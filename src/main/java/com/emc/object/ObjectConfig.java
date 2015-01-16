@@ -91,7 +91,7 @@ public abstract class ObjectConfig {
         return properties.get(propName);
     }
 
-    public Object propAsString(String propName) {
+    public String propAsString(String propName) {
         Object value = property(propName);
         return value == null ? null : value.toString();
     }
