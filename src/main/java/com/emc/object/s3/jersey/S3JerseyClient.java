@@ -14,7 +14,6 @@ import org.glassfish.jersey.client.JerseyClientBuilder;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
-import java.util.Map;
 
 public class S3JerseyClient extends AbstractS3Client {
     protected S3Config s3Config;
@@ -28,23 +27,27 @@ public class S3JerseyClient extends AbstractS3Client {
         SmartConfig smartConfig = s3Config.toSmartConfig();
 
         // S.C. - ENDPOINT POLLING
-        // TODO: ensure same configuration (i.e. proxy, etc.)
-        Client pollingClient = JerseyClientBuilder.newClient(new ClientConfig().connectorProvider(new ApacheConnectorProvider()));
+        // create a separate client for getting the node list. use any client config parameters set on s3Config
+        ClientConfig clientConfig = new ClientConfig();
+        for (String key : s3Config.getProperties().keySet())
+            clientConfig.property(key, s3Config.property(key));
+        clientConfig.connectorProvider(new ApacheConnectorProvider());
+        Client pollingClient = JerseyClientBuilder.newClient(clientConfig);
 
+        // create a host list provider based on the S3 ?endpoint call (will use the pollingClient we just made)
         S3HostListProvider hostListProvider = new S3HostListProvider(pollingClient, smartConfig.getLoadBalancer(),
                 s3Config.getIdentity(), s3Config.getSecretKey());
         smartConfig.setHostListProvider(hostListProvider);
 
-        Map<String, String> props = s3Config.getProperties();
-        if (props.containsKey(S3Config.PROPERTY_POLL_PROTOCOL))
-            hostListProvider.setProtocol(props.get(S3Config.PROPERTY_POLL_PROTOCOL));
+        if (s3Config.property(S3Config.PROPERTY_POLL_PROTOCOL) != null)
+            hostListProvider.setProtocol(s3Config.propAsString(S3Config.PROPERTY_POLL_PROTOCOL));
 
-        if (props.containsKey(S3Config.PROPERTY_POLL_PORT)) {
+        if (s3Config.property(S3Config.PROPERTY_POLL_PORT) != null) {
             try {
-                hostListProvider.setPort(Integer.parseInt(props.get(S3Config.PROPERTY_POLL_PORT)));
+                hostListProvider.setPort(Integer.parseInt(s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)));
             } catch (NumberFormatException e) {
                 throw new RuntimeException(String.format("invalid poll port (%s=%s)",
-                        S3Config.PROPERTY_POLL_PORT, props.get(S3Config.PROPERTY_POLL_PORT)), e);
+                        S3Config.PROPERTY_POLL_PORT, s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)), e);
             }
         }
 
@@ -54,7 +57,7 @@ public class S3JerseyClient extends AbstractS3Client {
         // S.C. - PROVIDER REGISTRATION
         client.register(new NamespaceRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new BucketRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
-        client.register(new AuthorizationRequestFilter(s3Config), Priorities.AUTHENTICATION);
+        client.register(new AuthorizationRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new ErrorResponseFilter());
     }
 
