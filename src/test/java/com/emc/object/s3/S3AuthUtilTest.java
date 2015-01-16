@@ -1,10 +1,11 @@
 package com.emc.object.s3;
 
-import com.emc.object.util.MultivalueMap;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,7 +16,7 @@ public class S3AuthUtilTest {
     private static final String METHOD_1 = "GET";
     private static final String RESOURCE_1 = "/johnsmith/photos/puppy.jpg";
     private static Map<String, String> PARAMETERS_1 = new HashMap<>();
-    private static MultivalueMap HEADERS_1 = new MultivalueMap();
+    private static MultivaluedMap<String, Object> HEADERS_1 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_1 = "GET\n" +
             "\n" +
             "\n" +
@@ -26,7 +27,7 @@ public class S3AuthUtilTest {
     private static final String METHOD_2 = "PUT";
     private static final String RESOURCE_2 = "/static.johnsmith.net/db-backup.dat.gz";
     private static Map<String, String> PARAMETERS_2 = new HashMap<>();
-    private static MultivalueMap HEADERS_2 = new MultivalueMap();
+    private static MultivaluedMap<String, Object> HEADERS_2 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_2 = "PUT\n" +
             "4gJE4saaMU4BqNR0kLY+lw==\n" +
             "application/x-download\n" +
@@ -41,7 +42,7 @@ public class S3AuthUtilTest {
     private static final String METHOD_3 = "GET";
     private static final String RESOURCE_3 = "/johnsmith/";
     private static Map<String, String> PARAMETERS_3 = new HashMap<>();
-    private static MultivalueMap HEADERS_3 = new MultivalueMap();
+    private static MultivaluedMap<String, Object> HEADERS_3 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_3 = "GET\n" +
             "\n" +
             "\n" +
@@ -52,7 +53,7 @@ public class S3AuthUtilTest {
     private static final String METHOD_4 = "GET";
     private static final String RESOURCE_4 = "/johnsmith/";
     private static Map<String, String> PARAMETERS_4 = new HashMap<>();
-    private static MultivalueMap HEADERS_4 = new MultivalueMap();
+    private static MultivaluedMap<String, Object> HEADERS_4 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_4 = "GET\n" +
             "\n" +
             "\n" +
@@ -87,19 +88,19 @@ public class S3AuthUtilTest {
 
     @Test
     public void testSign() {
-        MultivalueMap headers = new MultivalueMap(HEADERS_1);
+        MultivaluedMap<String, Object> headers = new MultivaluedHashMap<>(HEADERS_1);
         S3AuthUtil.sign(METHOD_1, RESOURCE_1, PARAMETERS_1, headers, ACCESS_KEY, SECRET_KEY, 0);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_1, headers.getFirst("Authorization"));
 
-        headers = new MultivalueMap(HEADERS_2);
+        headers = new MultivaluedHashMap<>(HEADERS_2);
         S3AuthUtil.sign(METHOD_2, RESOURCE_2, PARAMETERS_2, headers, ACCESS_KEY, SECRET_KEY, 0);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_2, headers.getFirst("Authorization"));
 
-        headers = new MultivalueMap(HEADERS_3);
+        headers = new MultivaluedHashMap<>(HEADERS_3);
         S3AuthUtil.sign(METHOD_3, RESOURCE_3, PARAMETERS_3, headers, ACCESS_KEY, SECRET_KEY, 0);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_3, headers.getFirst("Authorization"));
 
-        headers = new MultivalueMap(HEADERS_4);
+        headers = new MultivaluedHashMap<>(HEADERS_4);
         S3AuthUtil.sign(METHOD_4, RESOURCE_4, PARAMETERS_4, headers, ACCESS_KEY, SECRET_KEY, 0);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_4, headers.getFirst("Authorization"));
     }

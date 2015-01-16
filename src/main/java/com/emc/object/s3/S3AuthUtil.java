@@ -1,6 +1,5 @@
 package com.emc.object.s3;
 
-import com.emc.object.util.MultivalueMap;
 import com.emc.object.util.RestUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
@@ -8,6 +7,7 @@ import org.apache.log4j.Logger;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -34,7 +34,7 @@ public final class S3AuthUtil {
                 S3Constants.PARAM_ENDPOINT));
     }
 
-    public static void sign(String method, String resource, Map<String, String> parameters, MultivalueMap headers,
+    public static void sign(String method, String resource, Map<String, String> parameters, MultivaluedMap<String, Object> headers,
                             String accessKey, String secretKey, long clockSkew) {
         String stringToSign = getStringToSign(method, resource, parameters, headers, clockSkew);
         String signature = getSignature(stringToSign, secretKey);
@@ -42,7 +42,7 @@ public final class S3AuthUtil {
     }
 
     public static String getStringToSign(String method, String resource, Map<String, String> parameters,
-                                         MultivalueMap headers, long clockSkew) {
+                                         MultivaluedMap<String, Object> headers, long clockSkew) {
         StringBuilder stringToSign = new StringBuilder();
 
         // method line
@@ -99,14 +99,14 @@ public final class S3AuthUtil {
         return stringToSignStr;
     }
 
-    public static SortedMap<String, String> getCanonicalizedHeaders(MultivalueMap headers, Map<String, String> parameters) {
+    public static SortedMap<String, String> getCanonicalizedHeaders(MultivaluedMap<String, Object> headers, Map<String, String> parameters) {
         SortedMap<String, String> canonicalizedHeaders = new TreeMap<>();
 
         // add x-emc- and x-amz- headers
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
             if (lcHeader.startsWith(S3Constants.X_AMZ_PREFIX) || lcHeader.startsWith(RestUtil.X_EMC_PREFIX)) {
-                canonicalizedHeaders.put(lcHeader, headers.getDelimited(header, ","));
+                canonicalizedHeaders.put(lcHeader, RestUtil.delimit(headers.get(header), ","));
             }
         }
 

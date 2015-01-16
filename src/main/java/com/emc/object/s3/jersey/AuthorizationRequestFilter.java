@@ -2,7 +2,6 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3AuthUtil;
 import com.emc.object.s3.S3Config;
-import com.emc.object.util.MultivalueMap;
 import com.emc.object.util.RestUtil;
 
 import javax.ws.rs.client.ClientRequestContext;
@@ -40,7 +39,7 @@ public class AuthorizationRequestFilter implements ClientRequestFilter {
             S3AuthUtil.sign(requestContext.getMethod(),
                     resource,
                     parameters,
-                    new MultivalueMap(requestContext.getHeaders()),
+                    requestContext.getHeaders(),
                     s3Config.getIdentity(),
                     s3Config.getSecretKey(),
                     s3Config.getServerClockSkew());
