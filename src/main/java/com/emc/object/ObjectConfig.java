@@ -25,7 +25,7 @@ public abstract class ObjectConfig {
     private String secretKey;
     private long serverClockSkew;
 
-    private Map<String, String> properties = new HashMap<String, String>();
+    private Map<String, Object> properties = new HashMap<>();
 
     public List<URI> getEndpoints() {
         return endpoints;
@@ -83,8 +83,24 @@ public abstract class ObjectConfig {
         this.serverClockSkew = serverClockSkew;
     }
 
-    public Map<String, String> getProperties() {
+    public Map<String, Object> getProperties() {
         return properties;
+    }
+
+    public Object property(String propName) {
+        return properties.get(propName);
+    }
+
+    public Object propAsString(String propName) {
+        Object value = property(propName);
+        return value == null ? null : value.toString();
+    }
+
+    /**
+     * Allows custom properties to be set. These will be passed on to other client components (i.e. Jersey ClientConfig)
+     */
+    public void property(String propName, Object value) {
+        properties.put(propName, value);
     }
 
     public ObjectConfig withEndpoints(List<URI> endpoints) {
@@ -109,6 +125,11 @@ public abstract class ObjectConfig {
 
     public ObjectConfig withSecretKey(String secretKey) {
         setSecretKey(secretKey);
+        return this;
+    }
+
+    public ObjectConfig withProperty(String propName, Object value) {
+        property(propName, value);
         return this;
     }
 
@@ -154,17 +175,26 @@ public abstract class ObjectConfig {
 
         SmartConfig smartConfig = new SmartConfig(hosts);
 
-        smartConfig.setDisablePolling(Boolean.parseBoolean(properties.get(PROPERTY_DISABLE_POLLING)));
+        smartConfig.setDisablePolling(Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_POLLING)));
 
         if (properties.containsKey(PROPERTY_POLL_INTERVAL)) {
             try {
-                smartConfig.setPollInterval(Integer.parseInt(properties.get(PROPERTY_POLL_INTERVAL)));
+                smartConfig.setPollInterval(Integer.parseInt(propAsString(properties, PROPERTY_POLL_INTERVAL)));
             } catch (NumberFormatException e) {
                 throw new RuntimeException(String.format("invalid poll interval (%s=%s)",
                         PROPERTY_POLL_INTERVAL, properties.get(PROPERTY_POLL_INTERVAL)), e);
             }
         }
 
+        for (String prop : properties.keySet()) {
+            smartConfig.property(prop, properties.get(prop));
+        }
+
         return smartConfig;
+    }
+
+    protected String propAsString(Map<String, Object> properties, String propName) {
+        Object value = properties.get(propName);
+        return value == null ? null : value.toString();
     }
 }
