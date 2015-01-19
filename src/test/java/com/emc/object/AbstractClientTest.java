@@ -7,13 +7,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Random;
 
 @RunWith(ConcurrentJunitRunner.class)
 @Concurrent
 public abstract class AbstractClientTest {
     private static final Logger l4j = Logger.getLogger(AbstractClientTest.class);
-    private static final AtomicInteger counter = new AtomicInteger(0);
+    private static final Random random = new Random();
     private final ThreadLocal<String> testBucket = new ThreadLocal<>();
 
     /**
@@ -54,7 +54,7 @@ public abstract class AbstractClientTest {
         l4j.info("initializing client");
         initClient();
 
-        testBucket.set(getTestBucketPrefix() + "-" + counter.incrementAndGet());
+        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + (random.nextInt(8999) + 1000));
         l4j.info("creating test bucket " + getTestBucket());
         createBucket(getTestBucket());
     }
