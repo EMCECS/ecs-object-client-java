@@ -20,12 +20,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
-@XmlRootElement(name = "ListDataNode", namespace = "http://s3.amazonaws.com/doc/2006-03-01/")
+@XmlRootElement(name = "ListDataNode")
 public class ListDataNode {
     private List<String> dataNodes = new ArrayList<>();
     private String versionInfo;
 
-    @XmlElements(@XmlElement(name = "DataNodes", namespace = "http://s3.amazonaws.com/doc/2006-03-01/"))
+    @XmlElements(@XmlElement(name = "DataNodes"))
     public List<String> getDataNodes() {
         return dataNodes;
     }
@@ -34,7 +34,7 @@ public class ListDataNode {
         this.dataNodes = dataNodes;
     }
 
-    @XmlElement(name = "VersionInfo", namespace = "http://s3.amazonaws.com/doc/2006-03-01/")
+    @XmlElement(name = "VersionInfo")
     public String getVersionInfo() {
         return versionInfo;
     }

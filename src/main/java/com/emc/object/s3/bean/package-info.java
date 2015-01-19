@@ -12,8 +12,13 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+
 @XmlSchema(namespace = "http://s3.amazonaws.com/doc/2006-03-01/", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
-@XmlJavaTypeAdapter(value = com.emc.object.util.Iso8601Adapter.class, type = java.util.Date.class) package com.emc.object.s3.bean;
+@XmlJavaTypeAdapters({
+        @XmlJavaTypeAdapter(value = com.emc.object.util.Iso8601Adapter.class, type = java.util.Date.class),
+        @XmlJavaTypeAdapter(value = com.emc.object.util.RegionAdapter.class, type = com.emc.object.s3.bean.Region.class)
+}) package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlSchema;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapters;

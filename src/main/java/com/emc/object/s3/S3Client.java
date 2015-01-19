@@ -4,6 +4,8 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 
 public interface S3Client {
+    ListDataNode listDataNodes();
+
     /**
      * Lists the buckets owned by the configured identity
      */
@@ -38,6 +40,8 @@ public interface S3Client {
     LifecycleConfiguration getBucketLifecycle(String bucketName);
 
     void deleteBucketLifecycle(String bucketName);
+
+    LocationConstraint getBucketLocation(String bucketName);
 
     void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration);
 

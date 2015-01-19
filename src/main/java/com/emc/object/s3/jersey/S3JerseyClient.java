@@ -1,5 +1,6 @@
 package com.emc.object.s3.jersey;
 
+import com.emc.object.GenericRequest;
 import com.emc.object.Method;
 import com.emc.object.ObjectRequest;
 import com.emc.object.s3.*;
@@ -63,6 +64,11 @@ public class S3JerseyClient extends AbstractS3Client {
         client.register(new BucketRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new AuthorizationRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new ErrorResponseFilter());
+    }
+
+    @Override
+    public ListDataNode listDataNodes() {
+        return executeRequest(client, new GenericRequest(Method.GET, "", "endpoint"), ListDataNode.class);
     }
 
     @Override
@@ -138,6 +144,12 @@ public class S3JerseyClient extends AbstractS3Client {
     @Override
     public void deleteBucketLifecycle(String bucketName) {
         executeRequest(client, new GenericBucketRequest(Method.DELETE, "lifecycle").withBucketName(bucketName), null);
+    }
+
+    @Override
+    public LocationConstraint getBucketLocation(String bucketName) {
+        S3Request request = new GenericBucketRequest(Method.GET, "location").withBucketName(bucketName);
+        return executeRequest(client, request, LocationConstraint.class);
     }
 
     @Override
