@@ -4,18 +4,19 @@ import com.emc.object.Method;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class ListObjectsRequest extends AbstractBucketRequest<ListObjectsRequest> {
+public class ListVersionsRequest extends AbstractBucketRequest<ListVersionsRequest> {
     private String prefix;
     private String delimiter;
     private Integer maxKeys;
-    private String marker;
+    private String keyMarker;
+    private String versionIdMarker;
     private EncodingType encodingType;
 
     @Override
-    protected ListObjectsRequest me() {
+    protected ListVersionsRequest me() {
         return this;
     }
 
@@ -31,11 +32,13 @@ public class ListObjectsRequest extends AbstractBucketRequest<ListObjectsRequest
 
     @Override
     public String getQuery() {
-        Map<String, Object> paramMap = new HashMap<>();
+        Map<String, Object> paramMap = new LinkedHashMap<>(); // preserve order (?version needs to come first)
+        paramMap.put("versions", null);
         if (prefix != null) paramMap.put(S3Constants.PARAM_PREFIX, prefix);
         if (delimiter != null) paramMap.put(S3Constants.PARAM_DELIMITER, delimiter);
         if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys);
-        if (marker != null) paramMap.put(S3Constants.PARAM_MARKER, marker);
+        if (keyMarker != null) paramMap.put(S3Constants.PARAM_KEY_MARKER, keyMarker);
+        if (versionIdMarker != null) paramMap.put(S3Constants.PARAM_VERSION_ID_MARKER, versionIdMarker);
         if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType);
         return RestUtil.generateQuery(paramMap);
     }
@@ -64,12 +67,20 @@ public class ListObjectsRequest extends AbstractBucketRequest<ListObjectsRequest
         this.maxKeys = maxKeys;
     }
 
-    public String getMarker() {
-        return marker;
+    public String getKeyMarker() {
+        return keyMarker;
     }
 
-    public void setMarker(String marker) {
-        this.marker = marker;
+    public void setKeyMarker(String keyMarker) {
+        this.keyMarker = keyMarker;
+    }
+
+    public String getVersionIdMarker() {
+        return versionIdMarker;
+    }
+
+    public void setVersionIdMarker(String versionIdMarker) {
+        this.versionIdMarker = versionIdMarker;
     }
 
     public EncodingType getEncodingType() {
@@ -80,27 +91,32 @@ public class ListObjectsRequest extends AbstractBucketRequest<ListObjectsRequest
         this.encodingType = encodingType;
     }
 
-    public ListObjectsRequest withPrefix(String prefix) {
+    public ListVersionsRequest withPrefix(String prefix) {
         setPrefix(prefix);
         return this;
     }
 
-    public ListObjectsRequest withDelimiter(String delimiter) {
+    public ListVersionsRequest withDelimiter(String delimiter) {
         setDelimiter(delimiter);
         return this;
     }
 
-    public ListObjectsRequest withMaxKeys(Integer maxKeys) {
+    public ListVersionsRequest withMaxKeys(Integer maxKeys) {
         setMaxKeys(maxKeys);
         return this;
     }
 
-    public ListObjectsRequest withMarker(String marker) {
-        setMarker(marker);
+    public ListVersionsRequest withKeyMarker(String keyMarker) {
+        setKeyMarker(keyMarker);
         return this;
     }
 
-    public ListObjectsRequest withEncodingType(EncodingType encodingType) {
+    public ListVersionsRequest withVersionIdMarker(String versionIdMarker) {
+        setVersionIdMarker(versionIdMarker);
+        return this;
+    }
+
+    public ListVersionsRequest withEncodingType(EncodingType encodingType) {
         setEncodingType(encodingType);
         return this;
     }

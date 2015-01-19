@@ -8,13 +8,56 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public final class RestUtil {
+    public static final String HEADER_DATE = "Date";
     public static final String HEADER_CONTENT_MD5 = "Content-MD5";
+    public static final String HEADER_CONTENT_TYPE = "Content-Type";
 
-    public static final String X_EMC_PREFIX = "x-emc-";
+    public static final String EMC_PREFIX = "x-emc-";
+
+    public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
+    public static final String EMC_PROJECT_ID = EMC_PREFIX + "project-id";
+    public static final String EMC_VPOOL_ID = EMC_PREFIX + "vpool";
+    public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
+
+    public static final String TYPE_APPLICATION_XML = "application/xml";
+
+    public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
+
+    public static final int STATUS_REDIRECT = 301;
+    public static final int STATUS_NOT_FOUND = 404;
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
 
+    public static Object getFirst(Map<String, List<Object>> multiValueMap, String key) {
+        List<Object> values = multiValueMap.get(key);
+        if (values == null || values.isEmpty()) return null;
+        return values.get(0);
+    }
+
+    public static void putSingle(Map<String, List<Object>> multiValueMap, String key, Object value) {
+        put(multiValueMap, key, value, true);
+    }
+
+    public static void add(Map<String, List<Object>> multiValueMap, String key, Object value) {
+        put(multiValueMap, key, value, false);
+    }
+
+    private static void put(Map<String, List<Object>> multiValueMap, String key, Object value, boolean single) {
+        synchronized (multiValueMap) {
+            List<Object> values = multiValueMap.get(key);
+            if (values == null) {
+                values = new ArrayList<>();
+                multiValueMap.put(key, values);
+            } else if (single)
+                values.clear();
+            values.add(value);
+        }
+    }
+
+    /**
+     * URL-decodes names and values
+     */
     public static Map<String, String> getQueryParameterMap(String queryString) {
         Map<String, String> parameters = new HashMap<>();
         if (queryString != null && queryString.trim().length() > 0) {
@@ -22,10 +65,29 @@ public final class RestUtil {
                 String[] keyValue = pair.split("=");
                 if (keyValue.length < 1 || keyValue.length > 2 || keyValue[0].trim().length() == 0)
                     throw new IllegalArgumentException("invalid query parameter: " + pair);
-                parameters.put(keyValue[0], keyValue.length > 1 ? keyValue[1] : "");
+                parameters.put(urlDecode(keyValue[0]), keyValue.length > 1 ? urlDecode(keyValue[1]) : "");
             }
         }
         return parameters;
+    }
+
+    /**
+     * URL-encodes names and values
+     */
+    public static String generateQuery(Map<String, Object> parameterMap) {
+        StringBuilder query = new StringBuilder();
+        if (parameterMap != null && !parameterMap.isEmpty()) {
+            query.append("?");
+            Iterator<String> paramI = parameterMap.keySet().iterator();
+            while (paramI.hasNext()) {
+                String name = paramI.next();
+                query.append(urlEncode(name));
+                if (parameterMap.get(name) != null)
+                    query.append("=").append(urlEncode(parameterMap.get(name).toString()));
+                if (paramI.hasNext()) query.append("&");
+            }
+        }
+        return query.toString();
     }
 
     public static String getRequestDate(long clockSkew) {
@@ -47,7 +109,7 @@ public final class RestUtil {
         return getHeaderFormat().format(date);
     }
 
-    public static String encodeUtf8(String value) {
+    public static String urlEncode(String value) {
         // Use %20, not +
         try {
             return URLEncoder.encode(value, "UTF-8").replace("+", "%20");
@@ -56,7 +118,7 @@ public final class RestUtil {
         }
     }
 
-    public static String decodeUtf8(String value) {
+    public static String urlDecode(String value) {
         try {
             // don't want '+' decoded to a space
             return URLDecoder.decode(value.replace("+", "%2B"), "UTF-8");

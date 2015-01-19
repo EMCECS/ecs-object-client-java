@@ -1,9 +1,14 @@
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.RestUtil;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @XmlRootElement(name = "AccessControlPolicy")
@@ -29,5 +34,13 @@ public class AccessControlList {
 
     public void setGrants(Set<Grant> grants) {
         this.grants = grants;
+    }
+
+    public Map<String, List<Object>> toHeaders() {
+        Map<String, List<Object>> headers = new HashMap<>();
+        for (Grant grant : grants) {
+            RestUtil.add(headers, grant.getPermission().getHeaderName(), grant.getGrantee().getHeaderValue());
+        }
+        return headers;
     }
 }

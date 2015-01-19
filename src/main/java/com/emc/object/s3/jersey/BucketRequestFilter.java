@@ -1,6 +1,7 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Constants;
 import org.apache.log4j.Logger;
 
 import javax.ws.rs.client.ClientRequestContext;
@@ -12,8 +13,6 @@ import java.net.URISyntaxException;
 public class BucketRequestFilter implements ClientRequestFilter {
     private static final Logger l4j = Logger.getLogger(BucketRequestFilter.class);
 
-    public static final String PROPERTY_BUCKET_NAME = "com.emc.object.s3.bucketName";
-
     private S3Config s3Config;
 
     public BucketRequestFilter(S3Config s3Config) {
@@ -24,7 +23,7 @@ public class BucketRequestFilter implements ClientRequestFilter {
     public void filter(ClientRequestContext requestContext) throws IOException {
         URI uri = requestContext.getUri();
 
-        String bucketName = (String) requestContext.getProperty(PROPERTY_BUCKET_NAME);
+        String bucketName = (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
         try {
             if (bucketName != null) {
 

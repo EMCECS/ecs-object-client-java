@@ -4,7 +4,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlType(name = "Group")
-public class Group extends Grantee {
+public class Group extends AbstractGrantee {
     private String uri;
 
     public Group() {
@@ -24,7 +24,12 @@ public class Group extends Grantee {
     }
 
     @Override
-    public int compareTo(Grantee o) {
+    public String getHeaderValue() {
+        return "uri=\"" + getUri() + "\"";
+    }
+
+    @Override
+    public int compareTo(AbstractGrantee o) {
         if (o instanceof Group)
             return uri.compareTo(((Group) o).getUri());
         else

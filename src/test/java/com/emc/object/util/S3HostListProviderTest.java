@@ -1,5 +1,6 @@
 package com.emc.object.util;
 
+import com.emc.object.s3.S3HostListProvider;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.vipr.services.lib.ViprConfig;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;

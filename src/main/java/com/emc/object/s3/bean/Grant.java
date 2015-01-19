@@ -5,23 +5,23 @@ import javax.xml.bind.annotation.XmlType;
 
 @XmlType(propOrder = {"grantee", "permission"})
 public class Grant implements Comparable<Grant> {
-    private Grantee grantee;
+    private AbstractGrantee grantee;
     private Permission permission;
 
     public Grant() {
     }
 
-    public Grant(Grantee grantee, Permission permission) {
+    public Grant(AbstractGrantee grantee, Permission permission) {
         this.grantee = grantee;
         this.permission = permission;
     }
 
     @XmlElement(name = "Grantee")
-    public Grantee getGrantee() {
+    public AbstractGrantee getGrantee() {
         return grantee;
     }
 
-    public void setGrantee(Grantee grantee) {
+    public void setGrantee(AbstractGrantee grantee) {
         this.grantee = grantee;
     }
 

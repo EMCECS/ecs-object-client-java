@@ -4,7 +4,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlType(name = "CanonicalUser", propOrder = {"id", "displayName"})
-public class CanonicalUser extends Grantee {
+public class CanonicalUser extends AbstractGrantee {
     private String id;
     private String displayName;
 
@@ -35,7 +35,12 @@ public class CanonicalUser extends Grantee {
     }
 
     @Override
-    public int compareTo(Grantee o) {
+    public String getHeaderValue() {
+        return "id=\"" + getId() + "\"";
+    }
+
+    @Override
+    public int compareTo(AbstractGrantee o) {
         if (o instanceof CanonicalUser)
             return id.compareTo(((CanonicalUser) o).getId());
         else

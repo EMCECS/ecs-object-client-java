@@ -6,8 +6,6 @@ import org.apache.log4j.Logger;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MultivaluedMap;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -34,40 +32,40 @@ public final class S3AuthUtil {
                 S3Constants.PARAM_ENDPOINT));
     }
 
-    public static void sign(String method, String resource, Map<String, String> parameters, MultivaluedMap<String, Object> headers,
+    public static void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers,
                             String accessKey, String secretKey, long clockSkew) {
         String stringToSign = getStringToSign(method, resource, parameters, headers, clockSkew);
         String signature = getSignature(stringToSign, secretKey);
-        headers.putSingle("Authorization", "AWS " + accessKey + ":" + signature);
+        RestUtil.putSingle(headers, "Authorization", "AWS " + accessKey + ":" + signature);
     }
 
     public static String getStringToSign(String method, String resource, Map<String, String> parameters,
-                                         MultivaluedMap<String, Object> headers, long clockSkew) {
+                                         Map<String, List<Object>> headers, long clockSkew) {
         StringBuilder stringToSign = new StringBuilder();
 
         // method line
         stringToSign.append(method).append("\n");
 
         // MD5 line
-        Object contentMd5 = headers.getFirst(RestUtil.HEADER_CONTENT_MD5);
+        Object contentMd5 = RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_MD5);
         if (contentMd5 != null) stringToSign.append(contentMd5);
         stringToSign.append("\n");
 
         // content type line
-        Object contentType = headers.getFirst(HttpHeaders.CONTENT_TYPE);
+        Object contentType = RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_TYPE);
         if (contentType != null) stringToSign.append(contentType);
         stringToSign.append("\n");
 
         // date line
         // use Date header by default
-        Object date = headers.getFirst(HttpHeaders.DATE);
+        Object date = RestUtil.getFirst(headers, RestUtil.HEADER_DATE);
         if (date == null) {
             // must have a date in the headers
             date = RestUtil.getRequestDate(clockSkew);
-            headers.putSingle(HttpHeaders.DATE, date);
+            RestUtil.putSingle(headers, RestUtil.HEADER_DATE, date);
         }
         // if x-amz-date is specified, date line should be blank
-        if (headers.containsKey(S3Constants.HEADER_DATE))
+        if (headers.containsKey(S3Constants.AMZ_DATE))
             date = "";
         // if expires parameter is set, use that instead
         if (parameters.containsKey(S3Constants.PARAM_EXPIRES))
@@ -99,13 +97,13 @@ public final class S3AuthUtil {
         return stringToSignStr;
     }
 
-    public static SortedMap<String, String> getCanonicalizedHeaders(MultivaluedMap<String, Object> headers, Map<String, String> parameters) {
+    public static SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers, Map<String, String> parameters) {
         SortedMap<String, String> canonicalizedHeaders = new TreeMap<>();
 
         // add x-emc- and x-amz- headers
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
-            if (lcHeader.startsWith(S3Constants.X_AMZ_PREFIX) || lcHeader.startsWith(RestUtil.X_EMC_PREFIX)) {
+            if (lcHeader.startsWith(S3Constants.AMZ_PREFIX) || lcHeader.startsWith(RestUtil.EMC_PREFIX)) {
                 canonicalizedHeaders.put(lcHeader, RestUtil.delimit(headers.get(header), ","));
             }
         }
@@ -113,7 +111,7 @@ public final class S3AuthUtil {
         // add x-amz- parameters
         for (String parameter : parameters.keySet()) {
             String lcParameter = parameter.toLowerCase();
-            if (lcParameter.startsWith(S3Constants.X_AMZ_PREFIX)) {
+            if (lcParameter.startsWith(S3Constants.AMZ_PREFIX)) {
                 canonicalizedHeaders.put(lcParameter, parameters.get(parameter));
             }
         }

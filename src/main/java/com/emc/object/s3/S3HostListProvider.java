@@ -1,8 +1,8 @@
-package com.emc.object.util;
+package com.emc.object.s3;
 
+import com.emc.object.s3.bean.ListDataNode;
 import com.emc.rest.smart.HostListProvider;
 import com.emc.rest.smart.LoadBalancer;
-import com.emc.rest.smart.bean.ListDataNode;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 

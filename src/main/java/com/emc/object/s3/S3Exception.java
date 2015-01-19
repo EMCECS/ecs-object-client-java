@@ -1,21 +1,22 @@
 package com.emc.object.s3;
 
-import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.ResponseProcessingException;
+import javax.ws.rs.core.Response;
 
-public class S3Exception extends WebApplicationException {
+public class S3Exception extends ResponseProcessingException {
     private String errorCode;
     private String requestId;
 
-    public S3Exception(String message) {
-        super(message);
+    public S3Exception(Response response, String message) {
+        super(response, message);
     }
 
-    public S3Exception(String message, int httpStatus) {
-        super(message, httpStatus);
+    public S3Exception(Response response, String message, Throwable cause) {
+        super(response, message, cause);
     }
 
-    public S3Exception(String message, int httpStatus, String errorCode, String requestId) {
-        super(message, httpStatus);
+    public S3Exception(Response response, String message, String errorCode, String requestId) {
+        super(response, message);
         this.errorCode = errorCode;
         this.requestId = requestId;
     }

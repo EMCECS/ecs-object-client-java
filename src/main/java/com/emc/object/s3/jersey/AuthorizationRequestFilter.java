@@ -2,6 +2,7 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3AuthUtil;
 import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
 import javax.ws.rs.client.ClientRequestContext;
@@ -26,13 +27,13 @@ public class AuthorizationRequestFilter implements ClientRequestFilter {
 
             // check if bucket is in hostname
             if (s3Config.isvHostBuckets()) {
-                String bucketName = (String) requestContext.getProperty(BucketRequestFilter.PROPERTY_BUCKET_NAME);
+                String bucketName = (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
                 if (bucketName != null) resource = "/" + bucketName + resource;
             }
 
             // check if namespace is in hostname
             if (s3Config.isvHostNamespace() && s3Config.isSignNamespace()) {
-                String namespace = (String) requestContext.getProperty(NamespaceRequestFilter.PROPERTY_NAMESPACE);
+                String namespace = (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE);
                 if (namespace != null) resource = "/" + namespace + resource;
             }
 

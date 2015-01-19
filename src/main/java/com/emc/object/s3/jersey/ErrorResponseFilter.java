@@ -11,6 +11,7 @@ import org.jdom2.input.SAXBuilder;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientResponseContext;
 import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 
 public class ErrorResponseFilter implements ClientResponseFilter {
@@ -18,6 +19,7 @@ public class ErrorResponseFilter implements ClientResponseFilter {
 
     public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
         if (responseContext.getStatus() > 299) {
+            Response response = Response.status(responseContext.getStatusInfo()).build();
 
             // JAXB will expect a namespace if we try to unmarshall, but some error responses don't include
             // a namespace. In lieu of writing a SAXFilter to apply a default namespace in-line, this works just as well.
@@ -27,7 +29,7 @@ public class ErrorResponseFilter implements ClientResponseFilter {
             try {
                 d = sb.build(responseContext.getEntityStream());
             } catch (Throwable t) {
-                throw new S3Exception(responseContext.getStatusInfo().getReasonPhrase(), responseContext.getStatus());
+                throw new S3Exception(response, "could not parse error response", t);
             }
 
             String code = d.getRootElement().getChildText("Code");
@@ -44,11 +46,11 @@ public class ErrorResponseFilter implements ClientResponseFilter {
 
             if (code == null && message == null) {
                 // not an error from S3
-                throw new S3Exception(responseContext.getStatusInfo().getReasonPhrase(), responseContext.getStatus());
+                throw new S3Exception(response, "no code or message in error response");
             }
 
             LogMF.debug(l4j, "Error: {0}, message: {1}, requestId: {2}", code, message, requestId);
-            throw new S3Exception(message, responseContext.getStatus(), code, requestId);
+            throw new S3Exception(response, message, code, requestId);
         }
     }
 }

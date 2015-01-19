@@ -1,7 +1,9 @@
 package com.emc.object.s3.request;
 
-public abstract class AbstractBucketRequest implements S3Request {
+public abstract class AbstractBucketRequest<T extends AbstractBucketRequest> extends S3Request {
     private String bucketName;
+
+    protected abstract T me();
 
     public String getBucketName() {
         return bucketName;
@@ -11,8 +13,8 @@ public abstract class AbstractBucketRequest implements S3Request {
         this.bucketName = bucketName;
     }
 
-    public AbstractBucketRequest withBucketName(String bucketName) {
+    public T withBucketName(String bucketName) {
         setBucketName(bucketName);
-        return this;
+        return me();
     }
 }
