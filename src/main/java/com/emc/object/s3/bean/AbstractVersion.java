@@ -1,7 +1,6 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.Date;
 
 public abstract class AbstractVersion {
@@ -9,7 +8,7 @@ public abstract class AbstractVersion {
     private String versionId;
     private Boolean latest;
     private Date lastModified;
-    private Owner owner;
+    private CanonicalUser owner;
 
     @XmlElement(name = "Key")
     public String getKey() {
@@ -48,11 +47,11 @@ public abstract class AbstractVersion {
     }
 
     @XmlElement(name = "Owner")
-    public Owner getOwner() {
+    public CanonicalUser getOwner() {
         return owner;
     }
 
-    public void setOwner(Owner owner) {
+    public void setOwner(CanonicalUser owner) {
         this.owner = owner;
     }
 }

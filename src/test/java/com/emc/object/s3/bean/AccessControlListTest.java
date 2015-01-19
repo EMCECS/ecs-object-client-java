@@ -14,7 +14,7 @@ import java.util.TreeSet;
 public class AccessControlListTest {
     @Test
     public void testMarshall() throws Exception {
-        JAXBContext context = JAXBContext.newInstance(AccessControlList.class, Owner.class, Grant.class, CanonicalUser.class, Group.class, Permission.class);
+        JAXBContext context = JAXBContext.newInstance(AccessControlList.class, Grant.class, CanonicalUser.class, Group.class, Permission.class);
 
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                 "<AccessControlPolicy xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" +
@@ -67,7 +67,7 @@ public class AccessControlListTest {
         grants.add(new Grant(new Group("rawg"), Permission.WRITE_ACP));
 
         AccessControlList object = new AccessControlList();
-        object.setOwner(new Owner("owner", "Owner"));
+        object.setOwner(new CanonicalUser("owner", "Owner"));
         object.setGrants(grants);
 
         // unmarshall and compare to object

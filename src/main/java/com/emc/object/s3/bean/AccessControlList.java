@@ -11,15 +11,15 @@ import java.util.*;
 @XmlRootElement(name = "AccessControlPolicy")
 @XmlType(propOrder = {"owner", "grants"})
 public class AccessControlList {
-    private Owner owner;
+    private CanonicalUser owner;
     private Set<Grant> grants = new LinkedHashSet<>();
 
     @XmlElement(name = "Owner")
-    public Owner getOwner() {
+    public CanonicalUser getOwner() {
         return owner;
     }
 
-    public void setOwner(Owner owner) {
+    public void setOwner(CanonicalUser owner) {
         this.owner = owner;
     }
 

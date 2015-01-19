@@ -141,6 +141,24 @@ public class S3JerseyClient extends AbstractS3Client {
     }
 
     @Override
+    public void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration) {
+        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, "versioning",
+                versioningConfiguration, RestUtil.TYPE_APPLICATION_XML).withBucketName(bucketName);
+        executeRequest(client, request, null);
+    }
+
+    @Override
+    public VersioningConfiguration getBucketVersioning(String bucketName) {
+        S3Request request = new GenericBucketRequest(Method.GET, "versioning").withBucketName(bucketName);
+        return executeRequest(client, request, VersioningConfiguration.class);
+    }
+
+    @Override
+    public ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request) {
+        return executeRequest(client, request, ListMultipartUploadsResult.class);
+    }
+
+    @Override
     public ListObjectsResult listObjects(ListObjectsRequest request) {
         return executeRequest(client, request, ListObjectsResult.class);
     }

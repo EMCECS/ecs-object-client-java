@@ -126,4 +126,9 @@ public class LifecycleRule {
         @XmlElement(name = "Date")
         public Date date;
     }
+
+    @XmlEnum
+    private static enum Status {
+        Enabled, Disabled
+    }
 }

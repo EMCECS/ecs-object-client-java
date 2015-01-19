@@ -14,7 +14,7 @@ import java.util.List;
 public class ListVersionsResultTest {
     @Test
     public void testMarshalling() throws Exception {
-        JAXBContext context = JAXBContext.newInstance(ListVersionsResult.class, Owner.class, Version.class, DeleteMarker.class);
+        JAXBContext context = JAXBContext.newInstance(ListVersionsResult.class, CanonicalUser.class, Version.class, DeleteMarker.class);
 
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                 "<ListVersionsResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" +
@@ -73,7 +73,7 @@ public class ListVersionsResultTest {
 
         List<AbstractVersion> versions = new ArrayList<>();
 
-        Owner owner = new Owner("ID12345", "Foo Bar");
+        CanonicalUser owner = new CanonicalUser("ID12345", "Foo Bar");
 
         AbstractVersion version = new DeleteMarker();
         version.setKey("sourcekey");

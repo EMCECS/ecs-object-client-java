@@ -39,6 +39,14 @@ public interface S3Client {
 
     void deleteBucketLifecycle(String bucketName);
 
+    void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration);
+
+    VersioningConfiguration getBucketVersioning(String bucketName);
+
+    ListMultipartUploadsResult listMultipartUploads(String bucketName);
+
+    ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);
+
     ListObjectsResult listObjects(String bucketName);
 
     ListObjectsResult listObjects(String bucketName, String prefix);

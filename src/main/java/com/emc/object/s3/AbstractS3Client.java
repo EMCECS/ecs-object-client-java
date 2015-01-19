@@ -46,4 +46,9 @@ public abstract class AbstractS3Client extends AbstractJerseyClient implements S
     public ListVersionsResult listVersions(String bucketName, String prefix) {
         return listVersions(new ListVersionsRequest().withBucketName(bucketName).withPrefix(prefix));
     }
+
+    @Override
+    public ListMultipartUploadsResult listMultipartUploads(String bucketName) {
+        return listMultipartUploads(new ListMultipartUploadsRequest().withBucketName(bucketName));
+    }
 }

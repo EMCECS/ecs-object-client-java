@@ -9,7 +9,7 @@ public class S3Object {
     private String eTag;
     private Long size;
     private StorageClass storageClass;
-    private Owner owner;
+    private CanonicalUser owner;
 
     @XmlElement(name = "Key")
     public String getKey() {
@@ -57,11 +57,11 @@ public class S3Object {
     }
 
     @XmlElement(name = "Owner")
-    public Owner getOwner() {
+    public CanonicalUser getOwner() {
         return owner;
     }
 
-    public void setOwner(Owner owner) {
+    public void setOwner(CanonicalUser owner) {
         this.owner = owner;
     }
 }

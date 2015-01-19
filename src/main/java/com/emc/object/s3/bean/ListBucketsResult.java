@@ -10,15 +10,15 @@ import java.util.List;
 @XmlRootElement(name = "ListAllMyBucketsResult")
 @XmlType(propOrder = {"owner", "buckets"})
 public class ListBucketsResult {
-    private Owner owner;
+    private CanonicalUser owner;
     private List<Bucket> buckets = new ArrayList<>();
 
     @XmlElement(name = "Owner")
-    public Owner getOwner() {
+    public CanonicalUser getOwner() {
         return owner;
     }
 
-    public void setOwner(Owner owner) {
+    public void setOwner(CanonicalUser owner) {
         this.owner = owner;
     }
 
