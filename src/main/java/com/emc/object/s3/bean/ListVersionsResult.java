@@ -1,10 +1,11 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "ListVersionsResult")
-@XmlType(propOrder = {"bucketName", "prefix", "keyMarker", "versionIdMarker", "nextKeyMarker", "nextVersionIdMarker", "maxKeys", "delimiter", "truncated", "versions", "commonPrefixes"})
+@XmlType(propOrder = {"bucketName", "prefix", "keyMarker", "versionIdMarker", "nextKeyMarker", "nextVersionIdMarker", "maxKeys", "delimiter", "truncated", "versions", "_commonPrefixes"})
 public class ListVersionsResult {
     private String bucketName;
     private String prefix;
@@ -15,8 +16,8 @@ public class ListVersionsResult {
     private String nextKeyMarker;
     private String nextVersionIdMarker;
     private Boolean truncated;
-    private List<AbstractVersion> versions;
-    private List<String> commonPrefixes;
+    private List<AbstractVersion> versions = new ArrayList<>();
+    private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
 
     @XmlElement(name = "Name")
     public String getBucketName() {
@@ -108,13 +109,21 @@ public class ListVersionsResult {
         this.versions = versions;
     }
 
-    @XmlElementWrapper(name = "CommonPrefixes")
-    @XmlElement(name = "Prefix")
-    public List<String> getCommonPrefixes() {
-        return commonPrefixes;
+    @XmlElement(name = "CommonPrefixes")
+    protected List<CommonPrefix> get_commonPrefixes() {
+        return _commonPrefixes;
     }
 
-    public void setCommonPrefixes(List<String> commonPrefixes) {
-        this.commonPrefixes = commonPrefixes;
+    protected void set_commonPrefixes(List<CommonPrefix> _commonPrefixes) {
+        this._commonPrefixes = _commonPrefixes;
+    }
+
+    @XmlTransient
+    public List<String> getCommonPrefixes() {
+        List<String> prefixes = new ArrayList<>();
+        for (CommonPrefix prefix : _commonPrefixes) {
+            prefixes.add(prefix.getPrefix());
+        }
+        return prefixes;
     }
 }

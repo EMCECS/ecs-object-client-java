@@ -91,7 +91,7 @@ public class ListVersionsResultTest {
         ((Version) version).seteTag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
         ((Version) version).setSize(217L);
         version.setOwner(owner);
-        ((Version) version).setStorageClass("STANDARD");
+        ((Version) version).setStorageClass(StorageClass.STANDARD);
         versions.add(version);
 
         version = new Version();
@@ -102,7 +102,7 @@ public class ListVersionsResultTest {
         ((Version) version).seteTag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
         ((Version) version).setSize(217L);
         version.setOwner(owner);
-        ((Version) version).setStorageClass("STANDARD");
+        ((Version) version).setStorageClass(StorageClass.STANDARD);
         versions.add(version);
 
         ListVersionsResult object = new ListVersionsResult();
@@ -116,7 +116,7 @@ public class ListVersionsResultTest {
         object.setDelimiter("/");
         object.setTruncated(true);
         object.setVersions(versions);
-        object.setCommonPrefixes(Arrays.asList("photos/", "videos/"));
+        object.set_commonPrefixes(Arrays.asList(new CommonPrefix("photos/"), new CommonPrefix("videos/")));
 
         // unmarshall and compare to object
         Unmarshaller unmarshaller = context.createUnmarshaller();

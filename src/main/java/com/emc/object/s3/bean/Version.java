@@ -8,7 +8,7 @@ import javax.xml.bind.annotation.XmlType;
 public class Version extends AbstractVersion {
     private String eTag;
     private Long size;
-    private String storageClass;
+    private StorageClass storageClass;
 
     @XmlElement(name = "ETag")
     public String geteTag() {
@@ -29,11 +29,11 @@ public class Version extends AbstractVersion {
     }
 
     @XmlElement(name = "StorageClass")
-    public String getStorageClass() {
+    public StorageClass getStorageClass() {
         return storageClass;
     }
 
-    public void setStorageClass(String storageClass) {
+    public void setStorageClass(StorageClass storageClass) {
         this.storageClass = storageClass;
     }
 }

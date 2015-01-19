@@ -2,17 +2,18 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 @XmlType(propOrder = {"id", "allowedOrigins", "allowedMethods", "maxAgeSeconds", "allowedHeaders", "exposeHeaders"})
 public class CorsRule {
     private String id;
-    private List<CorsMethod> allowedMethods;
-    private List<String> allowedOrigins;
+    private List<CorsMethod> allowedMethods = new ArrayList<>();
+    private List<String> allowedOrigins = new ArrayList<>();
     private Integer maxAgeSeconds;
-    private List<String> exposeHeaders;
-    private List<String> allowedHeaders;
+    private List<String> exposeHeaders = new ArrayList<>();
+    private List<String> allowedHeaders = new ArrayList<>();
 
     @XmlElement(name = "ID")
     public String getId() {

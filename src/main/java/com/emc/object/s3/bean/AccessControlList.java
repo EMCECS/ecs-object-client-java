@@ -6,16 +6,13 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @XmlRootElement(name = "AccessControlPolicy")
 @XmlType(propOrder = {"owner", "grants"})
 public class AccessControlList {
     private Owner owner;
-    private Set<Grant> grants;
+    private Set<Grant> grants = new LinkedHashSet<>();
 
     @XmlElement(name = "Owner")
     public Owner getOwner() {
