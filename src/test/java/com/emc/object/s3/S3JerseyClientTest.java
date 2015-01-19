@@ -18,6 +18,11 @@ public class S3JerseyClientTest extends AbstractClientTest {
     protected S3Client client;
 
     @Override
+    protected String getTestBucketPrefix() {
+        return "s3-client-test";
+    }
+
+    @Override
     protected void createBucket(String bucketName) throws Exception {
         client.createBucket(bucketName);
     }
