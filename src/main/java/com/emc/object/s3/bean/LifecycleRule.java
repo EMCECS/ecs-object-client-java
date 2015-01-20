@@ -128,7 +128,7 @@ public class LifecycleRule {
     }
 
     @XmlEnum
-    private static enum Status {
+    public static enum Status {
         Enabled, Disabled
     }
 }

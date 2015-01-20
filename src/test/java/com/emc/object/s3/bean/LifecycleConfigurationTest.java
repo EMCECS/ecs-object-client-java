@@ -15,7 +15,7 @@ import java.util.List;
 public class LifecycleConfigurationTest {
     @Test
     public void testMarshalling() throws Exception {
-        JAXBContext context = JAXBContext.newInstance(LifecycleConfiguration.class, LifecycleRule.class, Status.class);
+        JAXBContext context = JAXBContext.newInstance(LifecycleConfiguration.class, LifecycleRule.class);
 
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
                 "<LifecycleConfiguration xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" +
@@ -37,8 +37,8 @@ public class LifecycleConfigurationTest {
                 "</LifecycleConfiguration>";
 
         List<LifecycleRule> rules = new ArrayList<>();
-        rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/", Status.Enabled, 3650));
-        rules.add(new LifecycleRule(null, "foo/", Status.Disabled, new Date(2524608000000L)));
+        rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/", LifecycleRule.Status.Enabled, 3650));
+        rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled, new Date(2524608000000L)));
 
         LifecycleConfiguration object = new LifecycleConfiguration();
         object.setRules(rules);
