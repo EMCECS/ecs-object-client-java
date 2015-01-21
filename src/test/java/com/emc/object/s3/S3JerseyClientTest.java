@@ -1,6 +1,6 @@
 package com.emc.object.s3;
 
-import com.amazonaws.services.s3.model.CORSRule;
+//import com.amazonaws.services.s3.model.CORSRule;
 import com.emc.object.AbstractClientTest;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
