@@ -17,6 +17,7 @@ import org.glassfish.jersey.client.JerseyClientBuilder;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Invocation;
+import java.net.URI;
 
 public class S3JerseyClient extends AbstractS3Client {
     protected Client client;
@@ -44,8 +45,11 @@ public class S3JerseyClient extends AbstractS3Client {
                 s3Config.getIdentity(), s3Config.getSecretKey());
         smartConfig.setHostListProvider(hostListProvider);
 
+        URI endpoint = s3Config.getEndpoints().get(0);
         if (s3Config.property(S3Config.PROPERTY_POLL_PROTOCOL) != null)
             hostListProvider.setProtocol(s3Config.propAsString(S3Config.PROPERTY_POLL_PROTOCOL));
+        else
+            hostListProvider.setProtocol(endpoint.getScheme());
 
         if (s3Config.property(S3Config.PROPERTY_POLL_PORT) != null) {
             try {
@@ -54,12 +58,13 @@ public class S3JerseyClient extends AbstractS3Client {
                 throw new RuntimeException(String.format("invalid poll port (%s=%s)",
                         S3Config.PROPERTY_POLL_PORT, s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)), e);
             }
-        }
+        } else
+            hostListProvider.setPort(endpoint.getPort());
 
         // S.C. - CLIENT CREATION
         client = SmartClientFactory.createSmartClient(smartConfig);
 
-        // S.C. - PROVIDER REGISTRATION
+        // S.C. - FILTER REGISTRATION
         client.register(new NamespaceRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new BucketRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new AuthorizationRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
@@ -178,6 +183,29 @@ public class S3JerseyClient extends AbstractS3Client {
     @Override
     public ListVersionsResult listVersions(ListVersionsRequest request) {
         return executeRequest(client, request, ListVersionsResult.class);
+    }
+
+    @Override
+    public void createObject(String bucketName, final String key, Object content, String contentType) {
+        if (contentType == null) contentType = RestUtil.DEFAULT_CONTENT_TYPE; // TODO: infer content type ??
+        AbstractBucketRequest request = new GenericBucketEntityRequest<Object>(Method.PUT, null, content, contentType) {
+            @Override
+            public String getPath() {
+                return key;
+            }
+        }.withBucketName(bucketName);
+        executeRequest(client, request, null);
+    }
+
+    @Override
+    public void deleteObject(String bucketName, final String key) {
+        S3Request request = new GenericBucketRequest(Method.DELETE, null) {
+            @Override
+            public String getPath() {
+                return key;
+            }
+        }.withBucketName(bucketName);
+        executeRequest(client, request, null);
     }
 
     @Override

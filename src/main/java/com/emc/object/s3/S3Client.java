@@ -60,4 +60,8 @@ public interface S3Client {
     ListVersionsResult listVersions(String bucketName, String prefix);
 
     ListVersionsResult listVersions(ListVersionsRequest request);
+
+    void createObject(String bucketName, String key, Object content, String contentType);
+
+    void deleteObject(String bucketName, String key);
 }

@@ -1,11 +1,11 @@
 package com.emc.object.s3;
 
 import com.emc.object.AbstractClientTest;
+import com.emc.object.s3.bean.Bucket;
 import com.emc.object.s3.bean.ListBucketsResult;
+import com.emc.object.s3.bean.S3Object;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.vipr.services.lib.ViprConfig;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,9 +29,9 @@ public class S3JerseyClientTest extends AbstractClientTest {
 
     @Override
     protected void cleanUpBucket(String bucketName) throws Exception {
-//        for (String key : client.listObjects(getTestBucket())) {
-//            client.deleteObject(bucketName, key);
-//        }
+        for (S3Object object : client.listObjects(getTestBucket()).getObjects()) {
+            client.deleteObject(bucketName, object.getKey());
+        }
         client.deleteBucket(bucketName);
     }
 
@@ -47,11 +47,6 @@ public class S3JerseyClientTest extends AbstractClientTest {
         S3Config s3Config = new S3Config();
         s3Config.setEndpoints(parseUris(endpoints == null ? endpoint : endpoints));
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
-        s3Config.getProperties().put(S3Config.PROPERTY_POLL_PROTOCOL, "http");
-        s3Config.getProperties().put(S3Config.PROPERTY_POLL_PORT, "9020");
-
-        // TODO: remove when jersey request logging is fixed
-        s3Config.getProperties().put(ApacheClientProperties.CONNECTION_MANAGER, new PoolingHttpClientConnectionManager());
 
         client = new S3JerseyClient(s3Config);
     }
@@ -62,6 +57,10 @@ public class S3JerseyClientTest extends AbstractClientTest {
         Assert.assertNotNull(result);
         Assert.assertNotNull(result.getOwner());
         Assert.assertNotNull(result.getBuckets());
+
+        Bucket bucket = new Bucket();
+        bucket.setName(getTestBucket());
+        Assert.assertTrue(result.getBuckets().contains(bucket));
     }
 
     public void sampleTest() throws Exception {

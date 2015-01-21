@@ -20,11 +20,14 @@ public final class RestUtil {
     public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
 
     public static final String TYPE_APPLICATION_XML = "application/xml";
+    public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
 
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
 
     public static final int STATUS_REDIRECT = 301;
     public static final int STATUS_NOT_FOUND = 404;
+
+    public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
