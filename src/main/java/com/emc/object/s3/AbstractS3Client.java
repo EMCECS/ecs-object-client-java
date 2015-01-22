@@ -19,36 +19,36 @@ public abstract class AbstractS3Client extends AbstractJerseyClient implements S
 
     @Override
     public void createBucket(String bucketName) {
-        createBucket(new CreateBucketRequest().withBucketName(bucketName));
+        createBucket(new CreateBucketRequest(bucketName));
     }
 
     @Override
     public void setBucketAcl(String bucketName, AccessControlList acl) {
-        setBucketAcl(new SetBucketAclRequest().withAcl(acl));
+        setBucketAcl(new SetBucketAclRequest(bucketName).withAcl(acl));
     }
 
     @Override
     public void setBucketAcl(String bucketName, CannedAcl cannedAcl) {
-        setBucketAcl(new SetBucketAclRequest().withCannedAcl(cannedAcl));
+        setBucketAcl(new SetBucketAclRequest(bucketName).withCannedAcl(cannedAcl));
     }
 
     @Override
     public ListObjectsResult listObjects(String bucketName) {
-        return listObjects(new ListObjectsRequest().withBucketName(bucketName));
+        return listObjects(new ListObjectsRequest(bucketName));
     }
 
     @Override
     public ListObjectsResult listObjects(String bucketName, String prefix) {
-        return listObjects(new ListObjectsRequest().withBucketName(bucketName).withPrefix(prefix));
+        return listObjects(new ListObjectsRequest(bucketName).withPrefix(prefix));
     }
 
     @Override
     public ListVersionsResult listVersions(String bucketName, String prefix) {
-        return listVersions(new ListVersionsRequest().withBucketName(bucketName).withPrefix(prefix));
+        return listVersions(new ListVersionsRequest(bucketName).withPrefix(prefix));
     }
 
     @Override
     public ListMultipartUploadsResult listMultipartUploads(String bucketName) {
-        return listMultipartUploads(new ListMultipartUploadsRequest().withBucketName(bucketName));
+        return listMultipartUploads(new ListMultipartUploadsRequest(bucketName));
     }
 }

@@ -1,5 +1,6 @@
 package com.emc.object.s3;
 
+import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 
@@ -61,7 +62,19 @@ public interface S3Client {
 
     ListVersionsResult listVersions(ListVersionsRequest request);
 
+    /**
+     * Will fail if object exists
+     */
     void createObject(String bucketName, String key, Object content, String contentType);
+
+    /**
+     * Will fail if object does not exist
+     */
+    void updateObject(String bucketName, String key, Range range, Object content);
+
+    void putObject(PutObjectRequest request);
+
+    <T> T readObject(String bucketName, String key, Class<T> objectType);
 
     void deleteObject(String bucketName, String key);
 }

@@ -1,4 +1,4 @@
-package com.emc.object.util;
+package com.emc.object.s3;
 
 import com.emc.object.s3.bean.Region;
 

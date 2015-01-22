@@ -3,6 +3,7 @@ package com.emc.object.s3.jersey;
 import com.emc.object.GenericRequest;
 import com.emc.object.Method;
 import com.emc.object.ObjectRequest;
+import com.emc.object.Range;
 import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
@@ -11,7 +12,6 @@ import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
 import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.client.JerseyClientBuilder;
 
 import javax.ws.rs.Priorities;
@@ -26,7 +26,7 @@ public class S3JerseyClient extends AbstractS3Client {
         super(s3Config);
 
         // disable Jersey's strict HTTP compliance validation (so we can PUT without an entity)
-        s3Config.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, "true");
+//        s3Config.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, "true");
 
         // SMART CLIENT SETUP
 
@@ -73,7 +73,7 @@ public class S3JerseyClient extends AbstractS3Client {
 
     @Override
     public ListDataNode listDataNodes() {
-        return executeRequest(client, new GenericRequest(Method.GET, "", "endpoint"), ListDataNode.class);
+        return executeRequest(client, new GenericRequest(Method.GET, "").withQuery("endpoint"), ListDataNode.class);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class S3JerseyClient extends AbstractS3Client {
     @Override
     public boolean bucketExists(String bucketName) {
         try {
-            executeRequest(client, new GenericBucketRequest(Method.HEAD, null).withBucketName(bucketName), null);
+            executeRequest(client, new GenericBucketRequest(Method.HEAD, bucketName), null);
             return true;
         } catch (S3Exception e) {
             if (e.getResponse().getStatus() == RestUtil.STATUS_REDIRECT) return true;
@@ -101,7 +101,7 @@ public class S3JerseyClient extends AbstractS3Client {
 
     @Override
     public void deleteBucket(String bucketName) {
-        executeRequest(client, new GenericBucketRequest(Method.DELETE, null).withBucketName(bucketName), null);
+        executeRequest(client, new GenericBucketRequest(Method.DELETE, bucketName), null);
     }
 
     @Override
@@ -111,62 +111,62 @@ public class S3JerseyClient extends AbstractS3Client {
 
     @Override
     public AccessControlList getBucketAcl(String bucketName) {
-        S3Request request = new GenericBucketRequest(Method.GET, "acl").withBucketName(bucketName);
+        S3Request request = new GenericBucketRequest(Method.GET, bucketName).withQuery("acl");
         return executeRequest(client, request, AccessControlList.class);
     }
 
     @Override
     public void setBucketCors(String bucketName, CorsConfiguration corsConfiguration) {
-        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, "cors",
-                corsConfiguration, RestUtil.TYPE_APPLICATION_XML).withBucketName(bucketName);
+        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, corsConfiguration)
+                .withContentType(RestUtil.TYPE_APPLICATION_XML).withQuery("cors");
         executeRequest(client, request, null);
     }
 
     @Override
     public CorsConfiguration getBucketCors(String bucketName) {
-        S3Request request = new GenericBucketRequest(Method.GET, "cors").withBucketName(bucketName);
+        S3Request request = new GenericBucketRequest(Method.GET, bucketName).withQuery("cors");
         return executeRequest(client, request, CorsConfiguration.class);
     }
 
     @Override
     public void deleteBucketCors(String bucketName) {
-        executeRequest(client, new GenericBucketRequest(Method.DELETE, "cors").withBucketName(bucketName), null);
+        executeRequest(client, new GenericBucketRequest(Method.DELETE, bucketName).withQuery("cors"), null);
     }
 
     @Override
     public void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration) {
-        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, "lifecycle",
-                lifecycleConfiguration, RestUtil.TYPE_APPLICATION_XML).withBucketName(bucketName);
+        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, lifecycleConfiguration)
+                .withContentType(RestUtil.TYPE_APPLICATION_XML).withQuery("lifecycle");
         executeRequest(client, request, null);
     }
 
     @Override
     public LifecycleConfiguration getBucketLifecycle(String bucketName) {
-        S3Request request = new GenericBucketRequest(Method.GET, "lifecycle").withBucketName(bucketName);
+        S3Request request = new GenericBucketRequest(Method.GET, bucketName).withQuery("lifecycle");
         return executeRequest(client, request, LifecycleConfiguration.class);
     }
 
     @Override
     public void deleteBucketLifecycle(String bucketName) {
-        executeRequest(client, new GenericBucketRequest(Method.DELETE, "lifecycle").withBucketName(bucketName), null);
+        executeRequest(client, new GenericBucketRequest(Method.DELETE, bucketName).withQuery("lifecycle"), null);
     }
 
     @Override
     public LocationConstraint getBucketLocation(String bucketName) {
-        S3Request request = new GenericBucketRequest(Method.GET, "location").withBucketName(bucketName);
+        S3Request request = new GenericBucketRequest(Method.GET, bucketName).withQuery("location");
         return executeRequest(client, request, LocationConstraint.class);
     }
 
     @Override
     public void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration) {
-        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, "versioning",
-                versioningConfiguration, RestUtil.TYPE_APPLICATION_XML).withBucketName(bucketName);
+        S3Request request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, versioningConfiguration)
+                .withContentType(RestUtil.TYPE_APPLICATION_XML).withQuery("versioning");
         executeRequest(client, request, null);
     }
 
     @Override
     public VersioningConfiguration getBucketVersioning(String bucketName) {
-        S3Request request = new GenericBucketRequest(Method.GET, "versioning").withBucketName(bucketName);
+        S3Request request = new GenericBucketRequest(Method.GET, bucketName).withQuery("versioning");
         return executeRequest(client, request, VersioningConfiguration.class);
     }
 
@@ -188,24 +188,28 @@ public class S3JerseyClient extends AbstractS3Client {
     @Override
     public void createObject(String bucketName, final String key, Object content, String contentType) {
         if (contentType == null) contentType = RestUtil.DEFAULT_CONTENT_TYPE; // TODO: infer content type ??
-        AbstractBucketRequest request = new GenericBucketEntityRequest<Object>(Method.PUT, null, content, contentType) {
-            @Override
-            public String getPath() {
-                return key;
-            }
-        }.withBucketName(bucketName);
+        S3Request request = new PutObjectRequest<>(bucketName, key, content).withContentType(contentType);
         executeRequest(client, request, null);
     }
 
     @Override
+    public void updateObject(String bucketName, String key, Range range, Object content) {
+
+    }
+
+    @Override
+    public void putObject(PutObjectRequest request) {
+
+    }
+
+    @Override
+    public <T> T readObject(String bucketName, String key, Class<T> objectType) {
+        return null;
+    }
+
+    @Override
     public void deleteObject(String bucketName, final String key) {
-        S3Request request = new GenericBucketRequest(Method.DELETE, null) {
-            @Override
-            public String getPath() {
-                return key;
-            }
-        }.withBucketName(bucketName);
-        executeRequest(client, request, null);
+        executeRequest(client, new GenericObjectRequest(Method.DELETE, bucketName, key), null);
     }
 
     @Override

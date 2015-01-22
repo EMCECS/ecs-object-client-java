@@ -11,14 +11,8 @@ public class ListBucketsRequest extends S3Request {
     private Integer limit;
     private String marker;
 
-    @Override
-    public Method getMethod() {
-        return Method.GET;
-    }
-
-    @Override
-    public String getPath() {
-        return "";
+    public ListBucketsRequest() {
+        super(Method.GET, "");
     }
 
     @Override

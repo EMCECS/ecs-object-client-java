@@ -13,6 +13,7 @@ import javax.ws.rs.client.ClientResponseContext;
 import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class ErrorResponseFilter implements ClientResponseFilter {
     private static final Logger l4j = Logger.getLogger(ErrorResponseFilter.class);
@@ -26,8 +27,8 @@ public class ErrorResponseFilter implements ClientResponseFilter {
             SAXBuilder sb = new SAXBuilder();
 
             Document d;
-            try {
-                d = sb.build(responseContext.getEntityStream());
+            try (InputStream responseStream = responseContext.getEntityStream()) {
+                d = sb.build(responseStream);
             } catch (Throwable t) {
                 throw new S3Exception(response, "could not parse error response", t);
             }

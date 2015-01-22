@@ -6,6 +6,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.Response;
 
 public abstract class AbstractJerseyClient {
     protected ObjectConfig objectConfig;
@@ -17,22 +18,31 @@ public abstract class AbstractJerseyClient {
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
         Invocation.Builder builder = buildRequest(client, request);
 
-        if (request instanceof EntityRequest && ((EntityRequest) request).getEntity() != null) {
-            EntityRequest entityRequest = (EntityRequest) request;
-            Entity entity = Entity.entity(entityRequest.getEntity(), entityRequest.getContentType());
+        if (request.getMethod().isRequiresEntity()) {
+            Entity entity = Entity.text("");
+            if (request instanceof EntityRequest) {
+                EntityRequest entityRequest = (EntityRequest) request;
+                entity = Entity.entity(entityRequest.getEntity(), entityRequest.getContentType());
+            }
 
             if (responseType != null) {
                 return builder.method(request.getMethod().toString(), entity, responseType);
             } else {
-                builder.method(request.getMethod().toString(), entity);
+                Response response = builder.method(request.getMethod().toString(), entity);
+                response.close();
                 return null;
             }
+        } else { // non-entity request method
 
-        } else {
+            // can't send content with non-entity methods (GET, HEAD, etc.)
+            if (request instanceof EntityRequest)
+                throw new UnsupportedOperationException("an entity request is using a non-entity method (" + request.getMethod() + ")");
+
             if (responseType != null) {
                 return builder.method(request.getMethod().toString(), responseType);
             } else {
-                builder.method(request.getMethod().toString());
+                Response response = builder.method(request.getMethod().toString());
+                response.close();
                 return null;
             }
         }

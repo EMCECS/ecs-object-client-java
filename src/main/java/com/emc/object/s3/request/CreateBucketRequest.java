@@ -9,26 +9,15 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class CreateBucketRequest extends AbstractBucketRequest<CreateBucketRequest> {
+public class CreateBucketRequest extends AbstractBucketRequest {
     private CannedAcl cannedAcl;
     private AccessControlList acl;
     private String projectId;
     private String vPoolId;
     private Boolean fileSystemEnabled;
 
-    @Override
-    protected CreateBucketRequest me() {
-        return this;
-    }
-
-    @Override
-    public Method getMethod() {
-        return Method.PUT;
-    }
-
-    @Override
-    public String getPath() {
-        return "";
+    public CreateBucketRequest(String bucketName) {
+        super(Method.PUT, bucketName, "");
     }
 
     @Override

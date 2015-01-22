@@ -1,20 +1,16 @@
 package com.emc.object.s3.request;
 
-public abstract class AbstractBucketRequest<T extends AbstractBucketRequest> extends S3Request {
+import com.emc.object.Method;
+
+public abstract class AbstractBucketRequest extends S3Request {
     private String bucketName;
 
-    protected abstract T me();
-
-    public String getBucketName() {
-        return bucketName;
-    }
-
-    public void setBucketName(String bucketName) {
+    public AbstractBucketRequest(Method method, String bucketName, String path) {
+        super(method, path);
         this.bucketName = bucketName;
     }
 
-    public T withBucketName(String bucketName) {
-        setBucketName(bucketName);
-        return me();
+    public String getBucketName() {
+        return bucketName;
     }
 }

@@ -7,26 +7,15 @@ import com.emc.object.util.RestUtil;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ListObjectsRequest extends AbstractBucketRequest<ListObjectsRequest> {
+public class ListObjectsRequest extends AbstractBucketRequest {
     private String prefix;
     private String delimiter;
     private Integer maxKeys;
     private String marker;
     private EncodingType encodingType;
 
-    @Override
-    protected ListObjectsRequest me() {
-        return this;
-    }
-
-    @Override
-    public Method getMethod() {
-        return Method.GET;
-    }
-
-    @Override
-    public String getPath() {
-        return "";
+    public ListObjectsRequest(String bucketName) {
+        super(Method.GET, bucketName, "");
     }
 
     @Override

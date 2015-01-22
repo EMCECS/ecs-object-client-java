@@ -7,7 +7,7 @@ import com.emc.object.util.RestUtil;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class ListVersionsRequest extends AbstractBucketRequest<ListVersionsRequest> {
+public class ListVersionsRequest extends AbstractBucketRequest {
     private String prefix;
     private String delimiter;
     private Integer maxKeys;
@@ -15,19 +15,8 @@ public class ListVersionsRequest extends AbstractBucketRequest<ListVersionsReque
     private String versionIdMarker;
     private EncodingType encodingType;
 
-    @Override
-    protected ListVersionsRequest me() {
-        return this;
-    }
-
-    @Override
-    public Method getMethod() {
-        return Method.GET;
-    }
-
-    @Override
-    public String getPath() {
-        return "";
+    public ListVersionsRequest(String bucketName) {
+        super(Method.GET, bucketName, "");
     }
 
     @Override

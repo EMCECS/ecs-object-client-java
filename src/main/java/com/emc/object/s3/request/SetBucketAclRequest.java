@@ -10,23 +10,12 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class SetBucketAclRequest extends AbstractBucketRequest<SetBucketAclRequest> implements EntityRequest<AccessControlList> {
+public class SetBucketAclRequest extends AbstractBucketRequest implements EntityRequest<AccessControlList> {
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
-    @Override
-    protected SetBucketAclRequest me() {
-        return this;
-    }
-
-    @Override
-    public Method getMethod() {
-        return Method.PUT;
-    }
-
-    @Override
-    public String getPath() {
-        return "";
+    public SetBucketAclRequest(String bucketName) {
+        super(Method.PUT, bucketName, "");
     }
 
     @Override

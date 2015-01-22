@@ -1,60 +1,30 @@
 package com.emc.object.s3;
 
 //import com.amazonaws.services.s3.model.CORSRule;
+
 import com.emc.object.AbstractClientTest;
-import com.emc.object.s3.bean.AccessControlList;
-import com.emc.object.s3.bean.CannedAcl;
-import com.emc.object.s3.bean.CanonicalUser;
-import com.emc.object.s3.bean.CorsConfiguration;
-import com.emc.object.s3.bean.Grant;
-import com.emc.object.s3.bean.LifecycleConfiguration;
-import com.emc.object.s3.bean.LifecycleRule;
-import com.emc.object.s3.bean.LifecycleRule.Status;
-import com.emc.object.s3.bean.ListBucketsResult;
-import com.emc.object.s3.bean.ListMultipartUploadsResult;
-import com.emc.object.s3.bean.ListObjectsResult;
-import com.emc.object.s3.bean.ListVersionsResult;
-import com.emc.object.s3.bean.LocationConstraint;
-//import com.emc.object.s3.bean.Owner;
-import com.emc.object.s3.bean.Permission;
-import com.emc.object.s3.bean.S3Object;
-import com.emc.object.s3.bean.Upload;
-import com.emc.object.s3.bean.VersioningConfiguration;
+import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.CreateBucketRequest;
-import com.emc.object.s3.request.ListBucketsRequest;
-import com.emc.object.s3.request.ListMultipartUploadsRequest;
 import com.emc.object.s3.request.ListObjectsRequest;
 import com.emc.object.s3.request.ListVersionsRequest;
 import com.emc.object.s3.request.SetBucketAclRequest;
 import com.emc.vipr.services.lib.ViprConfig;
-
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.junit.Assert;
-import org.junit.Test;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-//JMC added
-import java.util.UUID;
-
-import com.emc.object.s3.bean.CorsRule;
-import com.emc.object.s3.bean.CorsConfiguration;
-
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.*;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
-import org.junit.runners.model.FrameworkMethod;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.net.URI;
+import java.util.*;
+
+//import com.emc.object.s3.bean.Owner;
+//JMC added
 
 public class S3JerseyClientTest extends AbstractClientTest {
     protected S3Client client;
@@ -79,10 +49,10 @@ public class S3JerseyClientTest extends AbstractClientTest {
 
     @Override
     protected void cleanUpBucket(String bucketName) throws Exception {
-//        for (String key : client.listObjects(getTestBucket())) {
-//            client.deleteObject(bucketName, key);
-//        }
-        client.deleteBucket(bucketName);
+		for (S3Object object : client.listObjects(getTestBucket()).getObjects()) {
+			client.deleteObject(bucketName, object.getKey());
+		}
+		client.deleteBucket(bucketName);
     }
     
     /*
@@ -320,9 +290,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
     
     @Test 
     public void testListObjectsLor() throws Exception {
-    	ListObjectsRequest request = new ListObjectsRequest();
-    	request.setBucketName(getTestBucket());
-    	
+		ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
+
     	ListObjectsResult result = client.listObjects(request);
     	Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
     	List<S3Object> resultObjects = result.getObjects();
@@ -393,10 +362,9 @@ public class S3JerseyClientTest extends AbstractClientTest {
 
     @Test
     public void testListVersionsReq() throws Exception {
-    	ListVersionsRequest request = new ListVersionsRequest();
-    	request.setBucketName(getTestBucket());
-    	request.setPrefix(getTestBucketPrefix());
-    	ListVersionsResult lvr = client.listVersions(request);
+		ListVersionsRequest request = new ListVersionsRequest(getTestBucket());
+		request.setPrefix(getTestBucketPrefix());
+		ListVersionsResult lvr = client.listVersions(request);
     	Assert.assertNotNull(lvr.getBucketName());
     	//Assert.assertNotNull(lvr.getDelimiter());
     	//Assert.assertNotNull(lvr.getKeyMarker());
@@ -443,12 +411,12 @@ public class S3JerseyClientTest extends AbstractClientTest {
     @Test 
     public void testCreateObject() throws Exception {
     	System.out.println("JMC Entered testCreateObject");
-    	File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
-        if(!testFile.exists()) {
-        	throw new FileNotFoundException("vipr.properties");
-        }
-        //TODO - I don't understand the the prefix and name of the object I'm creating is
-        //can I specify that with this method?
+//    	File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
+//        if(!testFile.exists()) {
+//        	throw new FileNotFoundException("vipr.properties");
+//        }
+		//TODO - I don't understand the the prefix and name of the object I'm creating is
+		//can I specify that with this method?
         //Amazon S3 uses the File object
         //client.createObject(getTestBucket(), "/objectPrefix/testObject1", testFile, "text/plain");
         client.createObject(getTestBucket(), "/objectPrefix/testObject1", "/Users/conerj/vipr.properties", "text/plain");

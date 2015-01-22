@@ -3,13 +3,18 @@ package com.emc.object.s3.request;
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
 
-public class GenericBucketEntityRequest<T> extends GenericBucketRequest implements EntityRequest {
+public class PutObjectRequest<T> extends AbstractObjectRequest implements EntityRequest<T> {
     private T entity;
     private String contentType;
 
-    public GenericBucketEntityRequest(Method method, String bucketName, T entity) {
-        super(method, bucketName);
+    public PutObjectRequest(String bucketName, String key, T entity) {
+        super(Method.PUT, bucketName, key);
         this.entity = entity;
+    }
+
+    @Override
+    public String getQuery() {
+        return null;
     }
 
     @Override
@@ -26,7 +31,7 @@ public class GenericBucketEntityRequest<T> extends GenericBucketRequest implemen
         this.contentType = contentType;
     }
 
-    public GenericBucketEntityRequest withContentType(String contentType) {
+    public PutObjectRequest withContentType(String contentType) {
         setContentType(contentType);
         return this;
     }

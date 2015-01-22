@@ -59,11 +59,11 @@ public class LifecycleRule {
     }
 
     @XmlElement(name = "Expiration")
-    public Expiration getExpiration() {
+    protected Expiration getExpiration() {
         return expiration;
     }
 
-    public void setExpiration(Expiration expiration) {
+    protected void setExpiration(Expiration expiration) {
         this.expiration = expiration;
     }
 
@@ -120,7 +120,7 @@ public class LifecycleRule {
     }
 
     @XmlAccessorType(XmlAccessType.FIELD)
-    private static class Expiration {
+    protected static class Expiration {
         @XmlElement(name = "Days")
         public Integer days;
         @XmlElement(name = "Date")

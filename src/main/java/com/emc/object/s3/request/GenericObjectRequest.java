@@ -2,11 +2,11 @@ package com.emc.object.s3.request;
 
 import com.emc.object.Method;
 
-public class GenericBucketRequest extends AbstractBucketRequest {
+public class GenericObjectRequest extends AbstractObjectRequest {
     private String query;
 
-    public GenericBucketRequest(Method method, String bucketName) {
-        super(method, bucketName, "");
+    public GenericObjectRequest(Method method, String bucketName, String key) {
+        super(method, bucketName, key);
     }
 
     @Override
@@ -18,7 +18,7 @@ public class GenericBucketRequest extends AbstractBucketRequest {
         this.query = query;
     }
 
-    public GenericBucketRequest withQuery(String query) {
+    public GenericObjectRequest withQuery(String query) {
         setQuery(query);
         return this;
     }

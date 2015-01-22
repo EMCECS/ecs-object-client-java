@@ -7,7 +7,7 @@ import com.emc.object.util.RestUtil;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class ListMultipartUploadsRequest extends AbstractBucketRequest<ListMultipartUploadsRequest> {
+public class ListMultipartUploadsRequest extends AbstractBucketRequest {
     private String prefix;
     private String delimiter;
     private Integer maxUploads;
@@ -15,19 +15,8 @@ public class ListMultipartUploadsRequest extends AbstractBucketRequest<ListMulti
     private String uploadIdMarker;
     private EncodingType encodingType;
 
-    @Override
-    protected ListMultipartUploadsRequest me() {
-        return this;
-    }
-
-    @Override
-    public Method getMethod() {
-        return Method.GET;
-    }
-
-    @Override
-    public String getPath() {
-        return "";
+    public ListMultipartUploadsRequest(String bucketName) {
+        super(Method.GET, bucketName, "");
     }
 
     @Override
