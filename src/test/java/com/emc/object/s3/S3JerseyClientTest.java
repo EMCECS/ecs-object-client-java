@@ -123,6 +123,7 @@ public class S3JerseyClientTest extends AbstractClientTest {
         Assert.assertNotNull(result.getOwner());
         Assert.assertNotNull(result.getBuckets());
         //cleanUpBucket(bucketName);
+        System.out.println("JMC testListBuckets succeeded for user: " + result.getOwner().getId() +  " !!!!!!!!!!!!!!!!!!!");
     }
     
     @Test
@@ -133,6 +134,7 @@ public class S3JerseyClientTest extends AbstractClientTest {
     @Test
     public void testBucketExists() throws Exception {
     	Assert.assertTrue("Bucket " + getTestBucket() + " should exist but does NOT", client.bucketExists(getTestBucket()));
+    	System.out.println("JMC testBucketExists succeeded!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
     
     //this is tested by default in the @Before method
@@ -342,12 +344,22 @@ public class S3JerseyClientTest extends AbstractClientTest {
     
     @Test
     public void testListObjectsBucketNamePrefix() throws Exception {
-    	String myPrefix = "/testPrefix/";
+    	System.out.println("JMC Entered testListObjectsBucketNamePrefix");
+    	String myPrefix = "testPrefix";
     	int numObjects = 10;
-        this.createTestObjects("/testPrefix/", numObjects);
+        this.createTestObjects("testPrefix/", numObjects);
+        System.out.println("JMC created all test objects. Now they will be listed");
     	ListObjectsResult result = client.listObjects(getTestBucket(), myPrefix);
-    	Assert.assertNotNull(result);
+    	Assert.assertNotNull("ListObjectsResult was null and should NOT be",result);
     	Assert.assertEquals("The correct number of objects were NOT returned", numObjects, result.getObjects().size());
+    	System.out.println("JMC testListObjectsBucketNamePrefix succeeded. Going to print object names!!!!!");
+    	System.out.println(Integer.toString(result.getObjects().size()) +" were returned");
+    	//List<S3Object> s3Objects = result.getObjects();
+    	int tempInt = 0;
+    	for (S3Object s3Object: result.getObjects()) {
+    		System.out.println("s3Object[" + Integer.toString(tempInt) + "]: " + s3Object.getKey());
+    		tempInt++;
+    	}
     }
   
 
@@ -397,7 +409,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
     	Assert.assertNotNull(lvr.getVersions());
     }
     
-    protected void createTestObjects(String prefix, int numObjects) throws Exception {
+    protected void createTestObjects(String prefixWithDelim, int numObjects) throws Exception {
+    	System.out.println("JMC Entered createTestObjects. Creating " + Integer.toString(numObjects));
     	String objectName;
     	File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
         if(!testFile.exists()) {
@@ -406,8 +419,11 @@ public class S3JerseyClientTest extends AbstractClientTest {
         
         for(int i=0; i<numObjects; i++) {
         	objectName = "TestObject_" + UUID.randomUUID();
-        	client.createObject(getTestBucket(), prefix + objectName, testFile, "text");
+        	System.out.println("JMC about to create " + objectName);
+        	client.createObject(getTestBucket(), prefixWithDelim + objectName, testFile, "text/plain");
+        	System.out.println("JMC client.createObject " + objectName + " seemed to work");
         }
+        System.out.println("JMC Done creating test objects");
     }
     
     //TODO need to actually make these multi part uploads
@@ -420,12 +436,13 @@ public class S3JerseyClientTest extends AbstractClientTest {
         
         for(int i=0; i<numObjects; i++) {
         	objectName = "TestObject_" + UUID.randomUUID();
-        	client.createObject(getTestBucket(), prefix + objectName, testFile, "text");
+        	client.createObject(getTestBucket(), prefix + objectName, testFile, "text/plain");
         }
     }
     
     @Test 
     public void testCreateObject() throws Exception {
+    	System.out.println("JMC Entered testCreateObject");
     	File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
         if(!testFile.exists()) {
         	throw new FileNotFoundException("vipr.properties");
@@ -433,7 +450,16 @@ public class S3JerseyClientTest extends AbstractClientTest {
         //TODO - I don't understand the the prefix and name of the object I'm creating is
         //can I specify that with this method?
         //Amazon S3 uses the File object
-        client.createObject(getTestBucket(), "/objectPrefix/testObject", testFile, "text");
+        //client.createObject(getTestBucket(), "/objectPrefix/testObject1", testFile, "text/plain");
+        client.createObject(getTestBucket(), "/objectPrefix/testObject1", "/Users/conerj/vipr.properties", "text/plain");
+
+        System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+
+        //client.createObject(getTestBucket(), "/objectPrefix/testObject2", testFile, "text/plain");
+        client.createObject(getTestBucket(), "/objectPrefix/testObject2", "/Users/conerj/vipr.properties", "text/plain");
+
+        System.out.println("JMC testCreateObject [2] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+
     }
     
     @Test
