@@ -80,7 +80,6 @@ public final class RestUtil {
     public static String generateQuery(Map<String, Object> parameterMap) {
         StringBuilder query = new StringBuilder();
         if (parameterMap != null && !parameterMap.isEmpty()) {
-            query.append("?");
             Iterator<String> paramI = parameterMap.keySet().iterator();
             while (paramI.hasNext()) {
                 String name = paramI.next();

@@ -1,7 +1,5 @@
 package com.emc.object.s3;
 
-//import com.amazonaws.services.s3.model.CORSRule;
-
 import com.emc.object.AbstractClientTest;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
@@ -9,8 +7,6 @@ import com.emc.object.s3.request.ListObjectsRequest;
 import com.emc.object.s3.request.ListVersionsRequest;
 import com.emc.object.s3.request.SetBucketAclRequest;
 import com.emc.vipr.services.lib.ViprConfig;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -23,13 +19,9 @@ import java.io.FileNotFoundException;
 import java.net.URI;
 import java.util.*;
 
-//import com.emc.object.s3.bean.Owner;
-//JMC added
-
 public class S3JerseyClientTest extends AbstractClientTest {
     protected S3Client client;
-    protected String  secretKey;
-    
+
     @Rule
     public TestRule watcher = new TestWatcher() {
     	protected void starting(Description description) {
@@ -53,50 +45,39 @@ public class S3JerseyClientTest extends AbstractClientTest {
 			client.deleteObject(bucketName, object.getKey());
 		}
 		client.deleteBucket(bucketName);
-    }
-    
-    /*
-    protected String createBucketAndName() throws Exception {
-    	String bucketName = "TestBucket_" + UUID.randomUUID();
-    	String msg="Bucket could NOT be created";
-    	createBucket(bucketName);
-    	Assert.assertTrue(msg, client.bucketExists(bucketName));
-    	return bucketName;
-    }
-*/
+	}
+
     @Override
     public void initClient() throws Exception {
         Properties props = ViprConfig.getProperties();
 
         String accessKey = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_ACCESS_KEY_ID);
-        this.secretKey = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_SECRET_KEY);
-        String endpoint = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_ENDPOINT);
+		String secretKey = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_SECRET_KEY);
+		String endpoint = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_ENDPOINT);
         String endpoints = props.getProperty(ViprConfig.PROP_S3_ENDPOINTS);
 
         S3Config s3Config = new S3Config();
         s3Config.setEndpoints(parseUris(endpoints == null ? endpoint : endpoints));
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
-        s3Config.getProperties().put(S3Config.PROPERTY_POLL_PROTOCOL, "http");
-        s3Config.getProperties().put(S3Config.PROPERTY_POLL_PORT, "9020");
-
-        // TODO: remove when jersey request logging is fixed
-        s3Config.getProperties().put(ApacheClientProperties.CONNECTION_MANAGER, new PoolingHttpClientConnectionManager());
 
         client = new S3JerseyClient(s3Config);
     }
 
     @Test
     public void testListBuckets() throws Exception {
-    	//String bucketName = createBucketAndName();
         ListBucketsResult result = client.listBuckets();
         Assert.assertNotNull(result);
         Assert.assertNotNull(result.getOwner());
         Assert.assertNotNull(result.getBuckets());
-        //cleanUpBucket(bucketName);
+
+		Bucket bucket = new Bucket();
+		bucket.setName(getTestBucket());
+		Assert.assertTrue(result.getBuckets().contains(bucket));
+
         System.out.println("JMC testListBuckets succeeded for user: " + result.getOwner().getId() +  " !!!!!!!!!!!!!!!!!!!");
     }
-    
-    @Test
+
+	@Test
     public void testListBucketsReq() {
     	//ListBucketsResult listBuckets(ListBucketsRequest request);
     }
@@ -461,16 +442,6 @@ public class S3JerseyClientTest extends AbstractClientTest {
     // ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);
     
     
-    
-    public void sampleTest() throws Exception {
-        // create some objects
-        String key = "my-object";
-//        client.createObject(getTestBucket(), key);
-
-        // test some stuff
-
-        // done (don't have to clean up after yourself)
-    }
 
     protected List<URI> parseUris(String uriString) throws Exception {
         List<URI> uris = new ArrayList<>();
