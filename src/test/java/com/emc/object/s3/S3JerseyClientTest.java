@@ -452,12 +452,10 @@ public class S3JerseyClientTest extends AbstractClientTest {
         //Amazon S3 uses the File object
         //client.createObject(getTestBucket(), "/objectPrefix/testObject1", testFile, "text/plain");
         client.createObject(getTestBucket(), "/objectPrefix/testObject1", "/Users/conerj/vipr.properties", "text/plain");
-
         System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
 
         //client.createObject(getTestBucket(), "/objectPrefix/testObject2", testFile, "text/plain");
         client.createObject(getTestBucket(), "/objectPrefix/testObject2", "/Users/conerj/vipr.properties", "text/plain");
-
         System.out.println("JMC testCreateObject [2] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
 
     }
