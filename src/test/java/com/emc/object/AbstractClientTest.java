@@ -1,7 +1,6 @@
 package com.emc.object;
 
-import com.emc.test.util.Concurrent;
-import com.emc.test.util.ConcurrentJunitRunner;
+import com.emc.util.ConcurrentJunitRunner;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
@@ -10,7 +9,6 @@ import org.junit.runner.RunWith;
 import java.util.Random;
 
 @RunWith(ConcurrentJunitRunner.class)
-@Concurrent
 public abstract class AbstractClientTest {
     private static final Logger l4j = Logger.getLogger(AbstractClientTest.class);
     private static final Random random = new Random();

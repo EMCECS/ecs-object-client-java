@@ -1,17 +1,11 @@
 package com.emc.object.s3;
 
 import com.emc.object.AbstractClientTest;
-import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.CreateBucketRequest;
-import com.emc.object.s3.request.ListBucketsRequest;
-import com.emc.object.s3.request.ListObjectsRequest;
-import com.emc.object.s3.request.ListVersionsRequest;
-import com.emc.object.s3.request.PutObjectRequest;
-import com.emc.object.s3.request.SetBucketAclRequest;
-import com.emc.vipr.services.lib.ViprConfig;
-
+import com.emc.object.s3.request.*;
+import com.emc.object.util.TestProperties;
+import com.emc.util.TestConfig;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -23,7 +17,6 @@ import org.junit.runner.Description;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.*;
@@ -61,12 +54,12 @@ public class S3JerseyClientTest extends AbstractClientTest {
 
     @Override
     public void initClient() throws Exception {
-        Properties props = ViprConfig.getProperties();
+		Properties props = TestConfig.getProperties();
 
-        String accessKey = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_ACCESS_KEY_ID);
-		String secretKey = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_SECRET_KEY);
-		String endpoint = ViprConfig.getPropertyNotEmpty(props, ViprConfig.PROP_S3_ENDPOINT);
-        String endpoints = props.getProperty(ViprConfig.PROP_S3_ENDPOINTS);
+		String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
+		String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
+		String endpoint = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT);
+		String endpoints = props.getProperty(TestProperties.S3_ENDPOINTS);
 
         S3Config s3Config = new S3Config();
         s3Config.setEndpoints(parseUris(endpoints == null ? endpoint : endpoints));

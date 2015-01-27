@@ -2,7 +2,7 @@ package com.emc.object.util;
 
 import com.emc.object.s3.S3HostListProvider;
 import com.emc.rest.smart.SmartConfig;
-import com.emc.vipr.services.lib.ViprConfig;
+import com.emc.util.TestConfig;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.JerseyClientBuilder;
@@ -19,15 +19,15 @@ import java.util.Properties;
 public class S3HostListProviderTest {
     @Test
     public void testS3HostListProvider() throws Exception {
-        Properties viprProperties = null;
+        Properties properties = null;
         try {
-            viprProperties = ViprConfig.getProperties();
+            properties = TestConfig.getProperties();
         } catch (Exception e) {
             Assume.assumeTrue("vipr.properties missing", false);
         }
-        URI serverURI = new URI(ViprConfig.getPropertyNotEmpty(viprProperties, ViprConfig.PROP_S3_ENDPOINT));
-        String user = ViprConfig.getPropertyNotEmpty(viprProperties, ViprConfig.PROP_S3_ACCESS_KEY_ID);
-        String secret = ViprConfig.getPropertyNotEmpty(viprProperties, ViprConfig.PROP_S3_SECRET_KEY);
+        URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_ENDPOINT));
+        String user = TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_ACCESS_KEY);
+        String secret = TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_SECRET_KEY);
 
         SmartConfig smartConfig = new SmartConfig(Arrays.asList(serverURI.getHost()));
 
