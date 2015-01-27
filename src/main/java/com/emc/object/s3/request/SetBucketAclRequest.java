@@ -15,12 +15,7 @@ public class SetBucketAclRequest extends AbstractBucketRequest implements Entity
     private CannedAcl cannedAcl;
 
     public SetBucketAclRequest(String bucketName) {
-        super(Method.PUT, bucketName, "");
-    }
-
-    @Override
-    public String getQuery() {
-        return "acl";
+        super(Method.PUT, bucketName, "", "acl");
     }
 
     @Override

@@ -1,29 +1,38 @@
 package com.emc.object;
 
+import com.emc.object.util.RestUtil;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class ObjectRequest {
+public class ObjectRequest {
     private String namespace;
     private Method method;
     private String path;
+    private String subresource;
 
     /**
-     * @param method the HTTP method to use for the request
-     * @param path the context-relative path of the request (i.e. the object key/path). Be sure to exclude
-     *             dynamic path properties such as bucket or namespace. Since this is context-relative, also exclude
-     *             the base context of the service (i.e. /rest for Atmos).
+     * @param method      the HTTP method to use for the request
+     * @param path        the context-relative path of the request (i.e. the object key/path). Be sure to exclude
+     *                    dynamic path properties such as bucket or namespace. Since this is context-relative, also exclude
+     *                    the base context of the service (i.e. /rest for Atmos).
+     * @param subresource the subresource of the request. This will be the first parameter in the querystring and will
+     *                    not have an associated value (i.e. "acl" => ?acl).
      */
-    public ObjectRequest(Method method, String path) {
+    public ObjectRequest(Method method, String path, String subresource) {
         this.method = method;
         this.path = path;
+        this.subresource = subresource;
     }
 
     /**
-     * Implement to return the request-specific querystring based on properties of the request.
+     * Override to return the request-specific query parameters based on properties of the request. Do NOT include the
+     * subresource in this map; it will be inserted automatically.
      */
-    public abstract String getQuery();
+    public Map<String, Object> getQueryParams() {
+        return new HashMap<>();
+    }
 
     /**
      * Override to return request-specific headers based on properties of the request. Always call super() first and
@@ -31,6 +40,13 @@ public abstract class ObjectRequest {
      */
     public Map<String, List<Object>> getHeaders() {
         return new HashMap<>();
+    }
+
+    public final String getQueryString() {
+        String queryString = "";
+        if (subresource != null) queryString += subresource + "&";
+        queryString += RestUtil.generateQueryString(getQueryParams());
+        return queryString;
     }
 
     public String getNamespace() {
@@ -47,5 +63,9 @@ public abstract class ObjectRequest {
 
     public String getPath() {
         return path;
+    }
+
+    public String getSubresource() {
+        return subresource;
     }
 }

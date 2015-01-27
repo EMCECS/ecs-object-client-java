@@ -2,9 +2,7 @@ package com.emc.object.s3.request;
 
 import com.emc.object.Method;
 import com.emc.object.s3.S3Constants;
-import com.emc.object.util.RestUtil;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class ListMultipartUploadsRequest extends AbstractBucketRequest {
@@ -16,20 +14,19 @@ public class ListMultipartUploadsRequest extends AbstractBucketRequest {
     private EncodingType encodingType;
 
     public ListMultipartUploadsRequest(String bucketName) {
-        super(Method.GET, bucketName, "");
+        super(Method.GET, bucketName, "", "uploads");
     }
 
     @Override
-    public String getQuery() {
-        Map<String, Object> paramMap = new LinkedHashMap<>(); // preserve order (?version needs to come first)
-        paramMap.put("uploads", null);
+    public Map<String, Object> getQueryParams() {
+        Map<String, Object> paramMap = super.getQueryParams();
         if (prefix != null) paramMap.put(S3Constants.PARAM_PREFIX, prefix);
         if (delimiter != null) paramMap.put(S3Constants.PARAM_DELIMITER, delimiter);
         if (maxUploads != null) paramMap.put(S3Constants.PARAM_MAX_UPLOADS, maxUploads);
         if (keyMarker != null) paramMap.put(S3Constants.PARAM_KEY_MARKER, keyMarker);
         if (uploadIdMarker != null) paramMap.put(S3Constants.PARAM_UPLOAD_ID_MARKER, uploadIdMarker);
         if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType);
-        return RestUtil.generateQuery(paramMap);
+        return paramMap;
     }
 
     public String getPrefix() {

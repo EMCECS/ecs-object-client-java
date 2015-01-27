@@ -17,12 +17,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     private Boolean fileSystemEnabled;
 
     public CreateBucketRequest(String bucketName) {
-        super(Method.PUT, bucketName, "");
-    }
-
-    @Override
-    public String getQuery() {
-        return null;
+        super(Method.PUT, bucketName, "", null);
     }
 
     @Override

@@ -4,6 +4,7 @@ public final class S3Constants {
     public static final String XML_NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01";
 
     public static final String AMZ_PREFIX = "x-amz-";
+    public static final String AMZ_META_PREFIX = AMZ_PREFIX + "meta-";
 
     public static final String AMZ_DATE = AMZ_PREFIX + "date";
     public static final String AMZ_ACL = AMZ_PREFIX + "acl";
@@ -12,6 +13,8 @@ public final class S3Constants {
     public static final String AMZ_GRANT_READ_ACP = AMZ_PREFIX + "grant-read-acp";
     public static final String AMZ_GRANT_WRITE_ACP = AMZ_PREFIX + "grant-write-acp";
     public static final String AMZ_GRANT_FULL_CONTROL = AMZ_PREFIX + "grant-full-control";
+    public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";
+    public static final String AMZ_EXPIRATION = AMZ_PREFIX + "expiration";
 
     public static final String PARAM_EXPIRES = "Expires";
     public static final String PARAM_RESPONSE_HEADER_CACHE_CONTROL = "response-cache-control";

@@ -62,25 +62,25 @@ public interface S3Client {
 
     ListVersionsResult listVersions(ListVersionsRequest request);
 
-    /**
-     * Will fail if object exists
-     */
-    void createObject(String bucketName, String key, Object content, String contentType);
+    void putObject(String bucketName, String key, Object content, String contentType);
 
-    /**
-     * Will fail if object does not exist
-     */
-    void updateObject(String bucketName, String key, Range range, Object content);
+    void putObject(String bucketName, String key, Range range, Object content);
 
-    void putObject(PutObjectRequest request);
+    PutObjectResult putObject(PutObjectRequest request);
 
     <T> T readObject(String bucketName, String key, Class<T> objectType);
+
+    <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 
     void deleteObject(String bucketName, String key);
 
     void deleteVersion(String bucketName, String key, String versionId);
 
     DeleteObjectsResult deleteObjects(DeleteObjectsRequest request);
+
+    S3ObjectMetadata getObjectMetadata(String bucketName, String key);
+
+    S3ObjectMetadata getObjectMetadata(GetObjectMetadataRequest request);
 
     void setObjectAcl(String bucketName, String key, AccessControlList acl);
 

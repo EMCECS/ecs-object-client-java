@@ -11,7 +11,7 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
     private DeleteObjects deleteObjects;
 
     public DeleteObjectsRequest(String bucketName) {
-        super(Method.POST, bucketName, "");
+        super(Method.POST, bucketName, "", "delete");
     }
 
     @Override
@@ -22,11 +22,6 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
     @Override
     public String getContentType() {
         return RestUtil.TYPE_APPLICATION_XML;
-    }
-
-    @Override
-    public String getQuery() {
-        return "delete";
     }
 
     public DeleteObjects getDeleteObjects() {

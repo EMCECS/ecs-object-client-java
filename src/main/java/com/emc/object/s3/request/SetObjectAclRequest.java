@@ -10,18 +10,20 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class SetObjectAclRequest extends AbstractObjectRequest implements EntityRequest<AccessControlList> {
+public class SetObjectAclRequest extends S3ObjectRequest implements EntityRequest<AccessControlList> {
     private String versionId;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
     public SetObjectAclRequest(String bucketName, String key) {
-        super(Method.PUT, bucketName, key);
+        super(Method.PUT, bucketName, key, "acl");
     }
 
     @Override
-    public String getQuery() {
-        return "acl";
+    public Map<String, Object> getQueryParams() {
+        Map<String, Object> queryParams = super.getQueryParams();
+        if (versionId != null) queryParams.put("versionId", versionId);
+        return queryParams;
     }
 
     @Override

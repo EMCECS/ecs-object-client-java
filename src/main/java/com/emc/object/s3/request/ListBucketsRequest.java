@@ -1,26 +1,25 @@
 package com.emc.object.s3.request;
 
 import com.emc.object.Method;
+import com.emc.object.ObjectRequest;
 import com.emc.object.s3.S3Constants;
-import com.emc.object.util.RestUtil;
 
-import java.util.HashMap;
 import java.util.Map;
 
-public class ListBucketsRequest extends S3Request {
+public class ListBucketsRequest extends ObjectRequest {
     private Integer limit;
     private String marker;
 
     public ListBucketsRequest() {
-        super(Method.GET, "");
+        super(Method.GET, "", null);
     }
 
     @Override
-    public String getQuery() {
-        Map<String, Object> queryMap = new HashMap<>();
+    public Map<String, Object> getQueryParams() {
+        Map<String, Object> queryMap = super.getQueryParams();
         if (limit != null) queryMap.put(S3Constants.PARAM_LIMIT, limit);
         if (marker != null) queryMap.put(S3Constants.PARAM_MARKER, marker);
-        return RestUtil.generateQuery(queryMap);
+        return queryMap;
     }
 
     public Integer getLimit() {

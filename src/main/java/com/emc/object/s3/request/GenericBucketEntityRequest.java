@@ -7,8 +7,8 @@ public class GenericBucketEntityRequest<T> extends GenericBucketRequest implemen
     private T entity;
     private String contentType;
 
-    public GenericBucketEntityRequest(Method method, String bucketName, T entity) {
-        super(method, bucketName);
+    public GenericBucketEntityRequest(Method method, String bucketName, String subresource, T entity) {
+        super(method, bucketName, subresource);
         this.entity = entity;
     }
 

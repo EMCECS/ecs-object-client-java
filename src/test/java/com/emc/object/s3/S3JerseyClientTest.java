@@ -452,8 +452,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
         for(int i=0; i<numObjects; i++) {
         	objectName = "TestObject_" + UUID.randomUUID();
         	System.out.println("JMC about to create " + objectName);
-        	client.createObject(bucket, prefixWithDelim + objectName, testFile, "text/plain");
-        	System.out.println("JMC client.createObject " + objectName + " seemed to work");
+			client.putObject(bucket, prefixWithDelim + objectName, testFile, "text/plain");
+			System.out.println("JMC client.createObject " + objectName + " seemed to work");
         }
         System.out.println("JMC Done creating test objects");	
     }
@@ -468,8 +468,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
         
         for(int i=0; i<numObjects; i++) {
         	objectName = "TestObject_" + UUID.randomUUID();
-        	client.createObject(getTestBucket(), prefix + objectName, testFile, "text/plain");
-        }
+			client.putObject(getTestBucket(), prefix + objectName, testFile, "text/plain");
+		}
     }
     
     @Test 
@@ -482,12 +482,12 @@ public class S3JerseyClientTest extends AbstractClientTest {
 //        }
 	
         //client.createObject(getTestBucket(), "/objectPrefix/testObject1", testFile, "text/plain");
-        client.createObject(getTestBucket(), "/objectPrefix/testObject1", fileName, "text/plain");
-        System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+		client.putObject(getTestBucket(), "/objectPrefix/testObject1", fileName, "text/plain");
+		System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
 
         //client.createObject(getTestBucket(), "/objectPrefix/testObject2", testFile, "text/plain");
-        client.createObject(getTestBucket(), "/objectPrefix/testObject2", fileName, "text/plain");
-        System.out.println("JMC testCreateObject [2] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+		client.putObject(getTestBucket(), "/objectPrefix/testObject2", fileName, "text/plain");
+		System.out.println("JMC testCreateObject [2] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
     }
     
     @Test(expected=Exception.class)
@@ -498,12 +498,12 @@ public class S3JerseyClientTest extends AbstractClientTest {
     	thrown.expectMessage("Test succeeds. Fail was expected. Can NOT create a duplicate object");
     	
     	//create the first object which should succeed
-        client.createObject(getTestBucket(), "testObject1", fileName, "text/plain");
-        System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+		client.putObject(getTestBucket(), "testObject1", fileName, "text/plain");
+		System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
 
         //create object with the same key key which should fail
-        client.createObject(getTestBucket(), "testObject1", fileName, "text/plain");
-        System.out.println("JMC testCreateObject [2] with same name seemed to succeed again but should NOT have");
+		client.putObject(getTestBucket(), "testObject1", fileName, "text/plain");
+		System.out.println("JMC testCreateObject [2] with same name seemed to succeed again but should NOT have");
     }
     
     @Test
@@ -543,8 +543,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
     public void testUpdateObject() throws Exception {
     	String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
     	//create the initial object
-        client.createObject(getTestBucket(), "testObject1", fileName, "text/plain");
-        System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+		client.putObject(getTestBucket(), "testObject1", fileName, "text/plain");
+		System.out.println("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
  
         //TODO figure out this Range class thing
         //client.updateObject(getTestBucket(), "testObect1", range, content);
@@ -555,8 +555,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
     	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
     	String key = "objectKey";
     	PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), fileName, key);
-    	request.setContentType("text/plain");
-    	client.putObject(request);
+		request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+		client.putObject(request);
     	System.out.println("JMC - Seemed to succeed");
     	
     	ListObjectsResult result = client.listObjects(getTestBucket());
@@ -572,8 +572,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
     	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
     	String key = "objectKey";
     	PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), fileName, key);
-    	request.setContentType("text/plain");
-    	client.putObject(request);
+		request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+		client.putObject(request);
     	System.out.println("JMC - successfully created the test object. will read object");
     	/*
     	InputStream is = client.readObject(getTestBucket(), fileName, InputStream.class);

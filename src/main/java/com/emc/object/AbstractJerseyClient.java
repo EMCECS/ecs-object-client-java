@@ -15,7 +15,7 @@ public abstract class AbstractJerseyClient {
         this.objectConfig = objectConfig;
     }
 
-    protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
+    protected Response executeRequest(Client client, ObjectRequest request) {
         Invocation.Builder builder = buildRequest(client, request);
 
         if (request.getMethod().isRequiresEntity()) {
@@ -25,31 +25,31 @@ public abstract class AbstractJerseyClient {
                 entity = Entity.entity(entityRequest.getEntity(), entityRequest.getContentType());
             }
 
-            if (responseType != null) {
-                return builder.method(request.getMethod().toString(), entity, responseType);
-            } else {
-                Response response = builder.method(request.getMethod().toString(), entity);
-                response.close();
-                return null;
-            }
+            return builder.method(request.getMethod().toString(), entity);
         } else { // non-entity request method
 
             // can't send content with non-entity methods (GET, HEAD, etc.)
             if (request instanceof EntityRequest)
                 throw new UnsupportedOperationException("an entity request is using a non-entity method (" + request.getMethod() + ")");
 
-            if (responseType != null) {
-                return builder.method(request.getMethod().toString(), responseType);
-            } else {
-                Response response = builder.method(request.getMethod().toString());
-                response.close();
-                return null;
-            }
+            return builder.method(request.getMethod().toString());
         }
     }
 
+    protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
+        Response response = executeRequest(client, request);
+        T responseEntity = response.readEntity(responseType);
+        fillResponseEntity(responseEntity, response);
+        return responseEntity;
+    }
+
+    protected void fillResponseEntity(Object responseEntity, Response response) {
+        if (responseEntity instanceof ObjectResponse)
+            ((ObjectResponse) responseEntity).setHeaders(response.getHeaders());
+    }
+
     protected Invocation.Builder buildRequest(Client client, ObjectRequest request) {
-        Invocation.Builder builder = client.target(objectConfig.resolvePath(request.getPath(), request.getQuery())).request();
+        Invocation.Builder builder = client.target(objectConfig.resolvePath(request.getPath(), request.getQueryString())).request();
 
         // set namespace
         String namespace = request.getNamespace() != null ? request.getNamespace() : objectConfig.getNamespace();

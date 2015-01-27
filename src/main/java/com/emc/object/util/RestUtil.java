@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -11,6 +12,14 @@ public final class RestUtil {
     public static final String HEADER_DATE = "Date";
     public static final String HEADER_CONTENT_MD5 = "Content-MD5";
     public static final String HEADER_CONTENT_TYPE = "Content-Type";
+    public static final String HEADER_RANGE = "Range";
+    public static final String HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
+    public static final String HEADER_IF_UNMODIFIED_SINE = "If-Unmodified-Since";
+    public static final String HEADER_IF_MATCH = "If-Match";
+    public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
+    public static final String HEADER_LAST_MODIFIED = "Last-Modified";
+    public static final String HEADER_ETAG = "ETag";
+    public static final String HEADER_CONTENT_LENGTH = "Content-Length";
 
     public static final String EMC_PREFIX = "x-emc-";
 
@@ -25,6 +34,7 @@ public final class RestUtil {
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
 
     public static final int STATUS_REDIRECT = 301;
+    public static final int STATUS_UNAUTHORIZED = 403;
     public static final int STATUS_NOT_FOUND = 404;
 
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
@@ -77,7 +87,7 @@ public final class RestUtil {
     /**
      * URL-encodes names and values
      */
-    public static String generateQuery(Map<String, Object> parameterMap) {
+    public static String generateQueryString(Map<String, Object> parameterMap) {
         StringBuilder query = new StringBuilder();
         if (parameterMap != null && !parameterMap.isEmpty()) {
             Iterator<String> paramI = parameterMap.keySet().iterator();
@@ -107,8 +117,16 @@ public final class RestUtil {
         return delimited.toString();
     }
 
-    public static synchronized String headerFormat(Date date) {
+    public static String headerFormat(Date date) {
         return getHeaderFormat().format(date);
+    }
+
+    public static Date headerParse(String dateString) {
+        try {
+            return getHeaderFormat().parse(dateString);
+        } catch (ParseException e) {
+            throw new RuntimeException("invalid date header: " + dateString, e);
+        }
     }
 
     public static String urlEncode(String value) {
