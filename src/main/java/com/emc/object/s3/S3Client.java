@@ -77,4 +77,16 @@ public interface S3Client {
     <T> T readObject(String bucketName, String key, Class<T> objectType);
 
     void deleteObject(String bucketName, String key);
+
+    void deleteVersion(String bucketName, String key, String versionId);
+
+    DeleteObjectsResult deleteObjects(DeleteObjectsRequest request);
+
+    void setObjectAcl(String bucketName, String key, AccessControlList acl);
+
+    void setObjectAcl(String bucketName, String key, CannedAcl cannedAcl);
+
+    void setObjectAcl(SetObjectAclRequest request);
+
+    AccessControlList getObjectAcl(String bucketName, String key);
 }

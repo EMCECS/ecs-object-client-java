@@ -51,4 +51,14 @@ public abstract class AbstractS3Client extends AbstractJerseyClient implements S
     public ListMultipartUploadsResult listMultipartUploads(String bucketName) {
         return listMultipartUploads(new ListMultipartUploadsRequest(bucketName));
     }
+
+    @Override
+    public void setObjectAcl(String bucketName, String key, AccessControlList acl) {
+        setObjectAcl(new SetObjectAclRequest(bucketName, key).withAcl(acl));
+    }
+
+    @Override
+    public void setObjectAcl(String bucketName, String key, CannedAcl cannedAcl) {
+        setObjectAcl(new SetObjectAclRequest(bucketName, key).withCannedAcl(cannedAcl));
+    }
 }

@@ -18,7 +18,7 @@ public class VersioningConfiguration {
     }
 
     @XmlEnum
-    private static enum Status {
+    public static enum Status {
         Enabled, Suspended
     }
 }

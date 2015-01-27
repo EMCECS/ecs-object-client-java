@@ -204,12 +204,35 @@ public class S3JerseyClient extends AbstractS3Client {
 
     @Override
     public <T> T readObject(String bucketName, String key, Class<T> objectType) {
-        return null;
+        return executeRequest(client, new GenericObjectRequest(Method.GET, bucketName, key), objectType);
     }
 
     @Override
     public void deleteObject(String bucketName, final String key) {
         executeRequest(client, new GenericObjectRequest(Method.DELETE, bucketName, key), null);
+    }
+
+    @Override
+    public void deleteVersion(String bucketName, String key, String versionId) {
+        String query = "versionId=" + versionId;
+        S3Request request = new GenericObjectRequest(Method.DELETE, bucketName, key).withQuery(query);
+        executeRequest(client, request, null);
+    }
+
+    @Override
+    public DeleteObjectsResult deleteObjects(DeleteObjectsRequest request) {
+        return executeRequest(client, request, DeleteObjectsResult.class);
+    }
+
+    @Override
+    public void setObjectAcl(SetObjectAclRequest request) {
+        executeRequest(client, request, null);
+    }
+
+    @Override
+    public AccessControlList getObjectAcl(String bucketName, String key) {
+        S3Request request = new GenericObjectRequest(Method.GET, bucketName, key).withQuery("acl");
+        return executeRequest(client, request, AccessControlList.class);
     }
 
     @Override
