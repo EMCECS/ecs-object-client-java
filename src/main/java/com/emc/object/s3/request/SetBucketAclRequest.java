@@ -35,6 +35,11 @@ public class SetBucketAclRequest extends AbstractBucketRequest implements Entity
         return RestUtil.TYPE_APPLICATION_XML;
     }
 
+    @Override
+    public Long getContentLength() {
+        return null; // assuming the XML will be smaller than the configured entity buffer
+    }
+
     public AccessControlList getAcl() {
         return acl;
     }

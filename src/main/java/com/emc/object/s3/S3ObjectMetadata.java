@@ -89,6 +89,38 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
     }
 
+    public String getContentDisposition() {
+        return RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_DISPOSITION).toString();
+    }
+
+    public void setContentDisposition(String contentDisposition) {
+        RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_DISPOSITION, contentDisposition);
+    }
+
+    public String getContentEncoding() {
+        return RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_ENCODING).toString();
+    }
+
+    public void setContentEncoding(String contentEncoding) {
+        RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_ENCODING, contentEncoding);
+    }
+
+    public String getCacheControl() {
+        return RestUtil.getFirst(headers, RestUtil.HEADER_CACHE_CONTROL).toString();
+    }
+
+    public void setCacheControl(String cacheControl) {
+        RestUtil.putSingle(headers, RestUtil.HEADER_CACHE_CONTROL, cacheControl);
+    }
+
+    public Date getHttpExpires() {
+        return RestUtil.headerParse(RestUtil.getFirst(headers, RestUtil.HEADER_EXPIRES).toString());
+    }
+
+    public void setHttpExpires(Date httpExpires) {
+        RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
+    }
+
     public String getVersionId() {
         return RestUtil.getFirst(headers, S3Constants.AMZ_VERSION_ID).toString();
     }
@@ -130,6 +162,26 @@ public class S3ObjectMetadata {
 
     public S3ObjectMetadata withContentMd5(String contentMd5) {
         setContentMd5(contentMd5);
+        return this;
+    }
+
+    public S3ObjectMetadata withContentDisposition(String contentDisposition) {
+        setContentDisposition(contentDisposition);
+        return this;
+    }
+
+    public S3ObjectMetadata withContentEncoding(String contentEncoding) {
+        setContentEncoding(contentEncoding);
+        return this;
+    }
+
+    public S3ObjectMetadata withCacheControl(String cacheControl) {
+        setCacheControl(cacheControl);
+        return this;
+    }
+
+    public S3ObjectMetadata withHttpExpires(Date httpExpires) {
+        setHttpExpires(httpExpires);
         return this;
     }
 

@@ -22,6 +22,11 @@ public class GenericBucketEntityRequest<T> extends GenericBucketRequest implemen
         return contentType;
     }
 
+    @Override
+    public Long getContentLength() {
+        return null; // assuming bucket-related *request* entities will be smaller than the configured entity buffer
+    }
+
     public void setContentType(String contentType) {
         this.contentType = contentType;
     }

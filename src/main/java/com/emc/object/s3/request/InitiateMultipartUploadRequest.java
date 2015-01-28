@@ -1,8 +1,6 @@
 package com.emc.object.s3.request;
 
-import com.emc.object.EntityRequest;
 import com.emc.object.Method;
-import com.emc.object.Range;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
@@ -12,40 +10,22 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class PutObjectRequest<T> extends S3ObjectRequest implements EntityRequest<T> {
+public class InitiateMultipartUploadRequest extends S3ObjectRequest {
     private S3ObjectMetadata objectMetadata;
-    private T object;
-    private Range range;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
-    public PutObjectRequest(String bucketName, String key, T object) {
-        super(Method.PUT, bucketName, key, null);
-        this.object = object;
+    public InitiateMultipartUploadRequest(String bucketName, String key) {
+        super(Method.POST, bucketName, key, "uploads");
     }
 
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
-        headers.putAll(objectMetadata.toHeaders());
+        if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         return headers;
-    }
-
-    @Override
-    public T getEntity() {
-        return getObject();
-    }
-
-    @Override
-    public String getContentType() {
-        return objectMetadata != null ? objectMetadata.getContentType() : null;
-    }
-
-    @Override
-    public Long getContentLength() {
-        return objectMetadata != null ? objectMetadata.getContentLength() : null;
     }
 
     public S3ObjectMetadata getObjectMetadata() {
@@ -54,18 +34,6 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
 
     public void setObjectMetadata(S3ObjectMetadata objectMetadata) {
         this.objectMetadata = objectMetadata;
-    }
-
-    public T getObject() {
-        return object;
-    }
-
-    public Range getRange() {
-        return range;
-    }
-
-    public void setRange(Range range) {
-        this.range = range;
     }
 
     public AccessControlList getAcl() {
@@ -84,22 +52,17 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
         this.cannedAcl = cannedAcl;
     }
 
-    public PutObjectRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
+    public InitiateMultipartUploadRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
     }
 
-    public PutObjectRequest withRange(Range range) {
-        setRange(range);
-        return this;
-    }
-
-    public PutObjectRequest withAcl(AccessControlList acl) {
+    public InitiateMultipartUploadRequest withAcl(AccessControlList acl) {
         setAcl(acl);
         return this;
     }
 
-    public PutObjectRequest withCannedAcl(CannedAcl cannedAcl) {
+    public InitiateMultipartUploadRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
         return this;
     }

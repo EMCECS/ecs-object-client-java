@@ -43,6 +43,11 @@ public class SetObjectAclRequest extends S3ObjectRequest implements EntityReques
         return RestUtil.TYPE_APPLICATION_XML;
     }
 
+    @Override
+    public Long getContentLength() {
+        return null; // assuming the XML will be smaller than the configured entity buffer
+    }
+
     public String getVersionId() {
         return versionId;
     }

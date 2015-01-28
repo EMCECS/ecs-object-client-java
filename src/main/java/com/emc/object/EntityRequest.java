@@ -4,4 +4,6 @@ public interface EntityRequest<T> {
     public T getEntity();
 
     public String getContentType();
+
+    public Long getContentLength();
 }

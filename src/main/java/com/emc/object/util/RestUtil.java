@@ -20,6 +20,10 @@ public final class RestUtil {
     public static final String HEADER_LAST_MODIFIED = "Last-Modified";
     public static final String HEADER_ETAG = "ETag";
     public static final String HEADER_CONTENT_LENGTH = "Content-Length";
+    public static final String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
+    public static final String HEADER_CONTENT_ENCODING = "Content-Encoding";
+    public static final String HEADER_CACHE_CONTROL = "Cache-Control";
+    public static final String HEADER_EXPIRES = "Expires";
 
     public static final String EMC_PREFIX = "x-emc-";
 

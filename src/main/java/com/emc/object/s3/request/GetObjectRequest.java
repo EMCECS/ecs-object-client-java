@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GetObjectRequest extends S3ObjectRequest {
+public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectRequest {
     private String versionId;
     private Range range;
     private Date ifModifiedSince;
@@ -105,19 +105,22 @@ public class GetObjectRequest extends S3ObjectRequest {
         this.headerOverrides = headerOverrides;
     }
 
-    public GetObjectRequest withVersionId(String versionId) {
+    @SuppressWarnings("unchecked")
+    public T withVersionId(String versionId) {
         setVersionId(versionId);
-        return this;
+        return (T) this;
     }
 
-    public GetObjectRequest withRange(Range range) {
+    @SuppressWarnings("unchecked")
+    public T withRange(Range range) {
         setRange(range);
-        return this;
+        return (T) this;
     }
 
-    public synchronized GetObjectRequest headerOverride(ResponseHeaderOverride override, String value) {
+    @SuppressWarnings("unchecked")
+    public synchronized T headerOverride(ResponseHeaderOverride override, String value) {
         if (headerOverrides == null) headerOverrides = new HashMap<>();
         headerOverrides.put(override, value);
-        return this;
+        return (T) this;
     }
 }

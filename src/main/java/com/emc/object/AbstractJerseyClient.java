@@ -7,12 +7,19 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.Response;
+import java.io.InputStream;
 
 public abstract class AbstractJerseyClient {
     protected ObjectConfig objectConfig;
 
     protected AbstractJerseyClient(ObjectConfig objectConfig) {
         this.objectConfig = objectConfig;
+    }
+
+    protected Response executeAndClose(Client client, ObjectRequest request) {
+        Response response = executeRequest(client, request);
+        response.close();
+        return response;
     }
 
     protected Response executeRequest(Client client, ObjectRequest request) {
@@ -23,6 +30,13 @@ public abstract class AbstractJerseyClient {
             if (request instanceof EntityRequest) {
                 EntityRequest entityRequest = (EntityRequest) request;
                 entity = Entity.entity(entityRequest.getEntity(), entityRequest.getContentType());
+
+                // make sure input streams have a content length
+                if (entityRequest.getEntity() instanceof InputStream) {
+                    if (entityRequest.getContentLength() == null)
+                        throw new UnsupportedOperationException("you must specify a content length with an input stream");
+                    builder.header(RestUtil.HEADER_CONTENT_LENGTH, entityRequest.getContentLength());
+                }
             }
 
             return builder.method(request.getMethod().toString(), entity);

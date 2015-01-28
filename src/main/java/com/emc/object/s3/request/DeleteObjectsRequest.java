@@ -24,6 +24,11 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
         return RestUtil.TYPE_APPLICATION_XML;
     }
 
+    @Override
+    public Long getContentLength() {
+        return null; // assuming the XML will be smaller than the configure entity buffer
+    }
+
     public DeleteObjects getDeleteObjects() {
         return deleteObjects;
     }

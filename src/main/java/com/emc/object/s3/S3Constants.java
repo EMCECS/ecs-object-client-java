@@ -36,6 +36,8 @@ public final class S3Constants {
     public static final String PARAM_VERSION_ID_MARKER = "version-id-marker";
     public static final String PARAM_MAX_UPLOADS = "max-uploads";
     public static final String PARAM_UPLOAD_ID_MARKER = "upload-id-marker";
+    public static final String PARAM_UPLOAD_ID = "uploadId";
+    public static final String PARAM_PART_NUMBER = "partNumber";
 
     public static final String PROPERTY_BUCKET_NAME = "com.emc.object.s3.bucketName";
 

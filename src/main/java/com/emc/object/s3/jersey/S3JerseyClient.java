@@ -15,9 +15,11 @@ import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.JerseyClientBuilder;
 
 import javax.ws.rs.Priorities;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.Response;
+import java.io.StringReader;
 import java.net.URI;
 
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
@@ -89,7 +91,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public boolean bucketExists(String bucketName) {
         try {
-            executeRequest(client, new GenericBucketRequest(Method.HEAD, bucketName, null));
+            executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null));
             return true;
         } catch (S3Exception e) {
             switch (e.getResponse().getStatus()) {
@@ -111,12 +113,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void createBucket(CreateBucketRequest request) {
-        executeRequest(client, request);
+        executeAndClose(client, request);
     }
 
     @Override
     public void deleteBucket(String bucketName) {
-        executeRequest(client, new GenericBucketRequest(Method.DELETE, bucketName, null));
+        executeAndClose(client, new GenericBucketRequest(Method.DELETE, bucketName, null));
     }
 
     @Override
@@ -131,7 +133,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void setBucketAcl(SetBucketAclRequest request) {
-        executeRequest(client, request);
+        executeAndClose(client, request);
     }
 
     @Override
@@ -144,7 +146,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public void setBucketCors(String bucketName, CorsConfiguration corsConfiguration) {
         ObjectRequest request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, "cors", corsConfiguration)
                 .withContentType(RestUtil.TYPE_APPLICATION_XML);
-        executeRequest(client, request);
+        executeAndClose(client, request);
     }
 
     @Override
@@ -155,14 +157,14 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void deleteBucketCors(String bucketName) {
-        executeRequest(client, new GenericBucketRequest(Method.DELETE, bucketName, "cors"));
+        executeAndClose(client, new GenericBucketRequest(Method.DELETE, bucketName, "cors"));
     }
 
     @Override
     public void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration) {
         ObjectRequest request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, "lifecycle", lifecycleConfiguration)
                 .withContentType(RestUtil.TYPE_APPLICATION_XML);
-        executeRequest(client, request);
+        executeAndClose(client, request);
     }
 
     @Override
@@ -173,7 +175,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void deleteBucketLifecycle(String bucketName) {
-        executeRequest(client, new GenericBucketRequest(Method.DELETE, bucketName, "lifecycle"));
+        executeAndClose(client, new GenericBucketRequest(Method.DELETE, bucketName, "lifecycle"));
     }
 
     @Override
@@ -186,7 +188,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration) {
         ObjectRequest request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, "versioning", versioningConfiguration)
                 .withContentType(RestUtil.TYPE_APPLICATION_XML);
-        executeRequest(client, request);
+        executeAndClose(client, request);
     }
 
     @Override
@@ -234,7 +236,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
         PutObjectResult result = new PutObjectResult();
-        fillResponseEntity(result, executeRequest(client, request));
+        fillResponseEntity(result, executeAndClose(client, request));
         return result;
     }
 
@@ -245,21 +247,27 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType) {
-        GetObjectResult<T> result = new GetObjectResult<>();
-        Response response = executeRequest(client, request);
-        fillResponseEntity(result, response);
-        result.setObject(response.readEntity(objectType));
-        return result;
+        try {
+            GetObjectResult<T> result = new GetObjectResult<>();
+            Response response = executeRequest(client, request);
+            fillResponseEntity(result, response);
+            result.setObject(response.readEntity(objectType));
+            return result;
+        } catch (S3Exception e) {
+            // a 304 or 412 means If-* headers were used and a condition failed
+            if (e.getResponse().getStatus() == 304 || e.getResponse().getStatus() == 412) return null;
+            throw e;
+        }
     }
 
     @Override
     public void deleteObject(String bucketName, final String key) {
-        executeRequest(client, new S3ObjectRequest(Method.DELETE, bucketName, key, null));
+        executeAndClose(client, new S3ObjectRequest(Method.DELETE, bucketName, key, null));
     }
 
     @Override
     public void deleteVersion(String bucketName, String key, String versionId) {
-        executeRequest(client, new S3ObjectRequest(Method.DELETE, bucketName, key, "versionId=" + versionId));
+        executeAndClose(client, new S3ObjectRequest(Method.DELETE, bucketName, key, "versionId=" + versionId));
     }
 
     @Override
@@ -274,7 +282,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public S3ObjectMetadata getObjectMetadata(GetObjectMetadataRequest request) {
-        return null;
+        try {
+            return S3ObjectMetadata.fromHeaders(executeAndClose(client, request).getHeaders());
+        } catch (S3Exception e) {
+            // a 304 or 412 means If-* headers were used and a condition failed
+            if (e.getResponse().getStatus() == 304 || e.getResponse().getStatus() == 412) return null;
+            throw e;
+        }
     }
 
     @Override
@@ -289,7 +303,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void setObjectAcl(SetObjectAclRequest request) {
-        executeRequest(client, request);
+        executeAndClose(client, request);
     }
 
     @Override
@@ -306,6 +320,45 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request) {
         return executeRequest(client, request, ListMultipartUploadsResult.class);
+    }
+
+    @Override
+    public String initiateMultipartUpload(String bucketName, String key) {
+        return initiateMultipartUpload(new InitiateMultipartUploadRequest(bucketName, key)).getUploadId();
+    }
+
+    @Override
+    public InitiateMultipartUploadResult initiateMultipartUpload(InitiateMultipartUploadRequest request) {
+        return executeRequest(client, request, InitiateMultipartUploadResult.class);
+    }
+
+    @Override
+    public MultipartPart uploadPart(UploadPartRequest request) {
+        return new MultipartPart(request.getPartNumber(), executeAndClose(client, request).getEntityTag().getValue());
+    }
+
+    @Override
+    public CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request) {
+        // a 200 response may still return an error; have to check for that here
+        Response response = executeRequest(client, request);
+        try {
+            CompleteMultipartUploadResult result = response.readEntity(CompleteMultipartUploadResult.class);
+            fillResponseEntity(result, response);
+            return result;
+        } catch (ProcessingException e) {
+            // try parsing error XML
+            try {
+                throw ErrorResponseFilter.parseErrorResponse(new StringReader(response.readEntity(String.class)), response);
+            } catch (Throwable t) {
+                // if that doesn't work, just throw the processing exception
+                throw e;
+            }
+        }
+    }
+
+    @Override
+    public void abortMultipartUpload(AbortMultipartUploadRequest request) {
+        executeAndClose(client, request);
     }
 
     @Override

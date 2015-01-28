@@ -48,10 +48,6 @@ public interface S3Client {
 
     VersioningConfiguration getBucketVersioning(String bucketName);
 
-    ListMultipartUploadsResult listMultipartUploads(String bucketName);
-
-    ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);
-
     ListObjectsResult listObjects(String bucketName);
 
     ListObjectsResult listObjects(String bucketName, String prefix);
@@ -89,4 +85,18 @@ public interface S3Client {
     void setObjectAcl(SetObjectAclRequest request);
 
     AccessControlList getObjectAcl(String bucketName, String key);
+
+    ListMultipartUploadsResult listMultipartUploads(String bucketName);
+
+    ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);
+
+    String initiateMultipartUpload(String bucketName, String key);
+
+    InitiateMultipartUploadResult initiateMultipartUpload(InitiateMultipartUploadRequest request);
+
+    MultipartPart uploadPart(UploadPartRequest request);
+
+    CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
+
+    void abortMultipartUpload(AbortMultipartUploadRequest request);
 }
