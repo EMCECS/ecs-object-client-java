@@ -4,6 +4,8 @@ import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 
+import java.io.InputStream;
+
 public interface S3Client {
     ListDataNode listDataNodes();
 
@@ -65,6 +67,8 @@ public interface S3Client {
     PutObjectResult putObject(PutObjectRequest request);
 
     <T> T readObject(String bucketName, String key, Class<T> objectType);
+
+    InputStream readObjectStream(String bucketName, String key, Range range);
 
     <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 

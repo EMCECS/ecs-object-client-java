@@ -19,6 +19,7 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.Response;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URI;
 
@@ -243,6 +244,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public <T> T readObject(String bucketName, String key, Class<T> objectType) {
         return getObject(new GetObjectRequest(bucketName, key), objectType).getObject();
+    }
+
+    @Override
+    public InputStream readObjectStream(String bucketName, String key, Range range) {
+        return getObject(new GetObjectRequest(bucketName, key).withRange(range), InputStream.class).getObject();
     }
 
     @Override
