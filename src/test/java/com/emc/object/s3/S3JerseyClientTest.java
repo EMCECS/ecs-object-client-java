@@ -72,7 +72,7 @@ public class S3JerseyClientTest extends AbstractClientTest {
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
         if (enableVhost) s3Config.enableVirtualHosting(new URI(endpoint), true, true);
 
-//		s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
+//      s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
 
         client = new S3JerseyClient(s3Config);
     }
@@ -475,9 +475,9 @@ public class S3JerseyClientTest extends AbstractClientTest {
     public void testCreateObject() throws Exception {
         l4j.debug("JMC Entered testCreateObject");
         String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
-//    	File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
+//      File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
 //        if(!testFile.exists()) {
-//        	throw new FileNotFoundException("vipr.properties");
+//          throw new FileNotFoundException("vipr.properties");
 //        }
 
         //client.createObject(getTestBucket(), "/objectPrefix/testObject1", testFile, "text/plain");
@@ -629,13 +629,20 @@ public class S3JerseyClientTest extends AbstractClientTest {
     
     @Test
     public void testDeleteObjectsRequest() throws Exception {
-        int numObjects = 5;
-        this.createTestObjects(getTestBucket(), "delObjPrefex", numObjects);
-        //DeleteObjectsResult deleteObjects(DeleteObjectsRequest request);
-        DeleteObjectsRequest request = new DeleteObjectsRequest(getTestBucket());
+        //int numObjects = 5;
+        //this.createTestObjects(getTestBucket(), "delObjPrefex", numObjects);
+
+        String testObject1 = "/objectPrefix/testObject1";
+        String testObject2 = "/objectPrefix/testObject2";
+        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        client.putObject(getTestBucket(), testObject1, fileName, "text/plain");
+        client.putObject(getTestBucket(), testObject2, fileName, "text/plain");
+  
+        DeleteObjectsRequest request = new DeleteObjectsRequest(getTestBucket())
+            .withKeys(testObject1, testObject2);      
         DeleteObjectsResult results = client.deleteObjects(request);
         List<AbstractDeleteResult> resultList = results.getResults();
-        Assert.assertEquals(resultList.size(), numObjects);
+        Assert.assertEquals(2, resultList.size());
         for(AbstractDeleteResult result: resultList) {
             System.out.println("deleteResult.key: " + result.getKey());
             if (result instanceof DeleteError ) {
@@ -659,13 +666,27 @@ public class S3JerseyClientTest extends AbstractClientTest {
     }
     
     //S3ObjectMetadata getObjectMetadata(String bucketName, String key);
+    @Test
     public void testGetObjectMetadata() throws Exception {
         String testObject = "/objectPrefix/testObject1";
         String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), testObject);
+        this.validateMetadataValues(objectMetadata);
+    }
+    
+    @Test
+    public void testGetObjectMetadataRequest() throws Exception {
+        String testObject = "/objectPrefix/testObject1";
+        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        GetObjectMetadataRequest request = new GetObjectMetadataRequest(getTestBucket(), testObject);
+        S3ObjectMetadata objectMetadata = client.getObjectMetadata(request);
+        this.validateMetadataValues(objectMetadata);
+    }
+    
+    protected void validateMetadataValues(S3ObjectMetadata objectMetadata) throws Exception {
         Assert.assertNotNull(objectMetadata);
-
         System.out.println("objectMetadata.getContentType(): " + objectMetadata.getContentType());
         System.out.println("objectMetadata.getContentLength(): " + objectMetadata.getContentLength().toString());
         System.out.println("objectMetadata.getLastModified(): " + objectMetadata.getLastModified().toString());
@@ -676,10 +697,66 @@ public class S3JerseyClientTest extends AbstractClientTest {
         System.out.println("objectMetadata.getCacheControl(): " + objectMetadata.getCacheControl());
         System.out.println("objectMetadata.getHttpExpires(): " + objectMetadata.getHttpExpires().toString());
         System.out.println("objectMetadata.getVersionId(): " + objectMetadata.getVersionId());
-        //System.out.println("objectMetadata.getExpirationTime(): " + objectMetadata.getExpirationTime());
-        //System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
-        System.out.println("objectMetadata.getContentType(): " + objectMetadata.getContentType());
+        System.out.println("objectMetadata.getExpirationTime(): " + objectMetadata.getExpirationTime().toString());
+        System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
+        System.out.println("printing the " + objectMetadata.userMetadataKeys().size() + " user meta data key/value pairs");
+        for (String userMetaKey: objectMetadata.userMetadataKeys()) {
+            System.out.println("user meta Key: " + userMetaKey + "\tvalue: " + objectMetadata.userMetadata(userMetaKey));
+        }
     }
+    
+    @Test
+    public void testSetObjectAcl() throws Exception {
+        String testObject = "/objectPrefix/testObject1";
+        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        AccessControlList acl = this.createAcl();
+        client.setObjectAcl(getTestBucket(), testObject, acl);
+        this.getAndVerifyObjectAcl(getTestBucket(), testObject, acl);
+    }
+    
+    @Test
+    public void testSetObjectCannedAcl() throws Exception {
+        String testObject = "/objectPrefix/testObject1";
+        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        client.setObjectAcl(getTestBucket(), testObject, CannedAcl.BucketOwnerFullControl);
+        //TODO - need to validate this against a real acl
+    }
+    
+    @Test
+    public void testSetObjectAclRequestAcl() throws Exception {
+        String testObject = "/objectPrefix/testObject1";
+        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        AccessControlList acl = this.createAcl();
+        SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
+        request.setAcl(acl);
+        client.setObjectAcl(request);
+        this.getAndVerifyObjectAcl(getTestBucket(), testObject, acl);
+    }
+    
+
+    @Test
+    public void testSetObjectAclRequestCanned() throws Exception {
+        String testObject = "/objectPrefix/testObject1";
+        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
+        request.setCannedAcl(CannedAcl.BucketOwnerFullControl);
+        client.setObjectAcl(request);
+        //TODO - need to verify the returned acl is comparable to the canned acl
+    }
+    
+    
+    protected void getAndVerifyObjectAcl(String bucketName, String key, AccessControlList originalAcl) throws Exception {
+        AccessControlList responseAcl = client.getObjectAcl(bucketName, key);
+        this.testAclsEqual(originalAcl, responseAcl);
+    }
+    
+    //AccessControlList getObjectAcl(String bucketName, String key);
+    //tested in the set acl tests
+    
     
     
     protected List<URI> parseUris(String uriString) throws Exception {
