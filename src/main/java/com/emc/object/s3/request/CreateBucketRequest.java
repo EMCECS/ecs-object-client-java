@@ -12,7 +12,6 @@ import java.util.Map;
 public class CreateBucketRequest extends AbstractBucketRequest {
     private CannedAcl cannedAcl;
     private AccessControlList acl;
-    private String projectId;
     private String vPoolId;
     private Boolean fileSystemEnabled;
 
@@ -26,7 +25,6 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         if (acl != null) headers.putAll(acl.toHeaders());
-        if (projectId != null) RestUtil.putSingle(headers, RestUtil.EMC_PROJECT_ID, projectId);
         if (vPoolId != null) RestUtil.putSingle(headers, RestUtil.EMC_VPOOL_ID, vPoolId);
         if (fileSystemEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabled);
 
@@ -47,14 +45,6 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
     public void setAcl(AccessControlList acl) {
         this.acl = acl;
-    }
-
-    public String getProjectId() {
-        return projectId;
-    }
-
-    public void setProjectId(String projectId) {
-        this.projectId = projectId;
     }
 
     public String getvPoolId() {
@@ -80,11 +70,6 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
     public CreateBucketRequest withAcl(AccessControlList acl) {
         setAcl(acl);
-        return this;
-    }
-
-    public CreateBucketRequest withProjectId(String projectId) {
-        setProjectId(projectId);
         return this;
     }
 
