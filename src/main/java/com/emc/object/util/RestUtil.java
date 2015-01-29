@@ -30,7 +30,6 @@ public final class RestUtil {
 
     public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
     public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
-    public static final String EMC_PROJECT_ID = EMC_PREFIX + "project-id";
     public static final String EMC_VPOOL_ID = EMC_PREFIX + "vpool";
 
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
