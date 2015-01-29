@@ -1,11 +1,13 @@
 package com.emc.object.s3;
 
 import com.emc.object.AbstractClientTest;
+import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,6 +19,7 @@ import org.junit.runner.Description;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.*;
@@ -228,6 +231,8 @@ public class S3JerseyClientTest extends AbstractClientTest {
     	SetBucketAclRequest request;
     }
 
+    //JMC testline
+    //blah
     //TODO
     //void setBucketAcl(SetBucketAclRequest request);
     
@@ -490,6 +495,43 @@ public class S3JerseyClientTest extends AbstractClientTest {
 		System.out.println("JMC testCreateObject [2] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
     }
     
+    //basic test
+    @Test 
+    public void testCreateObjectWithRange() throws Exception {
+    	//void putObject(String bucketName, String key, Range range, Object content)
+    	System.out.println("JMC Entered testCreateObjectWithRange");
+    	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+    	File testFile = new File(fileName);
+        if(!testFile.exists()) {
+        	throw new FileNotFoundException("vipr.properties");
+        }
+    	long length = testFile.length();
+    	Range range = new Range((long)0, length/2);
+    	client.putObject(getTestBucket(), "/objectPrefix/testObject1", range, testFile);
+    	System.out.println("Put the first half of the object");
+    	range = new Range((long)length/2, length/2);
+    	client.putObject(getTestBucket(), "/objectPrefix/testObject2", range, testFile);
+    	System.out.println("Put both halves of the file");
+    }
+    
+    @Test 
+    public void testCreateObjectWithRequest() throws Exception {
+    	System.out.println("JMC Entered testCreateObjectWithRequest");
+    	String bucketName = "tempBucket";
+    	client.createBucket(bucketName);
+    	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+    	//PutObjectResult putObject(PutObjectRequest request);
+    	//PutObjectRequest(String bucketName, String key, T object) {
+    	PutObjectRequest<String> request = new PutObjectRequest<String>(bucketName, "/objectPrefix/testObject1", fileName);
+    	PutObjectResult result = client.putObject(request);
+    	Assert.assertNotNull(result);
+    	//TODO
+    	//need to check the Result fields but I'm not sure if they're allowed to be null
+    	//getVersionId should probably never be null since it converts toString before checking
+    	Assert.assertNotNull("versionId was null but should not be as it converts toString", result.getVersionId());
+    	System.out.println("result.getVersionId: " + result.getVersionId());
+    }
+    
     @Test(expected=Exception.class)
     public void testCreateDuplicateObject() throws Exception {
     	System.out.println("JMC Entered testCreateDuplicateObject");
@@ -554,7 +596,7 @@ public class S3JerseyClientTest extends AbstractClientTest {
     public void testPutObject() throws Exception {
     	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
     	String key = "objectKey";
-    	PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), fileName, key);
+    	PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
 		request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
 		client.putObject(request);
     	System.out.println("JMC - Seemed to succeed");
@@ -569,27 +611,56 @@ public class S3JerseyClientTest extends AbstractClientTest {
     @Test
     public void testVerifyRead() throws Exception {
     	System.out.println("JMC Entered testVerifyRead");
+    	/*
     	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
     	String key = "objectKey";
     	PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), fileName, key);
 		request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
 		client.putObject(request);
     	System.out.println("JMC - successfully created the test object. will read object");
-    	/*
-    	InputStream is = client.readObject(getTestBucket(), fileName, InputStream.class);
-    	System.out.print(is.read());
-    	*/
-    	InputStreamReader is = client.readObject(getTestBucket(), fileName, InputStreamReader.class);
+    	
+    	//InputStream is = client.readObject(getTestBucket(), fileName, InputStream.class);
+    	//System.out.print(is.read());
+    	
+    	InputStreamReader is = client.readObject(getTestBucket(), key, InputStreamReader.class);
     	System.out.println("JMC - readObject seemed to succeed. Will confirm the object contest");
     	BufferedReader br = new BufferedReader(is);
     	String line;
     	while((line=br.readLine()) != null) {
     		System.out.println(line);
     	}
-    	
+    	*/
     	System.out.println("JMC - Success");
     }
   
+    @Test
+    public void testReadObjectStreamRange() throws Exception {
+    	String bucketName = "streamrange";
+    	client.createBucket(bucketName);
+    	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+    	String key = "objectKey";
+    	PutObjectRequest<String> request = new PutObjectRequest<String>(bucketName, key, fileName);
+		request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+		client.putObject(request);
+    	System.out.println("JMC - successfully created the test object. will read object");
+    	
+    	Range range = new Range((long)0, (long)(fileName.length()/2) );
+    	InputStream is = client.readObjectStream(bucketName, key, range);
+    	System.out.println("JMC - readObjectStream seemed to succeed. Will confirm the object contest");
+    	BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    	String line;
+    	while((line=br.readLine()) != null) {
+    		System.out.println(line);
+    	}
+    	System.out.println("JMC - Success");
+    }
+    
+    //<T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
+    @Test
+    public void testGetObjectResultTemplate() throws Exception {
+    	
+    }
+    
     protected List<URI> parseUris(String uriString) throws Exception {
         List<URI> uris = new ArrayList<>();
         for (String uri : uriString.split(",")) {
