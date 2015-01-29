@@ -355,21 +355,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request) {
-        // a 200 response may still return an error; have to check for that here
-        Response response = executeRequest(client, request);
-        try {
-            CompleteMultipartUploadResult result = response.readEntity(CompleteMultipartUploadResult.class);
-            fillResponseEntity(result, response);
-            return result;
-        } catch (ProcessingException e) {
-            // try parsing error XML
-            try {
-                throw ErrorResponseFilter.parseErrorResponse(new StringReader(response.readEntity(String.class)), response);
-            } catch (Throwable t) {
-                // if that doesn't work, just throw the processing exception
-                throw e;
-            }
-        }
+        return executeRequest(client, request, CompleteMultipartUploadResult.class);
     }
 
     @Override
@@ -386,5 +372,26 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             builder.property(S3Constants.PROPERTY_BUCKET_NAME, ((AbstractBucketRequest) request).getBucketName());
 
         return builder;
+    }
+
+    @Override
+    protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
+        Response response = executeRequest(client, request);
+        try {
+            T responseEntity = response.readEntity(responseType);
+            fillResponseEntity(responseEntity, response);
+            return responseEntity;
+        } catch (ProcessingException e) {
+
+            // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the
+            // expected entity. check for that here.
+            try {
+                throw ErrorResponseFilter.parseErrorResponse(new StringReader(response.readEntity(String.class)), response);
+            } catch (Throwable t) {
+
+                // must be a reader error
+                throw e;
+            }
+        }
     }
 }
