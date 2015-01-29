@@ -47,10 +47,11 @@ public final class RestUtil {
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
 
-    public static Object getFirst(Map<String, List<Object>> multiValueMap, String key) {
+    public static String getFirstAsString(Map<String, List<Object>> multiValueMap, String key) {
         List<Object> values = multiValueMap.get(key);
         if (values == null || values.isEmpty()) return null;
-        return values.get(0);
+        Object value = values.get(0);
+        return value == null ? null : value.toString();
     }
 
     public static void putSingle(Map<String, List<Object>> multiValueMap, String key, Object value) {
@@ -128,10 +129,12 @@ public final class RestUtil {
     }
 
     public static String headerFormat(Date date) {
+        if (date == null) return null;
         return getHeaderFormat().format(date);
     }
 
     public static Date headerParse(String dateString) {
+        if (dateString == null) return null;
         try {
             return getHeaderFormat().parse(dateString);
         } catch (ParseException e) {

@@ -243,7 +243,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public long appendObject(String bucketName, String key, Object content) {
-        return putObject(new PutObjectRequest<>(bucketName, key, content).withRange(new Range(-1L, null))).getAppendOffset();
+        return putObject(new PutObjectRequest<>(bucketName, key, content).withRange(Range.fromOffset(-1))).getAppendOffset();
     }
 
     @Override

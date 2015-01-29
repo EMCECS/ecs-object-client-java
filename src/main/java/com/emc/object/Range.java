@@ -4,8 +4,12 @@ public class Range {
     private Long first;
     private Long last;
 
-    public static Range fromOffsetLength(Long offset, Long length) {
+    public static Range fromOffsetLength(long offset, long length) {
         return new Range(offset, offset + length - 1);
+    }
+
+    public static Range fromOffset(long offset) {
+        return new Range(offset, null);
     }
 
     public Range(Long first, Long last) {

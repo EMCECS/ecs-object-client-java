@@ -47,18 +47,18 @@ public final class S3AuthUtil {
         stringToSign.append(method).append("\n");
 
         // MD5 line
-        Object contentMd5 = RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_MD5);
+        String contentMd5 = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_MD5);
         if (contentMd5 != null) stringToSign.append(contentMd5);
         stringToSign.append("\n");
 
         // content type line
-        Object contentType = RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_TYPE);
+        String contentType = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
         if (contentType != null) stringToSign.append(contentType);
         stringToSign.append("\n");
 
         // date line
         // use Date header by default
-        Object date = RestUtil.getFirst(headers, RestUtil.HEADER_DATE);
+        String date = RestUtil.getFirstAsString(headers, RestUtil.HEADER_DATE);
         if (date == null) {
             // must have a date in the headers
             date = RestUtil.getRequestDate(clockSkew);

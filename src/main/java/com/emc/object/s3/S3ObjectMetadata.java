@@ -58,7 +58,7 @@ public class S3ObjectMetadata {
     }
 
     public String getContentType() {
-        return RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_TYPE).toString();
+        return RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
     }
 
     public void setContentType(String contentType) {
@@ -66,23 +66,23 @@ public class S3ObjectMetadata {
     }
 
     public Long getContentLength() {
-        return Long.parseLong(RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_LENGTH).toString());
+        return Long.parseLong(RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_LENGTH));
     }
 
     public void setContentLength(Long contentLength) {
-        RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_LENGTH, contentLength.toString());
+        RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_LENGTH, contentLength);
     }
 
     public Date getLastModified() {
-        return RestUtil.headerParse(RestUtil.getFirst(headers, RestUtil.HEADER_LAST_MODIFIED).toString());
+        return RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_LAST_MODIFIED));
     }
 
     public String getETag() {
-        return RestUtil.getFirst(headers, RestUtil.HEADER_ETAG).toString();
+        return RestUtil.getFirstAsString(headers, RestUtil.HEADER_ETAG);
     }
 
     public String getContentMd5() {
-        return RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_MD5).toString();
+        return RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_MD5);
     }
 
     public void setContentMd5(String contentMd5) {
@@ -90,7 +90,7 @@ public class S3ObjectMetadata {
     }
 
     public String getContentDisposition() {
-        return RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_DISPOSITION).toString();
+        return RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_DISPOSITION);
     }
 
     public void setContentDisposition(String contentDisposition) {
@@ -98,7 +98,7 @@ public class S3ObjectMetadata {
     }
 
     public String getContentEncoding() {
-        return RestUtil.getFirst(headers, RestUtil.HEADER_CONTENT_ENCODING).toString();
+        return RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_ENCODING);
     }
 
     public void setContentEncoding(String contentEncoding) {
@@ -106,7 +106,7 @@ public class S3ObjectMetadata {
     }
 
     public String getCacheControl() {
-        return RestUtil.getFirst(headers, RestUtil.HEADER_CACHE_CONTROL).toString();
+        return RestUtil.getFirstAsString(headers, RestUtil.HEADER_CACHE_CONTROL);
     }
 
     public void setCacheControl(String cacheControl) {
@@ -114,7 +114,7 @@ public class S3ObjectMetadata {
     }
 
     public Date getHttpExpires() {
-        return RestUtil.headerParse(RestUtil.getFirst(headers, RestUtil.HEADER_EXPIRES).toString());
+        return RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_EXPIRES));
     }
 
     public void setHttpExpires(Date httpExpires) {
@@ -122,7 +122,7 @@ public class S3ObjectMetadata {
     }
 
     public String getVersionId() {
-        return RestUtil.getFirst(headers, S3Constants.AMZ_VERSION_ID).toString();
+        return RestUtil.getFirstAsString(headers, S3Constants.AMZ_VERSION_ID);
     }
 
     public Date getExpirationTime() {
@@ -143,7 +143,7 @@ public class S3ObjectMetadata {
     }
 
     public String userMetadata(String name) {
-        return RestUtil.getFirst(headers, S3Constants.AMZ_META_PREFIX + name).toString();
+        return RestUtil.getFirstAsString(headers, S3Constants.AMZ_META_PREFIX + name);
     }
 
     public void userMetadata(String name, String value) {

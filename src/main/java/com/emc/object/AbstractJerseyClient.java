@@ -35,7 +35,8 @@ public abstract class AbstractJerseyClient {
                 // jersey requires content-type for entity requests
                 if (contentType == null) contentType = RestUtil.DEFAULT_CONTENT_TYPE;
 
-                entity = Entity.entity(entityRequest.getEntity(), contentType);
+                if (entityRequest.getEntity() != null)
+                    entity = Entity.entity(entityRequest.getEntity(), contentType);
 
                 // make sure input streams have a content length
                 if (entityRequest.getEntity() instanceof InputStream) {
