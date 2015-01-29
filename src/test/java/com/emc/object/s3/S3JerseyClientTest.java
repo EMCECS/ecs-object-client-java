@@ -655,11 +655,74 @@ public class S3JerseyClientTest extends AbstractClientTest {
     	System.out.println("JMC - Success");
     }
     
+    //TODO
     //<T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
     @Test
     public void testGetObjectResultTemplate() throws Exception {
     	
     }
+    
+    //TODO
+    @Test
+    public void testDeleteVersion() throws Exception {
+    	//void deleteVersion(String bucketName, String key, String versionId);
+    	
+    }
+    
+    @Test
+    public void testDeleteObjectsRequest() throws Exception {
+    	int numObjects = 5;
+    	this.createTestObjects(getTestBucket(), "delObjPrefex", numObjects);
+    	//DeleteObjectsResult deleteObjects(DeleteObjectsRequest request);
+    	DeleteObjectsRequest request = new DeleteObjectsRequest(getTestBucket());
+    	DeleteObjectsResult results = client.deleteObjects(request);
+    	List<AbstractDeleteResult> resultList = results.getResults();
+    	Assert.assertEquals(resultList.size(), numObjects);
+    	for(AbstractDeleteResult result: resultList) {
+    		System.out.println("deleteResult.key: " + result.getKey());
+    		if (result instanceof DeleteError ) {
+    			this.inspectDeleteError((DeleteError)result);
+    		}
+    		else {
+    			this.inspectDeleteSuccess((DeleteSuccess)result);
+    		}
+    	}
+    } 
+    protected void inspectDeleteError(DeleteError deleteResult) {
+    	System.out.println("JMC - Entered inspectDeleteResult - DeleteError");
+    	Assert.assertNotNull(deleteResult);
+    	System.out.println("deleteResult.code: " + deleteResult.getCode());
+    	System.out.println("deleteResult.message: " + deleteResult.getMessage());
+    }
+    protected void inspectDeleteSuccess(DeleteSuccess deleteResult) {
+    	System.out.println("JMC - Entered inspectDeleteResult - DeleteSuccess");
+    	System.out.println("deleteResult.deleteMarker: " + deleteResult.getDeleteMarker());
+    	System.out.println("deleteResult.deleteMarkerVersionId: " + deleteResult.getDeleteMarkerVersionId());
+    }
+    
+    //S3ObjectMetadata getObjectMetadata(String bucketName, String key);
+    public void testGetObjectMetadata() throws Exception {
+    	String testObject = "/objectPrefix/testObject1";
+    	String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+    	client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+    	S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), testObject);
+    	Assert.assertNotNull(objectMetadata);
+    	
+    	System.out.println("objectMetadata.getContentType(): " + objectMetadata.getContentType());
+    	System.out.println("objectMetadata.getContentLength(): " + objectMetadata.getContentLength().toString());
+    	System.out.println("objectMetadata.getLastModified(): " + objectMetadata.getLastModified().toString());
+    	System.out.println("objectMetadata.getETag(): " + objectMetadata.getETag());
+    	System.out.println("objectMetadata.getContentMd5(): " + objectMetadata.getContentMd5());
+    	System.out.println("objectMetadata.getContentDisposition(): " + objectMetadata.getContentDisposition());
+    	System.out.println("objectMetadata.getContentEncoding(): " + objectMetadata.getContentEncoding());
+    	System.out.println("objectMetadata.getCacheControl(): " + objectMetadata.getCacheControl());
+    	System.out.println("objectMetadata.getHttpExpires(): " + objectMetadata.getHttpExpires().toString());
+    	System.out.println("objectMetadata.getVersionId(): " + objectMetadata.getVersionId());
+    	//System.out.println("objectMetadata.getExpirationTime(): " + objectMetadata.getExpirationTime());
+    	//System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
+    	System.out.println("objectMetadata.getContentType(): " + objectMetadata.getContentType());
+    }
+    
     
     protected List<URI> parseUris(String uriString) throws Exception {
         List<URI> uris = new ArrayList<>();
