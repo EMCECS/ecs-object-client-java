@@ -354,6 +354,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public CopyPartResult copyPart(CopyPartRequest request) {
+        CopyPartResult result = executeRequest(client, request, CopyPartResult.class);
+        result.setPartNumber(request.getPartNumber());
+        return result;
+    }
+
+    @Override
     public CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request) {
         return executeRequest(client, request, CompleteMultipartUploadResult.class);
     }

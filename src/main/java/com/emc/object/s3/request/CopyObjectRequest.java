@@ -34,8 +34,11 @@ public class CopyObjectRequest extends S3ObjectRequest {
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
-        RestUtil.putSingle(headers, S3Constants.AMZ_COPY_SOURCE, String.format("/%s/%s", sourceBucketName, sourceKey));
-        if (sourceVersionId != null) RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_VERSION_ID, sourceVersionId);
+
+        String source = String.format("/%s/%s", sourceBucketName, sourceKey);
+        if (sourceVersionId != null) source += "?versionId=" + sourceVersionId;
+        RestUtil.putSingle(headers, S3Constants.AMZ_COPY_SOURCE, source);
+
         if (ifModifiedSince != null)
             RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_MODIFIED_SINCE, ifModifiedSince);
         if (ifUnmodifiedSince != null)

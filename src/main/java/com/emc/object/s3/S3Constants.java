@@ -19,6 +19,7 @@ public final class S3Constants {
     public static final String AMZ_SOURCE_MATCH = AMZ_PREFIX + "copy-source-if-match";
     public static final String AMZ_SOURCE_MODIFIED_SINCE = AMZ_PREFIX + "copy-source-if-modified-since";
     public static final String AMZ_SOURCE_NONE_MATCH = AMZ_PREFIX + "copy-source-if-none-match";
+    public static final String AMZ_SOURCE_RANGE = AMZ_PREFIX + "copy-source-range";
     public static final String AMZ_SOURCE_UNMODIFIED_SINCE = AMZ_PREFIX + "copy-source-if-unmodified-since";
     public static final String AMZ_SOURCE_VERSION_ID = AMZ_PREFIX + "copy-source-version-id";
     public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";

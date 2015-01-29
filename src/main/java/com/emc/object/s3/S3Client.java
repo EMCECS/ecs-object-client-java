@@ -104,6 +104,8 @@ public interface S3Client {
 
     MultipartPart uploadPart(UploadPartRequest request);
 
+    CopyPartResult copyPart(CopyPartRequest request);
+
     CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
 
     void abortMultipartUpload(AbortMultipartUploadRequest request);
