@@ -9,31 +9,32 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public final class RestUtil {
-    public static final String HEADER_DATE = "Date";
-    public static final String HEADER_CONTENT_MD5 = "Content-MD5";
-    public static final String HEADER_CONTENT_TYPE = "Content-Type";
-    public static final String HEADER_RANGE = "Range";
-    public static final String HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
-    public static final String HEADER_IF_UNMODIFIED_SINE = "If-Unmodified-Since";
-    public static final String HEADER_IF_MATCH = "If-Match";
-    public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
-    public static final String HEADER_LAST_MODIFIED = "Last-Modified";
-    public static final String HEADER_ETAG = "ETag";
-    public static final String HEADER_CONTENT_LENGTH = "Content-Length";
+    public static final String HEADER_CACHE_CONTROL = "Cache-Control";
     public static final String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
     public static final String HEADER_CONTENT_ENCODING = "Content-Encoding";
-    public static final String HEADER_CACHE_CONTROL = "Cache-Control";
+    public static final String HEADER_CONTENT_LENGTH = "Content-Length";
+    public static final String HEADER_CONTENT_MD5 = "Content-MD5";
+    public static final String HEADER_CONTENT_TYPE = "Content-Type";
+    public static final String HEADER_DATE = "Date";
+    public static final String HEADER_ETAG = "ETag";
     public static final String HEADER_EXPIRES = "Expires";
+    public static final String HEADER_IF_MATCH = "If-Match";
+    public static final String HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
+    public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
+    public static final String HEADER_IF_UNMODIFIED_SINE = "If-Unmodified-Since";
+    public static final String HEADER_LAST_MODIFIED = "Last-Modified";
+    public static final String HEADER_RANGE = "Range";
+    public static final String HEADER_USER_AGENT = "User-Agent";
 
     public static final String EMC_PREFIX = "x-emc-";
 
+    public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
     public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
     public static final String EMC_PROJECT_ID = EMC_PREFIX + "project-id";
     public static final String EMC_VPOOL_ID = EMC_PREFIX + "vpool";
-    public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
 
-    public static final String TYPE_APPLICATION_XML = "application/xml";
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
+    public static final String TYPE_APPLICATION_XML = "application/xml";
 
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
 
@@ -84,6 +85,8 @@ public final class RestUtil {
 
                 String key = equals > 0 ? pair.substring(0, equals) : pair;
                 String value = equals > 0 ? pair.substring(equals + 1) : null;
+
+                if (key.trim().length() == 0) throw new IllegalArgumentException("query parameters must have a name");
 
                 parameters.put(urlDecode(key), urlDecode(value));
             }

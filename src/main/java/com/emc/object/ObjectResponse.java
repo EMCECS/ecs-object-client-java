@@ -7,7 +7,7 @@ import java.util.Map;
 public abstract class ObjectResponse {
     private Map<String, List<Object>> headers;
 
-    public String headerString(String name) {
+    public String headerAsString(String name) {
         if (headers == null) return null;
         List<Object> values = headers.get(name);
         if (values == null || values.isEmpty()) return null;

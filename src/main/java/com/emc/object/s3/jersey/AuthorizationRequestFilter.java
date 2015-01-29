@@ -20,6 +20,10 @@ public class AuthorizationRequestFilter implements ClientRequestFilter {
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
 
+        // tack on user-agent here
+        if (s3Config.getUserAgent() != null)
+            requestContext.getHeaders().putSingle(RestUtil.HEADER_USER_AGENT, s3Config.getUserAgent());
+
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
             Map<String, String> parameters = RestUtil.getQueryParameterMap(requestContext.getUri().getQuery());

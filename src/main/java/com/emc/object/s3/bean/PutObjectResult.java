@@ -10,7 +10,7 @@ import java.util.Date;
 public class PutObjectResult extends ObjectResponse {
     @XmlTransient
     public String getVersionId() {
-        return headerString(S3Constants.AMZ_VERSION_ID);
+        return headerAsString(S3Constants.AMZ_VERSION_ID);
     }
 
     @XmlTransient

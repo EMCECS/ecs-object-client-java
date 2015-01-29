@@ -51,6 +51,8 @@ public class ObjectRequest {
 
         if (paramString.length() > 0) queryString += "&" + paramString;
 
+        if (queryString.startsWith("&")) queryString = queryString.substring(1);
+
         return (queryString.length() > 0) ? queryString : null;
     }
 

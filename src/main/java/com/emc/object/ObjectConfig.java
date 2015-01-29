@@ -18,12 +18,16 @@ public abstract class ObjectConfig {
     public static final String PROPERTY_POLL_INTERVAL = "com.emc.object.property.pollInterval";
     public static final String PROPERTY_DISABLE_POLLING = "com.emc.object.property.disablePolling";
 
+    public static final String PACKAGE_VERSION = ObjectConfig.class.getPackage().getImplementationVersion();
+    public static final String DEFAULT_USER_AGENT = "ECS Java SDK" + (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : "");
+
     private List<URI> endpoints;
     private String rootContext;
     private String namespace;
     private String identity;
     private String secretKey;
     private long serverClockSkew;
+    private String userAgent = DEFAULT_USER_AGENT;
 
     private Map<String, Object> properties = new HashMap<>();
 
@@ -83,6 +87,14 @@ public abstract class ObjectConfig {
         this.serverClockSkew = serverClockSkew;
     }
 
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+    }
+
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -125,6 +137,11 @@ public abstract class ObjectConfig {
 
     public ObjectConfig withSecretKey(String secretKey) {
         setSecretKey(secretKey);
+        return this;
+    }
+
+    public ObjectConfig withUserAgent(String userAgent) {
+        setUserAgent(userAgent);
         return this;
     }
 
