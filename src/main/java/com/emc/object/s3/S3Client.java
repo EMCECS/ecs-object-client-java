@@ -66,6 +66,8 @@ public interface S3Client {
 
     PutObjectResult putObject(PutObjectRequest request);
 
+    long appendObject(String bucketName, String key, Object content);
+
     CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String bucketName, String key);
 
     CopyObjectResult copyObject(CopyObjectRequest request);

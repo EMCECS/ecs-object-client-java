@@ -28,6 +28,7 @@ public final class RestUtil {
 
     public static final String EMC_PREFIX = "x-emc-";
 
+    public static final String EMC_APPEND_OFFSET = EMC_PREFIX + "append-offset";
     public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
     public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
     public static final String EMC_VPOOL_ID = EMC_PREFIX + "vpool";
