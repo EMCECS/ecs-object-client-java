@@ -100,7 +100,7 @@ public class ListVersionsResult {
         this.truncated = truncated;
     }
 
-    @XmlElementRef
+    @XmlElementRefs({@XmlElementRef(type = DeleteMarker.class), @XmlElementRef(type = Version.class)})
     public List<AbstractVersion> getVersions() {
         return versions;
     }

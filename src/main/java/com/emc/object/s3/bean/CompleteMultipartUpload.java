@@ -2,11 +2,12 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "CompleteMultipartUpload")
 public class CompleteMultipartUpload {
-    private List<MultipartPart> parts;
+    private List<MultipartPart> parts = new ArrayList<>();
 
     public CompleteMultipartUpload() {
     }

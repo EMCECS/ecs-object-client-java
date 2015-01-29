@@ -7,7 +7,6 @@ import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 import javax.ws.rs.client.Client;
@@ -19,12 +18,8 @@ import java.util.Properties;
 public class S3HostListProviderTest {
     @Test
     public void testS3HostListProvider() throws Exception {
-        Properties properties = null;
-        try {
-            properties = TestConfig.getProperties();
-        } catch (Exception e) {
-            Assume.assumeTrue("vipr.properties missing", false);
-        }
+        Properties properties = TestConfig.getProperties();
+
         URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_ENDPOINT));
         String user = TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_ACCESS_KEY);
         String secret = TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_SECRET_KEY);

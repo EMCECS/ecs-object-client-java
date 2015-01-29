@@ -43,10 +43,15 @@ public class ObjectRequest {
     }
 
     public final String getQueryString() {
+        String paramString = RestUtil.generateQueryString(getQueryParams());
+
         String queryString = "";
-        if (subresource != null) queryString += subresource + "&";
-        queryString += RestUtil.generateQueryString(getQueryParams());
-        return queryString;
+
+        if (subresource != null) queryString += subresource;
+
+        if (paramString.length() > 0) queryString += "&" + paramString;
+
+        return (queryString.length() > 0) ? queryString : null;
     }
 
     public String getNamespace() {

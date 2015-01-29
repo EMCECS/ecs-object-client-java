@@ -1,0 +1,25 @@
+###
+### Template file for test configuration parameters.
+### Copy to "test.properties" and configure for your environment.
+###
+
+## Your S3 Access Key
+s3.access_key=<user>@<domain>
+
+## Your S3 Secret Key
+s3.secret_key=<secretkey>
+
+## Endpoint to the S3 Access Point
+s3.endpoint=http://<ecshost>:9020
+
+## Uncomment to enable vhost-style requests (including the namespace)
+#enableVhost=true
+
+## Keypair used for encryption tests.  Run com.emc.object.EncryptionKeyGenerator
+## to generate a new keypair.
+encryption.public_key=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCXwte+fuZHBt07GP+idU3K+pSpZl3dt5O6iS9Am14G3/3JlqsdkDPdcyk6YWvn6J3SIreaty9csnf4OOSkWATrCwYnCP562FnbwcVZQ5LjKoJodCxRkbZSOD8feWFzNtg6PWPagoxeAS1hAyjuUHLbCgcyCVEdr0Nu5rybrEWVDwIDAQAB
+encryption.private_key=MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAJfC175+5kcG3TsY/6J1Tcr6lKlmXd23k7qJL0CbXgbf/cmWqx2QM91zKTpha+fondIit5q3L1yyd/g45KRYBOsLBicI/nrYWdvBxVlDkuMqgmh0LFGRtlI4Px95YXM22Do9Y9qCjF4BLWEDKO5QctsKBzIJUR2vQ27mvJusRZUPAgMBAAECgYAeKen7wPlAMMsUDfnxbmNR7tBRgzkw8mX4c3/i1X6w2yB0SvAj5h+I6nTNV8O8ym1j8OaRZ8uQHyDdQ2GekKgZRuPu/Fl2CxcvygbxLvyFeMDSeQQiuZZbmOMvBJL+FjelFRjDm1lPOZslw7WZYrJloxtgVyx/SVRezO2BZ4lRMQJBAPsd5+QGUyKy0WDxPolkx2CTM4tx/IdmkmqD6mHIPoHHI74wA5wyVCCEioNoyhxZvfAPKoT47jN8LHkF4McDDv0CQQCatlSZlNxFQKGQiBojmsfYbrsGPBYd52hm5DSWAaECx62TGCd5kvFBB9BFlxWde1Uza1Mhg0F9MzsDdrGtbl/7AkBYDkuTbRhX8YZ0TQQV363+Un/fpQ/dVv1+tlVJBpPMpE0HUwThD9DqOi/sFqHQwTNWa6sIR9YXXbKmmYYRoyPtAkAjZzfi0Tq6qjiOj2aT4TZ8I5KusY9KFotAiFY0QXkr3q+sqmlWG7cTb4tMcW9j0zZDBvtF/vg8gz2s5DtyeYCDAkAbstmaj40dU/HCUCEQE387aZceXndvd9jRngOKvixFHi7rPAC8Ja3XcPmLaD29nyqawpQL2nSI8pomKBnCUKTX
+
+## Optional -- HTTP proxy host and port.  Useful for debugging.
+#http.proxy.host=localhost
+#http.proxy.port=8888

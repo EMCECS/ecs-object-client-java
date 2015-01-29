@@ -2,12 +2,13 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "Delete")
 public class DeleteObjects {
     private Boolean quiet;
-    private List<Object> objects;
+    private List<Object> objects = new ArrayList<>();
 
     @XmlElement(name = "Quiet")
     public Boolean getQuiet() {

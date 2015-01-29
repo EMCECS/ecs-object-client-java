@@ -16,7 +16,7 @@ public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectReq
     private Date ifUnmodifiedSince;
     private String ifMatch;
     private String ifNoneMatch;
-    private Map<ResponseHeaderOverride, String> headerOverrides;
+    private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<>();
 
     public GetObjectRequest(String bucketName, String key) {
         this(Method.GET, bucketName, key);
@@ -118,8 +118,7 @@ public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectReq
     }
 
     @SuppressWarnings("unchecked")
-    public synchronized T headerOverride(ResponseHeaderOverride override, String value) {
-        if (headerOverrides == null) headerOverrides = new HashMap<>();
+    public T headerOverride(ResponseHeaderOverride override, String value) {
         headerOverrides.put(override, value);
         return (T) this;
     }

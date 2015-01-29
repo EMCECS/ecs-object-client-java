@@ -78,11 +78,14 @@ public final class RestUtil {
     public static Map<String, String> getQueryParameterMap(String queryString) {
         Map<String, String> parameters = new HashMap<>();
         if (queryString != null && queryString.trim().length() > 0) {
-            for (String pair : queryString.split(",")) {
-                String[] keyValue = pair.split("=");
-                if (keyValue.length < 1 || keyValue.length > 2 || keyValue[0].trim().length() == 0)
-                    throw new IllegalArgumentException("invalid query parameter: " + pair);
-                parameters.put(urlDecode(keyValue[0]), keyValue.length > 1 ? urlDecode(keyValue[1]) : "");
+            for (String pair : queryString.split("&")) {
+                int equals = pair.indexOf('=');
+                if (equals == 0) throw new IllegalArgumentException("invalid query parameter: " + pair);
+
+                String key = equals > 0 ? pair.substring(0, equals) : pair;
+                String value = equals > 0 ? pair.substring(equals + 1) : null;
+
+                parameters.put(urlDecode(key), urlDecode(value));
             }
         }
         return parameters;
@@ -134,6 +137,7 @@ public final class RestUtil {
     }
 
     public static String urlEncode(String value) {
+        if (value == null) return null;
         // Use %20, not +
         try {
             return URLEncoder.encode(value, "UTF-8").replace("+", "%20");
@@ -143,6 +147,7 @@ public final class RestUtil {
     }
 
     public static String urlDecode(String value) {
+        if (value == null) return null;
         try {
             // don't want '+' decoded to a space
             return URLDecoder.decode(value.replace("+", "%2B"), "UTF-8");

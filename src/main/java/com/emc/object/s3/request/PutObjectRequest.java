@@ -27,7 +27,7 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
-        headers.putAll(objectMetadata.toHeaders());
+        if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         return headers;
