@@ -3,14 +3,16 @@ package com.emc.object.s3.bean;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "ListAllMyBucketsResult")
-@XmlType(propOrder = {"owner", "buckets"})
 public class ListBucketsResult {
     private CanonicalUser owner;
+    private Integer maxBuckets;
+    private String marker;
+    private String nextMarker;
+    private Boolean truncated;
     private List<Bucket> buckets = new ArrayList<>();
 
     @XmlElement(name = "Owner")
@@ -20,6 +22,42 @@ public class ListBucketsResult {
 
     public void setOwner(CanonicalUser owner) {
         this.owner = owner;
+    }
+
+    @XmlElement(name = "MaxBuckets")
+    public Integer getMaxBuckets() {
+        return maxBuckets;
+    }
+
+    public void setMaxBuckets(Integer maxBuckets) {
+        this.maxBuckets = maxBuckets;
+    }
+
+    @XmlElement(name = "Marker")
+    public String getMarker() {
+        return marker;
+    }
+
+    public void setMarker(String marker) {
+        this.marker = marker;
+    }
+
+    @XmlElement(name = "NextMarker")
+    public String getNextMarker() {
+        return nextMarker;
+    }
+
+    public void setNextMarker(String nextMarker) {
+        this.nextMarker = nextMarker;
+    }
+
+    @XmlElement(name = "IsTruncated")
+    public Boolean getTruncated() {
+        return truncated;
+    }
+
+    public void setTruncated(Boolean truncated) {
+        this.truncated = truncated;
     }
 
     @XmlElementWrapper(name = "Buckets")
