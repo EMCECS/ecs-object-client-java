@@ -242,6 +242,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String bucketName, String key) {
+        return copyObject(new CopyObjectRequest(sourceBucketName, sourceKey, bucketName, key));
+    }
+
+    @Override
+    public CopyObjectResult copyObject(CopyObjectRequest request) {
+        return executeRequest(client, request, CopyObjectResult.class);
+    }
+
+    @Override
     public <T> T readObject(String bucketName, String key, Class<T> objectType) {
         return getObject(new GetObjectRequest(bucketName, key), objectType).getObject();
     }

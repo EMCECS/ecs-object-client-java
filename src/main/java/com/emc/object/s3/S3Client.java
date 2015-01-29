@@ -66,6 +66,10 @@ public interface S3Client {
 
     PutObjectResult putObject(PutObjectRequest request);
 
+    CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String bucketName, String key);
+
+    CopyObjectResult copyObject(CopyObjectRequest request);
+
     <T> T readObject(String bucketName, String key, Class<T> objectType);
 
     InputStream readObjectStream(String bucketName, String key, Range range);
