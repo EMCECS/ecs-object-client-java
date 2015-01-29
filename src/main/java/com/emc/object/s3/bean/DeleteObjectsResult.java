@@ -1,6 +1,7 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElementRef;
+import javax.xml.bind.annotation.XmlElementRefs;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.List;
 public class DeleteObjectsResult {
     private List<AbstractDeleteResult> results = new ArrayList<>();
 
-    @XmlElementRef
+    @XmlElementRefs({@XmlElementRef(type = DeleteSuccess.class), @XmlElementRef(type = DeleteError.class)})
     public List<AbstractDeleteResult> getResults() {
         return results;
     }

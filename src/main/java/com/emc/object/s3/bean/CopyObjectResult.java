@@ -14,7 +14,7 @@ public class CopyObjectResult extends PutObjectResult {
 
     @XmlTransient
     public String getSourceVersionId() {
-        return getFirstHeader(S3Constants.AMZ_SOURCE_VERSION_ID).toString();
+        return headerString(S3Constants.AMZ_SOURCE_VERSION_ID);
     }
 
     @XmlElement(name = "LastModified")

@@ -6,6 +6,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 
@@ -29,7 +30,12 @@ public abstract class AbstractJerseyClient {
             Entity entity = Entity.text("");
             if (request instanceof EntityRequest) {
                 EntityRequest entityRequest = (EntityRequest) request;
-                entity = Entity.entity(entityRequest.getEntity(), entityRequest.getContentType());
+
+                String contentType = entityRequest.getContentType();
+                // jersey requires content-type for entity requests
+                if (contentType == null) contentType = RestUtil.DEFAULT_CONTENT_TYPE;
+
+                entity = Entity.entity(entityRequest.getEntity(), contentType);
 
                 // make sure input streams have a content length
                 if (entityRequest.getEntity() instanceof InputStream) {
@@ -71,7 +77,9 @@ public abstract class AbstractJerseyClient {
             builder.property(RestUtil.PROPERTY_NAMESPACE, namespace);
 
         // set headers
-        builder.headers(new MultivaluedHashMap<String, Object>(request.getHeaders()));
+        MultivaluedMap<String, Object> jerseyHeaders = new MultivaluedHashMap<>();
+        jerseyHeaders.putAll(request.getHeaders());
+        builder.headers(jerseyHeaders);
 
         return builder;
     }
