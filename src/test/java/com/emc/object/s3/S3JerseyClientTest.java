@@ -4,14 +4,10 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.AbstractClientTest;
-import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.TestProperties;
-import com.emc.util.TestConfig;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -25,10 +21,8 @@ import java.io.*;
 import java.net.URI;
 import java.util.*;
 
-public class S3JerseyClientTest extends AbstractClientTest {
+public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
-
-    protected S3Client client;
 
     @Rule
     public TestRule watcher = new TestWatcher() {
@@ -46,50 +40,10 @@ public class S3JerseyClientTest extends AbstractClientTest {
     }
 
     @Override
-    protected void createBucket(String bucketName) throws Exception {
-        client.createBucket(bucketName);
-    }
-
-    @Override
-    protected void cleanUpBucket(String bucketName) throws Exception {
-        try {
-            for (S3Object object : client.listObjects(bucketName).getObjects()) {
-                client.deleteObject(bucketName, object.getKey());
-            }
-            client.deleteBucket(bucketName);
-        } catch (S3Exception e) {
-            if (!"NoSuchBucket".equals(e.getErrorCode())) throw e;
-        }
-    }
-
-    @Override
     public void initClient() throws Exception {
-        Properties props = TestConfig.getProperties();
-
-        String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
-        String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
-        String endpoint = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT);
-        String endpoints = props.getProperty(TestProperties.S3_ENDPOINTS);
-        boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
-
-        S3Config s3Config;
-        if (enableVhost) {
-            s3Config = new S3VHostConfig(new URI(endpoint));
-        } else {
-            List<URI> uris = parseUris(endpoints == null ? endpoint : endpoints);
-            String[] hosts = new String[uris.size()];
-            for (int i = 0; i < uris.size(); i++) {
-                hosts[i] = uris.get(i).getHost();
-            }
-            s3Config = new S3Config(Protocol.valueOf(uris.get(0).getScheme().toUpperCase()), hosts);
-        }
-        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
-
-//      s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
-
-        client = new S3JerseyClient(s3Config);
+        client = new S3JerseyClient(createS3Config());
     }
-    
+
     @Test
     public void emptyTest() throws Exception {
         l4j.debug("JMC Entered empty test to ensure Before/After processes");

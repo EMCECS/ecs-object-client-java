@@ -4,6 +4,7 @@
  */
 package com.emc.object.util;
 
+import com.emc.util.StreamUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -19,7 +20,7 @@ public class InputStreamSegmentTest {
         InputStream is = new InputStreamSegment(new ByteArrayInputStream(s.getBytes("UTF-8")), 10, 13);
 
         // read entire stream
-        String result = new java.util.Scanner(is, "UTF-8").useDelimiter("\\A").next();
+        String result = StreamUtil.readAsString(is);
         Assert.assertEquals("Hello Middle!", result);
     }
 
@@ -31,7 +32,7 @@ public class InputStreamSegmentTest {
         InputStream is = new InputStreamSegment(new ByteArrayInputStream(s.getBytes("UTF-8")), 0, 13);
 
         // read entire stream
-        String result = new java.util.Scanner(is, "UTF-8").useDelimiter("\\A").next();
+        String result = StreamUtil.readAsString(is);
         Assert.assertEquals("Hello Middle!", result);
     }
 
@@ -43,7 +44,7 @@ public class InputStreamSegmentTest {
         InputStream is = new InputStreamSegment(new ByteArrayInputStream(s.getBytes("UTF-8")), 17, 13);
 
         // read entire stream
-        String result = new java.util.Scanner(is, "UTF-8").useDelimiter("\\A").next();
+        String result = StreamUtil.readAsString(is);
         Assert.assertEquals("Hello Middle!", result);
     }
 }
