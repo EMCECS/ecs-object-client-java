@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
 import com.emc.object.Range;
@@ -5,6 +9,8 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 
 import java.io.InputStream;
+import java.net.URL;
+import java.util.Date;
 
 public interface S3Client {
     ListDataNode listDataNodes();
@@ -78,11 +84,17 @@ public interface S3Client {
 
     <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 
+    URL getPresignedUrl(String bucketName, String key, Date expirationTime);
+
+    URL getPresignedUrl(PresignedUrlRequest request);
+
     void deleteObject(String bucketName, String key);
 
     void deleteVersion(String bucketName, String key, String versionId);
 
     DeleteObjectsResult deleteObjects(DeleteObjectsRequest request);
+
+    void setObjectMetadata(String bucketName, String key, S3ObjectMetadata objectMetadata);
 
     S3ObjectMetadata getObjectMetadata(String bucketName, String key);
 

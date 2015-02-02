@@ -1,61 +1,48 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
+import com.emc.object.Protocol;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
+/**
+ * By default, the smart client is enabled, which means virtual host-style buckets/namespaces cannot be used. To use
+ * virtual host-style requests, construct an {@link S3VHostConfig} instead. That will disable the smart
+ * client and set a single host endpoint, prepending namespaces and buckets as appropriate.
+ */
+public class S3Config extends ObjectConfig<S3Config> {
+    public static final int DEFAULT_HTTP_PORT = 9020;
+    public static final int DEFAULT_HTTPS_PORT = 9021;
 
-public class S3Config extends ObjectConfig {
-    private boolean vHostBuckets = false;
-    private boolean vHostNamespace = false;
-    private boolean signNamespace = false;
+    protected static int defaultPort(Protocol protocol) {
+        if (protocol == Protocol.HTTP) return DEFAULT_HTTP_PORT;
+        else if (protocol == Protocol.HTTPS) return DEFAULT_HTTPS_PORT;
+        throw new IllegalArgumentException("unknown protocol: " + protocol);
+    }
 
-    /**
-     * By default, the smart client is enabled, which means virtual host-style buckets/namespaces cannot be used. The
-     * easiest way to enable virtual host-style anything is to call this method. This will disable the smart
-     * client and set a single host endpoint as well as configure whether to include the namespace in the host name
-     * and if so, whether it should be signed (should be true if your cloud has global users).
-     */
-    public void enableVirtualHosting(URI endpoint, boolean vHostNamespace, boolean signNamespace) {
-        vHostBuckets = true;
-        this.vHostNamespace = vHostNamespace;
-        this.signNamespace = signNamespace;
+    protected boolean useVHost = false;
+    protected boolean signNamespace = true;
 
-        List<URI> endpoints = new ArrayList<>();
-        endpoints.add(endpoint);
-        setEndpoints(endpoints);
+    public S3Config(Protocol protocol, String... hostList) {
+        super(protocol, defaultPort(protocol), hostList);
+    }
 
-        // make sure we don't poll for individual nodes
-        getProperties().put(ObjectConfig.PROPERTY_DISABLE_POLLING, "true");
+    public S3Config(Protocol protocol, int port, String... hostList) {
+        super(protocol, port, hostList);
     }
 
     @Override
     public String resolveHost() {
-        return getEndpoints().get(0).getHost();
+        return getHosts().get(0);
     }
 
-    public boolean isvHostBuckets() {
-        return vHostBuckets;
-    }
-
-    public void setvHostBuckets(boolean vHostBuckets) {
-        this.vHostBuckets = vHostBuckets;
-    }
-
-    public boolean isvHostNamespace() {
-        return vHostNamespace;
-    }
-
-    public void setvHostNamespace(boolean vHostNamespace) {
-        this.vHostNamespace = vHostNamespace;
+    public boolean isUseVHost() {
+        return useVHost;
     }
 
     public boolean isSignNamespace() {
         return signNamespace;
-    }
-
-    public void setSignNamespace(boolean signNamespace) {
-        this.signNamespace = signNamespace;
     }
 }

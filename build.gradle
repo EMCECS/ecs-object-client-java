@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
 
 dependencies {
     compile project(':smart-client'),
+            'com.emc.vipr:vipr-object-transformations:2.0.3',
             'org.jdom:jdom2:2.0.5'
     testCompile 'junit:junit:4.11'
 }

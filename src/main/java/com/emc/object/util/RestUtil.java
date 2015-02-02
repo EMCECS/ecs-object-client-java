@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.util;
 
 import java.io.UnsupportedEncodingException;
@@ -31,12 +35,16 @@ public final class RestUtil {
     public static final String EMC_APPEND_OFFSET = EMC_PREFIX + "append-offset";
     public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
     public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
-    public static final String EMC_VPOOL_ID = EMC_PREFIX + "vpool";
+    public static final String EMC_VPOOL = EMC_PREFIX + "vpool";
 
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
     public static final String TYPE_APPLICATION_XML = "application/xml";
 
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
+    public static final String PROPERTY_ENCRYPTION_OUTPUT_TRANSFORM_RECEIVER = "com.emc.object.encryption.outputTransformReceiver";
+    public static final String PROPERTY_ENCRYPTION_INPUT_TRANSFORM_RECEIVER = "com.emc.object.encryption.inputTransformReceiver";
+    public static final String PROPERTY_VERIFY_READ_CHECKSUM = "com.emc.object.verifyReadChecksum";
+    public static final String PROPERTY_WRITE_CHECKSUM = "com.emc.object.writeChecksum";
 
     public static final int STATUS_REDIRECT = 301;
     public static final int STATUS_UNAUTHORIZED = 403;
@@ -45,10 +53,10 @@ public final class RestUtil {
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
+    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
 
-    public static String getFirstAsString(Map<String, List<Object>> multiValueMap, String key) {
-        List<Object> values = multiValueMap.get(key);
+    public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key) {
+        List<T> values = multiValueMap.get(key);
         if (values == null || values.isEmpty()) return null;
         Object value = values.get(0);
         return value == null ? null : value.toString();
@@ -98,7 +106,7 @@ public final class RestUtil {
     /**
      * URL-encodes names and values
      */
-    public static String generateQueryString(Map<String, Object> parameterMap) {
+    public static String generateQueryString(Map<String, String> parameterMap) {
         StringBuilder query = new StringBuilder();
         if (parameterMap != null && !parameterMap.isEmpty()) {
             Iterator<String> paramI = parameterMap.keySet().iterator();
@@ -106,7 +114,7 @@ public final class RestUtil {
                 String name = paramI.next();
                 query.append(urlEncode(name));
                 if (parameterMap.get(name) != null)
-                    query.append("=").append(urlEncode(parameterMap.get(name).toString()));
+                    query.append("=").append(urlEncode(parameterMap.get(name)));
                 if (paramI.hasNext()) query.append("&");
             }
         }

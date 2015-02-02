@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.Method;
@@ -17,13 +21,13 @@ public class ListObjectsRequest extends AbstractBucketRequest {
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> paramMap = super.getQueryParams();
+    public Map<String, String> getQueryParams() {
+        Map<String, String> paramMap = super.getQueryParams();
         if (prefix != null) paramMap.put(S3Constants.PARAM_PREFIX, prefix);
         if (delimiter != null) paramMap.put(S3Constants.PARAM_DELIMITER, delimiter);
-        if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys);
+        if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys.toString());
         if (marker != null) paramMap.put(S3Constants.PARAM_MARKER, marker);
-        if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType);
+        if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType.toString());
         return paramMap;
     }
 

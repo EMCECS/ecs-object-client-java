@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3AuthUtil;
@@ -30,13 +34,13 @@ public class AuthorizationRequestFilter implements ClientRequestFilter {
             String resource = requestContext.getUri().getPath();
 
             // check if bucket is in hostname
-            if (s3Config.isvHostBuckets()) {
+            if (s3Config.isUseVHost()) {
                 String bucketName = (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
                 if (bucketName != null) resource = "/" + bucketName + resource;
             }
 
-            // check if namespace is in hostname
-            if (s3Config.isvHostNamespace() && s3Config.isSignNamespace()) {
+            // check if namespace is in hostname and must be signed
+            if (s3Config.isUseVHost() && s3Config.isSignNamespace()) {
                 String namespace = (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE);
                 if (namespace != null) resource = "/" + namespace + resource;
             }

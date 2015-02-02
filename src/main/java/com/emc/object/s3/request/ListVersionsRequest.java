@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.Method;
@@ -18,14 +22,14 @@ public class ListVersionsRequest extends AbstractBucketRequest {
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> paramMap = super.getQueryParams();
+    public Map<String, String> getQueryParams() {
+        Map<String, String> paramMap = super.getQueryParams();
         if (prefix != null) paramMap.put(S3Constants.PARAM_PREFIX, prefix);
         if (delimiter != null) paramMap.put(S3Constants.PARAM_DELIMITER, delimiter);
-        if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys);
+        if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys.toString());
         if (keyMarker != null) paramMap.put(S3Constants.PARAM_KEY_MARKER, keyMarker);
         if (versionIdMarker != null) paramMap.put(S3Constants.PARAM_VERSION_ID_MARKER, versionIdMarker);
-        if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType);
+        if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType.toString());
         return paramMap;
     }
 

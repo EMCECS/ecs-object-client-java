@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.Method;
@@ -25,7 +29,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         if (acl != null) headers.putAll(acl.toHeaders());
-        if (vPoolId != null) RestUtil.putSingle(headers, RestUtil.EMC_VPOOL_ID, vPoolId);
+        if (vPoolId != null) RestUtil.putSingle(headers, RestUtil.EMC_VPOOL, vPoolId);
         if (fileSystemEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabled);
 
         return headers;

@@ -1,5 +1,8 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.bean;
-
 public abstract class AbstractGrantee implements Comparable<AbstractGrantee> {
     @Override
     public int compareTo(AbstractGrantee o) {

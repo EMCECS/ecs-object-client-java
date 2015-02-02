@@ -1,5 +1,12 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
+import com.emc.object.s3.jersey.BucketRequestFilter;
+import com.emc.object.s3.jersey.NamespaceRequestFilter;
+import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
@@ -7,6 +14,9 @@ import org.apache.log4j.Logger;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -27,8 +37,6 @@ public final class S3AuthUtil {
                 S3Constants.PARAM_RESPONSE_HEADER_CONTENT_LANGUAGE,
                 S3Constants.PARAM_RESPONSE_HEADER_CONTENT_TYPE,
                 S3Constants.PARAM_RESPONSE_HEADER_EXPIRES,
-                S3Constants.PARAM_ACCESS_MODE,
-                S3Constants.PARAM_FILE_ACCESS,
                 S3Constants.PARAM_ENDPOINT));
     }
 
@@ -37,6 +45,49 @@ public final class S3AuthUtil {
         String stringToSign = getStringToSign(method, resource, parameters, headers, clockSkew);
         String signature = getSignature(stringToSign, secretKey);
         RestUtil.putSingle(headers, "Authorization", "AWS " + accessKey + ":" + signature);
+    }
+
+    public static URL generatePresignedUrl(PresignedUrlRequest request, S3Config s3Config) {
+        String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
+
+        URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
+
+        // must construct both the final URL and the resource for signing
+        String resource = "/" + request.getBucketName() + uri.getPath();
+
+        // insert namespace in host
+        if (namespace != null) {
+            if (s3Config.isUseVHost()) {
+                uri = NamespaceRequestFilter.insertNamespace(uri, namespace);
+                if (s3Config.isSignNamespace())
+                    resource = "/" + namespace + resource; // prepend to resource path for signing
+            } else {
+                // issue warning if namespace is specified and vhost is disabled because we can't put the namespace in the URL
+                l4j.warn("vHost namespace is disabled, so there is no way to specify a namespace in a pre-signed URL");
+            }
+        }
+
+        // insert bucket in host or path
+        uri = BucketRequestFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
+
+        // build parameters
+        Map<String, String> queryParams = request.getQueryParams();
+        queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
+
+        // sign the request
+        String stringToSign = S3AuthUtil.getStringToSign(request.getMethod().toString(), resource,
+                queryParams, request.getHeaders(), s3Config.getServerClockSkew());
+        String signature = S3AuthUtil.getSignature(stringToSign, s3Config.getSecretKey());
+
+        // add signature to query string
+        queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
+
+        try {
+            // we must manually append the query string to ensure nothing is re-encoded
+            return new URL(uri + "?" + RestUtil.generateQueryString(queryParams));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("generated URL is not well-formed");
+        }
     }
 
     public static String getStringToSign(String method, String resource, Map<String, String> parameters,

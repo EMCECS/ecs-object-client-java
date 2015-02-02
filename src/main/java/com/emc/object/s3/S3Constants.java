@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
 public final class S3Constants {
@@ -24,12 +28,11 @@ public final class S3Constants {
     public static final String AMZ_SOURCE_VERSION_ID = AMZ_PREFIX + "copy-source-version-id";
     public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";
 
-    public static final String PARAM_ACCESS_MODE = "accessmode";
+    public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";
     public static final String PARAM_DELIMITER = "delimiter";
     public static final String PARAM_ENCODING_TYPE = "encoding-type";
     public static final String PARAM_ENDPOINT = "endpoint";
     public static final String PARAM_EXPIRES = "Expires";
-    public static final String PARAM_FILE_ACCESS = "fileaccess";
     public static final String PARAM_KEY_MARKER = "key-marker";
     public static final String PARAM_LIMIT = "limit";
     public static final String PARAM_MARKER = "marker";
@@ -43,8 +46,10 @@ public final class S3Constants {
     public static final String PARAM_RESPONSE_HEADER_CONTENT_LANGUAGE = "response-content-language";
     public static final String PARAM_RESPONSE_HEADER_CONTENT_TYPE = "response-content-type";
     public static final String PARAM_RESPONSE_HEADER_EXPIRES = "response-expires";
+    public static final String PARAM_SIGNATURE = "Signature";
     public static final String PARAM_UPLOAD_ID = "uploadId";
     public static final String PARAM_UPLOAD_ID_MARKER = "upload-id-marker";
+    public static final String PARAM_VERSION_ID = "versionId";
     public static final String PARAM_VERSION_ID_MARKER = "version-id-marker";
 
     public static final String PROPERTY_BUCKET_NAME = "com.emc.object.s3.bucketName";

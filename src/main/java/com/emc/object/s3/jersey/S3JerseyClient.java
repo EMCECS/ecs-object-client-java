@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.jersey;
 
 import com.emc.object.AbstractJerseyClient;
@@ -7,7 +11,7 @@ import com.emc.object.Range;
 import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.RestUtil;
+import com.emc.object.util.*;
 import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
@@ -21,7 +25,9 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.io.StringReader;
-import java.net.URI;
+import java.net.URL;
+import java.security.NoSuchAlgorithmException;
+import java.util.Date;
 
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Config s3Config;
@@ -48,11 +54,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
                 s3Config.getIdentity(), s3Config.getSecretKey());
         smartConfig.setHostListProvider(hostListProvider);
 
-        URI endpoint = s3Config.getEndpoints().get(0);
         if (s3Config.property(S3Config.PROPERTY_POLL_PROTOCOL) != null)
             hostListProvider.setProtocol(s3Config.propAsString(S3Config.PROPERTY_POLL_PROTOCOL));
         else
-            hostListProvider.setProtocol(endpoint.getScheme());
+            hostListProvider.setProtocol(s3Config.getProtocol().toString());
 
         if (s3Config.property(S3Config.PROPERTY_POLL_PORT) != null) {
             try {
@@ -62,7 +67,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
                         S3Config.PROPERTY_POLL_PORT, s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)), e);
             }
         } else
-            hostListProvider.setPort(endpoint.getPort());
+            hostListProvider.setPort(s3Config.getPort());
 
         // S.C. - CLIENT CREATION
         client = SmartClientFactory.createSmartClient(smartConfig);
@@ -236,9 +241,25 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
-        PutObjectResult result = new PutObjectResult();
-        fillResponseEntity(result, executeAndClose(client, request));
-        return result;
+        try {
+
+            // enable checksum of the object
+            RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+            request.property(RestUtil.PROPERTY_WRITE_CHECKSUM, checksum);
+
+            PutObjectResult result = new PutObjectResult();
+            fillResponseEntity(result, executeAndClose(client, request));
+
+            // get ETag and verify (can't do this in interceptor; no way to get response headers)
+            ChecksumValue etag = new ChecksumValueImpl(ChecksumAlgorithm.MD5, checksum.getOffset(),
+                    RestUtil.getFirstAsString(result.getHeaders(), RestUtil.HEADER_ETAG));
+            if (!etag.equals(checksum))
+                throw new ChecksumError("write checksum failure", etag.getValue(), checksum.getValue());
+
+            return result;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("fatal: MD5 algorithm not found");
+        }
     }
 
     @Override
@@ -270,6 +291,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType) {
         try {
             GetObjectResult<T> result = new GetObjectResult<>();
+
+            // enable checksum of the object (verification is handled in interceptor
+            request.property(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM, "true");
+
             Response response = executeRequest(client, request);
             fillResponseEntity(result, response);
             result.setObject(response.readEntity(objectType));
@@ -279,6 +304,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             if (e.getResponse().getStatus() == 304 || e.getResponse().getStatus() == 412) return null;
             throw e;
         }
+    }
+
+    @Override
+    public URL getPresignedUrl(String bucketName, String key, Date expirationTime) {
+        return getPresignedUrl(new PresignedUrlRequest(Method.GET, bucketName, key, expirationTime));
+    }
+
+    @Override
+    public URL getPresignedUrl(PresignedUrlRequest request) {
+        return S3AuthUtil.generatePresignedUrl(request, s3Config);
     }
 
     @Override
@@ -294,6 +329,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public DeleteObjectsResult deleteObjects(DeleteObjectsRequest request) {
         return executeRequest(client, request, DeleteObjectsResult.class);
+    }
+
+    @Override
+    public void setObjectMetadata(String bucketName, String key, S3ObjectMetadata objectMetadata) {
+        AccessControlList acl = getObjectAcl(bucketName, key);
+        copyObject(new CopyObjectRequest(bucketName, key, bucketName, key).withAcl(acl).withObjectMetadata(objectMetadata));
     }
 
     @Override

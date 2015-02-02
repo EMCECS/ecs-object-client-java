@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.Method;
@@ -15,9 +19,9 @@ public class ListBucketsRequest extends ObjectRequest {
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> queryMap = super.getQueryParams();
-        if (limit != null) queryMap.put(S3Constants.PARAM_LIMIT, limit);
+    public Map<String, String> getQueryParams() {
+        Map<String, String> queryMap = super.getQueryParams();
+        if (limit != null) queryMap.put(S3Constants.PARAM_LIMIT, limit.toString());
         if (marker != null) queryMap.put(S3Constants.PARAM_MARKER, marker);
         return queryMap;
     }

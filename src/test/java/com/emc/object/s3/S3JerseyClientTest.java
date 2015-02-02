@@ -1,6 +1,11 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
 import com.emc.object.AbstractClientTest;
+import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
@@ -67,10 +72,18 @@ public class S3JerseyClientTest extends AbstractClientTest {
         String endpoints = props.getProperty(TestProperties.S3_ENDPOINTS);
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
 
-        S3Config s3Config = new S3Config();
-        s3Config.setEndpoints(parseUris(endpoints == null ? endpoint : endpoints));
+        S3Config s3Config;
+        if (enableVhost) {
+            s3Config = new S3VHostConfig(new URI(endpoint));
+        } else {
+            List<URI> uris = parseUris(endpoints == null ? endpoint : endpoints);
+            String[] hosts = new String[uris.size()];
+            for (int i = 0; i < uris.size(); i++) {
+                hosts[i] = uris.get(i).getHost();
+            }
+            s3Config = new S3Config(Protocol.valueOf(uris.get(0).getScheme().toUpperCase()), hosts);
+        }
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
-        if (enableVhost) s3Config.enableVirtualHosting(new URI(endpoint), true, true);
 
 //      s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
 
@@ -697,10 +710,10 @@ public class S3JerseyClientTest extends AbstractClientTest {
         System.out.println("objectMetadata.getCacheControl(): " + objectMetadata.getCacheControl());
         System.out.println("objectMetadata.getHttpExpires(): " + objectMetadata.getHttpExpires().toString());
         System.out.println("objectMetadata.getVersionId(): " + objectMetadata.getVersionId());
-        System.out.println("objectMetadata.getExpirationTime(): " + objectMetadata.getExpirationTime().toString());
+        System.out.println("objectMetadata.getExpirationDate(): " + objectMetadata.getExpirationDate().toString());
         System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
-        System.out.println("printing the " + objectMetadata.userMetadataKeys().size() + " user meta data key/value pairs");
-        for (String userMetaKey: objectMetadata.userMetadataKeys()) {
+        System.out.println("printing the " + objectMetadata.getUserMetadata().size() + " user meta data key/value pairs");
+        for (String userMetaKey : objectMetadata.getUserMetadata().keySet()) {
             System.out.println("user meta Key: " + userMetaKey + "\tvalue: " + objectMetadata.userMetadata(userMetaKey));
         }
     }

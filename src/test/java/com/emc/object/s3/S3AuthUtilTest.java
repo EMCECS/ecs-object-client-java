@@ -1,11 +1,19 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
+import com.emc.object.Method;
+import com.emc.object.s3.request.PresignedUrlRequest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import java.net.URI;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -129,5 +137,22 @@ public class S3AuthUtilTest {
         Assert.assertEquals(SIGNATURE_3, S3AuthUtil.getSignature(SIGN_STRING_3, SECRET_KEY));
 
         Assert.assertEquals(SIGNATURE_4, S3AuthUtil.getSignature(SIGN_STRING_4, SECRET_KEY));
+    }
+
+    @Test
+    public void testPresignedUrl() throws Exception {
+        S3Config s3Config = new S3VHostConfig(new URI("http://s3.amazonaws.com"))
+                .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+
+        PresignedUrlRequest request = new PresignedUrlRequest(Method.GET, "johnsmith", "/photos/puppy.jpg",
+                new Date(1175139620));
+
+        String expectedUrl = "http://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
+                "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE" +
+                "&Expires=1175139620" +
+                "&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D";
+        String actualUrl = S3AuthUtil.generatePresignedUrl(request, s3Config).toString();
+
+        Assert.assertEquals(expectedUrl, actualUrl);
     }
 }

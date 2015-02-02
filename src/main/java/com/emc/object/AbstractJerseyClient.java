@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object;
 
 import com.emc.object.util.RestUtil;
@@ -9,6 +13,7 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
+import java.util.Map;
 
 public abstract class AbstractJerseyClient {
     protected ObjectConfig objectConfig;
@@ -81,6 +86,11 @@ public abstract class AbstractJerseyClient {
         MultivaluedMap<String, Object> jerseyHeaders = new MultivaluedHashMap<>();
         jerseyHeaders.putAll(request.getHeaders());
         builder.headers(jerseyHeaders);
+
+        // set properties
+        for (Map.Entry<String, Object> entry : request.getProperties().entrySet()) {
+            builder.property(entry.getKey(), entry.getValue());
+        }
 
         return builder;
     }

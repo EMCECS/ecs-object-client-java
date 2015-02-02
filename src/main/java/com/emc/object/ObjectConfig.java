@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object;
 
 import com.emc.rest.smart.SmartConfig;
@@ -5,12 +9,12 @@ import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class ObjectConfig {
+public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private static final Logger l4j = Logger.getLogger(ObjectConfig.class);
 
     public static final String PROPERTY_POLL_PROTOCOL = "com.emc.object.property.pollProtocol";
@@ -21,7 +25,9 @@ public abstract class ObjectConfig {
     public static final String PACKAGE_VERSION = ObjectConfig.class.getPackage().getImplementationVersion();
     public static final String DEFAULT_USER_AGENT = "ECS Java SDK" + (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : "");
 
-    private List<URI> endpoints;
+    private Protocol protocol;
+    private List<String> hosts;
+    private int port = -1;
     private String rootContext;
     private String namespace;
     private String identity;
@@ -31,12 +37,22 @@ public abstract class ObjectConfig {
 
     private Map<String, Object> properties = new HashMap<>();
 
-    public List<URI> getEndpoints() {
-        return endpoints;
+    public ObjectConfig(Protocol protocol, int port, String... hostList) {
+        this.protocol = protocol;
+        this.port = port;
+        this.hosts = Arrays.asList(hostList);
     }
 
-    public void setEndpoints(List<URI> endpoints) {
-        this.endpoints = endpoints;
+    public Protocol getProtocol() {
+        return protocol;
+    }
+
+    public List<String> getHosts() {
+        return hosts;
+    }
+
+    public int getPort() {
+        return port;
     }
 
     public String getRootContext() {
@@ -115,39 +131,40 @@ public abstract class ObjectConfig {
         properties.put(propName, value);
     }
 
-    public ObjectConfig withEndpoints(List<URI> endpoints) {
-        setEndpoints(endpoints);
-        return this;
-    }
-
-    public ObjectConfig withRootContext(String rootContext) {
+    @SuppressWarnings("unchecked")
+    public T withRootContext(String rootContext) {
         setRootContext(rootContext);
-        return this;
+        return (T) this;
     }
 
-    public ObjectConfig withNamespace(String namespace) {
+    @SuppressWarnings("unchecked")
+    public T withNamespace(String namespace) {
         setNamespace(namespace);
-        return this;
+        return (T) this;
     }
 
-    public ObjectConfig withIdentity(String identity) {
+    @SuppressWarnings("unchecked")
+    public T withIdentity(String identity) {
         setIdentity(identity);
-        return this;
+        return (T) this;
     }
 
-    public ObjectConfig withSecretKey(String secretKey) {
+    @SuppressWarnings("unchecked")
+    public T withSecretKey(String secretKey) {
         setSecretKey(secretKey);
-        return this;
+        return (T) this;
     }
 
-    public ObjectConfig withUserAgent(String userAgent) {
+    @SuppressWarnings("unchecked")
+    public T withUserAgent(String userAgent) {
         setUserAgent(userAgent);
-        return this;
+        return (T) this;
     }
 
-    public ObjectConfig withProperty(String propName, Object value) {
+    @SuppressWarnings("unchecked")
+    public T withProperty(String propName, Object value) {
         property(propName, value);
-        return this;
+        return (T) this;
     }
 
     public abstract String resolveHost();
@@ -159,7 +176,6 @@ public abstract class ObjectConfig {
      * implementations as round-robin or single-host.
      */
     public URI resolvePath(String relativePath, String query) {
-        URI sample = getEndpoints().get(0);
         String path = "";
 
         // rootContext should be cleaned by setter
@@ -172,7 +188,7 @@ public abstract class ObjectConfig {
         path += relativePath;
 
         try {
-            URI uri = new URI(sample.getScheme(), null, resolveHost(), sample.getPort(), path, query, null);
+            URI uri = new URI(protocol.toString(), null, resolveHost(), port, path, query, null);
 
             l4j.debug("raw path & query: " + path + "?" + query);
             l4j.debug("resolved URI: " + uri);
@@ -185,11 +201,6 @@ public abstract class ObjectConfig {
 
 
     public SmartConfig toSmartConfig() {
-        List<String> hosts = new ArrayList<>();
-        for (URI uri : endpoints) {
-            hosts.add(uri.getHost());
-        }
-
         SmartConfig smartConfig = new SmartConfig(hosts);
 
         smartConfig.setDisablePolling(Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_POLLING)));

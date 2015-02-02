@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.EntityRequest;
@@ -17,19 +21,23 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
 
     public UploadPartRequest(String bucketName, String key, String uploadId, int partNumber, T object) {
         super(Method.PUT, bucketName, key, null);
+        this.uploadId = uploadId;
+        this.partNumber = partNumber;
+        this.object = object;
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> queryParams = super.getQueryParams();
-        queryParams.put(S3Constants.PARAM_UPLOAD_ID, partNumber);
-        queryParams.put(S3Constants.PARAM_PART_NUMBER, partNumber);
+    public Map<String, String> getQueryParams() {
+        Map<String, String> queryParams = super.getQueryParams();
+        queryParams.put(S3Constants.PARAM_UPLOAD_ID, uploadId);
+        queryParams.put(S3Constants.PARAM_PART_NUMBER, Integer.toString(partNumber));
         return queryParams;
     }
 
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
+        if (contentLength != null) RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_LENGTH, contentLength);
         if (contentMd5 != null) RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
         return headers;
     }

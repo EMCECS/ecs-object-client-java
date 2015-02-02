@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.Method;
@@ -27,8 +31,8 @@ public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectReq
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> queryParams = super.getQueryParams();
+    public Map<String, String> getQueryParams() {
+        Map<String, String> queryParams = super.getQueryParams();
         if (versionId != null) queryParams.put("versionId", versionId);
         for (ResponseHeaderOverride override : headerOverrides.keySet()) {
             queryParams.put(override.getQueryParam(), headerOverrides.get(override));

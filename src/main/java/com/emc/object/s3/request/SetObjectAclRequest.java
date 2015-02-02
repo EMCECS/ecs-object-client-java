@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.EntityRequest;
@@ -20,8 +24,8 @@ public class SetObjectAclRequest extends S3ObjectRequest implements EntityReques
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> queryParams = super.getQueryParams();
+    public Map<String, String> getQueryParams() {
+        Map<String, String> queryParams = super.getQueryParams();
         if (versionId != null) queryParams.put("versionId", versionId);
         return queryParams;
     }

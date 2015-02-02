@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3.request;
 
 import com.emc.object.Range;
@@ -19,10 +23,10 @@ public class CopyPartRequest extends CopyObjectRequest {
     }
 
     @Override
-    public Map<String, Object> getQueryParams() {
-        Map<String, Object> queryParams = super.getQueryParams();
-        queryParams.put(S3Constants.PARAM_UPLOAD_ID, partNumber);
-        queryParams.put(S3Constants.PARAM_PART_NUMBER, partNumber);
+    public Map<String, String> getQueryParams() {
+        Map<String, String> queryParams = super.getQueryParams();
+        queryParams.put(S3Constants.PARAM_UPLOAD_ID, uploadId);
+        queryParams.put(S3Constants.PARAM_PART_NUMBER, Integer.toString(partNumber));
         return queryParams;
     }
 

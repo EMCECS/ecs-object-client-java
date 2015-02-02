@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object;
 
 import com.emc.object.util.RestUtil;
@@ -5,12 +9,14 @@ import com.emc.object.util.RestUtil;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class ObjectRequest {
     private String namespace;
     private Method method;
     private String path;
     private String subresource;
+    private Map<String, Object> properties = new HashMap<>();
 
     /**
      * @param method      the HTTP method to use for the request
@@ -29,9 +35,12 @@ public class ObjectRequest {
     /**
      * Override to return the request-specific query parameters based on properties of the request. Do NOT include the
      * subresource in this map; it will be inserted automatically.
+     *
+     * Note this implementation uses a TreeSet, which will sort the parameters by name. This is done to make URLs
+     * consistent for testing and should not change the semantics of any request.
      */
-    public Map<String, Object> getQueryParams() {
-        return new HashMap<>();
+    public Map<String, String> getQueryParams() {
+        return new TreeMap<>();
     }
 
     /**
@@ -74,5 +83,17 @@ public class ObjectRequest {
 
     public String getSubresource() {
         return subresource;
+    }
+
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    /**
+     * Pass request-specific properties to the HTTP client implementation that may affect
+     * processing/filters, etc.
+     */
+    public void property(String name, Object value) {
+        properties.put(name, value);
     }
 }
