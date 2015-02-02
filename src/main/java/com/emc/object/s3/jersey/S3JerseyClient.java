@@ -76,6 +76,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.register(new NamespaceRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new BucketRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new AuthorizationRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
+        client.register(new ChecksumInterceptor());
         client.register(new ErrorResponseFilter());
     }
 
@@ -292,8 +293,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             GetObjectResult<T> result = new GetObjectResult<>();
 
-            // enable checksum of the object (verification is handled in interceptor
-            request.property(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM, "true");
+            if (request.getRange() == null) {
+                // enable checksum of the object (verification is handled in interceptor)
+                request.property(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM, Boolean.TRUE);
+            }
 
             Response response = executeRequest(client, request);
             fillResponseEntity(result, response);

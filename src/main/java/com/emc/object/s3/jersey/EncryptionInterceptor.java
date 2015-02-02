@@ -13,6 +13,7 @@ import com.emc.vipr.transform.OutputTransform;
 import com.emc.vipr.transform.TransformException;
 import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
 
+import javax.annotation.Priority;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.ext.ReaderInterceptor;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+@Priority(100)
 public class EncryptionInterceptor implements WriterInterceptor, ReaderInterceptor {
     EncryptionTransformFactory factory;
 

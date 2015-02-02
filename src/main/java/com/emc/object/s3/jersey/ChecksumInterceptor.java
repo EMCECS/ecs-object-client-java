@@ -3,6 +3,7 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.util.*;
 
+import javax.annotation.Priority;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.ext.ReaderInterceptor;
 import javax.ws.rs.ext.ReaderInterceptorContext;
@@ -11,12 +12,13 @@ import javax.ws.rs.ext.WriterInterceptorContext;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 
+@Priority(110)
 public class ChecksumInterceptor implements ReaderInterceptor, WriterInterceptor {
     @Override
     public Object aroundReadFrom(ReaderInterceptorContext context) throws IOException, WebApplicationException {
         try {
-            boolean verifyChecksum = Boolean.valueOf(context.getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM).toString());
-            if (verifyChecksum) {
+            Boolean verifyChecksum = (Boolean) context.getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
+            if (verifyChecksum != null && verifyChecksum) {
                 // pull etag and length from headers and wrap stream with verifier
                 S3ObjectMetadata objectMetadata = S3ObjectMetadata.fromHeaders(context.getHeaders());
                 ChecksumValue etag = new ChecksumValueImpl(ChecksumAlgorithm.MD5, objectMetadata.getContentLength(), objectMetadata.getETag());

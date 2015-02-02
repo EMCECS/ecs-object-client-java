@@ -189,12 +189,7 @@ public class S3JerseyClientTest extends AbstractClientTest {
         grantSet.add(grant);
         grantSet.add(grant2);
 
-        CanonicalUser owner = new CanonicalUser();
-        owner.setDisplayName("ownerName");
-        owner.setId("ownerId");
-
         AccessControlList acl = new AccessControlList();
-        acl.setOwner(owner);
         acl.setGrants(grantSet);
         return acl;
     }
@@ -484,22 +479,17 @@ public class S3JerseyClientTest extends AbstractClientTest {
         }
     }
     
-    @Test 
-    public void testCreateObject() throws Exception {
-        l4j.debug("JMC Entered testCreateObject");
-        String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
-//      File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
-//        if(!testFile.exists()) {
-//          throw new FileNotFoundException("vipr.properties");
-//        }
+    @Test
+    public void testCreateReadObject() throws Exception {
+        String key1 = "/objectPrefix/testObject1";
+        String key2 = "/objectPrefix/testObject2";
+        String content1 = "Hello Object!", content2 = "Hello Object 2!!";
 
-        //client.createObject(getTestBucket(), "/objectPrefix/testObject1", testFile, "text/plain");
-        client.putObject(getTestBucket(), "/objectPrefix/testObject1", fileName, "text/plain");
-        l4j.debug("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+        client.putObject(getTestBucket(), key1, content1, "text/plain");
+        Assert.assertEquals(content1, client.readObject(getTestBucket(), key1, String.class));
 
-        //client.createObject(getTestBucket(), "/objectPrefix/testObject2", testFile, "text/plain");
-        client.putObject(getTestBucket(), "/objectPrefix/testObject2", fileName, "text/plain");
-        l4j.debug("JMC testCreateObject [2] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
+        client.putObject(getTestBucket(), key2, content2, "text/plain");
+        Assert.assertEquals(content2, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -701,16 +691,16 @@ public class S3JerseyClientTest extends AbstractClientTest {
     protected void validateMetadataValues(S3ObjectMetadata objectMetadata) throws Exception {
         Assert.assertNotNull(objectMetadata);
         System.out.println("objectMetadata.getContentType(): " + objectMetadata.getContentType());
-        System.out.println("objectMetadata.getContentLength(): " + objectMetadata.getContentLength().toString());
-        System.out.println("objectMetadata.getLastModified(): " + objectMetadata.getLastModified().toString());
+        System.out.println("objectMetadata.getContentLength(): " + objectMetadata.getContentLength());
+        System.out.println("objectMetadata.getLastModified(): " + objectMetadata.getLastModified());
         System.out.println("objectMetadata.getETag(): " + objectMetadata.getETag());
         System.out.println("objectMetadata.getContentMd5(): " + objectMetadata.getContentMd5());
         System.out.println("objectMetadata.getContentDisposition(): " + objectMetadata.getContentDisposition());
         System.out.println("objectMetadata.getContentEncoding(): " + objectMetadata.getContentEncoding());
         System.out.println("objectMetadata.getCacheControl(): " + objectMetadata.getCacheControl());
-        System.out.println("objectMetadata.getHttpExpires(): " + objectMetadata.getHttpExpires().toString());
+        System.out.println("objectMetadata.getHttpExpires(): " + objectMetadata.getHttpExpires());
         System.out.println("objectMetadata.getVersionId(): " + objectMetadata.getVersionId());
-        System.out.println("objectMetadata.getExpirationDate(): " + objectMetadata.getExpirationDate().toString());
+        System.out.println("objectMetadata.getExpirationDate(): " + objectMetadata.getExpirationDate());
         System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
         System.out.println("printing the " + objectMetadata.getUserMetadata().size() + " user meta data key/value pairs");
         for (String userMetaKey : objectMetadata.getUserMetadata().keySet()) {

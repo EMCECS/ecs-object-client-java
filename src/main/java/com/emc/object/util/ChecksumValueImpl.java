@@ -11,7 +11,7 @@ public class ChecksumValueImpl extends ChecksumValue {
     public ChecksumValueImpl(ChecksumAlgorithm algorithm, long offset, String value) {
         this.algorithm = algorithm;
         this.offset = offset;
-        this.value = value;
+        this.value = value.replaceAll("\"", "").trim();
     }
 
     /**

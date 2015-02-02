@@ -72,6 +72,11 @@ public final class RestUtil {
 
     private static void put(Map<String, List<Object>> multiValueMap, String key, Object value, boolean single) {
         synchronized (multiValueMap) {
+            // save calling code some headaches
+            if (value == null) {
+                if (single) multiValueMap.remove(key);
+                return;
+            }
             List<Object> values = multiValueMap.get(key);
             if (values == null) {
                 values = new ArrayList<>();
