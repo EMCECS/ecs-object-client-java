@@ -555,7 +555,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testReadObjectStreamRange() throws Exception {
         String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), key, fileName);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
         l4j.debug("JMC - successfully created the test object. will read object");
