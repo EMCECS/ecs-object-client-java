@@ -405,9 +405,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     protected void createTestObjects(String bucket, String prefixWithDelim, int numObjects) throws Exception {
         l4j.debug("JMC Entered createTestObjects. Creating " + Integer.toString(numObjects));
         String objectName;
-        File testFile = new File(System.getProperty("user.home") + File.separator + "vipr.properties");
+        File testFile = new File(System.getProperty("user.home") + File.separator + "test.properties");
         if (!testFile.exists()) {
-            throw new FileNotFoundException("vipr.properties");
+            throw new FileNotFoundException("test.properties");
         }
         
         for(int i=0; i<numObjects; i++) {
@@ -422,9 +422,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     //TODO need to actually make these multi part uploads
     protected void createMultipartTestObjects(String prefix, int numObjects) throws Exception {
         String objectName;
-        File testFile = new File(System.getProperty("user.home") + File.separator +"vipr.properties");
+        File testFile = new File(System.getProperty("user.home") + File.separator +"test.properties");
         if(!testFile.exists()) {
-            throw new FileNotFoundException("vipr.properties");
+            throw new FileNotFoundException("test.properties");
         }
         
         for(int i=0; i<numObjects; i++) {
@@ -450,10 +450,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testCreateObjectWithRange() throws Exception {
         //void putObject(String bucketName, String key, Range range, Object content)
         l4j.debug("JMC Entered testCreateObjectWithRange");
-        String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         File testFile = new File(fileName);
         if (!testFile.exists()) {
-            throw new FileNotFoundException("vipr.properties");
+            throw new FileNotFoundException("test.properties");
         }
         long length = testFile.length();
         Range range = new Range((long)0, length/2);
@@ -466,7 +466,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateObjectWithRequest() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         //PutObjectResult putObject(PutObjectRequest request);
         //PutObjectRequest(String bucketName, String key, T object) {
         PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), "/objectPrefix/testObject1", fileName);
@@ -509,7 +509,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testUpdateObject() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         //create the initial object
         client.putObject(getTestBucket(), "testObject1", fileName, "text/plain");
         l4j.debug("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
@@ -520,7 +520,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testPutObject() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         String key = "objectKey";
         PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -537,7 +537,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testVerifyRead() throws Exception {
         l4j.debug("JMC Entered testVerifyRead");
-        String fileName = System.getProperty("user.home") + File.separator + "vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         String key = "objectKey";
         PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -553,7 +553,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
   
     @Test
     public void testReadObjectStreamRange() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         String key = "objectKey";
         PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -591,7 +591,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         String testObject1 = "/objectPrefix/testObject1";
         String testObject2 = "/objectPrefix/testObject2";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject1, fileName, "text/plain");
         client.putObject(getTestBucket(), testObject2, fileName, "text/plain");
   
@@ -626,7 +626,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testGetObjectMetadata() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), testObject);
         this.validateMetadataValues(objectMetadata);
@@ -635,7 +635,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testGetObjectMetadataRequest() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         GetObjectMetadataRequest request = new GetObjectMetadataRequest(getTestBucket(), testObject);
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(request);
@@ -665,7 +665,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         AccessControlList acl = this.createAcl();
         client.setObjectAcl(getTestBucket(), testObject, acl);
@@ -675,7 +675,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectCannedAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         client.setObjectAcl(getTestBucket(), testObject, CannedAcl.BucketOwnerFullControl);
         //TODO - need to validate this against a real acl
@@ -684,7 +684,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectAclRequestAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         AccessControlList acl = this.createAcl();
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
@@ -697,7 +697,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectAclRequestCanned() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"vipr.properties";
+        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
         request.setCannedAcl(CannedAcl.BucketOwnerFullControl);
