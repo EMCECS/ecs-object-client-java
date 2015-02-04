@@ -139,7 +139,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         CanonicalUser cu2 = new CanonicalUser("userId2","userDisplayName2");
         Permission perm2 = Permission.READ;
         Grant grant2 = new Grant(cu2, perm2);
-        Set<Grant> grantSet = new HashSet<>();
+        Set<Grant> grantSet = new HashSet<Grant>();
         grantSet.add(grant);
         grantSet.add(grant2);
 
@@ -189,8 +189,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testGetBucketCors() throws Exception {
         //CorsConfiguration getBucketCors(String bucketName);
 
-        ArrayList<CorsRule> crArr = new ArrayList<>();
-        List<CorsRule> crArrVerify = new ArrayList<>();
+        ArrayList<CorsRule> crArr = new ArrayList<CorsRule>();
+        List<CorsRule> crArrVerify = new ArrayList<CorsRule>();
 
         CorsRule cr0 = new CorsRule();
         cr0.setId("corsRuleTestId0");
@@ -247,7 +247,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     
     @Test
     public void testDeleteBucketCors() throws Exception {
-        ArrayList<CorsRule> crArr = new ArrayList<>();
+        ArrayList<CorsRule> crArr = new ArrayList<CorsRule>();
 
         CorsRule cr = new CorsRule();
         cr.setId("corsRuleTestId");
@@ -285,7 +285,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testDeleteBucketLifecycle() throws Exception {
         String bn = getTestBucket();
         LifecycleRule lcr = new LifecycleRule();
-        ArrayList<LifecycleRule> lcrList = new ArrayList<>();
+        ArrayList<LifecycleRule> lcrList = new ArrayList<LifecycleRule>();
         lcrList.add(lcr);
         LifecycleConfiguration lc = new LifecycleConfiguration();
         lc.setRules(lcrList);
@@ -469,7 +469,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         //PutObjectResult putObject(PutObjectRequest request);
         //PutObjectRequest(String bucketName, String key, T object) {
-        PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), "/objectPrefix/testObject1", fileName);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), "/objectPrefix/testObject1", fileName);
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
@@ -522,7 +522,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testPutObject() throws Exception {
         String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), key, fileName);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
         l4j.debug("JMC - Seemed to succeed");
@@ -539,7 +539,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         l4j.debug("JMC Entered testVerifyRead");
         String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<>(getTestBucket(), key, fileName);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
         l4j.debug("JMC - successfully created the test object. will read object");
@@ -717,7 +717,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     
     
     protected List<URI> parseUris(String uriString) throws Exception {
-        List<URI> uris = new ArrayList<>();
+        List<URI> uris = new ArrayList<URI>();
         for (String uri : uriString.split(",")) {
             uris.add(new URI(uri));
         }
