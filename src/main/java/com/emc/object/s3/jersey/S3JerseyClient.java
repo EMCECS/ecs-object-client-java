@@ -72,7 +72,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // S.C. - CLIENT CREATION
         client = SmartClientFactory.createSmartClient(smartConfig);
 
-        // S.C. - FILTER REGISTRATION
+        if (s3Config.isUseVHost()) {
+            ((ClientConfig) client.getConfiguration()).connectorProvider(new ApacheConnectorProvider()); // remove load balancer
+        }
+
+        // filter registration
         client.register(new NamespaceRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new BucketRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
         client.register(new AuthorizationRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
