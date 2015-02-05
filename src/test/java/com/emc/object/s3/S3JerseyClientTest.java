@@ -8,6 +8,7 @@ import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
+import com.emc.object.util.InputStreamSegment;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -159,7 +160,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(grants1.length, grants2.length);
         Assert.assertTrue("The acl sets are not deeply equal", Arrays.deepEquals(grants1, grants2));
     }
-    
+
+    @Test
     public void testSetBucketAcl() {
         AccessControlList acl = this.createAcl();
         client.setBucketAcl(getTestBucket(), acl);
@@ -420,7 +422,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     //TODO need to actually make these multi part uploads
-    protected void createMultipartTestObjects(String prefix, int numObjects) throws Exception {
+    //returns ArrayList of [ [uploadId,key],[uploadId,key]... ]
+    protected List<List<String>> createMultipartTestObjects(String prefix, int numObjects) throws Exception {
+        List<List<String>> upIds = new ArrayList<List<String>>();
+        ArrayList<String> tmp;
         String objectName;
         File testFile = new File(System.getProperty("user.home") + File.separator +"test.properties");
         if(!testFile.exists()) {
@@ -429,8 +434,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         
         for(int i=0; i<numObjects; i++) {
             objectName = "TestObject_" + UUID.randomUUID();
-            client.initiateMultipartUpload(getTestBucket(), prefix + objectName);
+            tmp = new ArrayList<String>();
+            System.out.println("JMC about to call client.initiateMultipartUpload");
+            tmp.add(client.initiateMultipartUpload(getTestBucket(), prefix + objectName));
+            tmp.add(prefix + objectName);
+            upIds.add(tmp);
         }
+        return upIds;
     }
     
     @Test
@@ -493,19 +503,98 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListMultipartUploads() throws Exception {
+    public void testInitiateListAbortMultipartUploads() throws Exception {
         int numObjects = 2;
         String prefix = "multiPrefix/";
-        this.createMultipartTestObjects(prefix, numObjects);
+        System.out.println("JMC about to call this.createMultipartTestObjects ");
+        List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
+        System.out.println("JMC about to call client.listMultipartUploads");
         ListMultipartUploadsResult result = client.listMultipartUploads(getTestBucket());
         Assert.assertNotNull(result);
         List<Upload> lu = result.getUploads();
         Assert.assertEquals(numObjects, lu.size());
+        System.out.println("JMC ListMultipartUploadsResult.length = " + lu.size());
+        //TODO - Upload members are private with no getter/setters
+        /*
+        for (Upload u: lu) {
+            System.out.println("JMC - ListMultipartUploadsResult uploadID: ");
+        }
+        */
+        System.out.println("JMC createMultipartTestObjects returned = " + upIds.size());
+        //ArrayList of [ [uploadId,key],[uploadId,key]... ]
+        for (List<String> tmp: upIds) {
+            System.out.println("JMC createMultipartTestObjects uploadId: " + tmp.get(0) + "\tkey: " + tmp.get(1));
+            //AbortMultipartUploadRequest(String bucketName, String key, String uploadId)
+            System.out.println("JMC - now aborting initialized upload");
+            AbortMultipartUploadRequest abortReq = new AbortMultipartUploadRequest(getTestBucket(), tmp.get(1), tmp.get(0));
+        }
     }
 
     //TODO
     // ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);
 
+
+    @Test
+    public void testSingleMultipartUpload() throws Exception {
+        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
+        int numObjects = 1;
+        String prefix = "multiPrefix/";
+
+        //step 1) initialize the multipart upload
+        List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
+        ListMultipartUploadsResult result = client.listMultipartUploads(getTestBucket());
+        Assert.assertNotNull(result);
+        List<Upload> lu = result.getUploads();
+        Assert.assertEquals(numObjects, lu.size());
+        System.out.println("JMC ListMultipartUploadsResult.length = " + lu.size());
+        //TODO - Upload members are private with no getter/setters
+        /*
+        for (Upload u: lu) {
+            System.out.println("JMC - ListMultipartUploadsResult uploadID: ");
+        }
+        */
+        System.out.println("JMC createMultipartTestObjects returned = " + upIds.size());
+        //upIds is ArrayList of [ [uploadId,key],[uploadId,key]... ]
+        List<String> tmp = upIds.get(0);
+        Assert.assertEquals(2, tmp.size()); //should contain [uploadId, key]
+        System.out.println("JMC createMultipartTestObjects uploadId: " + tmp.get(0) + "\tkey: " + tmp.get(1));
+        System.out.println("JMC beginning to upload chunks");
+
+        //step 2) upload the parts
+        this.uploadMultipartFileParts(getTestBucket(), tmp.get(0), tmp.get(1), fileName);
+        System.out.println("JMC returned from this.uploadMultipartFileParts. About to call the complete request");
+
+        //step 3) call complete on that multipart upload
+        //CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), tmp.get(1), tmp.get(0));
+        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
+        System.out.println("JMC CompleteMultipartUploadResult.bucketName: " + completionResult.getBucketName());
+        System.out.println("JMC CompleteMultipartUploadResult.eTag: " + completionResult.getETag());
+        System.out.println("JMC CompleteMultipartUploadResult.key: " + completionResult.getKey());
+        System.out.println("JMC CompleteMultipartUploadResult.location: " + completionResult.getLocation());
+
+    }
+
+
+    protected void uploadMultipartFileParts(String bucket, String uploadId, String key, String fileName) throws Exception {
+        File fileObj = new File(fileName);
+        long fileLength = fileObj.length();
+        int partNum = 1; //the UploadPartRequest partNum is 1 based, not 0 based
+        long segmentOffset = 0;
+        long segmentLen = 5*1024*1024;
+        long totalLengthSent = 0;
+        //InputStreamSegment(InputStream inputStream, long offset, long length)
+        while(segmentOffset < fileLength) {
+            System.out.println("JMC about to upload part: " + partNum + "\tuploadId: " + uploadId + "\tkey: " + key);
+            client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, partNum,
+                    new InputStreamSegment(new FileInputStream(fileName), segmentOffset, segmentLen)));
+            totalLengthSent += segmentLen;
+            partNum++;
+            segmentOffset += segmentLen;
+            System.out.println("JMC - uploaded multipart segment");
+        }
+        System.out.println("JMC - finished uploading parts of multipart upload of file key: " + key);
+    }
 
     @Test
     public void testUpdateObject() throws Exception {
@@ -537,7 +626,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testVerifyRead() throws Exception {
         l4j.debug("JMC Entered testVerifyRead");
-        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
+        String fileName = System.getProperty("user.home") + File.separator + "test.properties";;
         String key = "objectKey";
         PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
