@@ -38,7 +38,7 @@ public class CopyPartResult extends ObjectResponse {
 
     @XmlTransient
     public String getVersionId() {
-        return headerAsString(S3Constants.AMZ_SOURCE_VERSION_ID);
+        return firstHeader(S3Constants.AMZ_SOURCE_VERSION_ID);
     }
 
     @XmlElement(name = "ETag")

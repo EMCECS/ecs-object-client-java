@@ -7,13 +7,13 @@ package com.emc.object.s3;
 import com.emc.object.s3.bean.ListDataNode;
 import com.emc.rest.smart.HostListProvider;
 import com.emc.rest.smart.LoadBalancer;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Invocation;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -60,7 +60,7 @@ public class S3HostListProvider implements HostListProvider {
 
         // generate signature
         String canonicalString = "GET\n\n\n" + rfcDate + "\n" + path;
-        String signature = null;
+        String signature;
         try {
             signature = getSignature(canonicalString, secret);
         } catch (Exception e) {
@@ -68,7 +68,7 @@ public class S3HostListProvider implements HostListProvider {
         }
 
         // construct request
-        Invocation.Builder request = client.target(uri).request();
+        WebResource.Builder request = client.resource(uri).getRequestBuilder();
 
         // add date and auth headers
         request.header("Date", rfcDate);

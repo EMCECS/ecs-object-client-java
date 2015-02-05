@@ -6,16 +6,17 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.util.RestUtil;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.filter.ClientFilter;
 import org.apache.log4j.Logger;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class NamespaceRequestFilter implements ClientRequestFilter {
-    private static final Logger l4j = Logger.getLogger(NamespaceRequestFilter.class);
+public class NamespaceFilter extends ClientFilter {
+    private static final Logger l4j = Logger.getLogger(NamespaceFilter.class);
 
     /**
      * prepend to hostname (i.e. namespace.s3.company.com)
@@ -33,21 +34,23 @@ public class NamespaceRequestFilter implements ClientRequestFilter {
 
     private S3Config s3Config;
 
-    public NamespaceRequestFilter(S3Config s3Config) {
+    public NamespaceFilter(S3Config s3Config) {
         this.s3Config = s3Config;
     }
 
     @Override
-    public void filter(ClientRequestContext requestContext) throws IOException {
-        String namespace = (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE);
+    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+        String namespace = (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE);
         if (namespace != null) {
 
             if (s3Config.isUseVHost()) {
-                requestContext.setUri(insertNamespace(requestContext.getUri(), namespace));
+                request.setURI(insertNamespace(request.getURI(), namespace));
             } else {
                 // add to headers (x-emc-namespace: namespace)
-                requestContext.getHeaders().putSingle(RestUtil.EMC_NAMESPACE, namespace);
+                request.getHeaders().putSingle(RestUtil.EMC_NAMESPACE, namespace);
             }
         }
+
+        return getNext().handle(request);
     }
 }

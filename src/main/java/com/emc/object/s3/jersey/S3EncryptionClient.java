@@ -17,8 +17,7 @@ import com.emc.vipr.transform.OutputTransform;
 import com.emc.vipr.transform.TransformException;
 import com.emc.vipr.transform.encryption.DoesNotNeedRekeyException;
 import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.RequestEntityProcessing;
+import com.sun.jersey.api.client.config.ClientConfig;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -91,7 +90,7 @@ public class S3EncryptionClient extends S3JerseyClient {
     public S3EncryptionClient(S3Config s3Config, EncryptionConfig encryptionConfig) {
         super(s3Config);
         this.factory = encryptionConfig.getFactory();
-        client.register(new EncryptionInterceptor(factory));
+        client.addFilter(new EncryptionFilter(factory));
     }
 
     /**
@@ -150,7 +149,7 @@ public class S3EncryptionClient extends S3JerseyClient {
         request.property(RestUtil.PROPERTY_ENCRYPTION_OUTPUT_TRANSFORM_RECEIVER, receiver);
 
         // turn on chunked encoding and remove content-length
-        request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
+        request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
         if (request.getObjectMetadata() != null) request.getObjectMetadata().setContentLength(null);
 
         // write data

@@ -6,16 +6,17 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.filter.ClientFilter;
 import org.apache.log4j.Logger;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class BucketRequestFilter implements ClientRequestFilter {
-    private static final Logger l4j = Logger.getLogger(BucketRequestFilter.class);
+public class BucketFilter extends ClientFilter {
+    private static final Logger l4j = Logger.getLogger(BucketFilter.class);
 
     public static URI insertBucket(URI uri, String bucketName, boolean useVHost) {
         try {
@@ -39,17 +40,19 @@ public class BucketRequestFilter implements ClientRequestFilter {
 
     private S3Config s3Config;
 
-    public BucketRequestFilter(S3Config s3Config) {
+    public BucketFilter(S3Config s3Config) {
         this.s3Config = s3Config;
     }
 
     @Override
-    public void filter(ClientRequestContext requestContext) throws IOException {
-        URI uri = requestContext.getUri();
+    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+        URI uri = request.getURI();
 
-        String bucketName = (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
+        String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
         if (bucketName != null) {
-            requestContext.setUri(insertBucket(uri, bucketName, s3Config.isUseVHost()));
+            request.setURI(insertBucket(uri, bucketName, s3Config.isUseVHost()));
         }
+
+        return getNext().handle(request);
     }
 }

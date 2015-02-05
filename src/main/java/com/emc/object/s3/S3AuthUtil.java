@@ -4,8 +4,8 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.BucketRequestFilter;
-import com.emc.object.s3.jersey.NamespaceRequestFilter;
+import com.emc.object.s3.jersey.BucketFilter;
+import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
 import org.apache.commons.codec.binary.Base64;
@@ -58,7 +58,7 @@ public final class S3AuthUtil {
         // insert namespace in host
         if (namespace != null) {
             if (s3Config.isUseVHost()) {
-                uri = NamespaceRequestFilter.insertNamespace(uri, namespace);
+                uri = NamespaceFilter.insertNamespace(uri, namespace);
                 if (s3Config.isSignNamespace())
                     resource = "/" + namespace + resource; // prepend to resource path for signing
             } else {
@@ -68,7 +68,7 @@ public final class S3AuthUtil {
         }
 
         // insert bucket in host or path
-        uri = BucketRequestFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
+        uri = BucketFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
 
         // build parameters
         Map<String, String> queryParams = request.getQueryParams();

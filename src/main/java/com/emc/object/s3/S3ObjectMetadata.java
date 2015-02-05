@@ -90,7 +90,6 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CACHE_CONTROL, cacheControl);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_DISPOSITION, contentDisposition);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_ENCODING, contentEncoding);
-        RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_LENGTH, contentLength);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_TYPE, contentType);
         for (String name : userMetadata.keySet()) {

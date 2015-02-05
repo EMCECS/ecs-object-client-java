@@ -4,6 +4,8 @@
  */
 package com.emc.object.util;
 
+import com.emc.rest.util.SizedInputStream;
+
 import java.io.IOException;
 import java.io.InputStream;
 

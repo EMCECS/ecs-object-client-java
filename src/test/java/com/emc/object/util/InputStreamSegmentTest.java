@@ -4,7 +4,7 @@
  */
 package com.emc.object.util;
 
-import com.emc.util.StreamUtil;
+import com.emc.rest.util.StreamUtil;
 import org.junit.Assert;
 import org.junit.Test;
 

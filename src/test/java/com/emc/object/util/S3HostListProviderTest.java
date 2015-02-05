@@ -7,13 +7,11 @@ package com.emc.object.util;
 import com.emc.object.s3.S3HostListProvider;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.util.TestConfig;
-import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.JerseyClientBuilder;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.client.apache4.ApacheHttpClient4;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.ws.rs.client.Client;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
@@ -30,7 +28,7 @@ public class S3HostListProviderTest {
 
         SmartConfig smartConfig = new SmartConfig(Arrays.asList(serverURI.getHost()));
 
-        Client client = JerseyClientBuilder.newClient(new ClientConfig().connectorProvider(new ApacheConnectorProvider()));
+        Client client = ApacheHttpClient4.create();
 
         S3HostListProvider hostListProvider = new S3HostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
         hostListProvider.setProtocol(serverURI.getScheme());

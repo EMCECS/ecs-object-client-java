@@ -639,6 +639,51 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         l4j.debug("JMC - Success");
     }
+
+    @Test
+    public void testStreamObjectBetweenBuckets() throws Exception {
+        Random random = new Random();
+        String bucket2 = getTestBucket() + "-B", bucket3 = getTestBucket() + "-C";
+        String key1 = "below-32k.obj", key2 = "above-32k.obj";
+        long size1 = 32 * 1024 - 1; // 1 less than 32k
+        long size2 = 64 * 1024 + 1; // 1 more than 64k
+        client.createBucket(bucket2);
+        client.createBucket(bucket3);
+        try {
+            // write to first bucket
+            byte[] data = new byte[(int) size1];
+            random.nextBytes(data);
+            client.putObject(getTestBucket(), key1, data, null);
+
+            data = new byte[(int) size2];
+            client.putObject(getTestBucket(), key2, data, null);
+
+            // read then write to second bucket
+            data = client.readObject(getTestBucket(), key1, byte[].class);
+            client.putObject(bucket2, key1, data, null);
+            Assert.assertEquals(data.length, client.readObject(bucket2, key1, byte[].class).length);
+
+            data = client.readObject(getTestBucket(), key2, byte[].class);
+            client.putObject(bucket2, key2, data, null);
+            Assert.assertEquals(data.length, client.readObject(bucket2, key2, byte[].class).length);
+
+            // stream to third bucket
+            InputStream inputStream = client.readObjectStream(getTestBucket(), key1, null);
+            PutObjectRequest<InputStream> request = new PutObjectRequest<>(bucket3, key1, inputStream);
+            request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size1));
+            client.putObject(request);
+            Assert.assertEquals(size1, client.readObject(bucket3, key1, byte[].class).length);
+
+            inputStream = client.readObjectStream(getTestBucket(), key2, null);
+            request = new PutObjectRequest<>(bucket3, key2, inputStream);
+            request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size2));
+            client.putObject(request);
+            Assert.assertEquals(size2, client.readObject(bucket3, key2, byte[].class).length);
+        } finally {
+            cleanUpBucket(bucket2);
+            cleanUpBucket(bucket3);
+        }
+    }
   
     @Test
     public void testReadObjectStreamRange() throws Exception {

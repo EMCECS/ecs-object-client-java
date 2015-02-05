@@ -11,77 +11,76 @@ import com.emc.object.Range;
 import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.*;
+import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
-import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.JerseyClientBuilder;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 
-import javax.ws.rs.Priorities;
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.MessageBodyWriter;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URL;
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.List;
 
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Config s3Config;
     protected Client client;
 
     public S3JerseyClient(S3Config s3Config) {
+        this(s3Config, null, null);
+    }
+
+    public S3JerseyClient(S3Config s3Config, List<Class<MessageBodyReader<?>>> readers, List<Class<MessageBodyWriter<?>>> writers) {
         super(s3Config);
         this.s3Config = s3Config;
 
-        // SMART CLIENT SETUP
+        // add Checksum
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
 
-        // S.C. - ENDPOINT POLLING
-        // create a separate client for getting the node list. use any client config parameters set on s3Config
-        ClientConfig clientConfig = new ClientConfig();
-        for (String key : s3Config.getProperties().keySet())
-            clientConfig.property(key, s3Config.property(key));
-        clientConfig.connectorProvider(new ApacheConnectorProvider());
-        Client pollingClient = JerseyClientBuilder.newClient(clientConfig);
+        // creates a standard (non-load-balancing) jersey client
+        client = SmartClientFactory.createStandardClient(smartConfig, readers, writers);
 
-        // create a host list provider based on the S3 ?endpoint call (will use the pollingClient we just made)
-        S3HostListProvider hostListProvider = new S3HostListProvider(pollingClient, smartConfig.getLoadBalancer(),
-                s3Config.getIdentity(), s3Config.getSecretKey());
-        smartConfig.setHostListProvider(hostListProvider);
+        if (!s3Config.isUseVHost()) {
+            // SMART CLIENT SETUP
 
-        if (s3Config.property(S3Config.PROPERTY_POLL_PROTOCOL) != null)
-            hostListProvider.setProtocol(s3Config.propAsString(S3Config.PROPERTY_POLL_PROTOCOL));
-        else
-            hostListProvider.setProtocol(s3Config.getProtocol().toString());
+            // S.C. - ENDPOINT POLLING
+            // create a host list provider based on the S3 ?endpoint call (will use the standard client we just made)
+            S3HostListProvider hostListProvider = new S3HostListProvider(client, smartConfig.getLoadBalancer(),
+                    s3Config.getIdentity(), s3Config.getSecretKey());
+            smartConfig.setHostListProvider(hostListProvider);
 
-        if (s3Config.property(S3Config.PROPERTY_POLL_PORT) != null) {
-            try {
-                hostListProvider.setPort(Integer.parseInt(s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)));
-            } catch (NumberFormatException e) {
-                throw new RuntimeException(String.format("invalid poll port (%s=%s)",
-                        S3Config.PROPERTY_POLL_PORT, s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)), e);
-            }
-        } else
-            hostListProvider.setPort(s3Config.getPort());
+            if (s3Config.property(S3Config.PROPERTY_POLL_PROTOCOL) != null)
+                hostListProvider.setProtocol(s3Config.propAsString(S3Config.PROPERTY_POLL_PROTOCOL));
+            else
+                hostListProvider.setProtocol(s3Config.getProtocol().toString());
 
-        // S.C. - CLIENT CREATION
-        client = SmartClientFactory.createSmartClient(smartConfig);
+            if (s3Config.property(S3Config.PROPERTY_POLL_PORT) != null) {
+                try {
+                    hostListProvider.setPort(Integer.parseInt(s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)));
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException(String.format("invalid poll port (%s=%s)",
+                            S3Config.PROPERTY_POLL_PORT, s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)), e);
+                }
+            } else
+                hostListProvider.setPort(s3Config.getPort());
 
-        if (s3Config.isUseVHost()) {
-            ((ClientConfig) client.getConfiguration()).connectorProvider(new ApacheConnectorProvider()); // remove load balancer
+            // S.C. - CLIENT CREATION
+            // create a load-balancing jersey client
+            client = SmartClientFactory.createSmartClient(smartConfig, readers, writers);
         }
 
-        // filter registration
-        client.register(new NamespaceRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
-        client.register(new BucketRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
-        client.register(new AuthorizationRequestFilter(s3Config), Priorities.HEADER_DECORATOR);
-        client.register(new ChecksumInterceptor());
-        client.register(new ErrorResponseFilter());
+        // jersey filters
+        client.addFilter(new ErrorFilter());
+        client.addFilter(new ChecksumFilter());
+        client.addFilter(new AuthorizationFilter(s3Config));
+        client.addFilter(new BucketFilter(s3Config));
+        client.addFilter(new NamespaceFilter(s3Config));
     }
 
     @Override
@@ -105,7 +104,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null));
             return true;
         } catch (S3Exception e) {
-            switch (e.getResponse().getStatus()) {
+            switch (e.getHttpCode()) {
                 case RestUtil.STATUS_REDIRECT:
                 case RestUtil.STATUS_UNAUTHORIZED:
                     return true;
@@ -246,25 +245,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
-        try {
 
-            // enable checksum of the object
-            RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
-            request.property(RestUtil.PROPERTY_WRITE_CHECKSUM, checksum);
+        // enable checksum of the object
+        request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
 
-            PutObjectResult result = new PutObjectResult();
-            fillResponseEntity(result, executeAndClose(client, request));
-
-            // get ETag and verify (can't do this in interceptor; no way to get response headers)
-            ChecksumValue etag = new ChecksumValueImpl(ChecksumAlgorithm.MD5, checksum.getOffset(),
-                    RestUtil.getFirstAsString(result.getHeaders(), RestUtil.HEADER_ETAG));
-            if (!etag.equals(checksum))
-                throw new ChecksumError("write checksum failure", etag.getValue(), checksum.getValue());
-
-            return result;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("fatal: MD5 algorithm not found");
-        }
+        PutObjectResult result = new PutObjectResult();
+        fillResponseEntity(result, executeAndClose(client, request));
+        return result;
     }
 
     @Override
@@ -295,20 +282,19 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType) {
         try {
-            GetObjectResult<T> result = new GetObjectResult<>();
-
             if (request.getRange() == null) {
                 // enable checksum of the object (verification is handled in interceptor)
                 request.property(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM, Boolean.TRUE);
             }
 
-            Response response = executeRequest(client, request);
+            GetObjectResult<T> result = new GetObjectResult<>();
+            ClientResponse response = executeRequest(client, request);
             fillResponseEntity(result, response);
-            result.setObject(response.readEntity(objectType));
+            result.setObject(response.getEntity(objectType));
             return result;
         } catch (S3Exception e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (e.getResponse().getStatus() == 304 || e.getResponse().getStatus() == 412) return null;
+            if (e.getHttpCode() == 304 || e.getHttpCode() == 412) return null;
             throw e;
         }
     }
@@ -355,7 +341,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             return S3ObjectMetadata.fromHeaders(executeAndClose(client, request).getHeaders());
         } catch (S3Exception e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (e.getResponse().getStatus() == 304 || e.getResponse().getStatus() == 412) return null;
+            if (e.getHttpCode() == 304 || e.getHttpCode() == 412) return null;
             throw e;
         }
     }
@@ -424,29 +410,27 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
-    protected Invocation.Builder buildRequest(Client client, ObjectRequest request) {
-        Invocation.Builder builder = super.buildRequest(client, request); // this will set namespace
-
+    protected WebResource.Builder buildRequest(Client client, ObjectRequest request) {
         // set bucket
         if (request instanceof AbstractBucketRequest)
-            builder.property(S3Constants.PROPERTY_BUCKET_NAME, ((AbstractBucketRequest) request).getBucketName());
+            request.property(S3Constants.PROPERTY_BUCKET_NAME, ((AbstractBucketRequest) request).getBucketName());
 
-        return builder;
+        return super.buildRequest(client, request); // this will set namespace
     }
 
     @Override
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
-        Response response = executeRequest(client, request);
+        ClientResponse response = executeRequest(client, request);
         try {
-            T responseEntity = response.readEntity(responseType);
+            T responseEntity = response.getEntity(responseType);
             fillResponseEntity(responseEntity, response);
             return responseEntity;
-        } catch (ProcessingException e) {
+        } catch (ClientHandlerException e) {
 
             // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the
             // expected entity. check for that here.
             try {
-                throw ErrorResponseFilter.parseErrorResponse(new StringReader(response.readEntity(String.class)), response);
+                throw ErrorFilter.parseErrorResponse(new StringReader(response.getEntity(String.class)), response.getStatus());
             } catch (Throwable t) {
 
                 // must be a reader error
