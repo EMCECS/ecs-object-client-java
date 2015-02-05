@@ -44,7 +44,8 @@ public final class RestUtil {
     public static final String PROPERTY_ENCRYPTION_OUTPUT_TRANSFORM_RECEIVER = "com.emc.object.encryption.outputTransformReceiver";
     public static final String PROPERTY_ENCRYPTION_INPUT_TRANSFORM_RECEIVER = "com.emc.object.encryption.inputTransformReceiver";
     public static final String PROPERTY_VERIFY_READ_CHECKSUM = "com.emc.object.verifyReadChecksum";
-    public static final String PROPERTY_WRITE_CHECKSUM = "com.emc.object.writeChecksum";
+    public static final String PROPERTY_VERIFY_WRITE_CHECKSUM = "com.emc.object.verifyWriteChecksum";
+
 
     public static final int STATUS_REDIRECT = 301;
     public static final int STATUS_UNAUTHORIZED = 403;

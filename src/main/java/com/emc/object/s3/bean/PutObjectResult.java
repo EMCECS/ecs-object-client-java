@@ -15,7 +15,7 @@ import java.util.Date;
 public class PutObjectResult extends ObjectResponse {
     @XmlTransient
     public String getVersionId() {
-        return headerAsString(S3Constants.AMZ_VERSION_ID);
+        return firstHeader(S3Constants.AMZ_VERSION_ID);
     }
 
     @XmlTransient
@@ -30,7 +30,7 @@ public class PutObjectResult extends ObjectResponse {
 
     @XmlTransient
     public Long getAppendOffset() {
-        String appendOffset = headerAsString(RestUtil.EMC_APPEND_OFFSET);
+        String appendOffset = firstHeader(RestUtil.EMC_APPEND_OFFSET);
         return appendOffset == null ? null : Long.parseLong(appendOffset);
     }
 }

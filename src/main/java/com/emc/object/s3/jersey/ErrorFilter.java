@@ -6,32 +6,33 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3Exception;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.filter.ClientFilter;
 import org.apache.log4j.LogMF;
 import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Namespace;
 import org.jdom2.input.SAXBuilder;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientResponseContext;
-import javax.ws.rs.client.ClientResponseFilter;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
-public class ErrorResponseFilter implements ClientResponseFilter {
-    private static final Logger l4j = Logger.getLogger(ErrorResponseFilter.class);
+public class ErrorFilter extends ClientFilter {
+    private static final Logger l4j = Logger.getLogger(ErrorFilter.class);
 
-    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
-        if (responseContext.getStatus() > 299) {
-            Response response = Response.status(responseContext.getStatusInfo()).build();
+    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+        ClientResponse response = getNext().handle(request);
 
-            throw parseErrorResponse(new InputStreamReader(responseContext.getEntityStream()), response);
+        if (response.getStatus() > 299) {
+            throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
         }
+
+        return response;
     }
 
-    public static S3Exception parseErrorResponse(Reader reader, Response response) {
+    public static S3Exception parseErrorResponse(Reader reader, int statusCode) {
 
         // JAXB will expect a namespace if we try to unmarshall, but some error responses don't include
         // a namespace. In lieu of writing a SAXFilter to apply a default namespace in-line, this works just as well.
@@ -41,7 +42,7 @@ public class ErrorResponseFilter implements ClientResponseFilter {
         try (Reader r = reader) {
             d = sb.build(r);
         } catch (Throwable t) {
-            return new S3Exception(response, "could not parse error response", t);
+            return new S3Exception("could not parse error response", statusCode, t);
         }
 
         String code = d.getRootElement().getChildText("Code");
@@ -58,10 +59,10 @@ public class ErrorResponseFilter implements ClientResponseFilter {
 
         if (code == null && message == null) {
             // not an error from S3
-            return new S3Exception(response, "no code or message in error response");
+            return new S3Exception("no code or message in error response", statusCode);
         }
 
         LogMF.debug(l4j, "Error: {0}, message: {1}, requestId: {2}", code, message, requestId);
-        return new S3Exception(response, message, code, requestId);
+        return new S3Exception(message, statusCode, code, requestId);
     }
 }
