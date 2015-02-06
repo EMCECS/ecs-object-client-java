@@ -18,23 +18,16 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URL;
 import java.util.Date;
-import java.util.List;
 
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Config s3Config;
     protected Client client;
 
     public S3JerseyClient(S3Config s3Config) {
-        this(s3Config, null, null);
-    }
-
-    public S3JerseyClient(S3Config s3Config, List<Class<MessageBodyReader<?>>> readers, List<Class<MessageBodyWriter<?>>> writers) {
         super(s3Config);
         this.s3Config = s3Config;
 
@@ -43,7 +36,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         SmartConfig smartConfig = s3Config.toSmartConfig();
 
         // creates a standard (non-load-balancing) jersey client
-        client = SmartClientFactory.createStandardClient(smartConfig, readers, writers);
+        client = SmartClientFactory.createStandardClient(smartConfig);
 
         if (!s3Config.isUseVHost()) {
             // SMART CLIENT SETUP
@@ -71,7 +64,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            client = SmartClientFactory.createSmartClient(smartConfig, readers, writers);
+            client = SmartClientFactory.createSmartClient(smartConfig);
         }
 
         // jersey filters

@@ -14,7 +14,7 @@ import com.emc.object.util.RestUtil;
 import com.emc.vipr.transform.TransformException;
 import com.emc.vipr.transform.encryption.DoesNotNeedRekeyException;
 import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
-import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -155,7 +155,7 @@ public class S3EncryptionClient extends S3JerseyClient {
         request.property(RestUtil.PROPERTY_ENCODE_METADATA, userMeta);
 
         // turn on chunked encoding
-        request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
+        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
 
         // write data
         super.putObject(request);
