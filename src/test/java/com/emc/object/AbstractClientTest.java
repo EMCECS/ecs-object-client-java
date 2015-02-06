@@ -16,7 +16,7 @@ import java.util.Random;
 public abstract class AbstractClientTest {
     private static final Logger l4j = Logger.getLogger(AbstractClientTest.class);
     private static final Random random = new Random();
-    private final ThreadLocal<String> testBucket = new ThreadLocal<>();
+    private final ThreadLocal<String> testBucket = new ThreadLocal<String>();
 
     /**
      * Implement to initialize the object client to be used for each test. Each subclass must keep a reference to the

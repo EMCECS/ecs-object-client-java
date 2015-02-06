@@ -27,7 +27,7 @@ public class ConcurrentJunitRunner extends BlockJUnit4ClassRunner {
                     klass.isAnnotationPresent(Concurrent.class) ?
                             klass.getAnnotation(Concurrent.class).threads() :
                             (int) (Runtime.getRuntime().availableProcessors() * 1.5));
-            Queue<Future<?>> tasks = new LinkedList<>();
+            Queue<Future<?>> tasks = new LinkedList<Future<?>>();
 
             @Override
             public void schedule(Runnable childStatement) {

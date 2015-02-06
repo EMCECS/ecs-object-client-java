@@ -20,7 +20,7 @@ public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectReq
     private Date ifUnmodifiedSince;
     private String ifMatch;
     private String ifNoneMatch;
-    private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<>();
+    private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<ResponseHeaderOverride, String>();
 
     public GetObjectRequest(String bucketName, String key) {
         this(Method.GET, bucketName, key);

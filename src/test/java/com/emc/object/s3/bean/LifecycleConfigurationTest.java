@@ -40,7 +40,7 @@ public class LifecycleConfigurationTest {
                 "</Rule>" +
                 "</LifecycleConfiguration>";
 
-        List<LifecycleRule> rules = new ArrayList<>();
+        List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
         rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/", LifecycleRule.Status.Enabled, 3650));
         rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled, new Date(2524608000000L)));
 

@@ -27,7 +27,7 @@ public final class S3AuthUtil {
     public static SortedSet<String> SIGNED_PARAMETERS;
 
     static {
-        SIGNED_PARAMETERS = new TreeSet<>(Arrays.asList(
+        SIGNED_PARAMETERS = new TreeSet<String>(Arrays.asList(
                 "acl", "torrent", "logging", "location", "policy", "requestPayment", "versioning",
                 "versions", "versionId", "notification", "uploadId", "uploads", "partNumber", "website",
                 "delete", "lifecycle", "tagging", "cors", "restore",
@@ -149,7 +149,7 @@ public final class S3AuthUtil {
     }
 
     public static SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers, Map<String, String> parameters) {
-        SortedMap<String, String> canonicalizedHeaders = new TreeMap<>();
+        SortedMap<String, String> canonicalizedHeaders = new TreeMap<String, String>();
 
         // add x-emc- and x-amz- headers
         for (String header : headers.keySet()) {

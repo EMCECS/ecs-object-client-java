@@ -41,8 +41,8 @@ public final class RestUtil {
     public static final String TYPE_APPLICATION_XML = "application/xml";
 
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
-    public static final String PROPERTY_ENCRYPTION_OUTPUT_TRANSFORM_RECEIVER = "com.emc.object.encryption.outputTransformReceiver";
-    public static final String PROPERTY_ENCRYPTION_INPUT_TRANSFORM_RECEIVER = "com.emc.object.encryption.inputTransformReceiver";
+    public static final String PROPERTY_ENCODE_METADATA = "com.emc.object.codec.encodeMetadata";
+    public static final String PROPERTY_DECODE_METADATA = "com.emc.object.codec.decodeMetadata";
     public static final String PROPERTY_VERIFY_READ_CHECKSUM = "com.emc.object.verifyReadChecksum";
     public static final String PROPERTY_VERIFY_WRITE_CHECKSUM = "com.emc.object.verifyWriteChecksum";
 
@@ -54,7 +54,7 @@ public final class RestUtil {
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
+    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
 
     public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key) {
         List<T> values = multiValueMap.get(key);
@@ -80,7 +80,7 @@ public final class RestUtil {
             }
             List<Object> values = multiValueMap.get(key);
             if (values == null) {
-                values = new ArrayList<>();
+                values = new ArrayList<Object>();
                 multiValueMap.put(key, values);
             } else if (single)
                 values.clear();
@@ -92,7 +92,7 @@ public final class RestUtil {
      * URL-decodes names and values
      */
     public static Map<String, String> getQueryParameterMap(String queryString) {
-        Map<String, String> parameters = new HashMap<>();
+        Map<String, String> parameters = new HashMap<String, String>();
         if (queryString != null && queryString.trim().length() > 0) {
             for (String pair : queryString.split("&")) {
                 int equals = pair.indexOf('=');

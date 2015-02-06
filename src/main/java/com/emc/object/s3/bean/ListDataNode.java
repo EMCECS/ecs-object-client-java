@@ -12,7 +12,7 @@ import java.util.List;
 
 @XmlRootElement(name = "ListDataNode")
 public class ListDataNode {
-    private List<String> dataNodes = new ArrayList<>();
+    private List<String> dataNodes = new ArrayList<String>();
     private String versionInfo;
 
     @XmlElements(@XmlElement(name = "DataNodes"))

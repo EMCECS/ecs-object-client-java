@@ -16,7 +16,7 @@ import java.util.*;
 @XmlType(propOrder = {"owner", "grants"})
 public class AccessControlList {
     private CanonicalUser owner;
-    private Set<Grant> grants = new LinkedHashSet<>();
+    private Set<Grant> grants = new LinkedHashSet<Grant>();
 
     @XmlElement(name = "Owner")
     public CanonicalUser getOwner() {
@@ -38,7 +38,7 @@ public class AccessControlList {
     }
 
     public Map<String, List<Object>> toHeaders() {
-        Map<String, List<Object>> headers = new HashMap<>();
+        Map<String, List<Object>> headers = new HashMap<String, List<Object>>();
         for (Grant grant : grants) {
             RestUtil.add(headers, grant.getPermission().getHeaderName(), grant.getGrantee().getHeaderValue());
         }

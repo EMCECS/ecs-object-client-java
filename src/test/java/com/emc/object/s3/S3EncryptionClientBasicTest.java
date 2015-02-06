@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
 import com.emc.object.EncryptionConfig;
@@ -32,7 +36,7 @@ public class S3EncryptionClientBasicTest extends S3EncryptionClientKeyStoreTest 
 
     @Override
     protected EncryptionConfig createEncryptionConfig() throws Exception {
-        return new EncryptionConfig(getMasterKey(), new HashSet<>(Arrays.asList(getMasterKey(), getOldKey())), null, keySize);
+        return new EncryptionConfig(getMasterKey(), new HashSet<KeyPair>(Arrays.asList(getMasterKey(), getOldKey())), null, keySize);
     }
 
     @Override

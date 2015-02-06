@@ -75,7 +75,7 @@ public class ListVersionsResultTest {
                 "</CommonPrefixes>" +
                 "</ListVersionsResult>";
 
-        List<AbstractVersion> versions = new ArrayList<>();
+        List<AbstractVersion> versions = new ArrayList<AbstractVersion>();
 
         CanonicalUser owner = new CanonicalUser("ID12345", "Foo Bar");
 

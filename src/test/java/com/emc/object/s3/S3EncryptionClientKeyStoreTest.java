@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.object.s3;
 
 import com.emc.object.EncryptionConfig;
@@ -13,6 +17,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.security.KeyStore;

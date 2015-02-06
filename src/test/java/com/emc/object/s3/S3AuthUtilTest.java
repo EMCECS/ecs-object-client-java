@@ -23,7 +23,7 @@ public class S3AuthUtilTest {
 
     private static final String METHOD_1 = "GET";
     private static final String RESOURCE_1 = "/johnsmith/photos/puppy.jpg";
-    private static Map<String, String> PARAMETERS_1 = new HashMap<>();
+    private static Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
     private static OutBoundHeaders HEADERS_1 = new OutBoundHeaders();
     private static final String SIGN_STRING_1 = "GET\n" +
             "\n" +
@@ -34,7 +34,7 @@ public class S3AuthUtilTest {
 
     private static final String METHOD_2 = "PUT";
     private static final String RESOURCE_2 = "/static.johnsmith.net/db-backup.dat.gz";
-    private static Map<String, String> PARAMETERS_2 = new HashMap<>();
+    private static Map<String, String> PARAMETERS_2 = new HashMap<String, String>();
     private static OutBoundHeaders HEADERS_2 = new OutBoundHeaders();
     private static final String SIGN_STRING_2 = "PUT\n" +
             "4gJE4saaMU4BqNR0kLY+lw==\n" +
@@ -49,7 +49,7 @@ public class S3AuthUtilTest {
 
     private static final String METHOD_3 = "GET";
     private static final String RESOURCE_3 = "/johnsmith/";
-    private static Map<String, String> PARAMETERS_3 = new HashMap<>();
+    private static Map<String, String> PARAMETERS_3 = new HashMap<String, String>();
     private static OutBoundHeaders HEADERS_3 = new OutBoundHeaders();
     private static final String SIGN_STRING_3 = "GET\n" +
             "\n" +
@@ -60,7 +60,7 @@ public class S3AuthUtilTest {
 
     private static final String METHOD_4 = "GET";
     private static final String RESOURCE_4 = "/johnsmith/";
-    private static Map<String, String> PARAMETERS_4 = new HashMap<>();
+    private static Map<String, String> PARAMETERS_4 = new HashMap<String, String>();
     private static OutBoundHeaders HEADERS_4 = new OutBoundHeaders();
     private static final String SIGN_STRING_4 = "GET\n" +
             "\n" +

@@ -17,7 +17,7 @@ public class ListBucketsResult {
     private String marker;
     private String nextMarker;
     private Boolean truncated;
-    private List<Bucket> buckets = new ArrayList<>();
+    private List<Bucket> buckets = new ArrayList<Bucket>();
 
     @XmlElement(name = "Owner")
     public CanonicalUser getOwner() {

@@ -13,11 +13,11 @@ import java.util.List;
 @XmlType(propOrder = {"id", "allowedOrigins", "allowedMethods", "maxAgeSeconds", "allowedHeaders", "exposeHeaders"})
 public class CorsRule {
     private String id;
-    private List<CorsMethod> allowedMethods = new ArrayList<>();
-    private List<String> allowedOrigins = new ArrayList<>();
+    private List<CorsMethod> allowedMethods = new ArrayList<CorsMethod>();
+    private List<String> allowedOrigins = new ArrayList<String>();
     private Integer maxAgeSeconds;
-    private List<String> exposeHeaders = new ArrayList<>();
-    private List<String> allowedHeaders = new ArrayList<>();
+    private List<String> exposeHeaders = new ArrayList<String>();
+    private List<String> allowedHeaders = new ArrayList<String>();
 
     @XmlElement(name = "ID")
     public String getId() {

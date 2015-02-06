@@ -669,13 +669,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
             // stream to third bucket
             InputStream inputStream = client.readObjectStream(getTestBucket(), key1, null);
-            PutObjectRequest<InputStream> request = new PutObjectRequest<>(bucket3, key1, inputStream);
+            PutObjectRequest<InputStream> request = new PutObjectRequest<InputStream>(bucket3, key1, inputStream);
             request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size1));
             client.putObject(request);
             Assert.assertEquals(size1, client.readObject(bucket3, key1, byte[].class).length);
 
             inputStream = client.readObjectStream(getTestBucket(), key2, null);
-            request = new PutObjectRequest<>(bucket3, key2, inputStream);
+            request = new PutObjectRequest<InputStream>(bucket3, key2, inputStream);
             request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size2));
             client.putObject(request);
             Assert.assertEquals(size2, client.readObject(bucket3, key2, byte[].class).length);

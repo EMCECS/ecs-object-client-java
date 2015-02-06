@@ -27,7 +27,7 @@ public class S3ObjectMetadata {
     private Date httpExpires;
     private Date lastModified;
     private String versionId;
-    private Map<String, String> userMetadata = new HashMap<>();
+    private Map<String, String> userMetadata = new HashMap<String, String>();
 
     public static <T> S3ObjectMetadata fromHeaders(Map<String, List<T>> headers) {
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
@@ -75,7 +75,7 @@ public class S3ObjectMetadata {
     }
 
     public static <T> Map<String, String> getUserMetadata(Map<String, List<T>> headers) {
-        Map<String, String> userMetadata = new HashMap<>();
+        Map<String, String> userMetadata = new HashMap<String, String>();
         for (String name : headers.keySet()) {
             if (name.startsWith(S3Constants.AMZ_META_PREFIX)) {
                 userMetadata.put(name.substring(S3Constants.AMZ_META_PREFIX.length()),
@@ -86,7 +86,7 @@ public class S3ObjectMetadata {
     }
 
     public Map<String, List<Object>> toHeaders() {
-        Map<String, List<Object>> headers = new HashMap<>();
+        Map<String, List<Object>> headers = new HashMap<String, List<Object>>();
         RestUtil.putSingle(headers, RestUtil.HEADER_CACHE_CONTROL, cacheControl);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_DISPOSITION, contentDisposition);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_ENCODING, contentEncoding);

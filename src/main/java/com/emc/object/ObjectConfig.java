@@ -34,8 +34,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private String secretKey;
     private long serverClockSkew;
     private String userAgent = DEFAULT_USER_AGENT;
+    private EncryptionConfig encryptionConfig;
 
-    private Map<String, Object> properties = new HashMap<>();
+    private Map<String, Object> properties = new HashMap<String, Object>();
 
     public ObjectConfig(Protocol protocol, int port, String... hostList) {
         this.protocol = protocol;
@@ -111,6 +112,14 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.userAgent = userAgent;
     }
 
+    public EncryptionConfig getEncryptionConfig() {
+        return encryptionConfig;
+    }
+
+    public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
+        this.encryptionConfig = encryptionConfig;
+    }
+
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -158,6 +167,12 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     @SuppressWarnings("unchecked")
     public T withUserAgent(String userAgent) {
         setUserAgent(userAgent);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public ObjectConfig withEncryptionConfig(EncryptionConfig encryptionConfig) {
+        setEncryptionConfig(encryptionConfig);
         return (T) this;
     }
 

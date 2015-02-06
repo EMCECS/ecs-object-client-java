@@ -19,8 +19,8 @@ public class ListObjectsResult {
     private String marker;
     private String nextMarker;
     private Boolean truncated;
-    private List<S3Object> objects = new ArrayList<>();
-    private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
+    private List<S3Object> objects = new ArrayList<S3Object>();
+    private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
 
     @XmlElement(name = "Name")
     public String getBucketName() {
@@ -105,7 +105,7 @@ public class ListObjectsResult {
 
     @XmlTransient
     public List<String> getCommonPrefixes() {
-        List<String> prefixes = new ArrayList<>();
+        List<String> prefixes = new ArrayList<String>();
         for (CommonPrefix prefix : _commonPrefixes) {
             prefixes.add(prefix.getPrefix());
         }
