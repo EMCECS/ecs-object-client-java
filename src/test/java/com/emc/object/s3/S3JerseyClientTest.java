@@ -624,6 +624,44 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testCopyObject() throws Exception {
+        String key1 = "source-object";
+        String key2 = "copied-object";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectSelf() throws Exception {
+        String key = "object";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key, content, null);
+        GetObjectResult<String> result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
+        Assert.assertEquals(content, result.getObject());
+        Date originalModified = result.getObjectMetadata().getLastModified();
+
+        client.copyObject(getTestBucket(), key, getTestBucket(), key);
+        result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
+        Assert.assertEquals(content, result.getObject());
+        Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
+    }
+
+    public void testCopyObjectWithMeta() throws Exception {
+        // TODO: write test case
+    }
+
+    public void testUpdateMetadata() throws Exception {
+        // TODO: write test case
+    }
+
+    @Test
     public void testVerifyRead() throws Exception {
         l4j.debug("JMC Entered testVerifyRead");
         String fileName = System.getProperty("user.home") + File.separator + "test.properties";;

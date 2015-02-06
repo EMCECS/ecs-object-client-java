@@ -5,6 +5,7 @@
 package com.emc.object;
 
 import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.SizeOverrideWriter;
 import com.emc.rest.util.SizedInputStream;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -40,11 +41,12 @@ public abstract class AbstractJerseyClient {
 
                 if (entityRequest.getEntity() != null) entity = entityRequest.getEntity();
 
-                // make sure input streams have a content length
-                if (entity instanceof InputStream && !(entity instanceof SizedInputStream)) {
-                    if (entityRequest.getContentLength() == null)
-                        throw new UnsupportedOperationException("you must specify a content length with an input stream");
-                    entity = new SizedInputStream((InputStream) entity, entityRequest.getContentLength());
+                // override content-length if set
+                if (entityRequest.getContentLength() != null) {
+                    SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
+                } else if (entity instanceof InputStream && !(entity instanceof SizedInputStream)) {
+                    // TODO: can remove this when chunked encoding is supported
+                    throw new UnsupportedOperationException("you must specify a content length with an input stream");
                 }
             }
 

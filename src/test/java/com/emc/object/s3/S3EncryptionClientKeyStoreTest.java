@@ -8,6 +8,7 @@ import com.emc.object.EncryptionConfig;
 import com.emc.object.s3.bean.GetObjectResult;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.request.GetObjectRequest;
+import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
 import com.emc.vipr.transform.TransformConstants;
 import com.emc.vipr.transform.encryption.KeyStoreEncryptionFactory;
@@ -15,9 +16,9 @@ import com.emc.vipr.transform.encryption.KeyUtils;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.security.KeyStore;
@@ -88,7 +89,7 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
 
         Assert.assertEquals("unencrypted size incorrect", "12",
                 result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
-        Assert.assertEquals("encrypted size incorrect", "16", result.getObjectMetadata().userMetadata("size"));
+        Assert.assertEquals("encrypted size incorrect", 16, result.getObjectMetadata().getContentLength().longValue());
         Assert.assertEquals("unencrypted sha1 incorrect", "2ef7bde608ce5404e97d5f042f95f89f1c232871",
                 result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         Assert.assertEquals("master key ID incorrect", getMasterKeyFingerprint(),
@@ -105,20 +106,21 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         InputStream rawInput = getClass().getClassLoader().getResourceAsStream("uncompressed.txt");
         Assume.assumeNotNull(rawInput);
 
-        client.putObject(getTestBucket(), key, rawInput, null);
-        GetObjectResult<String> result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
+        client.putObject(new PutObjectRequest<InputStream>(getTestBucket(), key, rawInput)
+                .withObjectMetadata(new S3ObjectMetadata().withContentLength(2516125L)));
+        S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), key);
 
         Assert.assertEquals("unencrypted size incorrect", "2516125",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
-        Assert.assertEquals("encrypted size incorrect", 2516128L, result.getObjectMetadata().getContentLength().longValue());
+                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
+        Assert.assertEquals("encrypted size incorrect", 2516128L, objectMetadata.getContentLength().longValue());
         Assert.assertEquals("unencrypted sha1 incorrect", "027e997e6b1dfc97b93eb28dc9a6804096d85873",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         Assert.assertEquals("master key ID incorrect", getMasterKeyFingerprint(),
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
-        Assert.assertNotNull("IV null", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_IV));
-        Assert.assertNotNull("Object key", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
+                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
         Assert.assertNotNull("Missing metadata signature",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
+                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
     }
 
     // Test a stream > 4MB.
@@ -128,7 +130,8 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         int size = 5 * 1024 * 1024 + 13;
         RandomInputStream rs = new RandomInputStream(size);
 
-        client.putObject(getTestBucket(), key, rs, null);
+        client.putObject(new PutObjectRequest<InputStream>(getTestBucket(), key, rs)
+                .withObjectMetadata(new S3ObjectMetadata().withContentLength((long) size)));
         GetObjectResult<byte[]> result = client.getObject(new GetObjectRequest(getTestBucket(), key), byte[].class);
 
         // Make sure the checksum matches
@@ -178,5 +181,22 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         Assert.assertNotNull("Object key", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
         Assert.assertNotNull("Missing metadata signature",
                 result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
+    }
+
+    // the following methods aren't supported in the encryption client
+
+    @Ignore
+    @Override
+    public void testReadObjectStreamRange() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListMultipartUploads() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testCreateObjectWithRange() throws Exception {
     }
 }

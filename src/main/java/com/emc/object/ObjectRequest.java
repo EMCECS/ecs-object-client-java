@@ -33,6 +33,17 @@ public class ObjectRequest {
     }
 
     /**
+     * Constructs a duplicate of the specified object request.
+     */
+    public ObjectRequest(ObjectRequest other) {
+        this.namespace = other.namespace;
+        this.method = other.method;
+        this.path = other.path;
+        this.subresource = other.subresource;
+        this.properties.putAll(other.properties);
+    }
+
+    /**
      * Override to return the request-specific query parameters based on properties of the request. Do NOT include the
      * subresource in this map; it will be inserted automatically.
      *
@@ -79,6 +90,10 @@ public class ObjectRequest {
 
     public String getPath() {
         return path;
+    }
+
+    protected void setPath(String path) {
+        this.path = path;
     }
 
     public String getSubresource() {

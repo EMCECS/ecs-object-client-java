@@ -35,7 +35,7 @@ public class ChecksumFilter extends ClientFilter {
             if (verifyWrite != null && verifyWrite && etag != null) {
                 // verify write checksum
                 if (!adapter.getChecksum().getValue().equals(etag))
-                    throw new ChecksumError("Checksum failure while reading stream", adapter.getChecksum().getValue(), etag);
+                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getValue(), etag);
             }
 
             Boolean verifyRead = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
@@ -61,9 +61,9 @@ public class ChecksumFilter extends ClientFilter {
         @Override
         public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
             try {
-                out = getAdapter().adapt(request, out); // don't break the chain
                 checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
-                return new ChecksummedOutputStream(out, checksum);
+                out = new ChecksummedOutputStream(out, checksum);
+                return getAdapter().adapt(request, out); // don't break the chain
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("fatal: MD5 algorithm not found");
             }

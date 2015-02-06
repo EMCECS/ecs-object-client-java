@@ -17,10 +17,13 @@ import java.util.Map;
 public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private static final Logger l4j = Logger.getLogger(ObjectConfig.class);
 
-    public static final String PROPERTY_POLL_PROTOCOL = "com.emc.object.property.pollProtocol";
-    public static final String PROPERTY_POLL_PORT = "com.emc.object.property.pollPort";
-    public static final String PROPERTY_POLL_INTERVAL = "com.emc.object.property.pollInterval";
-    public static final String PROPERTY_DISABLE_POLLING = "com.emc.object.property.disablePolling";
+    public static final String PROPERTY_POLL_PROTOCOL = "com.emc.object.pollProtocol";
+    public static final String PROPERTY_POLL_PORT = "com.emc.object.pollPort";
+    public static final String PROPERTY_POLL_INTERVAL = "com.emc.object.pollInterval";
+    public static final String PROPERTY_DISABLE_POLLING = "com.emc.object.disablePolling";
+    public static final String PROPERTY_PROXY_URI = "com.emc.object.proxyUri";
+    public static final String PROPERTY_PROXY_USER = "com.emc.object.proxyUser";
+    public static final String PROPERTY_PROXY_PASS = "com.emc.object.proxyPass";
 
     public static final String PACKAGE_VERSION = ObjectConfig.class.getPackage().getImplementationVersion();
     public static final String DEFAULT_USER_AGENT = "ECS Java SDK" + (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : "");
@@ -63,11 +66,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public void setRootContext(String rootContext) {
         if (rootContext != null) {
 
-            // replace first & last slash
-            rootContext = "/" + rootContext.replaceAll("^/", "").replaceAll("/$", "");
-
-            // if we're left with just "/", set to null
-            if (rootContext.equals("/")) rootContext = null;
+            // remove first & last slash
+            rootContext = rootContext.trim().replaceAll("^/", "").replaceAll("/$", "");
         }
         this.rootContext = rootContext;
     }
@@ -186,18 +186,15 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
     /**
      * Resolves a path relative to the API context. The returned URI will be of the format
-     * scheme://host[:port][/rootContext]/relativePath?query. The scheme and port are pulled from the first endpoint in
+     * scheme://host[:port]/[rootContext/]relativePath?query. The scheme and port are pulled from the first endpoint in
      * the endpoints list. The host to use may be virtual (to be resolved by a load balancer) or calculated in
      * implementations as round-robin or single-host.
      */
     public URI resolvePath(String relativePath, String query) {
-        String path = "";
+        String path = "/";
 
         // rootContext should be cleaned by setter
-        if (rootContext != null) path = rootContext;
-
-        // make sure we delimit rootContext and relative path
-        if (!relativePath.startsWith("/")) path += "/";
+        if (rootContext != null && rootContext.length() > 0) path += rootContext + "/";
 
         // add relative path to context
         path += relativePath;
@@ -228,6 +225,15 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                         PROPERTY_POLL_INTERVAL, properties.get(PROPERTY_POLL_INTERVAL)), e);
             }
         }
+
+        try {
+            if (properties.containsKey(PROPERTY_PROXY_URI))
+                smartConfig.setProxyUri(new URI(propAsString(PROPERTY_PROXY_URI)));
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("invalid proxy URI", e);
+        }
+        smartConfig.setProxyUser(propAsString(PROPERTY_PROXY_USER));
+        smartConfig.setProxyPass(propAsString(PROPERTY_PROXY_PASS));
 
         for (String prop : properties.keySet()) {
             smartConfig.property(prop, properties.get(prop));

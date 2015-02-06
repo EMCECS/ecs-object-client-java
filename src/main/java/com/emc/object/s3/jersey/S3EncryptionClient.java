@@ -5,7 +5,6 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.EncryptionConfig;
-import com.emc.object.ObjectRequest;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
@@ -14,10 +13,14 @@ import com.emc.object.util.RestUtil;
 import com.emc.vipr.transform.TransformException;
 import com.emc.vipr.transform.encryption.DoesNotNeedRekeyException;
 import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import com.sun.jersey.api.client.ClientHandler;
+import com.sun.jersey.api.client.filter.ClientFilter;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -88,14 +91,28 @@ public class S3EncryptionClient extends S3JerseyClient {
         super(s3Config);
         this.factory = encryptionConfig.getFactory();
 
-        // jersey filters
+        // insert codec filter into chain before the checksum filter
+        // as usual, Jersey makes this quite hard
+
+        // first, make a list of the filters
+        List<ClientFilter> filters = new ArrayList<ClientFilter>();
+        ClientHandler handler = client.getHeadHandler();
+        while (handler instanceof ClientFilter) {
+            ClientFilter filter = (ClientFilter) handler;
+            if (filter instanceof ChecksumFilter) {
+                // insert codec filter before checksum filter
+                filters.add(new CodecFilter(factory));
+            }
+            filters.add(filter);
+            handler = filter.getNext();
+        }
+
+        // then re-create the filter list (must reverse the list because filters are inserted back to front)
+        Collections.reverse(filters);
         client.removeAllFilters();
-        client.addFilter(new ErrorFilter());
-        client.addFilter(new CodecFilter(factory));
-        client.addFilter(new ChecksumFilter());
-        client.addFilter(new AuthorizationFilter(s3Config));
-        client.addFilter(new BucketFilter(s3Config));
-        client.addFilter(new NamespaceFilter(s3Config));
+        for (ClientFilter filter : filters) {
+            client.addFilter(filter);
+        }
     }
 
     /**
@@ -131,7 +148,12 @@ public class S3EncryptionClient extends S3JerseyClient {
                 }
 
                 // push the re-signed keys as metadata
-                setObjectMetadata(bucketName, key, objectMetadata);
+                // TODO: revert after testing
+                AccessControlList acl = getObjectAcl(bucketName, key);
+                super.copyObject(new CopyObjectRequest(bucketName, key, bucketName, key + ".temp"));
+                super.copyObject(new CopyObjectRequest(bucketName, key + ".temp", bucketName, key)
+                        .withAcl(acl).withObjectMetadata(objectMetadata));
+                super.deleteObject(bucketName, key + ".temp");
 
                 return true;
             } catch (DoesNotNeedRekeyException e) {
@@ -149,24 +171,31 @@ public class S3EncryptionClient extends S3JerseyClient {
         if (request.getRange() != null)
             throw new UnsupportedOperationException(PARTIAL_UPDATE_MSG);
 
-        // activate codec filter
+        // make user metadata available as a request property
         if (request.getObjectMetadata() == null) request.setObjectMetadata(new S3ObjectMetadata());
         Map<String, String> userMeta = request.getObjectMetadata().getUserMetadata();
-        request.property(RestUtil.PROPERTY_ENCODE_METADATA, userMeta);
+        request.property(RestUtil.PROPERTY_USER_METADATA, userMeta);
 
-        // turn on chunked encoding
-        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
+        // activate codec filter
+        request.property(RestUtil.PROPERTY_ENCODE_ENTITY, Boolean.TRUE);
+
+        // TODO: remove after testing
+        @SuppressWarnings("unchecked")
+        PutObjectRequest tempRequest = new PutObjectRequest(request);
+        tempRequest.setKey(request.getKey() + ".temp");
 
         // write data
-        super.putObject(request);
+        super.putObject(tempRequest);
 
         // encryption filter will modify userMeta with encryption metadata *after* the object is transferred
         // we must send a separate metadata update or the object will be unreadable
         // TODO: should this be atomic?  how do we handle rollback?
-        // use internal methods to avoid UnsupportedOperationException
-        ObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), request.getKey(),
+        CopyObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), tempRequest.getKey(),
                 request.getBucketName(), request.getKey()).withAcl(request.getAcl()).withObjectMetadata(request.getObjectMetadata());
-        return executeRequest(client, metadataUpdate, CopyObjectResult.class);
+        // TODO: revert after testing
+        PutObjectResult result = super.copyObject(metadataUpdate);
+        super.deleteObject(request.getBucketName(), tempRequest.getKey());
+        return result;
     }
 
     @Override
@@ -175,7 +204,7 @@ public class S3EncryptionClient extends S3JerseyClient {
             throw new UnsupportedOperationException(PARTIAL_READ_MSG);
 
         // activate codec filter
-        request.property(RestUtil.PROPERTY_DECODE_METADATA, Boolean.TRUE);
+        request.property(RestUtil.PROPERTY_DECODE_ENTITY, Boolean.TRUE);
 
         return super.getObject(request, objectType);
     }

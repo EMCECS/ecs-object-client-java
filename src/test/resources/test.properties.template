@@ -15,6 +15,5 @@ s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 ## Uncomment to enable vhost-style requests (including the namespace)
 #enableVhost=true
 
-## Optional -- HTTP proxy host and port.  Useful for debugging.
-#http.proxy.host=localhost
-#http.proxy.port=8888
+## Optional -- HTTP proxy.  Useful for debugging.
+#http.proxyUri=http://localhost:8888

@@ -41,8 +41,9 @@ public final class RestUtil {
     public static final String TYPE_APPLICATION_XML = "application/xml";
 
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
-    public static final String PROPERTY_ENCODE_METADATA = "com.emc.object.codec.encodeMetadata";
-    public static final String PROPERTY_DECODE_METADATA = "com.emc.object.codec.decodeMetadata";
+    public static final String PROPERTY_USER_METADATA = "com.emc.object.userMetadata";
+    public static final String PROPERTY_ENCODE_ENTITY = "com.emc.object.codec.encodeEntity";
+    public static final String PROPERTY_DECODE_ENTITY = "com.emc.object.codec.decodeEntity";
     public static final String PROPERTY_VERIFY_READ_CHECKSUM = "com.emc.object.verifyReadChecksum";
     public static final String PROPERTY_VERIFY_WRITE_CHECKSUM = "com.emc.object.verifyWriteChecksum";
 

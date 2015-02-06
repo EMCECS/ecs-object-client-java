@@ -28,6 +28,15 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
         this.object = object;
     }
 
+    public PutObjectRequest(PutObjectRequest<T> other) {
+        super(other);
+        this.objectMetadata = other.objectMetadata;
+        this.object = other.object;
+        this.range = other.range;
+        this.acl = other.acl;
+        this.cannedAcl = other.cannedAcl;
+    }
+
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();

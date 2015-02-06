@@ -34,7 +34,8 @@ public class S3ObjectMetadata {
         objectMetadata.cacheControl = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CACHE_CONTROL);
         objectMetadata.contentDisposition = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_DISPOSITION);
         objectMetadata.contentEncoding = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_ENCODING);
-        objectMetadata.contentLength = Long.parseLong(RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_LENGTH));
+        if (RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_LENGTH) != null)
+            objectMetadata.contentLength = Long.parseLong(RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_LENGTH));
         objectMetadata.contentMd5 = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_MD5);
         objectMetadata.contentType = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
         objectMetadata.eTag = RestUtil.getFirstAsString(headers, RestUtil.HEADER_ETAG);

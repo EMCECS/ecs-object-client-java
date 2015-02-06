@@ -14,7 +14,17 @@ public class S3ObjectRequest extends AbstractBucketRequest {
         this.key = key;
     }
 
+    public S3ObjectRequest(S3ObjectRequest other) {
+        super(other);
+        this.key = other.key;
+    }
+
     public String getKey() {
         return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+        setPath(key);
     }
 }

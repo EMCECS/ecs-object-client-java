@@ -13,11 +13,20 @@ public abstract class AbstractBucketRequest extends ObjectRequest {
 
     public AbstractBucketRequest(Method method, String bucketName, String path, String subresource) {
         super(method, path, subresource);
-        this.bucketName = bucketName;
-        property(S3Constants.PROPERTY_BUCKET_NAME, bucketName);
+        setBucketName(bucketName);
+    }
+
+    public AbstractBucketRequest(AbstractBucketRequest other) {
+        super(other);
+        setBucketName(other.bucketName);
     }
 
     public String getBucketName() {
         return bucketName;
+    }
+
+    public void setBucketName(String bucketName) {
+        this.bucketName = bucketName;
+        property(S3Constants.PROPERTY_BUCKET_NAME, bucketName);
     }
 }
