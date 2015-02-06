@@ -12,7 +12,7 @@ import java.util.List;
 
 @XmlRootElement(name = "CORSConfiguration")
 public class CorsConfiguration {
-    private List<CorsRule> corsRules = new ArrayList<>();
+    private List<CorsRule> corsRules = new ArrayList<CorsRule>();
 
     @XmlElement(name = "CORSRule")
     public List<CorsRule> getCorsRules() {

@@ -10,7 +10,7 @@ import java.util.Map;
 public class PresignedUrlRequest extends S3ObjectRequest {
     private Date expirationTime;
     private String versionId;
-    private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<>();
+    private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<ResponseHeaderOverride, String>();
 
     public PresignedUrlRequest(Method method, String bucketName, String key, Date expirationTime) {
         super(method, bucketName, key, null);

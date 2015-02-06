@@ -10,10 +10,7 @@ import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.ObjectReceiver;
 import com.emc.object.util.RestUtil;
-import com.emc.vipr.transform.InputTransform;
-import com.emc.vipr.transform.OutputTransform;
 import com.emc.vipr.transform.TransformException;
 import com.emc.vipr.transform.encryption.DoesNotNeedRekeyException;
 import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
@@ -90,7 +87,15 @@ public class S3EncryptionClient extends S3JerseyClient {
     public S3EncryptionClient(S3Config s3Config, EncryptionConfig encryptionConfig) {
         super(s3Config);
         this.factory = encryptionConfig.getFactory();
-        client.addFilter(new EncryptionFilter(factory));
+
+        // jersey filters
+        client.removeAllFilters();
+        client.addFilter(new ErrorFilter());
+        client.addFilter(new CodecFilter(factory));
+        client.addFilter(new ChecksumFilter());
+        client.addFilter(new AuthorizationFilter(s3Config));
+        client.addFilter(new BucketFilter(s3Config));
+        client.addFilter(new NamespaceFilter(s3Config));
     }
 
     /**
@@ -144,29 +149,23 @@ public class S3EncryptionClient extends S3JerseyClient {
         if (request.getRange() != null)
             throw new UnsupportedOperationException(PARTIAL_UPDATE_MSG);
 
-        // holder for the output transform which must be created in the interceptor
-        ObjectReceiver<OutputTransform> receiver = new ObjectReceiver<>();
-        request.property(RestUtil.PROPERTY_ENCRYPTION_OUTPUT_TRANSFORM_RECEIVER, receiver);
+        // activate codec filter
+        if (request.getObjectMetadata() == null) request.setObjectMetadata(new S3ObjectMetadata());
+        Map<String, String> userMeta = request.getObjectMetadata().getUserMetadata();
+        request.property(RestUtil.PROPERTY_ENCODE_METADATA, userMeta);
 
-        // turn on chunked encoding and remove content-length
+        // turn on chunked encoding
         request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
-        if (request.getObjectMetadata() != null) request.getObjectMetadata().setContentLength(null);
 
         // write data
         super.putObject(request);
 
-        // update metadata with encryption spec (must be a followup call)
-        S3ObjectMetadata objectMetadata = request.getObjectMetadata();
-        Map<String, String> userMetadata = objectMetadata.getUserMetadata();
-
-        OutputTransform outputTransform = receiver.getObject();
-        userMetadata.putAll(outputTransform.getEncodedMetadata());
-        EncryptionConfig.setEncryptionMode(userMetadata, outputTransform.getTransformConfig());
-
+        // encryption filter will modify userMeta with encryption metadata *after* the object is transferred
+        // we must send a separate metadata update or the object will be unreadable
         // TODO: should this be atomic?  how do we handle rollback?
         // use internal methods to avoid UnsupportedOperationException
         ObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), request.getKey(),
-                request.getBucketName(), request.getKey()).withAcl(request.getAcl()).withObjectMetadata(objectMetadata);
+                request.getBucketName(), request.getKey()).withAcl(request.getAcl()).withObjectMetadata(request.getObjectMetadata());
         return executeRequest(client, metadataUpdate, CopyObjectResult.class);
     }
 
@@ -175,16 +174,15 @@ public class S3EncryptionClient extends S3JerseyClient {
         if (request.getRange() != null)
             throw new UnsupportedOperationException(PARTIAL_READ_MSG);
 
-        // property to enable the transform interceptor and receive the input transform
-        ObjectReceiver<InputTransform> receiver = new ObjectReceiver<>();
-        request.property(RestUtil.PROPERTY_ENCRYPTION_INPUT_TRANSFORM_RECEIVER, receiver);
+        // activate codec filter
+        request.property(RestUtil.PROPERTY_DECODE_METADATA, Boolean.TRUE);
 
-        // TODO: should we remove the transform metadata before releasing to calling code?
         return super.getObject(request, objectType);
     }
 
     @Override
     public CopyObjectResult copyObject(CopyObjectRequest request) {
+        // TODO: we should support adding metadata somehow; maybe be intelligent about required metadata
         if (request.getObjectMetadata() != null)
             throw new UnsupportedOperationException(UNSUPPORTED_MSG + " (copy and replace metadata)");
         return super.copyObject(request);

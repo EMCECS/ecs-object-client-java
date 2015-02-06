@@ -32,7 +32,7 @@ public class S3EncryptionClientBasicTest extends S3EncryptionClientKeyStoreTest 
 
     @Override
     protected EncryptionConfig createEncryptionConfig() throws Exception {
-        return new EncryptionConfig(getMasterKey(), new HashSet<>(Arrays.asList(getMasterKey(), getOldKey())), null, keySize);
+        return new EncryptionConfig(getMasterKey(), new HashSet<KeyPair>(Arrays.asList(getMasterKey(), getOldKey())), null, keySize);
     }
 
     @Override

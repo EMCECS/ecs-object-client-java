@@ -11,7 +11,7 @@ import java.util.List;
 
 @XmlRootElement(name = "CompleteMultipartUpload")
 public class CompleteMultipartUpload {
-    private List<MultipartPart> parts = new ArrayList<>();
+    private List<MultipartPart> parts = new ArrayList<MultipartPart>();
 
     public CompleteMultipartUpload() {
     }

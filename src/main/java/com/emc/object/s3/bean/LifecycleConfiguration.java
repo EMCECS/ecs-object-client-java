@@ -11,7 +11,7 @@ import java.util.List;
 
 @XmlRootElement(name = "LifecycleConfiguration")
 public class LifecycleConfiguration {
-    private List<LifecycleRule> rules = new ArrayList<>();
+    private List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
 
     @XmlElement(name = "Rule")
     public List<LifecycleRule> getRules() {

@@ -26,15 +26,16 @@ public class ChecksumFilter extends ClientFilter {
             // pull etag from response headers
             String etag = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_ETAG);
             if (etag != null) etag = etag.replaceAll("\"", "");
+            if (etag != null && (etag.length() <= 2 || etag.contains("-"))) etag = null; // look for valid etags
 
-            if (verifyWrite != null && verifyWrite) {
+            if (verifyWrite != null && verifyWrite && etag != null) {
                 // verify write checksum
                 if (!adapter.getChecksum().getValue().equals(etag))
                     throw new ChecksumError("Checksum failure while reading stream", adapter.getChecksum().getValue(), etag);
             }
 
             Boolean verifyRead = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
-            if (verifyRead != null && verifyRead) {
+            if (verifyRead != null && verifyRead && etag != null) {
                 // wrap stream to verify read checksum
                 response.setEntityInputStream(new ChecksummedInputStream(response.getEntityInputStream(),
                         new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, etag))); // won't have length for chunked responses
@@ -56,6 +57,7 @@ public class ChecksumFilter extends ClientFilter {
         @Override
         public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
             try {
+                out = getAdapter().adapt(request, out); // don't break the chain
                 checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
                 return new ChecksummedOutputStream(out, checksum);
             } catch (NoSuchAlgorithmException e) {

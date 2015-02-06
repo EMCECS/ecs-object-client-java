@@ -39,10 +39,16 @@ public class ErrorFilter extends ClientFilter {
         SAXBuilder sb = new SAXBuilder();
 
         Document d;
-        try (Reader r = reader) {
-            d = sb.build(r);
+        try {
+            d = sb.build(reader);
         } catch (Throwable t) {
             return new S3Exception("could not parse error response", statusCode, t);
+        } finally {
+            try {
+                reader.close();
+            } catch (Throwable t) {
+                l4j.warn("could not close reader", t);
+            }
         }
 
         String code = d.getRootElement().getChildText("Code");

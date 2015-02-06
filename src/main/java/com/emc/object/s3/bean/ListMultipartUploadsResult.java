@@ -21,8 +21,8 @@ public class ListMultipartUploadsResult {
     private String nextKeyMarker;
     private String nextUploadIdMarker;
     private Boolean truncated;
-    private List<Upload> uploads = new ArrayList<>();
-    private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
+    private List<Upload> uploads = new ArrayList<Upload>();
+    private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
 
     @XmlElement(name = "Bucket")
     public String getBucketName() {
@@ -125,7 +125,7 @@ public class ListMultipartUploadsResult {
 
     @XmlTransient
     public List<String> getCommonPrefixes() {
-        List<String> prefixes = new ArrayList<>();
+        List<String> prefixes = new ArrayList<String>();
         for (CommonPrefix prefix : _commonPrefixes) {
             prefixes.add(prefix.getPrefix());
         }

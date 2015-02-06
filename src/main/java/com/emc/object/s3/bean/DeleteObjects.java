@@ -12,7 +12,7 @@ import java.util.List;
 @XmlRootElement(name = "Delete")
 public class DeleteObjects {
     private Boolean quiet;
-    private List<Object> objects = new ArrayList<>();
+    private List<Object> objects = new ArrayList<Object>();
 
     @XmlElement(name = "Quiet")
     public Boolean getQuiet() {

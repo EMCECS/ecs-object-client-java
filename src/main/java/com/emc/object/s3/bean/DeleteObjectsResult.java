@@ -12,7 +12,7 @@ import java.util.List;
 
 @XmlRootElement(name = "DeleteResult")
 public class DeleteObjectsResult {
-    private List<AbstractDeleteResult> results = new ArrayList<>();
+    private List<AbstractDeleteResult> results = new ArrayList<AbstractDeleteResult>();
 
     @XmlElementRefs({@XmlElementRef(type = DeleteSuccess.class), @XmlElementRef(type = DeleteError.class)})
     public List<AbstractDeleteResult> getResults() {

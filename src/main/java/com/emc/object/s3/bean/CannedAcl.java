@@ -15,7 +15,7 @@ public enum CannedAcl {
 
     public static CannedAcl fromHeaderValue(String header) {
         for (CannedAcl cannedAcl : values()) {
-            if (cannedAcl.equals(header)) return cannedAcl;
+            if (cannedAcl.getHeaderValue().equals(header)) return cannedAcl;
         }
         return null;
     }

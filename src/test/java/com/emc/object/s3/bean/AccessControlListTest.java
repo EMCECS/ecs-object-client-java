@@ -63,7 +63,7 @@ public class AccessControlListTest {
                 "</AccessControlList>" +
                 "</AccessControlPolicy>";
 
-        Set<Grant> grants = new TreeSet<>();
+        Set<Grant> grants = new TreeSet<Grant>();
         grants.add(new Grant(new CanonicalUser("foo", "Foo"), Permission.FULL_CONTROL));
         grants.add(new Grant(new CanonicalUser("bar", "Bar"), Permission.READ));
         grants.add(new Grant(new CanonicalUser("baz", "Baz"), Permission.WRITE));

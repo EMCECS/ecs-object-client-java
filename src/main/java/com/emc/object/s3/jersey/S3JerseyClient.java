@@ -17,7 +17,6 @@ import com.emc.rest.smart.SmartConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
@@ -154,8 +153,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void setBucketCors(String bucketName, CorsConfiguration corsConfiguration) {
-        ObjectRequest request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, "cors", corsConfiguration)
-                .withContentType(RestUtil.TYPE_APPLICATION_XML);
+        ObjectRequest request = new GenericBucketEntityRequest<CorsConfiguration>(
+                Method.PUT, bucketName, "cors", corsConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
         executeAndClose(client, request);
     }
 
@@ -172,8 +171,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration) {
-        ObjectRequest request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, "lifecycle", lifecycleConfiguration)
-                .withContentType(RestUtil.TYPE_APPLICATION_XML);
+        ObjectRequest request = new GenericBucketEntityRequest<LifecycleConfiguration>(
+                Method.PUT, bucketName, "lifecycle", lifecycleConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
         executeAndClose(client, request);
     }
 
@@ -196,8 +195,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration) {
-        ObjectRequest request = new GenericBucketEntityRequest<>(Method.PUT, bucketName, "versioning", versioningConfiguration)
-                .withContentType(RestUtil.TYPE_APPLICATION_XML);
+        ObjectRequest request = new GenericBucketEntityRequest<VersioningConfiguration>(
+                Method.PUT, bucketName, "versioning", versioningConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
         executeAndClose(client, request);
     }
 
@@ -235,12 +234,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public void putObject(String bucketName, String key, Object content, String contentType) {
         S3ObjectMetadata metadata = new S3ObjectMetadata().withContentType(contentType);
-        putObject(new PutObjectRequest<>(bucketName, key, content).withObjectMetadata(metadata));
+        putObject(new PutObjectRequest<Object>(bucketName, key, content).withObjectMetadata(metadata));
     }
 
     @Override
     public void putObject(String bucketName, String key, Range range, Object content) {
-        putObject(new PutObjectRequest<>(bucketName, key, content).withRange(range));
+        putObject(new PutObjectRequest<Object>(bucketName, key, content).withRange(range));
     }
 
     @Override
@@ -256,7 +255,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public long appendObject(String bucketName, String key, Object content) {
-        return putObject(new PutObjectRequest<>(bucketName, key, content).withRange(Range.fromOffset(-1))).getAppendOffset();
+        return putObject(new PutObjectRequest<Object>(bucketName, key, content)
+                .withRange(Range.fromOffset(-1))).getAppendOffset();
     }
 
     @Override
@@ -287,7 +287,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
                 request.property(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM, Boolean.TRUE);
             }
 
-            GetObjectResult<T> result = new GetObjectResult<>();
+            GetObjectResult<T> result = new GetObjectResult<T>();
             ClientResponse response = executeRequest(client, request);
             fillResponseEntity(result, response);
             result.setObject(response.getEntity(objectType));
@@ -407,15 +407,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public void abortMultipartUpload(AbortMultipartUploadRequest request) {
         executeAndClose(client, request);
-    }
-
-    @Override
-    protected WebResource.Builder buildRequest(Client client, ObjectRequest request) {
-        // set bucket
-        if (request instanceof AbstractBucketRequest)
-            request.property(S3Constants.PROPERTY_BUCKET_NAME, ((AbstractBucketRequest) request).getBucketName());
-
-        return super.buildRequest(client, request); // this will set namespace
     }
 
     @Override

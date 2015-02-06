@@ -16,7 +16,7 @@ public class ObjectRequest {
     private Method method;
     private String path;
     private String subresource;
-    private Map<String, Object> properties = new HashMap<>();
+    private Map<String, Object> properties = new HashMap<String, Object>();
 
     /**
      * @param method      the HTTP method to use for the request
@@ -40,7 +40,7 @@ public class ObjectRequest {
      * consistent for testing and should not change the semantics of any request.
      */
     public Map<String, String> getQueryParams() {
-        return new TreeMap<>();
+        return new TreeMap<String, String>();
     }
 
     /**
@@ -48,7 +48,7 @@ public class ObjectRequest {
      * modify the result.
      */
     public Map<String, List<Object>> getHeaders() {
-        return new HashMap<>();
+        return new HashMap<String, List<Object>>();
     }
 
     public final String getQueryString() {
