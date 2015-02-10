@@ -9,7 +9,13 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
+import com.emc.object.util.RestUtil;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
+//import org.glassfish.jersey.client.ClientProperties;
+//import org.glassfish.jersey.client.RequestEntityProcessing;
+import com.sun.jersey.api.client.config.ClientConfig;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -485,6 +491,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testCreateObjectChunkedWithRequest() throws Exception {
+        //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
+        //String fileName = System.getProperty("user.home") + File.separator + "test.properties";
+        int size = 50000;
+        byte[] data =  new byte[size];
+        new Random().nextBytes(data);
+        String dataStr = new String(data);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), "/objectPrefix/testObject1", dataStr);
+        //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
+
+        //request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
+        //System.out.println("JMC PROPERTY_CHUNKED_ENCODING_SIZE to -1");
+
+        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
+        System.out.println("JMC PROPERTY_ENABLE_BUFFERING to false");
+        PutObjectResult result = client.putObject(request);
+        Assert.assertNotNull(result);
+    }
+
+    @Test
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
         Assert.assertNotNull(lc);
@@ -508,12 +534,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String prefix = "multiPrefix/";
         System.out.println("JMC about to call this.createMultipartTestObjects ");
         List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
+
         System.out.println("JMC about to call client.listMultipartUploads");
         ListMultipartUploadsResult result = client.listMultipartUploads(getTestBucket());
         Assert.assertNotNull(result);
         List<Upload> lu = result.getUploads();
         Assert.assertEquals(numObjects, lu.size());
-        System.out.println("JMC ListMultipartUploadsResult.length = " + lu.size());
+
+        System.out.println("JMC testInitiateListAbortMultipartUploads ListMultipartUploadsResult.length = " + lu.size());
         //TODO - Upload members are private with no getter/setters
         /*
         for (Upload u: lu) {
@@ -535,64 +563,130 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
 
     @Test
-    public void testSingleMultipartUpload() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
-        int numObjects = 1;
-        String prefix = "multiPrefix/";
+    public void testSingleMultipartUploadMostSimpleOnePart() throws Exception {
+        String key = "TestObject_" + UUID.randomUUID();
+        int fiveKB = 5 * 1024;
+        byte[] content1 = new byte[5 * 1024];
+        new Random().nextBytes(content1);
+        InputStream is1 = new ByteArrayInputStream(content1, 0, fiveKB);
 
-        //step 1) initialize the multipart upload
-        List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
-        ListMultipartUploadsResult result = client.listMultipartUploads(getTestBucket());
-        Assert.assertNotNull(result);
-        List<Upload> lu = result.getUploads();
-        Assert.assertEquals(numObjects, lu.size());
-        System.out.println("JMC ListMultipartUploadsResult.length = " + lu.size());
-        //TODO - Upload members are private with no getter/setters
-        /*
-        for (Upload u: lu) {
-            System.out.println("JMC - ListMultipartUploadsResult uploadID: ");
-        }
-        */
-        System.out.println("JMC createMultipartTestObjects returned = " + upIds.size());
-        //upIds is ArrayList of [ [uploadId,key],[uploadId,key]... ]
-        List<String> tmp = upIds.get(0);
-        Assert.assertEquals(2, tmp.size()); //should contain [uploadId, key]
-        System.out.println("JMC createMultipartTestObjects uploadId: " + tmp.get(0) + "\tkey: " + tmp.get(1));
-        System.out.println("JMC beginning to upload chunks");
+        System.out.println("JMC - calling client.initiateMultipartUpload");
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+        System.out.println("JMC - calling client.UploadPartRequest 1");
+        MultipartPart mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                new InputStreamSegment(is1, 0, fiveKB)));
 
-        //step 2) upload the parts
-        this.uploadMultipartFileParts(getTestBucket(), tmp.get(0), tmp.get(1), fileName);
-        System.out.println("JMC returned from this.uploadMultipartFileParts. About to call the complete request");
-
-        //step 3) call complete on that multipart upload
-        //CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
-        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), tmp.get(1), tmp.get(0));
+        List<MultipartPart> parts = new ArrayList<>();
+        parts.add(mp1);
+        System.out.println("JMC - calling client.completeMultipartUpload");
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
+        completionRequest.setParts(parts);
         CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        System.out.println("JMC CompleteMultipartUploadResult.bucketName: " + completionResult.getBucketName());
-        System.out.println("JMC CompleteMultipartUploadResult.eTag: " + completionResult.getETag());
-        System.out.println("JMC CompleteMultipartUploadResult.key: " + completionResult.getKey());
-        System.out.println("JMC CompleteMultipartUploadResult.location: " + completionResult.getLocation());
-
+        System.out.println("JMC - returned from client.completeMultipartUpload");
     }
 
 
+    @Test
+    public void testSingleMultipartUploadMostSimple() throws Exception {
+        String key = "TestObject_" + UUID.randomUUID();
+        int fiveKB = 5 * 1024;
+        byte[] content1 = new byte[5 * 1024];
+        byte[] content2 = new byte[5 * 1024];
+        byte[] content3 = new byte[5 * 1024];
+        new Random().nextBytes(content1);
+        new Random().nextBytes(content2);
+        new Random().nextBytes(content3);
+        InputStream is1 = new ByteArrayInputStream(content1, 0, fiveKB);
+        InputStream is2 = new ByteArrayInputStream(content2, 0, fiveKB);
+        InputStream is3 = new ByteArrayInputStream(content3, 0, fiveKB);
+
+        System.out.println("JMC - calling client.initiateMultipartUpload");
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+        System.out.println("JMC - calling client.UploadPartRequest 1");
+        MultipartPart mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                new InputStreamSegment(is1, 0, fiveKB)));
+        System.out.println("JMC - calling client.UploadPartRequest 2");
+        MultipartPart mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
+                new InputStreamSegment(is2, 0, fiveKB)));
+        System.out.println("JMC - calling client.UploadPartRequest 3");
+        MultipartPart mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
+                new InputStreamSegment(is3, 0, fiveKB)));
+
+        List<MultipartPart> parts = new ArrayList<>();
+        parts.add(mp1);
+        parts.add(mp2);
+        parts.add(mp3);
+        System.out.println("JMC - calling client.completeMultipartUpload");
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
+        completionRequest.setParts(parts);
+        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
+        System.out.println("JMC - returned from client.completeMultipartUpload");
+    }
+
+    @Test
+    public void testSingleMultipartUploadSimple() throws Exception {
+        String key = "TestObject_" + UUID.randomUUID();
+        int fiveMB = 5 * 1024 * 1024;
+        byte[] content = new byte[11 * 1024 * 1024];
+        new Random().nextBytes(content);
+        InputStream is1 = new ByteArrayInputStream(content, 0, fiveMB);
+        InputStream is2 = new ByteArrayInputStream(content, fiveMB, fiveMB);
+        InputStream is3 = new ByteArrayInputStream(content, 2 * fiveMB, content.length - (2 * fiveMB));
+
+        System.out.println("JMC - calling client.initiateMultipartUpload");
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+        System.out.println("JMC - calling client.UploadPartRequest 1");
+        MultipartPart mp1 =  client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                new InputStreamSegment(is1, 0, fiveMB)));
+        MultipartPart mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
+                new InputStreamSegment(is2, 0, fiveMB)));
+        System.out.println("JMC - calling client.UploadPartRequest 3");
+        /*
+        MultipartPart mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
+                new InputStreamSegment(is3, 0, content.length - (2 * fiveMB))));
+*/
+
+        MultipartPart mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
+                new InputStreamSegment(is3, 0, 2*fiveMB)));
+        List<MultipartPart> parts = new ArrayList<>();
+        parts.add(mp1);
+        parts.add(mp2);
+        parts.add(mp3);
+        System.out.println("JMC - calling client.completeMultipartUpload");
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
+        completionRequest.setParts(parts);
+        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
+        System.out.println("JMC - returned from client.completeMultipartUpload");
+    }
+
     protected void uploadMultipartFileParts(String bucket, String uploadId, String key, String fileName) throws Exception {
+        System.out.println("JMC Entered this.uploadMultipartFileParts");
         File fileObj = new File(fileName);
         long fileLength = fileObj.length();
         int partNum = 1; //the UploadPartRequest partNum is 1 based, not 0 based
         long segmentOffset = 0;
-        long segmentLen = 5*1024*1024;
+        //long segmentLen = 5*1024*1024;
+        long segmentLen = 5*1024;
+        long sendLen = segmentLen;
         long totalLengthSent = 0;
         //InputStreamSegment(InputStream inputStream, long offset, long length)
+        System.out.println("JMC about to loop over parts fileLength: " + fileLength + "\tsegmentLen: " + segmentLen);
+        /*
         while(segmentOffset < fileLength) {
             System.out.println("JMC about to upload part: " + partNum + "\tuploadId: " + uploadId + "\tkey: " + key);
             client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, partNum,
-                    new InputStreamSegment(new FileInputStream(fileName), segmentOffset, segmentLen)));
+                    new InputStreamSegment(new FileInputStream(fileName), segmentOffset, sendLen)));
             totalLengthSent += segmentLen;
             partNum++;
             segmentOffset += segmentLen;
+            if (fileLength-totalLengthSent < segmentLen) {
+                sendLen = fileLength-totalLengthSent;
+            }
             System.out.println("JMC - uploaded multipart segment");
         }
+        */
+        client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, partNum,
+                new InputStreamSegment(new FileInputStream(fileName), segmentOffset, fileLength)));
         System.out.println("JMC - finished uploading parts of multipart upload of file key: " + key);
     }
 
