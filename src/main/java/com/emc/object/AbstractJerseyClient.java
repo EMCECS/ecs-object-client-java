@@ -10,14 +10,18 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import org.apache.log4j.Logger;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.MessageBodyWriter;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.util.Map;
 
 public abstract class AbstractJerseyClient {
+    private static final Logger l4j = Logger.getLogger(AbstractJerseyClient.class);
+
     protected static final Annotation[] EMPTY_ANNOTATIONS = new Annotation[0];
 
     protected ObjectConfig objectConfig;
@@ -61,7 +65,12 @@ public abstract class AbstractJerseyClient {
                     // NOTE2: if the entity is an input stream, it will be streamed into memory to determine its size. this
                     //        may cause OutOfMemoryException if there is not enough memory to hold the data
                     // TODO: can remove when chunked encoding is supported
-                    if (size < 0) request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
+                    if (size < 0) {
+                        l4j.info("entity size cannot be determined; enabling Apache client entity buffering...");
+                        if (entity instanceof InputStream)
+                            l4j.warn("set a content-length for input streams to save memory");
+                        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
+                    }
 
                     SizeOverrideWriter.setEntitySize(size);
                 }
