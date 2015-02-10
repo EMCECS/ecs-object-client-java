@@ -4,8 +4,10 @@
  */
 description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
 
+version = '0.9-beta'
+
 dependencies {
-    compile project(':smart-client'),
+    compile 'com.emc.ecs:smart-client:1.0',
             'com.emc.vipr:vipr-object-transformations:2.0.3',
             'org.jdom:jdom2:2.0.5'
     testCompile 'junit:junit:4.11'
