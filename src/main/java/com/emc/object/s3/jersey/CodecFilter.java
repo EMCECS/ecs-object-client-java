@@ -40,17 +40,8 @@ public class CodecFilter extends ClientFilter {
 
             // alter entity size (if necessary) to reflect encrypted size
             Long contentLength = SizeOverrideWriter.getEntitySize();
-            // TODO: really, the smart-client should automatically set size override for large entities internally,
-            // but there appears to be no way to accomplish that, so we do it here
-            if (contentLength == null) {
-                // if this object has an implicit size, we must override it
-                Object entity = request.getEntity();
-                if (entity instanceof byte[]) contentLength = (long) ((byte[]) entity).length;
-                else if (entity instanceof File) contentLength = ((File) entity).length();
-                else if (entity instanceof SizedInputStream) contentLength = ((SizedInputStream) entity).getSize();
-            }
-            if (contentLength != null)
-                SizeOverrideWriter.setEntitySize(contentLength + (16 - (contentLength % 16)));
+            if (contentLength != null && contentLength >= 0)
+                SizeOverrideWriter.setEntitySize((contentLength / 16 + 1) * 16);
 
             // wrap output stream with encryptor
             request.setAdapter(new EncryptAdapter(request.getAdapter(), userMeta));

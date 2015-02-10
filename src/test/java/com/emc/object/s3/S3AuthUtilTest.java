@@ -144,7 +144,7 @@ public class S3AuthUtilTest {
         S3Config s3Config = new S3VHostConfig(new URI("http://s3.amazonaws.com"))
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
 
-        PresignedUrlRequest request = new PresignedUrlRequest(Method.GET, "johnsmith", "/photos/puppy.jpg",
+        PresignedUrlRequest request = new PresignedUrlRequest(Method.GET, "johnsmith", "photos/puppy.jpg",
                 new Date(1175139620));
 
         String expectedUrl = "http://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +

@@ -192,7 +192,12 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testListMultipartUploads() throws Exception {
+    public void testInitiateListAbortMultipartUploads() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    protected void uploadMultipartFileParts(String bucket, String uploadId, String key, String fileName) throws Exception {
     }
 
     @Ignore

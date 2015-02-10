@@ -33,8 +33,8 @@ public class ChecksummedOutputStream extends OutputStream {
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        update(b, off, len);
         delegate.write(b, off, len);
+        update(b, off, len);
     }
 
     @Override
