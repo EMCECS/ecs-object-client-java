@@ -5,6 +5,7 @@
 // ****NOTE: to generate a coverage report, run ./gradlew test followed by ./gradlew testCoberturaReport
 description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
 group 'com.emc.ecs'
+version '1.2'
 
 ext.scmUrl = 'https://github.com/emcvipr/ecs-object-client'
 ext.scmConnection = 'scm:git@github.com:emcvipr/ecs-object-client.git'
@@ -189,7 +190,6 @@ aggregateDocs.dependsOn javadoc
 
 apply plugin: 'base'
 apply plugin: 'github-pages'
-apply plugin: 'grgit-release'
 
 githubPages {
     repoUri = githubUrl
@@ -202,11 +202,6 @@ githubPages {
     }
 }
 publishGhPages.dependsOn aggregateDocs
-
-release {
-    grgit = Grgit.open(project.file('.'))
-    releaseTasks = [test, distZip, uploadArchives, publishGhPages]
-}
 
 clean {
     delete aggregatedDocsDir
