@@ -2,13 +2,217 @@
  * Copyright (c) 2015 EMC Corporation
  * All Rights Reserved
  */
+// ****NOTE: to generate a coverage report, run ./gradlew test followed by ./gradlew testCoberturaReport
 description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+group 'com.emc.ecs'
 
-version = '0.9-beta'
+ext.scmUrl = 'https://github.com/emcvipr/ecs-object-client'
+ext.scmConnection = 'scm:git@github.com:emcvipr/ecs-object-client.git'
+ext.githubUrl = 'https://github.com/emcvipr/ecs-object-client.git'
+ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.ajoberstar:gradle-git:0.9.0',
+                'com.eriwen:gradle-cobertura-plugin:1.1.1'
+    }
+}
+
+import org.ajoberstar.grgit.*
+
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'java'
+apply plugin: 'cobertura'
+apply plugin: 'distribution'
+//apply plugin: 'signing'
+apply plugin: 'maven'
+
+defaultTasks 'distZip'
+
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.allTasks.any { it.name == 'uploadArchives' }) {
+        def sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+        uploadArchives.repositories.mavenDeployer.repository.authentication.password = sonatypePass
+    }
+    if (taskGraph.allTasks.any { it instanceof Sign }) {
+        def signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
+        ext.'signing.password' = signingPass
+    }
+    if (taskGraph.hasTask(':publishGhPages')) {
+        githubPages.credentials.password = new String(System.console().readPassword('\nGithub password: '))
+    }
+    if (taskGraph.hasTask(':release')) {
+        def gitPassword = new String(System.console().readPassword('\nASD git password: '))
+        release.grgit = Grgit.open(project.file('.'), new Credentials(gitUsername, gitPassword))
+    }
+}
 
 dependencies {
-    compile 'com.emc.ecs:smart-client:1.0',
+    compile 'com.emc.ecs:smart-client:1.0.0',
             'com.emc.vipr:vipr-object-transformations:2.0.3',
             'org.jdom:jdom2:2.0.5'
     testCompile 'junit:junit:4.11'
 }
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+compileJava {
+    sourceCompatibility = 1.6
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+test {
+    jvmArgs '-XX:-UseSplitVerifier' // required for cobertura and Java 1.7
+}
+
+def projectPom = {
+    project {
+        name project.name
+        description project.description
+        url 'https://community.emc.com/community/products/vipr#developer'
+
+        scm {
+            url scmUrl
+            connection scmConnection
+            developerConnection scmConnection
+        }
+
+        licenses {
+            license {
+                name 'The BSD 3-Clause License'
+                url 'http://opensource.org/licenses/BSD-3-Clause'
+                distribution 'repo'
+            }
+        }
+
+        developers {
+            developer {
+                id 'emcvipr'
+                name 'EMC ViPR'
+            }
+        }
+    }
+}
+
+task writePom {
+    ext.pomFile = file("$buildDir/pom.xml")
+    outputs.file pomFile
+    doLast {
+        pom(projectPom).writeTo pomFile
+    }
+}
+
+jar {
+    doFirst {
+        manifest {
+            attributes 'Implementation-Version': project.version,
+                    'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
+        }
+    }
+    into("META-INF/maven/$project.group/$project.name") {
+        from writePom
+    }
+}
+
+javadoc {
+    options.quiet()
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from "${docsDir}/javadoc"
+}
+javadocJar.dependsOn javadoc
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives jar
+    archives javadocJar
+    archives sourcesJar
+}
+
+distributions {
+    main {
+        contents {
+            from configurations.archives.allArtifacts.files
+            from 'readme.txt'
+            from 'license.txt'
+            into('lib') {
+                from configurations.runtime
+            }
+        }
+    }
+}
+
+//    signing {
+//        required { gradle.taskGraph.hasTask(':uploadArchives') }
+//        sign configurations.archives
+//    }
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { deployment -> signing.signPom(deployment) }
+
+            repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
+                authentication(userName: sonatypeUsername, password: '')
+            }
+
+            pom projectPom
+        }
+    }
+}
+
+task aggregateDocs << {
+    copy {
+        from docsDir
+        into "${aggregatedDocsDir}/latest"
+    }
+    copy {
+        from docsDir
+        into "${aggregatedDocsDir}/${project.version}"
+    }
+}
+aggregateDocs.dependsOn javadoc
+
+apply plugin: 'base'
+apply plugin: 'github-pages'
+apply plugin: 'grgit-release'
+
+githubPages {
+    repoUri = githubUrl
+    credentials {
+        username = githubUsername
+        password = ''
+    }
+    pages {
+        from aggregatedDocsDir
+    }
+}
+publishGhPages.dependsOn aggregateDocs
+
+release {
+    grgit = Grgit.open(project.file('.'))
+    releaseTasks = [test, distZip, uploadArchives, publishGhPages]
+}
+
+clean {
+    delete aggregatedDocsDir
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.2.1'
+}
+
