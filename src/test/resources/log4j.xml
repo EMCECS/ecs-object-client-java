@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2015 EMC Corporation
+  ~ All Rights Reserved
+  -->
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration>
+	<appender name="mainAppender" class="org.apache.log4j.ConsoleAppender">
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="conversionPattern" value="%-7r %-5p [%-15t] %c{1}: %m%n"/>
+		</layout>
+	</appender>
+
+	<logger name="org.apache.http.wire">
+		<level value="INFO" />
+	</logger>
+
+	<root>
+		<priority value="DEBUG" />
+		<appender-ref ref="mainAppender" />
+	</root>
+</log4j:configuration>

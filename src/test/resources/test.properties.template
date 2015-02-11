@@ -1,0 +1,19 @@
+###
+### Template file for test configuration parameters.
+### Copy to "test.properties" and configure for your environment.
+###
+
+## Your S3 Access Key
+s3.access_key=<user>@<domain>
+
+## Your S3 Secret Key
+s3.secret_key=<secretkey>
+
+## Endpoint to the S3 Access Point
+s3.endpoint=http[s]://<ecshost>[:9020|:9021]
+
+## Uncomment to enable vhost-style requests (including the namespace)
+#enableVhost=true
+
+## Optional -- HTTP proxy.  Useful for debugging.
+#http.proxyUri=http://localhost:8888
