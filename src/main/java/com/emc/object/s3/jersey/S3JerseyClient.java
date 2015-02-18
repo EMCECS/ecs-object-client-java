@@ -381,8 +381,18 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
-    public MultipartPart uploadPart(UploadPartRequest request) {
-        return new MultipartPart(request.getPartNumber(), executeAndClose(client, request).getEntityTag().getValue());
+    public ListPartsResult listParts(String bucketName, String key, String uploadId) {
+        return listParts(new ListPartsRequest(bucketName, key, uploadId));
+    }
+
+    @Override
+    public ListPartsResult listParts(ListPartsRequest request) {
+        return executeRequest(client, request, ListPartsResult.class);
+    }
+
+    @Override
+    public MultipartPartETag uploadPart(UploadPartRequest request) {
+        return new MultipartPartETag(request.getPartNumber(), executeAndClose(client, request).getEntityTag().getValue());
     }
 
     @Override

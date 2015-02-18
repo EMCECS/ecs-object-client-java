@@ -4,6 +4,8 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.s3.request.EncodingType;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -16,6 +18,7 @@ public class ListMultipartUploadsResult {
     private String prefix;
     private String delimiter;
     private Integer maxUploads;
+    private EncodingType encodingType;
     private String keyMarker;
     private String uploadIdMarker;
     private String nextKeyMarker;
@@ -58,6 +61,15 @@ public class ListMultipartUploadsResult {
 
     public void setMaxUploads(Integer maxUploads) {
         this.maxUploads = maxUploads;
+    }
+
+    @XmlElement(name = "Encoding-Type")
+    public EncodingType getEncodingType() {
+        return encodingType;
+    }
+
+    public void setEncodingType(EncodingType encodingType) {
+        this.encodingType = encodingType;
     }
 
     @XmlElement(name = "KeyMarker")

@@ -4,6 +4,8 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.s3.request.EncodingType;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -16,6 +18,7 @@ public class ListObjectsResult {
     private String prefix;
     private String delimiter;
     private Integer maxKeys;
+    private EncodingType encodingType;
     private String marker;
     private String nextMarker;
     private Boolean truncated;
@@ -56,6 +59,15 @@ public class ListObjectsResult {
 
     public void setMaxKeys(Integer maxKeys) {
         this.maxKeys = maxKeys;
+    }
+
+    @XmlElement(name = "Encoding-Type")
+    public EncodingType getEncodingType() {
+        return encodingType;
+    }
+
+    public void setEncodingType(EncodingType encodingType) {
+        this.encodingType = encodingType;
     }
 
     @XmlElement(name = "Marker")

@@ -9,12 +9,10 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
-import com.emc.object.util.RestUtil;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
 //import org.glassfish.jersey.client.ClientProperties;
 //import org.glassfish.jersey.client.RequestEntityProcessing;
-import com.sun.jersey.api.client.config.ClientConfig;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -573,10 +571,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
         System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPart mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
                 new InputStreamSegment(is1, 0, fiveKB)));
 
-        List<MultipartPart> parts = new ArrayList<>();
+        List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
         parts.add(mp1);
         System.out.println("JMC - calling client.completeMultipartUpload");
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
@@ -603,16 +601,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
         System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPart mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
                 new InputStreamSegment(is1, 0, fiveKB)));
         System.out.println("JMC - calling client.UploadPartRequest 2");
-        MultipartPart mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
                 new InputStreamSegment(is2, 0, fiveKB)));
         System.out.println("JMC - calling client.UploadPartRequest 3");
-        MultipartPart mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
                 new InputStreamSegment(is3, 0, fiveKB)));
 
-        List<MultipartPart> parts = new ArrayList<>();
+        List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
         parts.add(mp1);
         parts.add(mp2);
         parts.add(mp3);
@@ -636,9 +634,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
         System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPart mp1 =  client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+        MultipartPartETag mp1 =  client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
                 new InputStreamSegment(is1, 0, fiveMB)));
-        MultipartPart mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
                 new InputStreamSegment(is2, 0, fiveMB)));
         System.out.println("JMC - calling client.UploadPartRequest 3");
         /*
@@ -646,9 +644,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 new InputStreamSegment(is3, 0, content.length - (2 * fiveMB))));
 */
 
-        MultipartPart mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
                 new InputStreamSegment(is3, 0, 2*fiveMB)));
-        List<MultipartPart> parts = new ArrayList<>();
+        List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
         parts.add(mp1);
         parts.add(mp2);
         parts.add(mp3);

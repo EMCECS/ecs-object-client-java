@@ -233,7 +233,7 @@ public class S3EncryptionClient extends S3JerseyClient {
     }
 
     @Override
-    public MultipartPart uploadPart(UploadPartRequest request) {
+    public MultipartPartETag uploadPart(UploadPartRequest request) {
         throw new UnsupportedOperationException(UNSUPPORTED_MSG);
     }
 

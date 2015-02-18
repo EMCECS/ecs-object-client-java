@@ -116,7 +116,11 @@ public interface S3Client {
 
     InitiateMultipartUploadResult initiateMultipartUpload(InitiateMultipartUploadRequest request);
 
-    MultipartPart uploadPart(UploadPartRequest request);
+    ListPartsResult listParts(String bucketName, String key, String uploadId);
+
+    ListPartsResult listParts(ListPartsRequest request);
+
+    MultipartPartETag uploadPart(UploadPartRequest request);
 
     CopyPartResult copyPart(CopyPartRequest request);
 

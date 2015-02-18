@@ -1,38 +1,27 @@
-/*
- * Copyright (c) 2015 EMC Corporation
- * All Rights Reserved
- */
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
+import java.util.Date;
 
-public class MultipartPart {
-    private Integer partNumber;
-    private String eTag;
+public class MultipartPart extends MultipartPartETag {
+    private Date lastModified;
+    private Long size;
 
-    public MultipartPart() {
+    @XmlElement(name = "LastModified")
+    public Date getLastModified() {
+        return lastModified;
     }
 
-    public MultipartPart(Integer partNumber, String eTag) {
-        this.partNumber = partNumber;
-        this.eTag = eTag;
+    public void setLastModified(Date lastModified) {
+        this.lastModified = lastModified;
     }
 
-    @XmlElement(name = "PartNumber")
-    public Integer getPartNumber() {
-        return partNumber;
+    @XmlElement(name = "Size")
+    public Long getSize() {
+        return size;
     }
 
-    public void setPartNumber(Integer partNumber) {
-        this.partNumber = partNumber;
-    }
-
-    @XmlElement(name = "ETag")
-    public String getETag() {
-        return eTag;
-    }
-
-    public void setETag(String eTag) {
-        this.eTag = eTag;
+    public void setSize(Long size) {
+        this.size = size;
     }
 }

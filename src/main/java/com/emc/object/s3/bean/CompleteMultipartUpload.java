@@ -11,21 +11,21 @@ import java.util.List;
 
 @XmlRootElement(name = "CompleteMultipartUpload")
 public class CompleteMultipartUpload {
-    private List<MultipartPart> parts = new ArrayList<MultipartPart>();
+    private List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
 
     public CompleteMultipartUpload() {
     }
 
-    public CompleteMultipartUpload(List<MultipartPart> parts) {
+    public CompleteMultipartUpload(List<MultipartPartETag> parts) {
         this.parts = parts;
     }
 
     @XmlElement(name = "Part")
-    public List<MultipartPart> getParts() {
+    public List<MultipartPartETag> getParts() {
         return parts;
     }
 
-    public void setParts(List<MultipartPart> parts) {
+    public void setParts(List<MultipartPartETag> parts) {
         this.parts = parts;
     }
 }

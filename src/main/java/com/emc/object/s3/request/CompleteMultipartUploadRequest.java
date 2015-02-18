@@ -7,7 +7,7 @@ package com.emc.object.s3.request;
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
 import com.emc.object.s3.bean.CompleteMultipartUpload;
-import com.emc.object.s3.bean.MultipartPart;
+import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.util.RestUtil;
 
 import java.util.List;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class CompleteMultipartUploadRequest extends S3ObjectRequest implements EntityRequest<CompleteMultipartUpload> {
     private String uploadId;
-    private List<MultipartPart> parts;
+    private List<MultipartPartETag> parts;
 
     public CompleteMultipartUploadRequest(String bucketName, String key, String uploadId) {
         super(Method.POST, bucketName, key, null);
@@ -48,15 +48,15 @@ public class CompleteMultipartUploadRequest extends S3ObjectRequest implements E
         return uploadId;
     }
 
-    public List<MultipartPart> getParts() {
+    public List<MultipartPartETag> getParts() {
         return parts;
     }
 
-    public void setParts(List<MultipartPart> parts) {
+    public void setParts(List<MultipartPartETag> parts) {
         this.parts = parts;
     }
 
-    public CompleteMultipartUploadRequest withParts(List<MultipartPart> parts) {
+    public CompleteMultipartUploadRequest withParts(List<MultipartPartETag> parts) {
         setParts(parts);
         return this;
     }
