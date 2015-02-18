@@ -1,0 +1,2 @@
+Copyright (c) 2015#if($today.year > 2015)-$today.year#end EMC Corporation
+All Rights Reserved
