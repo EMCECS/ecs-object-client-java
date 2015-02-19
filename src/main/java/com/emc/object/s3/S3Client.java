@@ -12,16 +12,33 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Date;
 
+/**
+ * Represents all S3 operations supported by the ECS platform of the corresponding version of this library.  Note that
+ * ECS does not implement all S3 operations in the API specification.  Some methods have yet to be implemented, while
+ * many do not apply to a private cloud infrastructure.  ECS also extends the S3 API by providing methods not included
+ * in the original specification, such as mutable objects (byte-range update) and atomic appends (returning offset).
+ * <p/>
+ * Any calls resulting in an error will throw S3Exception.  All available information from the error will be included in
+ * the exception instance.  If an exception is not thrown, you may assume the call was successful.
+ */
 public interface S3Client {
     ListDataNode listDataNodes();
 
     /**
-     * Lists the buckets owned by the configured identity
+     * Lists the buckets owned by the user.
      */
     ListBucketsResult listBuckets();
 
+    /**
+     * List the buckets owned by the user.  ListBucketsRequest provides all available options for this call.
+     */
     ListBucketsResult listBuckets(ListBucketsRequest request);
 
+    /**
+     * Returns whether a bucket exists in the user's namespace (or the configured namespace of the client). This call
+     * will return true if the bucket exists even if the user does not have access to the bucket. If this call returns
+     * false, a subsequent call to createBucket with the same name should succeed.
+     */
     boolean bucketExists(String bucketName);
 
     void createBucket(String bucketName);
