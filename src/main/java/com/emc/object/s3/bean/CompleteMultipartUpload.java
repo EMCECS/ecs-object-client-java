@@ -28,26 +28,26 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 @XmlRootElement(name = "CompleteMultipartUpload")
 public class CompleteMultipartUpload {
-    private List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
+    private SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
 
     public CompleteMultipartUpload() {
     }
 
-    public CompleteMultipartUpload(List<MultipartPartETag> parts) {
+    public CompleteMultipartUpload(SortedSet<MultipartPartETag> parts) {
         this.parts = parts;
     }
 
     @XmlElement(name = "Part")
-    public List<MultipartPartETag> getParts() {
+    public SortedSet<MultipartPartETag> getParts() {
         return parts;
     }
 
-    public void setParts(List<MultipartPartETag> parts) {
+    public void setParts(SortedSet<MultipartPartETag> parts) {
         this.parts = parts;
     }
 }

@@ -28,7 +28,7 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 
-public class MultipartPartETag {
+public class MultipartPartETag implements Comparable<MultipartPartETag> {
     private Integer partNumber;
     private String eTag;
 
@@ -38,6 +38,11 @@ public class MultipartPartETag {
     public MultipartPartETag(Integer partNumber, String eTag) {
         this.partNumber = partNumber;
         this.eTag = eTag;
+    }
+
+    @Override
+    public int compareTo(MultipartPartETag multipartPartETag) {
+        return partNumber.compareTo(multipartPartETag.getPartNumber());
     }
 
     @XmlElement(name = "PartNumber")

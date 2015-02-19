@@ -596,7 +596,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
                 new InputStreamSegment(is1, 0, fiveKB)));
 
-        List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
         System.out.println("JMC - calling client.completeMultipartUpload");
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
@@ -632,7 +632,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
                 new InputStreamSegment(is3, 0, fiveKB)));
 
-        List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
         parts.add(mp2);
         parts.add(mp3);
@@ -668,7 +668,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
                 new InputStreamSegment(is3, 0, 2*fiveMB)));
-        List<MultipartPartETag> parts = new ArrayList<MultipartPartETag>();
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
         parts.add(mp2);
         parts.add(mp3);

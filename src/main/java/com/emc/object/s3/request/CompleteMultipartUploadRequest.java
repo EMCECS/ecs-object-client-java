@@ -32,12 +32,12 @@ import com.emc.object.s3.bean.CompleteMultipartUpload;
 import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.util.RestUtil;
 
-import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 
 public class CompleteMultipartUploadRequest extends S3ObjectRequest implements EntityRequest<CompleteMultipartUpload> {
     private String uploadId;
-    private List<MultipartPartETag> parts;
+    private SortedSet<MultipartPartETag> parts;
 
     public CompleteMultipartUploadRequest(String bucketName, String key, String uploadId) {
         super(Method.POST, bucketName, key, null);
@@ -63,22 +63,22 @@ public class CompleteMultipartUploadRequest extends S3ObjectRequest implements E
 
     @Override
     public Long getContentLength() {
-        return null; // assuming the XML will be smaller than the configured entity buffer
+        return null; // assume chunked encoding or buffering
     }
 
     public String getUploadId() {
         return uploadId;
     }
 
-    public List<MultipartPartETag> getParts() {
+    public SortedSet<MultipartPartETag> getParts() {
         return parts;
     }
 
-    public void setParts(List<MultipartPartETag> parts) {
+    public void setParts(SortedSet<MultipartPartETag> parts) {
         this.parts = parts;
     }
 
-    public CompleteMultipartUploadRequest withParts(List<MultipartPartETag> parts) {
+    public CompleteMultipartUploadRequest withParts(SortedSet<MultipartPartETag> parts) {
         setParts(parts);
         return this;
     }
