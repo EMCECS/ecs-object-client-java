@@ -62,7 +62,7 @@ public final class S3Constants {
     public static final String PARAM_MAX_PARTS = "max-parts";
     public static final String PARAM_MAX_UPLOADS = "max-uploads";
     public static final String PARAM_PART_NUMBER = "partNumber";
-    public static final String PARAM_PART_NUMBER_MARKER = "part-number​-marker";
+    public static final String PARAM_PART_NUMBER_MARKER = "part-number-marker";
     public static final String PARAM_PREFIX = "prefix";
     public static final String PARAM_RESPONSE_HEADER_CACHE_CONTROL = "response-cache-control";
     public static final String PARAM_RESPONSE_HEADER_CONTENT_DISPOSITION = "response-content-disposition";

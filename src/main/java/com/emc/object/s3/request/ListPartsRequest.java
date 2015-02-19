@@ -79,4 +79,19 @@ public class ListPartsRequest extends S3ObjectRequest {
     public void setEncodingType(EncodingType encodingType) {
         this.encodingType = encodingType;
     }
+
+    public ListPartsRequest withMaxParts(Integer maxParts) {
+        setMaxParts(maxParts);
+        return this;
+    }
+
+    public ListPartsRequest withMarker(String marker) {
+        setMarker(marker);
+        return this;
+    }
+
+    public ListPartsRequest withEncodingType(EncodingType encodingType) {
+        setEncodingType(encodingType);
+        return this;
+    }
 }
