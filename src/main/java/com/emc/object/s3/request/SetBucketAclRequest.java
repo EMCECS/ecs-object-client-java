@@ -63,7 +63,7 @@ public class SetBucketAclRequest extends AbstractBucketRequest implements Entity
 
     @Override
     public Long getContentLength() {
-        return null; // assuming the XML will be smaller than the configured entity buffer
+        return null; // assume chunked encoding or buffering
     }
 
     public AccessControlList getAcl() {

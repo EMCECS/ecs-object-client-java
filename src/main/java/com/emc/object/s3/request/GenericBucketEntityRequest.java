@@ -50,7 +50,7 @@ public class GenericBucketEntityRequest<T> extends GenericBucketRequest implemen
 
     @Override
     public Long getContentLength() {
-        return null; // assuming bucket-related *request* entities will be smaller than the configured entity buffer
+        return null; // assume chunked encoding or buffering
     }
 
     public void setContentType(String contentType) {
