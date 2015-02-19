@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "ListVersionsResult")
-@XmlType(propOrder = {"bucketName", "prefix", "keyMarker", "versionIdMarker", "nextKeyMarker", "nextVersionIdMarker", "maxKeys", "delimiter", "truncated", "versions", "_commonPrefixes"})
 public class ListVersionsResult {
     private String bucketName;
     private String prefix;

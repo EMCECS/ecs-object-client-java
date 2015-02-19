@@ -204,4 +204,19 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
     @Override
     public void testCreateObjectWithRange() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void testSingleMultipartUploadMostSimpleOnePart() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testSingleMultipartUploadMostSimple() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testSingleMultipartUploadSimple() throws Exception {
+    }
 }

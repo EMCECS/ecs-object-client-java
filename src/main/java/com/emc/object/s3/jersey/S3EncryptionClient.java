@@ -148,12 +148,9 @@ public class S3EncryptionClient extends S3JerseyClient {
                 }
 
                 // push the re-signed keys as metadata
-                // TODO: revert after testing
                 AccessControlList acl = getObjectAcl(bucketName, key);
-                super.copyObject(new CopyObjectRequest(bucketName, key, bucketName, key + ".temp"));
-                super.copyObject(new CopyObjectRequest(bucketName, key + ".temp", bucketName, key)
+                super.copyObject(new CopyObjectRequest(bucketName, key, bucketName, key)
                         .withAcl(acl).withObjectMetadata(objectMetadata));
-                super.deleteObject(bucketName, key + ".temp");
 
                 return true;
             } catch (DoesNotNeedRekeyException e) {
@@ -179,23 +176,15 @@ public class S3EncryptionClient extends S3JerseyClient {
         // activate codec filter
         request.property(RestUtil.PROPERTY_ENCODE_ENTITY, Boolean.TRUE);
 
-        // TODO: remove after testing
-        @SuppressWarnings("unchecked")
-        PutObjectRequest tempRequest = new PutObjectRequest(request);
-        tempRequest.setKey(request.getKey() + ".temp");
-
         // write data
-        super.putObject(tempRequest);
+        super.putObject(request);
 
         // encryption filter will modify userMeta with encryption metadata *after* the object is transferred
         // we must send a separate metadata update or the object will be unreadable
         // TODO: should this be atomic?  how do we handle rollback?
-        CopyObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), tempRequest.getKey(),
+        CopyObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), request.getKey(),
                 request.getBucketName(), request.getKey()).withAcl(request.getAcl()).withObjectMetadata(request.getObjectMetadata());
-        // TODO: revert after testing
-        PutObjectResult result = super.copyObject(metadataUpdate);
-        super.deleteObject(request.getBucketName(), tempRequest.getKey());
-        return result;
+        return super.copyObject(metadataUpdate);
     }
 
     @Override
