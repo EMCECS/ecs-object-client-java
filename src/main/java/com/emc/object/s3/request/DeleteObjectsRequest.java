@@ -29,6 +29,7 @@ package com.emc.object.s3.request;
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
 import com.emc.object.s3.bean.DeleteObjects;
+import com.emc.object.s3.bean.ObjectKey;
 import com.emc.object.util.RestUtil;
 
 import java.util.Arrays;
@@ -52,7 +53,7 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
 
     @Override
     public Long getContentLength() {
-        return null; // assuming the XML will be smaller than the configure entity buffer
+        return null; // assume chunked encoding or buffering
     }
 
     public DeleteObjects getDeleteObjects() {
@@ -63,18 +64,18 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
         this.deleteObjects = deleteObjects;
     }
 
-    public synchronized DeleteObjectsRequest withObjects(DeleteObjects.Object... objects) {
+    public synchronized DeleteObjectsRequest withKeys(ObjectKey... keys) {
         if (deleteObjects == null)
             deleteObjects = new DeleteObjects();
-        deleteObjects.setObjects(Arrays.asList(objects));
+        deleteObjects.setKeys(Arrays.asList(keys));
         return this;
     }
 
     public DeleteObjectsRequest withKeys(String... keys) {
-        DeleteObjects.Object[] objects = new DeleteObjects.Object[keys.length];
+        ObjectKey[] objects = new ObjectKey[keys.length];
         for (int i = 0; i < keys.length; i++) {
-            objects[i] = new DeleteObjects.Object(keys[i]);
+            objects[i] = new ObjectKey(keys[i]);
         }
-        return withObjects(objects);
+        return withKeys(objects);
     }
 }

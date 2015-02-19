@@ -27,30 +27,38 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.List;
 
-@XmlRootElement(name = "Delete")
-public class DeleteObjects {
-    private Boolean quiet;
-    private List<ObjectKey> keys = new ArrayList<ObjectKey>();
+public class ObjectKey {
+    private String key;
+    private String versionId;
 
-    @XmlElement(name = "Quiet")
-    public Boolean getQuiet() {
-        return quiet;
+    public ObjectKey() {
     }
 
-    public void setQuiet(Boolean quiet) {
-        this.quiet = quiet;
+    public ObjectKey(String key) {
+        this.key = key;
     }
 
-    @XmlElement(name = "Object")
-    public List<ObjectKey> getKeys() {
-        return keys;
+    public ObjectKey(String key, String versionId) {
+        this.key = key;
+        this.versionId = versionId;
     }
 
-    public void setKeys(List<ObjectKey> keys) {
-        this.keys = keys;
+    @XmlElement(name = "Key")
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    @XmlElement(name = "VersionId")
+    public String getVersionId() {
+        return versionId;
+    }
+
+    public void setVersionId(String versionId) {
+        this.versionId = versionId;
     }
 }
