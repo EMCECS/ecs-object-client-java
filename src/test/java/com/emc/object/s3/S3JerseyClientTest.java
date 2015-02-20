@@ -47,6 +47,11 @@ import org.junit.runner.Description;
 import java.io.*;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
@@ -171,6 +176,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         grantSet.add(grant2);
 
         AccessControlList acl = new AccessControlList();
+        AccessControlList origAcl = client.getBucketAcl(getTestBucket());
+        CanonicalUser cu = origAcl.getOwner();
+        acl.setOwner(cu);
         acl.setGrants(grantSet);
         return acl;
     }
@@ -376,7 +384,80 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             tempInt++;
         }
     }
-  
+
+
+    /*
+     * just a basic listing of objects with paged results (ie no prefix matching)
+     */
+    @Test
+    public void testListObjectsPaging1() throws Exception {
+        l4j.debug("JMC Entered testListObjectsBucketNamePrefix");
+        String myPrefix = "testPrefix";
+        int numObjects = 10;
+        int pageSize = 5;
+        int loopCnt = (numObjects+pageSize-1)/pageSize;
+
+        this.createTestObjects(myPrefix, numObjects);
+        l4j.debug("JMC created all test objects. Now they will be listed");
+
+        List<S3Object> s3ObjectList = new ArrayList<S3Object>();
+        ListObjectsResult result;
+        ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
+        request.setMaxKeys(pageSize);
+        for (int i=0; i<loopCnt;i++) {
+            result = client.listObjects(request);
+            s3ObjectList.addAll(result.getObjects());
+            request.setMarker(result.getNextMarker());
+        }
+
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, s3ObjectList.size());
+        l4j.debug("JMC testListObjectsBucketNamePrefix succeeded. Going to print object names!!!!!");
+        l4j.debug(Integer.toString(s3ObjectList.size()) + " were returned");
+        //List<S3Object> s3Objects = result.getObjects();
+        int tempInt = 0;
+        for (S3Object s3Object : s3ObjectList) {
+            l4j.debug("s3Object[" + Integer.toString(tempInt) + "]: " + s3Object.getKey());
+            tempInt++;
+        }
+    }
+
+    /*
+     * listing of objects with paged results only on those objects with matching prefix
+     */
+    @Test
+    public void testListObjectsPagingWithPrefix() throws Exception {
+        l4j.debug("JMC Entered testListObjectsBucketNamePrefix");
+        String myPrefixA = "testPrefixA";
+        String myPrefixB = "testPrefixB";
+        int numObjects = 10;
+        int pageSize = 5;
+        int loopCnt = (numObjects+pageSize-1)/pageSize;
+
+        this.createTestObjects(myPrefixA, numObjects);
+        this.createTestObjects(myPrefixB, numObjects);
+        l4j.debug("JMC created all test objects. Now they will be listed");
+
+        List<S3Object> s3ObjectList = new ArrayList<S3Object>();
+        ListObjectsResult result;
+        ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
+        request.setPrefix(myPrefixA);
+        request.setMaxKeys(pageSize);
+        for (int i=0; i<loopCnt;i++) {
+            result = client.listObjects(request);
+            s3ObjectList.addAll(result.getObjects());
+            request.setMarker(result.getNextMarker());
+        }
+
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, s3ObjectList.size());
+        l4j.debug("JMC testListObjectsBucketNamePrefix succeeded. Going to print object names!!!!!");
+        l4j.debug(Integer.toString(s3ObjectList.size()) + " were returned");
+        //List<S3Object> s3Objects = result.getObjects();
+        int tempInt = 0;
+        for (S3Object s3Object : s3ObjectList) {
+            l4j.debug("s3Object[" + Integer.toString(tempInt) + "]: " + s3Object.getKey());
+            tempInt++;
+        }
+    }
 
     @Test
     public void testCreateBucket() throws Exception {
@@ -605,14 +686,219 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         System.out.println("JMC - returned from client.completeMultipartUpload");
     }
 
-
     @Test
-    public void testSingleMultipartUploadMostSimple() throws Exception {
+    public void testSingleMultipartUploadListParts() throws Exception {
         String key = "TestObject_" + UUID.randomUUID();
         int fiveKB = 5 * 1024;
         byte[] content1 = new byte[5 * 1024];
         byte[] content2 = new byte[5 * 1024];
         byte[] content3 = new byte[5 * 1024];
+        new Random().nextBytes(content1);
+        new Random().nextBytes(content2);
+        new Random().nextBytes(content3);
+        InputStream is1 = new ByteArrayInputStream(content1, 0, fiveKB);
+        InputStream is2 = new ByteArrayInputStream(content2, 0, fiveKB);
+        InputStream is3 = new ByteArrayInputStream(content3, 0, fiveKB);
+
+        System.out.println("JMC - calling client.initiateMultipartUpload");
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+        System.out.println("JMC - calling client.UploadPartRequest 1");
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                new InputStreamSegment(is1, 0, fiveKB)));
+        System.out.println("JMC - calling client.UploadPartRequest 2");
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
+                new InputStreamSegment(is2, 0, fiveKB)));
+        System.out.println("JMC - calling client.UploadPartRequest 3");
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
+                new InputStreamSegment(is3, 0, fiveKB)));
+
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
+        parts.add(mp1);
+        parts.add(mp2);
+        parts.add(mp3);
+
+
+        ListPartsResult lpr = client.listParts(getTestBucket(), key, uploadId);
+        l4j.debug("ListPartsResult bucketName: " + lpr.getBucketName());
+        l4j.debug("ListPartsResult key: " + lpr.getKey());
+        l4j.debug("ListPartsResult getNextPartNumberMarker: " + lpr.getNextPartNumberMarker());
+        l4j.debug("ListPartsResult uploadId: " + lpr.getUploadId());
+        l4j.debug("ListPartsResult getPartNumberMarker: " + lpr.getPartNumberMarker());
+        l4j.debug("------------------Start list of Multiparts----------------------");
+        List<MultipartPart> mpp = lpr.getParts();
+        Assert.assertEquals(3, mpp.size());
+
+        for (MultipartPart part: mpp) {
+            l4j.debug("\t----------------------part#" + part.getPartNumber() + " information");
+            l4j.debug("\tpart.getSize() = " + part.getSize());
+            l4j.debug("\tpart.getETag = " + part.getETag() );
+            l4j.debug("\tpart.getPartNumber = " + part.getPartNumber() );
+            //this does NOT assume that the list comes back in sequential order
+            if (part.getPartNumber() == 1) {
+                Assert.assertEquals(mp1.getETag(), mpp.get(0).getETag());
+            }
+            else if (part.getPartNumber() == 2) {
+                Assert.assertEquals(mp2.getETag(), mpp.get(1).getETag());
+            }
+            else if (part.getPartNumber() == 3) {
+                Assert.assertEquals(mp3.getETag(), mpp.get(2).getETag());
+            }
+            else {
+                Assert.fail("Unknown Part number: " + part.getPartNumber());
+            }
+        }
+        l4j.debug("------------------End list of Multiparts----------------------");
+
+        System.out.println("JMC - calling client.completeMultipartUpload");
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
+        completionRequest.setParts(parts);
+        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
+        System.out.println("JMC - returned from client.completeMultipartUpload");
+    }
+
+
+    @Test
+    public void testMultiThreadMultipartUploadListPartsPagination() throws Exception {
+        String key = "TestObject_" + UUID.randomUUID();
+        int fiveKB = 5 * 1024;
+        int partCnt = 7;
+        byte[] b;
+        InputStream tmpIs;
+        List<InputStream> uploadPartsBytesList = new ArrayList<InputStream>();
+        for (int i=0; i<partCnt;i++) {
+            b = new byte[fiveKB];
+            new Random().nextBytes(b);
+            tmpIs = new ByteArrayInputStream(b, 0, fiveKB);
+            uploadPartsBytesList.add(tmpIs);
+        }
+        l4j.debug("JMC - calling client.initiateMultipartUpload");
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        List<Future<?>> futures = new ArrayList<Future<?>>();
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        final AtomicInteger successCount = new AtomicInteger();
+        int uploadPartNumber = 1;
+        for(InputStream uploadPartStream: uploadPartsBytesList) {
+            final UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, uploadPartNumber,
+                    new InputStreamSegment(uploadPartStream, 0, fiveKB));
+
+            futures.add(executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    l4j.debug(Thread.currentThread().getName() + " thread uploading part number: " + request.getPartNumber());
+                    client.uploadPart(request);
+                    successCount.incrementAndGet();
+                }
+            }));
+            uploadPartNumber++;
+        }
+        l4j.debug("JMC submitted all parts into the executor service. About to shutdown and wait");
+        executor.shutdown();
+        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+        l4j.debug("JMC all threads terminated. The wait is complete");
+        Assert.assertEquals("at least one thread failed", futures.size(), successCount.intValue());
+
+        int maxParts = 2;
+        int loopCnt = (partCnt+maxParts-1)/maxParts;
+
+        l4j.debug("JMC will need to make " + Integer.toString(loopCnt) + " listParts calls");
+        ListPartsRequest listPartsRequest = new ListPartsRequest(getTestBucket(), key, uploadId);
+        listPartsRequest.setMaxParts(maxParts);
+        ListPartsResult lpr;
+        String marker = "";
+        List<MultipartPart> mpp = new ArrayList<MultipartPart>();
+        for (int i=0; i<loopCnt; i++) {
+            lpr = client.listParts(listPartsRequest);
+            mpp.addAll(lpr.getParts());
+            marker = lpr.getNextPartNumberMarker();
+            l4j.debug("JMC setting the marker for the next listParts request marker: " + marker);
+            listPartsRequest.setMarker(marker);
+        }
+
+        l4j.debug("JMC - calling client.completeMultipartUpload");
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
+
+        MultipartPartETag eTag;
+        for (MultipartPart part: mpp) {
+            l4j.debug("JMC adding part# " + part.getPartNumber()   + " with etag: " + part.getETag() );
+            eTag = new MultipartPartETag(part.getPartNumber(), part.getETag());
+            parts.add(eTag);
+        }
+        completionRequest.setParts(parts);
+        l4j.debug("JMC - set the parts for the completion request");
+        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
+        l4j.debug("JMC - returned from client.completeMultipartUpload");
+    }
+
+    @Test
+    public void testMultiThreadMultipartUploadMostSimple() throws Exception {
+        String key = "TestObject_" + UUID.randomUUID();
+        int fiveKB = 5 * 1024;
+        int partCnt = 7;
+        byte[] b;
+        InputStream tmpIs;
+        List<InputStream> uploadPartsBytesList = new ArrayList<InputStream>();
+        for (int i=0; i<partCnt;i++) {
+            b = new byte[fiveKB];
+            new Random().nextBytes(b);
+            tmpIs = new ByteArrayInputStream(b, 0, fiveKB);
+            uploadPartsBytesList.add(tmpIs);
+        }
+        l4j.debug("JMC - calling client.initiateMultipartUpload");
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        List<Future<?>> futures = new ArrayList<Future<?>>();
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        final AtomicInteger successCount = new AtomicInteger();
+        int uploadPartNumber = 1;
+        for(InputStream uploadPartStream: uploadPartsBytesList) {
+            final UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, uploadPartNumber,
+                    new InputStreamSegment(uploadPartStream, 0, fiveKB));
+
+            futures.add(executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    l4j.debug(Thread.currentThread().getName() + " thread uploading part number: " + request.getPartNumber());
+                    client.uploadPart(request);
+                    successCount.incrementAndGet();
+                }
+            }));
+            uploadPartNumber++;
+        }
+        l4j.debug("JMC submitted all parts into the executor service. About to shutdown and wait");
+        executor.shutdown();
+        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+        l4j.debug("JMC all threads terminated. The wait is complete");
+        Assert.assertEquals("at least one thread failed", futures.size(), successCount.intValue());
+
+        ListPartsResult lpr = client.listParts(getTestBucket(), key, uploadId);
+        List<MultipartPart> mpp = lpr.getParts();
+        Assert.assertEquals("at least one part failed according to listParts", successCount.intValue(), mpp.size());
+
+
+        l4j.debug("JMC - calling client.completeMultipartUpload");
+        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
+        MultipartPartETag eTag;
+        for (MultipartPart part: mpp) {
+            l4j.debug("JMC adding part# " + part.getPartNumber()   + " with etag: " + part.getETag() );
+            eTag = new MultipartPartETag(part.getPartNumber(), part.getETag());
+            parts.add(eTag);
+        }
+        completionRequest.setParts(parts);
+        l4j.debug("JMC - set the parts for the completion request");
+        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
+        l4j.debug("JMC - returned from client.completeMultipartUpload");
+    }
+
+    @Test
+    public void testSingleMultipartUploadMostSimple() throws Exception {
+        String key = "TestObject_" + UUID.randomUUID();
+        int fiveKB = 5 * 1024;
+        byte[] content1 = new byte[fiveKB];
+        byte[] content2 = new byte[fiveKB];
+        byte[] content3 = new byte[fiveKB];
         new Random().nextBytes(content1);
         new Random().nextBytes(content2);
         new Random().nextBytes(content3);
