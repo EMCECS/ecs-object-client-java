@@ -65,17 +65,13 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
         String proxyUri = props.getProperty(TestProperties.PROXY_URI);
 
-        System.out.println("JMC createS3Config: " + endpoint);
         S3Config s3Config;
         if (enableVhost) {
             s3Config = new S3VHostConfig(endpoint);
+        } else if (endpoint.getPort() > 0) {
+            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
         } else {
-            if (endpoint.getPort() != -1) {
-                s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
-            }
-            else {
-                s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
-            }
+            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
