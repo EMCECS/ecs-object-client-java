@@ -33,10 +33,8 @@ import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
-//import org.glassfish.jersey.client.ClientProperties;
-//import org.glassfish.jersey.client.RequestEntityProcessing;
-
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -641,6 +639,45 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertNotNull(result);
     }
 
+    @Ignore // TODO: blocked by STORAGE-374
+    @Test
+    public void testCreateObjectWithMetadata() throws Exception {
+        String key = "meta-test", content = "Hello Metadata!";
+        String cc = "none", cd = "none", ce = "none", ct = "text/plain";
+        Calendar expires = Calendar.getInstance();
+        expires.add(Calendar.DATE, 1);
+        expires.set(Calendar.MILLISECOND, 0);
+        Map<String, String> userMeta = new HashMap<String, String>();
+        userMeta.put("meta1", "value1");
+        userMeta.put("meta2", "value2");
+
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withContentType(ct);
+        objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
+        objectMetadata.withHttpExpires(expires.getTime());
+        objectMetadata.setUserMetadata(userMeta);
+        client.putObject(new PutObjectRequest<String>(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
+    }
+
+    @Test
+    public void testLargeObjectContentLength() throws Exception {
+        String key = "large-object";
+        int size = 1024 * 1024;
+        Random random = new Random();
+        byte[] bigData = new byte[size];
+        random.nextBytes(bigData);
+        client.putObject(getTestBucket(), key, bigData, null);
+
+        GetObjectResult<byte[]> result = client.getObject(new GetObjectRequest(getTestBucket(), key), byte[].class);
+        Assert.assertEquals("bad content-length", new Long(size), result.getObjectMetadata().getContentLength());
+    }
+
     @Test
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
@@ -1077,18 +1114,119 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(content, result.getObject());
         Date originalModified = result.getObjectMetadata().getLastModified();
 
+        // wait a tick so mtime is different
+        Thread.sleep(1000);
+
         client.copyObject(getTestBucket(), key, getTestBucket(), key);
         result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
         Assert.assertEquals(content, result.getObject());
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
+    @Ignore // TODO: blocked by STORAGE-374 and STORAGE-3674
+    @Test
     public void testCopyObjectWithMeta() throws Exception {
-        // TODO: write test case
+        String key1 = "object1", key2 = "object2", key3 = "object3";
+        String content = "Hello copy with meta!";
+        String ct = "text/plain", cc, cd, ce;
+        cc = cd = ce = "none";
+        Calendar expires = Calendar.getInstance();
+        expires.setTimeInMillis(System.currentTimeMillis() + 24 * 60 * 60 * 1000);
+        expires.set(Calendar.MILLISECOND, 0);
+        Map<String, String> userMeta = new HashMap<String, String>();
+        userMeta.put("meta1", "value1");
+        userMeta.put("meta2", "value2");
+
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withContentType(ct);
+        objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
+        objectMetadata.withHttpExpires(expires.getTime());
+        objectMetadata.setUserMetadata(userMeta);
+        client.putObject(new PutObjectRequest<String>(getTestBucket(), key1, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key1);
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
+
+        // test copy meta
+        client.copyObject(new CopyObjectRequest(getTestBucket(), key1, getTestBucket(), key2));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key2);
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
+
+        // test replace meta
+        ct = "application/octet-stream";
+        cc = cd = ce = "new";
+        expires.add(Calendar.DATE, 1);
+        userMeta.clear();
+        userMeta.put("meta3", "value3");
+        userMeta.put("meta4", "value4");
+        objectMetadata = new S3ObjectMetadata().withContentType(ct);
+        objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
+        objectMetadata.withHttpExpires(expires.getTime());
+        objectMetadata.setUserMetadata(userMeta);
+        client.copyObject(new CopyObjectRequest(getTestBucket(), key1, getTestBucket(), key3).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key3);
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
+    @Ignore // TODO: blocked by STORAGE-374
+    @Test
     public void testUpdateMetadata() throws Exception {
-        // TODO: write test case
+        String key = "update-metadata";
+        String content = "Hello update meta!";
+        String ct = "text/plain", cc, cd, ce;
+        cc = cd = ce = "none";
+        Calendar expires = Calendar.getInstance();
+        expires.add(Calendar.DATE, 1);
+        expires.set(Calendar.MILLISECOND, 0);
+        Map<String, String> userMeta = new HashMap<String, String>();
+        userMeta.put("meta1", "value1");
+        userMeta.put("meta2", "value2");
+
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withContentType(ct);
+        objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
+        objectMetadata.withHttpExpires(expires.getTime());
+        objectMetadata.setUserMetadata(userMeta);
+        client.putObject(new PutObjectRequest<String>(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
+
+        // test update meta
+        ct = "application/octet-stream";
+        cc = cd = ce = "new";
+        expires.add(Calendar.DATE, 1);
+        userMeta.clear();
+        userMeta.put("meta3", "value3");
+        userMeta.put("meta4", "value4");
+        objectMetadata = new S3ObjectMetadata().withContentType(ct);
+        objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
+        objectMetadata.withHttpExpires(expires.getTime());
+        objectMetadata.setUserMetadata(userMeta);
+        client.copyObject(new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
     @Test
