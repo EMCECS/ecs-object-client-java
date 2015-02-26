@@ -163,17 +163,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     protected AccessControlList createAcl() {
-        CanonicalUser cu1 = new CanonicalUser("userId1", "userDisplayName1");
+        CanonicalUser cu1 = new CanonicalUser("user1", "userDisplayName1");
         Permission perm = Permission.FULL_CONTROL;
         Grant grant = new Grant(cu1, perm);
 
-
-        CanonicalUser cu2 = new CanonicalUser("userId2","userDisplayName2");
+/*
+        CanonicalUser cu2 = new CanonicalUser("user1","userDisplayName2");
         Permission perm2 = Permission.READ;
         Grant grant2 = new Grant(cu2, perm2);
+        */
+
         Set<Grant> grantSet = new HashSet<Grant>();
         grantSet.add(grant);
+        /*
         grantSet.add(grant2);
+        */
 
         AccessControlList acl = new AccessControlList();
         AccessControlList origAcl = client.getBucketAcl(getTestBucket());
@@ -189,14 +193,33 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(owner1.getId(), owner2.getId());
         Assert.assertEquals(owner1.getDisplayName(), owner2.getDisplayName());
 
+        /*
         Grant[] grants1 = (Grant[])acl1.getGrants().toArray();
         Grant[] grants2 = (Grant[])acl2.getGrants().toArray();
         Assert.assertEquals(grants1.length, grants2.length);
-        Assert.assertTrue("The acl sets are not deeply equal", Arrays.deepEquals(grants1, grants2));
+        */
+        Set<Grant> gs1 = acl1.getGrants();
+        Set<Grant> gs2 = acl2.getGrants();
+
+        //should only be 1 grant per acl for current testing at this point. There
+        //used to be 2 but I removed the second one for now (see this.createAcl())
+        Assert.assertEquals(gs1.size(), gs2.size());
+        Grant g1 = new Grant();
+        Grant g2 = new Grant();
+        for (Grant g: gs1) {
+            g1 = g;
+            l4j.debug("JMC retrieved g1");
+        }
+        for (Grant g: gs2) {
+            g2 = g;
+            l4j.debug("JMC retrieved g2");
+        }
+        //Grant implements comparable
+        Assert.assertEquals(g1, g2);
     }
 
     @Test
-    public void testSetBucketAcl() {
+    public void testSetBucketAcl() throws Exception {
         AccessControlList acl = this.createAcl();
         client.setBucketAcl(getTestBucket(), acl);
         AccessControlList aclReturned = client.getBucketAcl(getTestBucket());
@@ -515,14 +538,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         l4j.debug("JMC Entered createTestObjects. Creating " + Integer.toString(numObjects));
         String objectName;
         File testFile = new File(System.getProperty("user.home") + File.separator + "test.properties");
+
+        int fiveKB = 5 * 1024;
+        byte[] content1 = new byte[5 * 1024];
+        new Random().nextBytes(content1);
+
         if (!testFile.exists()) {
             throw new FileNotFoundException("test.properties");
         }
         
         for(int i=0; i<numObjects; i++) {
-            objectName = "TestObject_" + UUID.randomUUID();
+            //objectName = "TestObject_" + UUID.randomUUID();
+            objectName = "TestObject_" + Integer.toString(i);
             l4j.debug("JMC about to create " + objectName);
-            client.putObject(bucket, prefixWithDelim + objectName, testFile, "text/plain");
+            //client.putObject(bucket, prefixWithDelim + objectName, testFile, "text/plain");
+            client.putObject(bucket, prefixWithDelim + objectName, content1, "text/plain");
             l4j.debug("JMC client.createObject " + objectName + " seemed to work");
         }
         l4j.debug("JMC Done creating test objects");
@@ -1074,6 +1104,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = client.readObject(getTestBucket(), key, String.class);
         l4j.debug("JMC - readObject seemed to succeed. Will confirm the object contest");
         Assert.assertEquals("Wring object content", fileName, content);
+        l4j.debug("JMC content: " + content);
 
         l4j.debug("JMC - Success");
     }
@@ -1138,7 +1169,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line;
         while ((line = br.readLine()) != null) {
-            l4j.debug(line);
+            l4j.debug("JMC LINE:" + line);
         }
         l4j.debug("JMC - Success");
     }
@@ -1146,7 +1177,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     //<T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
     @Test
     public void testGetObjectResultTemplate() throws Exception {
-
+        //creates objects named TestObject_ + zero based index
+        this.createTestObjects("", 1);
+        GetObjectRequest request = new GetObjectRequest(getTestBucket(),"TestObject_0");
+        GetObjectResult<String> result = client.getObject(request,String.class);
+        l4j.debug("JMC returned from client.getObject");
+        l4j.debug("JMC getObject = " + result.getObject());
+        S3ObjectMetadata meta = result.getObjectMetadata();
+        l4j.debug("JMC meta.getContentLength(): " + meta.getContentLength());
     }
     
     //TODO
@@ -1260,8 +1298,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), testObject, fileName, "text/plain");
         AccessControlList acl = this.createAcl();
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
+        l4j.debug("JMC calling request.setAcl");
         request.setAcl(acl);
         client.setObjectAcl(request);
+        l4j.debug("JMC the object acl has been set. About to verify that the same acl is retrieved");
         this.getAndVerifyObjectAcl(getTestBucket(), testObject, acl);
     }
     
@@ -1279,7 +1319,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     
     
     protected void getAndVerifyObjectAcl(String bucketName, String key, AccessControlList originalAcl) throws Exception {
+        l4j.debug("JMC Entered getAndVerifyObjectAcl");
         AccessControlList responseAcl = client.getObjectAcl(bucketName, key);
+        l4j.debug("JMC retrieved the response object acl for verification purposes");
         this.testAclsEqual(originalAcl, responseAcl);
     }
     
