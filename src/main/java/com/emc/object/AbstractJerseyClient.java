@@ -95,6 +95,14 @@ public abstract class AbstractJerseyClient {
                     }
 
                     SizeOverrideWriter.setEntitySize(size);
+                } else {
+
+                    // no entity, but make sure the apache handler doesn't mess up the content-length somehow
+                    // (i.e. if content-encoding is set)
+                    request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
+
+                    String headerContentType = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.DEFAULT_CONTENT_TYPE);
+                    if (headerContentType != null) contentType = headerContentType;
                 }
 
                 WebResource.Builder builder = buildRequest(client, request);
