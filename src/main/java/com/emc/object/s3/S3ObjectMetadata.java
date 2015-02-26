@@ -115,6 +115,7 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_ENCODING, contentEncoding);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_TYPE, contentType);
+        RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
         for (String name : userMetadata.keySet()) {
             RestUtil.putSingle(headers, S3Constants.AMZ_META_PREFIX + name, userMetadata.get(name));
         }
