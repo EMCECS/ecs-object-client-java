@@ -69,6 +69,71 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.hosts = Arrays.asList(hostList);
     }
 
+    public abstract String resolveHost();
+
+    /**
+     * Resolves a path relative to the API context. The returned URI will be of the format
+     * scheme://host[:port]/[rootContext/]relativePath?query. The scheme and port are pulled from the first endpoint in
+     * the endpoints list. The host to use may be virtual (to be resolved by a load balancer) or calculated in
+     * implementations as round-robin or single-host.
+     */
+    public URI resolvePath(String relativePath, String query) {
+        String path = "/";
+
+        // rootContext should be cleaned by setter
+        if (rootContext != null && rootContext.length() > 0) path += rootContext + "/";
+
+        // add relative path to context
+        path += relativePath;
+
+        try {
+            URI uri = new URI(protocol.toString(), null, resolveHost(), port, path, query, null);
+
+            l4j.debug("raw path & query: " + path + "?" + query);
+            l4j.debug("resolved URI: " + uri);
+
+            return uri;
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Invalid URI syntax", e);
+        }
+    }
+
+
+    public SmartConfig toSmartConfig() {
+        SmartConfig smartConfig = new SmartConfig(hosts);
+
+        smartConfig.setDisablePolling(Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_POLLING)));
+
+        if (properties.containsKey(PROPERTY_POLL_INTERVAL)) {
+            try {
+                smartConfig.setPollInterval(Integer.parseInt(propAsString(properties, PROPERTY_POLL_INTERVAL)));
+            } catch (NumberFormatException e) {
+                throw new RuntimeException(String.format("invalid poll interval (%s=%s)",
+                        PROPERTY_POLL_INTERVAL, properties.get(PROPERTY_POLL_INTERVAL)), e);
+            }
+        }
+
+        try {
+            if (properties.containsKey(PROPERTY_PROXY_URI))
+                smartConfig.setProxyUri(new URI(propAsString(PROPERTY_PROXY_URI)));
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("invalid proxy URI", e);
+        }
+        smartConfig.setProxyUser(propAsString(PROPERTY_PROXY_USER));
+        smartConfig.setProxyPass(propAsString(PROPERTY_PROXY_PASS));
+
+        for (String prop : properties.keySet()) {
+            smartConfig.property(prop, properties.get(prop));
+        }
+
+        return smartConfig;
+    }
+
+    protected String propAsString(Map<String, Object> properties, String propName) {
+        Object value = properties.get(propName);
+        return value == null ? null : value.toString();
+    }
+
     public Protocol getProtocol() {
         return protocol;
     }
@@ -204,68 +269,20 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return (T) this;
     }
 
-    public abstract String resolveHost();
-
-    /**
-     * Resolves a path relative to the API context. The returned URI will be of the format
-     * scheme://host[:port]/[rootContext/]relativePath?query. The scheme and port are pulled from the first endpoint in
-     * the endpoints list. The host to use may be virtual (to be resolved by a load balancer) or calculated in
-     * implementations as round-robin or single-host.
-     */
-    public URI resolvePath(String relativePath, String query) {
-        String path = "/";
-
-        // rootContext should be cleaned by setter
-        if (rootContext != null && rootContext.length() > 0) path += rootContext + "/";
-
-        // add relative path to context
-        path += relativePath;
-
-        try {
-            URI uri = new URI(protocol.toString(), null, resolveHost(), port, path, query, null);
-
-            l4j.debug("raw path & query: " + path + "?" + query);
-            l4j.debug("resolved URI: " + uri);
-
-            return uri;
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Invalid URI syntax", e);
-        }
-    }
-
-
-    public SmartConfig toSmartConfig() {
-        SmartConfig smartConfig = new SmartConfig(hosts);
-
-        smartConfig.setDisablePolling(Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_POLLING)));
-
-        if (properties.containsKey(PROPERTY_POLL_INTERVAL)) {
-            try {
-                smartConfig.setPollInterval(Integer.parseInt(propAsString(properties, PROPERTY_POLL_INTERVAL)));
-            } catch (NumberFormatException e) {
-                throw new RuntimeException(String.format("invalid poll interval (%s=%s)",
-                        PROPERTY_POLL_INTERVAL, properties.get(PROPERTY_POLL_INTERVAL)), e);
-            }
-        }
-
-        try {
-            if (properties.containsKey(PROPERTY_PROXY_URI))
-                smartConfig.setProxyUri(new URI(propAsString(PROPERTY_PROXY_URI)));
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("invalid proxy URI", e);
-        }
-        smartConfig.setProxyUser(propAsString(PROPERTY_PROXY_USER));
-        smartConfig.setProxyPass(propAsString(PROPERTY_PROXY_PASS));
-
-        for (String prop : properties.keySet()) {
-            smartConfig.property(prop, properties.get(prop));
-        }
-
-        return smartConfig;
-    }
-
-    protected String propAsString(Map<String, Object> properties, String propName) {
-        Object value = properties.get(propName);
-        return value == null ? null : value.toString();
+    @Override
+    public String toString() {
+        return "ObjectConfig{" +
+                "protocol=" + protocol +
+                ", hosts=" + hosts +
+                ", port=" + port +
+                ", rootContext='" + rootContext + '\'' +
+                ", namespace='" + namespace + '\'' +
+                ", identity='" + identity + '\'' +
+                ", secretKey='" + secretKey + '\'' +
+                ", serverClockSkew=" + serverClockSkew +
+                ", userAgent='" + userAgent + '\'' +
+                ", encryptionConfig=" + encryptionConfig +
+                ", properties=" + properties +
+                '}';
     }
 }

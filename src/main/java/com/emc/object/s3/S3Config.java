@@ -52,7 +52,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     }
 
     public S3Config(Protocol protocol, int port, String... hostList) {
-        super(protocol, port, hostList);
+        super(protocol, port == -1 ? defaultPort(protocol) : port, hostList);
     }
 
     @Override
@@ -66,5 +66,13 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public boolean isSignNamespace() {
         return signNamespace;
+    }
+
+    @Override
+    public String toString() {
+        return "S3Config{" +
+                "useVHost=" + useVHost +
+                ", signNamespace=" + signNamespace +
+                "} " + super.toString();
     }
 }
