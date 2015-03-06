@@ -36,7 +36,7 @@ buildscript {
 
 apply from: "$commonBuildDir/ecs-publish.gradle"
 
-version '1.2-beta.3'
+version '1.2-beta.4'
 
 dependencies {
     compile 'com.emc.ecs:smart-client:1.0.0',
