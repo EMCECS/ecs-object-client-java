@@ -679,6 +679,45 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testLargeFileUploader() throws Exception {
+        String key = "large-file-uploader.bin";
+        int size = 80 * 1024 * 1024 + 123; // > 80MB
+        byte[] data = new byte[size];
+        new Random().nextBytes(data);
+        File file = File.createTempFile("large-file-uploader-test", null);
+        file.deleteOnExit();
+        OutputStream out = new FileOutputStream(file);
+        out.write(data);
+        out.close();
+
+        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader.run();
+
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+    }
+
+    @Test
+    public void testLargeFileDownloader() throws Exception {
+        String key = "large-file-downloader.bin";
+        int size = 80 * 1024 * 1024 + 179; // > 80MB
+        byte[] data = new byte[size];
+        new Random().nextBytes(data);
+        client.putObject(getTestBucket(), key, data, null);
+
+        File file = File.createTempFile("large-file-uploader-test", null);
+        file.deleteOnExit();
+        LargeFileDownloader downloader = new LargeFileDownloader(client, getTestBucket(), key, file);
+        downloader.run();
+
+        byte[] readData = new byte[size];
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        raf.read(readData);
+        raf.close();
+
+        Assert.assertArrayEquals(data, readData);
+    }
+
+    @Test
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
         Assert.assertNotNull(lc);
