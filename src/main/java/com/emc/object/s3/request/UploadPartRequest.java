@@ -59,7 +59,6 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
-        if (contentLength != null) RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_LENGTH, contentLength);
         if (contentMd5 != null) RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
         return headers;
     }
@@ -67,6 +66,11 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
     @Override
     public T getEntity() {
         return getObject();
+    }
+
+    @Override
+    public Long getContentLength() {
+        return contentLength;
     }
 
     @Override
@@ -84,10 +88,6 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
 
     public T getObject() {
         return object;
-    }
-
-    public Long getContentLength() {
-        return contentLength;
     }
 
     public void setContentLength(Long contentLength) {
