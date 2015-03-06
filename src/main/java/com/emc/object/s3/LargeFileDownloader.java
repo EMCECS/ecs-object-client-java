@@ -78,7 +78,7 @@ public class LargeFileDownloader implements Runnable {
     @Override
     public void run() {
         // sanity checks
-        if (!file.exists() || !file.canWrite())
+        if (file.exists() && !file.canWrite())
             throw new IllegalArgumentException("cannot write to file: " + file.getPath());
 
         if (partSize < MIN_PART_SIZE) {
