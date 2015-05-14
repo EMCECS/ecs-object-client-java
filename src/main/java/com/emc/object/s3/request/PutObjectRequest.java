@@ -62,6 +62,7 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
+        if (range != null) RestUtil.putSingle(headers, RestUtil.HEADER_RANGE, "bytes=" + range.toString());
         if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
@@ -119,22 +120,22 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
         this.cannedAcl = cannedAcl;
     }
 
-    public PutObjectRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
+    public PutObjectRequest<T> withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
     }
 
-    public PutObjectRequest withRange(Range range) {
+    public PutObjectRequest<T> withRange(Range range) {
         setRange(range);
         return this;
     }
 
-    public PutObjectRequest withAcl(AccessControlList acl) {
+    public PutObjectRequest<T> withAcl(AccessControlList acl) {
         setAcl(acl);
         return this;
     }
 
-    public PutObjectRequest withCannedAcl(CannedAcl cannedAcl) {
+    public PutObjectRequest<T> withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
         return this;
     }

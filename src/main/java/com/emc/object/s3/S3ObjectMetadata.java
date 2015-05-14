@@ -100,12 +100,19 @@ public class S3ObjectMetadata {
     public static <T> Map<String, String> getUserMetadata(Map<String, List<T>> headers) {
         Map<String, String> userMetadata = new HashMap<String, String>();
         for (String name : headers.keySet()) {
-            if (name.startsWith(S3Constants.AMZ_META_PREFIX)) {
-                userMetadata.put(name.substring(S3Constants.AMZ_META_PREFIX.length()),
-                        RestUtil.getFirstAsString(headers, name));
+            String key = getUserMetadataKey(name);
+            if (key != null) {
+                userMetadata.put(key, RestUtil.getFirstAsString(headers, name));
             }
         }
         return userMetadata;
+    }
+
+    public static String getUserMetadataKey(String headerName) {
+        if (headerName.startsWith(S3Constants.AMZ_META_PREFIX)) {
+            return headerName.substring(S3Constants.AMZ_META_PREFIX.length());
+        }
+        return null;
     }
 
     public Map<String, List<Object>> toHeaders() {
@@ -117,9 +124,13 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_TYPE, contentType);
         RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
         for (String name : userMetadata.keySet()) {
-            RestUtil.putSingle(headers, S3Constants.AMZ_META_PREFIX + name, userMetadata.get(name));
+            RestUtil.putSingle(headers, getHeaderName(name), userMetadata.get(name));
         }
         return headers;
+    }
+
+    public static String getHeaderName(String userMetadataKey) {
+        return S3Constants.AMZ_META_PREFIX + userMetadataKey;
     }
 
     public String getCacheControl() {
@@ -226,11 +237,11 @@ public class S3ObjectMetadata {
         this.userMetadata = userMetadata;
     }
 
-    public String userMetadata(String name) {
+    public String getUserMetadata(String name) {
         return userMetadata.get(name);
     }
 
-    public S3ObjectMetadata userMetadata(String name, String value) {
+    public S3ObjectMetadata addUserMetadata(String name, String value) {
         userMetadata.put(name, value);
         return this;
     }

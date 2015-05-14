@@ -47,7 +47,7 @@ public class Iso8601Adapter extends XmlAdapter<String, Date> {
      */
     @Override
     public Date unmarshal( String s ) throws Exception {
-        int hourOffset = 0, minuteOffset = 0;
+        int hourOffset = 0, minuteOffset = 0, millis = 0;
 
         String tzPattern = "([-+])(\\d{2}):?(\\d{2})?$";
 
@@ -67,12 +67,24 @@ public class Iso8601Adapter extends XmlAdapter<String, Date> {
             s = s.replaceAll( tzPattern, "" ) + "Z";
         }
 
+        // look for milliseconds (SimpleDateFormat does not support optional segments)
+        String millisPattern = "\\.(\\d{3})Z$";
+
+        matcher = Pattern.compile( millisPattern ).matcher( s );
+        if ( matcher.find() ) {
+
+            millis = Integer.parseInt( matcher.group( 1 ) );
+
+            s = s.replaceAll( millisPattern, "Z" );
+        }
+
         Calendar cal = Calendar.getInstance();
 
         cal.setTime( getFormat().parse( s ) );
 
         cal.add( Calendar.HOUR_OF_DAY, hourOffset );
         cal.add( Calendar.MINUTE, minuteOffset );
+        cal.add( Calendar.MILLISECOND, millis );
 
         return cal.getTime();
     }

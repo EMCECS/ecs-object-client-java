@@ -116,15 +116,15 @@ public class S3EncryptionClientBasicTest extends S3EncryptionClientKeyStoreTest 
 
         assertEquals("Content differs", content, result.getObject());
         assertEquals("unencrypted size incorrect", "12",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
         assertEquals("encrypted size incorrect", 16, result.getObjectMetadata().getContentLength().longValue());
         assertEquals("unencrypted sha1 incorrect", "2ef7bde608ce5404e97d5f042f95f89f1c232871",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         assertEquals("master key ID incorrect", KeyUtils.getRsaPublicKeyFingerprint((RSAPublicKey) getOldKey().getPublic(), null),
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
-        Assert.assertNotNull("IV null", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_IV));
-        Assert.assertNotNull("Object key", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
         Assert.assertNotNull("Missing metadata signature",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
     }
 }

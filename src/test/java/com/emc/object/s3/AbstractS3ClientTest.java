@@ -29,7 +29,9 @@ package com.emc.object.s3;
 import com.emc.object.AbstractClientTest;
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
+import com.emc.object.s3.bean.AbstractVersion;
 import com.emc.object.s3.bean.S3Object;
+import com.emc.object.s3.bean.VersioningConfiguration;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
 
@@ -47,8 +49,14 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     @Override
     protected void cleanUpBucket(String bucketName) throws Exception {
         try {
-            for (S3Object object : client.listObjects(bucketName).getObjects()) {
-                client.deleteObject(bucketName, object.getKey());
+            if (client.getBucketVersioning(bucketName).getStatus() == VersioningConfiguration.Status.Enabled) {
+                for (AbstractVersion version : client.listVersions(bucketName, null).getVersions()) {
+                    client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
+                }
+            } else {
+                for (S3Object object : client.listObjects(bucketName).getObjects()) {
+                    client.deleteObject(bucketName, object.getKey());
+                }
             }
             client.deleteBucket(bucketName);
         } catch (S3Exception e) {

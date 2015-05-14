@@ -90,6 +90,10 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
         return object;
     }
 
+    public void setObject(T object) {
+        this.object = object;
+    }
+
     public void setContentLength(Long contentLength) {
         this.contentLength = contentLength;
     }
@@ -100,6 +104,11 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
 
     public void setContentMd5(String contentMd5) {
         this.contentMd5 = contentMd5;
+    }
+
+    public UploadPartRequest withObject(T object) {
+        setObject(object);
+        return this;
     }
 
     public UploadPartRequest withContentLength(Long contentLength) {

@@ -35,12 +35,7 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 
 import java.io.*;
 import java.net.URI;
@@ -54,16 +49,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
 
-    @Rule
-    public TestRule watcher = new TestWatcher() {
-        protected void starting(Description description) {
-            l4j.debug("Starting test:>>>>>>>>>>>>>>> " + description.getMethodName());
-        }
-    };
-
-    @Rule
-    public ExpectedException thrown= ExpectedException.none();
-   
     @Override
     protected String getTestBucketPrefix() {
         return "s3-client-test";
@@ -72,11 +57,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Override
     public void initClient() throws Exception {
         client = new S3JerseyClient(createS3Config());
-    }
-
-    @Test
-    public void emptyTest() throws Exception {
-        l4j.debug("JMC Entered empty test to ensure Before/After processes");
     }
 
     @Test
@@ -592,21 +572,25 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateObjectWithRange() throws Exception {
-        //void putObject(String bucketName, String key, Range range, Object content)
-        l4j.debug("JMC Entered testCreateObjectWithRange");
-        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
-        File testFile = new File(fileName);
-        if (!testFile.exists()) {
-            throw new FileNotFoundException("test.properties");
-        }
-        long length = testFile.length();
-        Range range = new Range((long)0, length/2);
-        client.putObject(getTestBucket(), "/objectPrefix/testObject1", range, testFile);
-        l4j.debug("Put the first half of the object");
-        range = new Range(length / 2, length / 2);
-        client.putObject(getTestBucket(), "/objectPrefix/testObject2", range, testFile);
-        l4j.debug("Put both halves of the file");
+    public void testUpdateObjectWithRange() throws Exception {
+        String key = "testRange";
+        String content = "hello object!";
+        int offset = content.indexOf("object");
+
+        // create object
+        client.putObject(getTestBucket(), key, content, "text/plain");
+
+        // update fixed range
+        String contentPart = "ranges!";
+        Range range = Range.fromOffsetLength(offset, contentPart.length());
+        client.putObject(getTestBucket(), key, range, (Object) contentPart);
+
+        // update tail
+        range = Range.fromOffset(offset);
+        contentPart = "really long noun!";
+        client.putObject(getTestBucket(), key, range, (Object) contentPart);
+
+        Assert.assertEquals(content.substring(0, offset) + contentPart, client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -691,9 +675,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         out.close();
 
         LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
-        uploader.run();
+
+        // multipart
+        uploader.doMultipartUpload();
 
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+
+        client.deleteObject(getTestBucket(), key);
+
+        // parallel byte-range (also test metadata)
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
+        uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader.setObjectMetadata(objectMetadata);
+        uploader.doByteRangeUpload();
+
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
     }
 
     @Test
@@ -837,7 +834,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (MultipartPart part: mpp) {
             l4j.debug("\t----------------------part#" + part.getPartNumber() + " information");
             l4j.debug("\tpart.getSize() = " + part.getSize());
-            l4j.debug("\tpart.getETag = " + part.getETag() );
+            l4j.debug("\tpart.getETag = " + part.getETag());
             l4j.debug("\tpart.getPartNumber = " + part.getPartNumber() );
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
@@ -1097,8 +1094,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             System.out.println("JMC - uploaded multipart segment");
         }
         */
-        client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, partNum,
-                new InputStreamSegment(new FileInputStream(fileName), segmentOffset, fileLength)));
+        client.uploadPart(new UploadFilePartRequest(getTestBucket(), key, uploadId, partNum)
+                .withFile(new File(fileName)).withOffset(segmentOffset).withLength(segmentLen));
         System.out.println("JMC - finished uploading parts of multipart upload of file key: " + key);
     }
 
@@ -1127,6 +1124,20 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
         Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
         l4j.debug("JMC - Success");
+    }
+
+    @Test
+    public void testAppendObject() throws Exception {
+        String key = "appendTest";
+        String content = "Hello";
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+
+        String appendContent = " World!";
+        long offset = client.appendObject(getTestBucket(), key, appendContent);
+
+        Assert.assertEquals(content + appendContent, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content.length(), offset);
     }
 
     @Test
@@ -1357,18 +1368,86 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //creates objects named TestObject_ + zero based index
         this.createTestObjects("", 1);
         GetObjectRequest request = new GetObjectRequest(getTestBucket(),"TestObject_0");
-        GetObjectResult<String> result = client.getObject(request,String.class);
+        GetObjectResult<String> result = client.getObject(request, String.class);
         l4j.debug("JMC returned from client.getObject");
         l4j.debug("JMC getObject = " + result.getObject());
         S3ObjectMetadata meta = result.getObjectMetadata();
         l4j.debug("JMC meta.getContentLength(): " + meta.getContentLength());
     }
-    
-    //TODO
-    @Test
-    public void testDeleteVersion() throws Exception {
-        //void deleteVersion(String bucketName, String key, String versionId);
 
+    @Test
+    public void testBucketVersions() throws Exception {
+        VersioningConfiguration config = new VersioningConfiguration();
+        config.setStatus(VersioningConfiguration.Status.Enabled);
+        client.setBucketVersioning(getTestBucket(), config);
+
+        String key = "versionTest";
+        String content1 = "content1", content2 = "content2";
+
+        // create object
+        client.putObject(getTestBucket(), key, content1, "text/plain");
+
+        // update object (will create version)
+        client.putObject(getTestBucket(), key, content2, "text/plain");
+
+        Assert.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
+
+        // list versions
+        List<AbstractVersion> versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(2, versions.size());
+        String firstVersionId = null;
+        for (AbstractVersion version : versions) {
+            Assert.assertTrue(version instanceof Version);
+            Assert.assertEquals(key, version.getKey());
+            Assert.assertNotNull(version.getVersionId());
+            Assert.assertNotNull(version.getLastModified());
+            Assert.assertNotNull(version.getOwner());
+            Assert.assertEquals(content1.length(), (long) ((Version) version).getSize());
+            Assert.assertNotNull(((Version) version).geteTag());
+            Assert.assertNotNull(((Version) version).getStorageClass());
+            if (version.getLatest()) {
+                Assert.assertEquals(content2, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
+            } else {
+                Assert.assertEquals(content1, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
+                firstVersionId = version.getVersionId();
+            }
+        }
+
+        // restore version (copy old version)
+        client.copyObject(new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key).withSourceVersionId(firstVersionId));
+        Assert.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
+
+        versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(3, versions.size());
+        String thirdVersionId = null;
+        for (AbstractVersion version : versions) {
+            if (version.getLatest()) thirdVersionId = version.getVersionId();
+        }
+
+        // delete object (creates a delete marker)
+        client.deleteObject(getTestBucket(), key);
+
+        versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(4, versions.size());
+        String fourthVersionId = null;
+        for (AbstractVersion version : versions) {
+            if (version.getLatest()) fourthVersionId = version.getVersionId();
+        }
+
+        // delete explicit versions, which should revert back to prior version
+        client.deleteVersion(getTestBucket(), key, fourthVersionId);
+
+        versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(3, versions.size());
+        for (AbstractVersion version : versions) {
+            if (version.getLatest()) Assert.assertEquals(thirdVersionId, version.getVersionId());
+        }
+        Assert.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
+
+        client.deleteVersion(getTestBucket(), key, thirdVersionId);
+
+        Assert.assertEquals(2, client.listVersions(getTestBucket(), null).getVersions().size());
+        Assert.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
     }
     
     @Test
@@ -1445,7 +1524,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
         System.out.println("printing the " + objectMetadata.getUserMetadata().size() + " user meta data key/value pairs");
         for (String userMetaKey : objectMetadata.getUserMetadata().keySet()) {
-            System.out.println("user meta Key: " + userMetaKey + "\tvalue: " + objectMetadata.userMetadata(userMetaKey));
+            System.out.println("user meta Key: " + userMetaKey + "\tvalue: " + objectMetadata.getUserMetadata(userMetaKey));
         }
     }
     

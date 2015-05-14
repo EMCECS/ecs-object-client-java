@@ -110,16 +110,16 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         GetObjectResult<byte[]> result = client.getObject(new GetObjectRequest(getTestBucket(), key), byte[].class);
 
         Assert.assertEquals("unencrypted size incorrect", "12",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
         Assert.assertEquals("encrypted size incorrect", 16, result.getObjectMetadata().getContentLength().longValue());
         Assert.assertEquals("unencrypted sha1 incorrect", "2ef7bde608ce5404e97d5f042f95f89f1c232871",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         Assert.assertEquals("master key ID incorrect", getMasterKeyFingerprint(),
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
-        Assert.assertNotNull("IV null", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_IV));
-        Assert.assertNotNull("Object key", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
         Assert.assertNotNull("Missing metadata signature",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
     }
 
     @Test
@@ -133,16 +133,16 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), key);
 
         Assert.assertEquals("unencrypted size incorrect", "2516125",
-                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
+                objectMetadata.getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
         Assert.assertEquals("encrypted size incorrect", 2516128L, objectMetadata.getContentLength().longValue());
         Assert.assertEquals("unencrypted sha1 incorrect", "027e997e6b1dfc97b93eb28dc9a6804096d85873",
-                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+                objectMetadata.getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         Assert.assertEquals("master key ID incorrect", getMasterKeyFingerprint(),
-                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
-        Assert.assertNotNull("IV null", objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_IV));
-        Assert.assertNotNull("Object key", objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
+                objectMetadata.getUserMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", objectMetadata.getUserMetadata(TransformConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", objectMetadata.getUserMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
         Assert.assertNotNull("Missing metadata signature",
-                objectMetadata.userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
+                objectMetadata.getUserMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
     }
 
     // Test a stream > 4MB.
@@ -163,11 +163,11 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         // Hex Encode it
         String sha1hex = KeyUtils.toHexPadded(sha1Digest);
 
-        assertNotNull("Missing SHA1 meta", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+        assertNotNull("Missing SHA1 meta", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         assertEquals("SHA1 incorrect", sha1hex,
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         assertEquals("Stream length incorrect", size,
-                Integer.parseInt(result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE)));
+                Integer.parseInt(result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE)));
     }
 
     @Test
@@ -193,16 +193,16 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
 
         assertEquals("Content differs", content, result.getObject());
         assertEquals("unencrypted size incorrect", "12",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SIZE));
         assertEquals("encrypted size incorrect", 16, result.getObjectMetadata().getContentLength().longValue());
         assertEquals("unencrypted sha1 incorrect", "2ef7bde608ce5404e97d5f042f95f89f1c232871",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_UNENC_SHA1));
         assertEquals("master key ID incorrect", getKeyFingerprint(oldKeyAlias),
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
-        Assert.assertNotNull("IV null", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_IV));
-        Assert.assertNotNull("Object key", result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_OBJECT_KEY));
         Assert.assertNotNull("Missing metadata signature",
-                result.getObjectMetadata().userMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
+                result.getObjectMetadata().getUserMetadata(TransformConstants.META_ENCRYPTION_META_SIG));
     }
 
     // the following methods aren't supported in the encryption client
@@ -224,7 +224,7 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testCreateObjectWithRange() throws Exception {
+    public void testUpdateObjectWithRange() throws Exception {
     }
 
     @Ignore

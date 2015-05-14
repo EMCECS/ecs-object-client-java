@@ -24,59 +24,68 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object;
+package com.emc.object.s3.request;
 
-public class Range {
-    private Long first;
-    private Long last;
+import com.emc.object.util.InputStreamSegment;
 
-    public static Range fromOffsetLength(long offset, long length) {
-        return new Range(offset, offset + length - 1);
-    }
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
-    public static Range fromOffset(long offset) {
-        return new Range(offset, null);
-    }
+public class UploadFilePartRequest extends UploadPartRequest<InputStreamSegment> {
+    private File file;
+    private long offset = -1;
+    private long length;
 
-    public Range(int first, int last) {
-        this((long) first, (long) last);
-    }
-
-    public Range(Long first, Long last) {
-        this.first = first;
-        this.last = last;
-    }
-
-    public Long getFirst() {
-        return first;
-    }
-
-    public Long getLast() {
-        return last;
+    public UploadFilePartRequest(String bucketName, String key, String uploadId, int partNumber) {
+        super(bucketName, key, uploadId, partNumber, null);
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Range range = (Range) o;
-
-        if (first != null ? !first.equals(range.first) : range.first != null) return false;
-        if (last != null ? !last.equals(range.last) : range.last != null) return false;
-
-        return true;
+    public InputStreamSegment getEntity() {
+        try {
+            return new InputStreamSegment(new FileInputStream(file), offset, length);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("bad file parameters", e);
+        }
     }
 
-    @Override
-    public int hashCode() {
-        int result = first != null ? first.hashCode() : 0;
-        result = 31 * result + (last != null ? last.hashCode() : 0);
-        return result;
+    public File getFile() {
+        return file;
     }
 
-    @Override
-    public String toString() {
-        return "" + first + "-" + (last == null ? "" : last);
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    public long getOffset() {
+        return offset;
+    }
+
+    public void setOffset(long offset) {
+        this.offset = offset;
+    }
+
+    public long getLength() {
+        return length;
+    }
+
+    public void setLength(long length) {
+        this.length = length;
+    }
+
+    public UploadFilePartRequest withFile(File file) {
+        setFile(file);
+        return this;
+    }
+
+    public UploadFilePartRequest withOffset(long offset) {
+        setOffset(offset);
+        return this;
+    }
+
+    public UploadFilePartRequest withLength(long length) {
+        setLength(length);
+        return this;
     }
 }

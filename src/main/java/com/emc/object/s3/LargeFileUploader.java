@@ -26,11 +26,11 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.Range;
+import com.emc.object.s3.bean.AccessControlList;
+import com.emc.object.s3.bean.CannedAcl;
 import com.emc.object.s3.bean.MultipartPartETag;
-import com.emc.object.s3.request.AbortMultipartUploadRequest;
-import com.emc.object.s3.request.CompleteMultipartUploadRequest;
-import com.emc.object.s3.request.InitiateMultipartUploadRequest;
-import com.emc.object.s3.request.UploadPartRequest;
+import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
 import org.apache.log4j.Logger;
 
@@ -52,13 +52,17 @@ import java.util.concurrent.Future;
 public class LargeFileUploader implements Runnable {
     private static final Logger l4j = Logger.getLogger(LargeFileUploader.class);
 
-    public static final int DEFAULT_THREADS = 6;
+    public static final int DEFAULT_THREADS = 8;
 
     public static final long MIN_PART_SIZE = 5 * 1024 * 1024; // 5MB
     public static final int MAX_PARTS = 10000;
 
     private S3Client s3Client;
-    private InitiateMultipartUploadRequest request;
+    private String bucket;
+    private String key;
+    private S3ObjectMetadata objectMetadata;
+    private AccessControlList acl;
+    private CannedAcl cannedAcl;
     private File file;
     private Long partSize;
     private int threads = DEFAULT_THREADS;
@@ -69,22 +73,18 @@ public class LargeFileUploader implements Runnable {
      * <code>file</code> to <code>bucket/key</code>.
      */
     public LargeFileUploader(S3Client s3Client, String bucket, String key, File file) {
-        this(s3Client, new InitiateMultipartUploadRequest(bucket, key), file);
-    }
-
-    /**
-     * Allows more flexibility by accepting an {@link com.emc.object.s3.request.InitiateMultipartUploadRequest}
-     * and all of the options it provides.
-     */
-    public LargeFileUploader(S3Client s3Client, InitiateMultipartUploadRequest request, File file) {
         this.s3Client = s3Client;
-        this.request = request;
+        this.bucket = bucket;
+        this.key = key;
         this.file = file;
     }
 
     @Override
     public void run() {
-        String bucket = request.getBucketName(), key = request.getKey();
+        doMultipartUpload();
+    }
+
+    public void doMultipartUpload() {
 
         // sanity checks
         if (!file.exists() || !file.canRead())
@@ -105,20 +105,22 @@ public class LargeFileUploader implements Runnable {
         List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
 
         // initiate MP upload
+        InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucket, key);
+        request.setObjectMetadata(objectMetadata);
+        request.setAcl(acl);
+        request.setCannedAcl(cannedAcl);
         String uploadId = s3Client.initiateMultipartUpload(request).getUploadId();
 
         try {
             // submit all upload tasks
-            InputStreamSegment segment;
-            UploadPartRequest request;
+            UploadFilePartRequest partRequest;
             int partNumber = 1;
             long offset = 0, length = partSize;
             while (offset < file.length()) {
                 if (offset + length > file.length()) length = file.length() - offset;
-                segment = new InputStreamSegment(new FileInputStream(file), offset, length);
-                request = new UploadPartRequest<InputStreamSegment>(bucket, key, uploadId, partNumber++, segment);
-                request.setContentLength(length);
-                futures.add(executorService.submit(new UploadPartTask(request)));
+                partRequest = new UploadFilePartRequest(bucket, key, uploadId, partNumber++);
+                partRequest.withFile(file).withOffset(offset).withLength(length);
+                futures.add(executorService.submit(new UploadPartTask(partRequest)));
                 offset += length;
             }
 
@@ -144,16 +146,101 @@ public class LargeFileUploader implements Runnable {
         }
     }
 
+    public void doByteRangeUpload() {
+
+        // sanity checks
+        if (!file.exists() || !file.canRead())
+            throw new IllegalArgumentException("cannot read file: " + file.getPath());
+
+        long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
+        l4j.info(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
+
+        if (partSize == null) partSize = minPartSize;
+        if (partSize < minPartSize) {
+            l4j.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
+                    partSize / 1024, minPartSize / 1024));
+            partSize = minPartSize;
+        }
+
+        // set up thread pool
+        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
+        List<Future> futures = new ArrayList<Future>();
+
+        // create empty object (sets metadata/acl)
+        PutObjectRequest<Void> request = new PutObjectRequest<Void>(bucket, key, null);
+        request.setObjectMetadata(objectMetadata);
+        request.setAcl(acl);
+        request.setCannedAcl(cannedAcl);
+        s3Client.putObject(request);
+
+        try {
+            // submit all upload tasks
+            PutObjectRequest<InputStreamSegment> rangeRequest;
+            long offset = 0, length = partSize;
+            while (offset < file.length()) {
+                if (offset + length > file.length()) length = file.length() - offset;
+                Range range = Range.fromOffsetLength(offset, length);
+                InputStreamSegment segment = new InputStreamSegment(new FileInputStream(file), offset, length);
+                rangeRequest = new PutObjectRequest<InputStreamSegment>(bucket, key, segment).withRange(range);
+                futures.add(executorService.submit(new PutObjectTask(rangeRequest)));
+                offset += length;
+            }
+
+            // wait for threads to finish
+            for (Future future : futures) {
+                future.get();
+            }
+        } catch (Exception e) {
+
+            // delete object
+            s3Client.deleteObject(bucket, key);
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
+            throw new RuntimeException("error uploading file", e);
+        } finally {
+
+            // make sure all spawned threads are shut down
+            executorService.shutdownNow();
+        }
+    }
+
     public S3Client getS3Client() {
         return s3Client;
     }
 
-    public InitiateMultipartUploadRequest getRequest() {
-        return request;
+    public String getBucket() {
+        return bucket;
+    }
+
+    public String getKey() {
+        return key;
     }
 
     public File getFile() {
         return file;
+    }
+
+    public S3ObjectMetadata getObjectMetadata() {
+        return objectMetadata;
+    }
+
+    public void setObjectMetadata(S3ObjectMetadata objectMetadata) {
+        this.objectMetadata = objectMetadata;
+    }
+
+    public AccessControlList getAcl() {
+        return acl;
+    }
+
+    public void setAcl(AccessControlList acl) {
+        this.acl = acl;
+    }
+
+    public CannedAcl getCannedAcl() {
+        return cannedAcl;
+    }
+
+    public void setCannedAcl(CannedAcl cannedAcl) {
+        this.cannedAcl = cannedAcl;
     }
 
     public long getPartSize() {
@@ -193,6 +280,36 @@ public class LargeFileUploader implements Runnable {
         this.executorService = executorService;
     }
 
+    public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
+        setObjectMetadata(objectMetadata);
+        return this;
+    }
+
+    public LargeFileUploader withAcl(AccessControlList acl) {
+        setAcl(acl);
+        return this;
+    }
+
+    public LargeFileUploader withCannedAcl(CannedAcl cannedAcl) {
+        setCannedAcl(cannedAcl);
+        return this;
+    }
+
+    public LargeFileUploader withPartSize(Long partSize) {
+        setPartSize(partSize);
+        return this;
+    }
+
+    public LargeFileUploader withThreads(int threads) {
+        setThreads(threads);
+        return this;
+    }
+
+    public LargeFileUploader withExecutorService(ExecutorService executorService) {
+        setExecutorService(executorService);
+        return this;
+    }
+
     protected class UploadPartTask implements Callable<MultipartPartETag> {
         private UploadPartRequest request;
 
@@ -203,6 +320,19 @@ public class LargeFileUploader implements Runnable {
         @Override
         public MultipartPartETag call() throws Exception {
             return s3Client.uploadPart(request);
+        }
+    }
+
+    protected class PutObjectTask implements Runnable {
+        private PutObjectRequest request;
+
+        public PutObjectTask(PutObjectRequest request) {
+            this.request = request;
+        }
+
+        @Override
+        public void run() {
+            s3Client.putObject(request);
         }
     }
 }

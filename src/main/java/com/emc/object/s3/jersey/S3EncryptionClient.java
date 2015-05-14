@@ -166,7 +166,7 @@ public class S3EncryptionClient extends S3JerseyClient {
                 // re-sign the object encryption key
                 Map<String, String> rekeyMeta = factory.rekey(userMetadata);
                 for (String name : rekeyMeta.keySet()) {
-                    objectMetadata.userMetadata(name, rekeyMeta.get(name));
+                    objectMetadata.addUserMetadata(name, rekeyMeta.get(name));
                 }
 
                 // push the re-signed keys as metadata

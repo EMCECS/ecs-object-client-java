@@ -48,7 +48,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final String PROPERTY_PROXY_PASS = "com.emc.object.proxyPass";
 
     public static final String PACKAGE_VERSION = ObjectConfig.class.getPackage().getImplementationVersion();
-    public static final String DEFAULT_USER_AGENT = "ECS Java SDK" + (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : "");
+    public static final String DEFAULT_USER_AGENT = String.format("ECS Java SDK%s Java/%s (%s; %s; %s)",
+            (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : ""), System.getProperty("java.version"),
+            System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"));
 
     private Protocol protocol;
     private List<String> hosts;

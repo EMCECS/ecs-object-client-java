@@ -119,7 +119,11 @@ public interface S3Client {
 
     <T> T readObject(String bucketName, String key, Class<T> objectType);
 
+    <T> T readObject(String bucketName, String key, String versionId, Class<T> objectType);
+
     InputStream readObjectStream(String bucketName, String key, Range range);
+
+    GetObjectResult<InputStream> getObject(String bucketName, String key);
 
     <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 
