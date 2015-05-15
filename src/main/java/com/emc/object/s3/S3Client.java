@@ -44,6 +44,12 @@ import java.util.Date;
  * the exception instance.  If an exception is not thrown, you may assume the call was successful.
  */
 public interface S3Client {
+    /**
+     * Always call .shutdown() when finished with a client to ensure that any attached resources and background processes
+     * are released/terminated (i.e. polling threads for host list providers)
+     */
+    void shutdown();
+
     ListDataNode listDataNodes();
 
     /**

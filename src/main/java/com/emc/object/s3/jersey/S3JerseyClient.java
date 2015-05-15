@@ -34,11 +34,13 @@ import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
+import org.apache.log4j.Logger;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -46,6 +48,8 @@ import java.net.URL;
 import java.util.Date;
 
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
+    private static final Logger l4j = Logger.getLogger(S3JerseyClient.class);
+
     protected S3Config s3Config;
     protected Client client;
 
@@ -95,6 +99,22 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.addFilter(new AuthorizationFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            shutdown();
+        } finally {
+            super.finalize(); // make sure we call super.finalize() no matter what!
+        }
+    }
+
+    @Override
+    public void shutdown() {
+        l4j.debug("terminating polling daemon");
+        PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
+        if (pollingDaemon != null) pollingDaemon.terminate();
     }
 
     @Override
