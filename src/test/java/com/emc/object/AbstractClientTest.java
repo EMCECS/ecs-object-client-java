@@ -32,6 +32,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.Random;
 
 @RunWith(ConcurrentJunitRunner.class)
@@ -87,5 +90,21 @@ public abstract class AbstractClientTest {
     public final void destroyTestBucket() throws Exception {
         l4j.info("cleaning up bucket " + getTestBucket());
         cleanUpBucket(getTestBucket());
+    }
+
+    protected File createRandomTempFile(int size) throws Exception {
+        File file = File.createTempFile("random-" + size, null);
+        file.deleteOnExit();
+        OutputStream out = new FileOutputStream(file);
+        Random random = new Random();
+        int bufferSize = 64 * 1024, written = 0, toWrite = bufferSize;
+        byte[] buffer = new byte[bufferSize];
+        while (written < size) {
+            random.nextBytes(buffer);
+            if (written + toWrite > size) toWrite = size - written;
+            out.write(buffer, 0, toWrite);
+            written += toWrite;
+        }
+        return file;
     }
 }

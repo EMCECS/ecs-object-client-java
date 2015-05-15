@@ -52,7 +52,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     }
 
     public S3Config(Protocol protocol, int port, String... hostList) {
-        super(protocol, port == -1 ? defaultPort(protocol) : port, hostList);
+        super(protocol, port, hostList);
     }
 
     @Override

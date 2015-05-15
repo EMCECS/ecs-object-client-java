@@ -30,12 +30,15 @@ import com.emc.object.s3.S3HostListProvider;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.apache4.ApacheHttpClient4;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -47,10 +50,13 @@ public class S3HostListProviderTest {
         URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_ENDPOINT));
         String user = TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_ACCESS_KEY);
         String secret = TestConfig.getPropertyNotEmpty(properties, TestProperties.S3_SECRET_KEY);
+        String proxyUri = properties.getProperty(TestProperties.PROXY_URI);
 
-        SmartConfig smartConfig = new SmartConfig(Arrays.asList(serverURI.getHost()));
+        ClientConfig clientConfig = new DefaultClientConfig();
+        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
+        Client client = ApacheHttpClient4.create(clientConfig);
 
-        Client client = ApacheHttpClient4.create();
+        SmartConfig smartConfig = new SmartConfig(Collections.singletonList(serverURI.getHost()));
 
         S3HostListProvider hostListProvider = new S3HostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
         hostListProvider.setProtocol(serverURI.getScheme());

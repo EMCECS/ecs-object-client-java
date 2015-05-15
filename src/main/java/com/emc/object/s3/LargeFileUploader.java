@@ -142,7 +142,7 @@ public class LargeFileUploader implements Runnable {
         } finally {
 
             // make sure all spawned threads are shut down
-            executorService.shutdownNow();
+            executorService.shutdown();
         }
     }
 
@@ -199,7 +199,7 @@ public class LargeFileUploader implements Runnable {
         } finally {
 
             // make sure all spawned threads are shut down
-            executorService.shutdownNow();
+            executorService.shutdown();
         }
     }
 

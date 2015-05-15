@@ -59,6 +59,10 @@ public class AccessControlList {
         this.grants = grants;
     }
 
+    public void addGrants(Grant... grants) {
+        this.grants.addAll(Arrays.asList(grants));
+    }
+
     public Map<String, List<Object>> toHeaders() {
         Map<String, List<Object>> headers = new HashMap<String, List<Object>>();
         for (Grant grant : grants) {

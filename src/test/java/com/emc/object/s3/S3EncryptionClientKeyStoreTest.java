@@ -219,11 +219,6 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    protected void uploadMultipartFileParts(String bucket, String uploadId, String key, String fileName) throws Exception {
-    }
-
-    @Ignore
-    @Override
     public void testUpdateObjectWithRange() throws Exception {
     }
 
@@ -240,5 +235,45 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
     @Ignore
     @Override
     public void testSingleMultipartUploadSimple() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testBucketVersions() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testMultiThreadMultipartUploadMostSimple() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testLargeObjectContentLength() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testSingleMultipartUploadListParts() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testLargeFileUploader() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testMultiThreadMultipartUploadListPartsPagination() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testLargeFileDownloader() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testAppendObject() throws Exception {
     }
 }

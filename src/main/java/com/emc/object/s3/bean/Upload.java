@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3.bean;
 
+import javax.xml.bind.annotation.XmlElement;
 import java.util.Date;
 
 public class Upload {
@@ -35,4 +36,58 @@ public class Upload {
     private CanonicalUser owner;
     private StorageClass storageClass;
     private Date initiated;
+
+    @XmlElement(name = "Key")
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    @XmlElement(name = "UploadId")
+    public String getUploadId() {
+        return uploadId;
+    }
+
+    public void setUploadId(String uploadId) {
+        this.uploadId = uploadId;
+    }
+
+    @XmlElement(name = "RequestInitiator")
+    public CanonicalUser getInitiator() {
+        return initiator;
+    }
+
+    public void setInitiator(CanonicalUser initiator) {
+        this.initiator = initiator;
+    }
+
+    @XmlElement(name = "Owner")
+    public CanonicalUser getOwner() {
+        return owner;
+    }
+
+    public void setOwner(CanonicalUser owner) {
+        this.owner = owner;
+    }
+
+    @XmlElement(name = "StorageClass")
+    public StorageClass getStorageClass() {
+        return storageClass;
+    }
+
+    public void setStorageClass(StorageClass storageClass) {
+        this.storageClass = storageClass;
+    }
+
+    @XmlElement(name = "Initiated")
+    public Date getInitiated() {
+        return initiated;
+    }
+
+    public void setInitiated(Date initiated) {
+        this.initiated = initiated;
+    }
 }

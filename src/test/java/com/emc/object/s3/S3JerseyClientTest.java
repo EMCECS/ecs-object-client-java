@@ -30,7 +30,6 @@ import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.InputStreamSegment;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -38,12 +37,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
-import java.net.URI;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
@@ -79,8 +74,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Bucket bucket = new Bucket();
         bucket.setName(getTestBucket());
         Assert.assertTrue(result.getBuckets().contains(bucket));
-
-        l4j.debug("JMC testListBuckets succeeded for user: " + result.getOwner().getId() + " !!!!!!!!!!!!!!!!!!!");
     }
 
     @Test
@@ -140,76 +133,37 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    protected AccessControlList createAcl() {
-        CanonicalUser cu1 = new CanonicalUser("user1", "userDisplayName1");
-        Permission perm = Permission.FULL_CONTROL;
-        Grant grant = new Grant(cu1, perm);
+    protected void assertSameAcl(AccessControlList acl1, AccessControlList acl2) {
+        Assert.assertEquals(acl1.getOwner().getId(), acl2.getOwner().getId());
 
-/*
-        CanonicalUser cu2 = new CanonicalUser("user1","userDisplayName2");
-        Permission perm2 = Permission.READ;
-        Grant grant2 = new Grant(cu2, perm2);
-        */
-
-        Set<Grant> grantSet = new HashSet<Grant>();
-        grantSet.add(grant);
-        /*
-        grantSet.add(grant2);
-        */
-
-        AccessControlList acl = new AccessControlList();
-        AccessControlList origAcl = client.getBucketAcl(getTestBucket());
-        CanonicalUser cu = origAcl.getOwner();
-        acl.setOwner(cu);
-        acl.setGrants(grantSet);
-        return acl;
-    }
-    
-    protected void testAclsEqual(AccessControlList acl1, AccessControlList acl2) {
-        CanonicalUser owner1 = acl1.getOwner();
-        CanonicalUser owner2 = acl2.getOwner();
-        Assert.assertEquals(owner1.getId(), owner2.getId());
-        Assert.assertEquals(owner1.getDisplayName(), owner2.getDisplayName());
-
-        /*
-        Grant[] grants1 = (Grant[])acl1.getGrants().toArray();
-        Grant[] grants2 = (Grant[])acl2.getGrants().toArray();
-        Assert.assertEquals(grants1.length, grants2.length);
-        */
         Set<Grant> gs1 = acl1.getGrants();
         Set<Grant> gs2 = acl2.getGrants();
 
-        //should only be 1 grant per acl for current testing at this point. There
-        //used to be 2 but I removed the second one for now (see this.createAcl())
         Assert.assertEquals(gs1.size(), gs2.size());
-        Grant g1 = new Grant();
-        Grant g2 = new Grant();
-        for (Grant g: gs1) {
-            g1 = g;
-            l4j.debug("JMC retrieved g1");
+        Iterator<Grant> grantI = acl2.getGrants().iterator();
+        for (Grant g1 : acl1.getGrants()) {
+            Grant g2 = grantI.next();
+            Assert.assertEquals(g1.getGrantee(), g2.getGrantee());
+            Assert.assertEquals(g1.getPermission(), g2.getPermission());
         }
-        for (Grant g: gs2) {
-            g2 = g;
-            l4j.debug("JMC retrieved g2");
-        }
-        //Grant implements comparable
-        Assert.assertEquals(g1, g2);
     }
 
     @Test
     public void testSetBucketAcl() throws Exception {
-        AccessControlList acl = this.createAcl();
+        String identity = createS3Config().getIdentity();
+        CanonicalUser owner = new CanonicalUser(identity, identity);
+        AccessControlList acl = new AccessControlList();
+        acl.setOwner(owner);
+        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+
         client.setBucketAcl(getTestBucket(), acl);
-        AccessControlList aclReturned = client.getBucketAcl(getTestBucket());
-        this.testAclsEqual(acl, aclReturned);
+
+        this.assertSameAcl(acl, client.getBucketAcl(getTestBucket()));
     }
 
-    //TODO
+    @Test
     public void testSetBucketAclCanned() {
-        //void setBucketAcl(String bucketName, CannedAcl cannedAcl);
         client.setBucketAcl(getTestBucket(), CannedAcl.BucketOwnerFullControl);
-        AccessControlList acl = client.getBucketAcl(getTestBucket());
-        SetBucketAclRequest request;
     }
 
     //TODO
@@ -513,27 +467,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     protected void createTestObjects(String bucket, String prefixWithDelim, int numObjects) throws Exception {
-        l4j.debug("JMC Entered createTestObjects. Creating " + Integer.toString(numObjects));
         String objectName;
-        File testFile = new File(System.getProperty("user.home") + File.separator + "test.properties");
 
-        int fiveKB = 5 * 1024;
         byte[] content1 = new byte[5 * 1024];
         new Random().nextBytes(content1);
 
-        if (!testFile.exists()) {
-            throw new FileNotFoundException("test.properties");
-        }
-        
         for(int i=0; i<numObjects; i++) {
-            //objectName = "TestObject_" + UUID.randomUUID();
-            objectName = "TestObject_" + Integer.toString(i);
-            l4j.debug("JMC about to create " + objectName);
-            //client.putObject(bucket, prefixWithDelim + objectName, testFile, "text/plain");
+            objectName = "TestObject_" + i;
             client.putObject(bucket, prefixWithDelim + objectName, content1, "text/plain");
-            l4j.debug("JMC client.createObject " + objectName + " seemed to work");
         }
-        l4j.debug("JMC Done creating test objects");
     }
 
     //TODO need to actually make these multi part uploads
@@ -542,15 +484,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         List<List<String>> upIds = new ArrayList<List<String>>();
         ArrayList<String> tmp;
         String objectName;
-        File testFile = new File(System.getProperty("user.home") + File.separator +"test.properties");
-        if(!testFile.exists()) {
-            throw new FileNotFoundException("test.properties");
-        }
-        
+
         for(int i=0; i<numObjects; i++) {
             objectName = "TestObject_" + UUID.randomUUID();
             tmp = new ArrayList<String>();
-            System.out.println("JMC about to call client.initiateMultipartUpload");
             tmp.add(client.initiateMultipartUpload(getTestBucket(), prefix + objectName));
             tmp.add(prefix + objectName);
             upIds.add(tmp);
@@ -595,18 +532,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateObjectWithRequest() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
-        //PutObjectResult putObject(PutObjectRequest request);
-        //PutObjectRequest(String bucketName, String key, T object) {
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), "/objectPrefix/testObject1", fileName);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), "/objectPrefix/testObject1", "object content");
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
 
     @Test
     public void testCreateObjectChunkedWithRequest() throws Exception {
-        //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
-        //String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         int size = 50000;
         byte[] data =  new byte[size];
         new Random().nextBytes(data);
@@ -615,10 +547,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
 
         //request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
-        //System.out.println("JMC PROPERTY_CHUNKED_ENCODING_SIZE to -1");
 
         request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
-        System.out.println("JMC PROPERTY_ENABLE_BUFFERING to false");
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
@@ -665,7 +595,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testLargeFileUploader() throws Exception {
         String key = "large-file-uploader.bin";
-        int size = 80 * 1024 * 1024 + 123; // > 80MB
+        int size = 20 * 1024 * 1024 + 123; // > 20MB
         byte[] data = new byte[size];
         new Random().nextBytes(data);
         File file = File.createTempFile("large-file-uploader-test", null);
@@ -696,7 +626,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testLargeFileDownloader() throws Exception {
         String key = "large-file-downloader.bin";
-        int size = 80 * 1024 * 1024 + 179; // > 80MB
+        int size = 20 * 1024 * 1024 + 179; // > 20MB
         byte[] data = new byte[size];
         new Random().nextBytes(data);
         client.putObject(getTestBucket(), key, data, null);
@@ -732,34 +662,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("status is wrong", vc.getStatus(), vcResult.getStatus());
     }
 
-    @Test
+    //TODO
+    //@Test
     public void testInitiateListAbortMultipartUploads() throws Exception {
         int numObjects = 2;
-        String prefix = "multiPrefix/";
-        System.out.println("JMC about to call this.createMultipartTestObjects ");
-        List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
+        //String prefix = "multiPrefix/";
+        //List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
 
-        System.out.println("JMC about to call client.listMultipartUploads");
         ListMultipartUploadsResult result = client.listMultipartUploads(getTestBucket());
         Assert.assertNotNull(result);
         List<Upload> lu = result.getUploads();
         Assert.assertEquals(numObjects, lu.size());
-
-        System.out.println("JMC testInitiateListAbortMultipartUploads ListMultipartUploadsResult.length = " + lu.size());
-        //TODO - Upload members are private with no getter/setters
-        /*
-        for (Upload u: lu) {
-            System.out.println("JMC - ListMultipartUploadsResult uploadID: ");
-        }
-        */
-        System.out.println("JMC createMultipartTestObjects returned = " + upIds.size());
-        //ArrayList of [ [uploadId,key],[uploadId,key]... ]
-        for (List<String> tmp: upIds) {
-            System.out.println("JMC createMultipartTestObjects uploadId: " + tmp.get(0) + "\tkey: " + tmp.get(1));
-            //AbortMultipartUploadRequest(String bucketName, String key, String uploadId)
-            System.out.println("JMC - now aborting initialized upload");
-            AbortMultipartUploadRequest abortReq = new AbortMultipartUploadRequest(getTestBucket(), tmp.get(1), tmp.get(0));
-        }
     }
 
     //TODO
@@ -774,19 +687,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         new Random().nextBytes(content1);
         InputStream is1 = new ByteArrayInputStream(content1, 0, fiveKB);
 
-        System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
-        System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
-                new InputStreamSegment(is1, 0, fiveKB)));
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1));
 
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
-        System.out.println("JMC - calling client.completeMultipartUpload");
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
         completionRequest.setParts(parts);
-        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        System.out.println("JMC - returned from client.completeMultipartUpload");
+        client.completeMultipartUpload(completionRequest);
     }
 
     @Test
@@ -803,17 +711,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         InputStream is2 = new ByteArrayInputStream(content2, 0, fiveKB);
         InputStream is3 = new ByteArrayInputStream(content3, 0, fiveKB);
 
-        System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
-        System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
-                new InputStreamSegment(is1, 0, fiveKB)));
-        System.out.println("JMC - calling client.UploadPartRequest 2");
-        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
-                new InputStreamSegment(is2, 0, fiveKB)));
-        System.out.println("JMC - calling client.UploadPartRequest 3");
-        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
-                new InputStreamSegment(is3, 0, fiveKB)));
+
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1));
+
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 2, is2));
+
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 3, is3));
 
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
@@ -822,20 +726,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
 
         ListPartsResult lpr = client.listParts(getTestBucket(), key, uploadId);
-        l4j.debug("ListPartsResult bucketName: " + lpr.getBucketName());
-        l4j.debug("ListPartsResult key: " + lpr.getKey());
-        l4j.debug("ListPartsResult getNextPartNumberMarker: " + lpr.getNextPartNumberMarker());
-        l4j.debug("ListPartsResult uploadId: " + lpr.getUploadId());
-        l4j.debug("ListPartsResult getPartNumberMarker: " + lpr.getPartNumberMarker());
-        l4j.debug("------------------Start list of Multiparts----------------------");
+
         List<MultipartPart> mpp = lpr.getParts();
         Assert.assertEquals(3, mpp.size());
 
         for (MultipartPart part: mpp) {
-            l4j.debug("\t----------------------part#" + part.getPartNumber() + " information");
-            l4j.debug("\tpart.getSize() = " + part.getSize());
-            l4j.debug("\tpart.getETag = " + part.getETag());
-            l4j.debug("\tpart.getPartNumber = " + part.getPartNumber() );
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
                 Assert.assertEquals(mp1.getETag(), mpp.get(0).getETag());
@@ -850,88 +745,71 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
             }
         }
-        l4j.debug("------------------End list of Multiparts----------------------");
 
-        System.out.println("JMC - calling client.completeMultipartUpload");
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
         completionRequest.setParts(parts);
-        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        System.out.println("JMC - returned from client.completeMultipartUpload");
+        client.completeMultipartUpload(completionRequest);
     }
 
 
     @Test
     public void testMultiThreadMultipartUploadListPartsPagination() throws Exception {
-        String key = "TestObject_" + UUID.randomUUID();
-        int fiveKB = 5 * 1024;
-        int partCnt = 7;
-        byte[] b;
-        InputStream tmpIs;
-        List<InputStream> uploadPartsBytesList = new ArrayList<InputStream>();
-        for (int i=0; i<partCnt;i++) {
-            b = new byte[fiveKB];
-            new Random().nextBytes(b);
-            tmpIs = new ByteArrayInputStream(b, 0, fiveKB);
-            uploadPartsBytesList.add(tmpIs);
-        }
-        l4j.debug("JMC - calling client.initiateMultipartUpload");
+        String key = "mpuListPartsTest";
+        File file = createRandomTempFile(10 * 1024 * 1024 + 333); // 10MB+ (not a power of 2)
+        int partSize = 2 * 1024 * 1024; // 2MB parts
+
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
 
-        List<Future<?>> futures = new ArrayList<Future<?>>();
-        ExecutorService executor = Executors.newFixedThreadPool(8);
-        final AtomicInteger successCount = new AtomicInteger();
-        int uploadPartNumber = 1;
-        for(InputStream uploadPartStream: uploadPartsBytesList) {
-            final UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, uploadPartNumber,
-                    new InputStreamSegment(uploadPartStream, 0, fiveKB));
+        try {
+            List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
+            ExecutorService executor = Executors.newFixedThreadPool(8);
 
-            futures.add(executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    l4j.debug(Thread.currentThread().getName() + " thread uploading part number: " + request.getPartNumber());
-                    client.uploadPart(request);
-                    successCount.incrementAndGet();
-                }
-            }));
-            uploadPartNumber++;
+            int partNumber = 1;
+            long offset = 0, length = partSize;
+            while (offset < file.length()) {
+                if (offset + length > file.length()) length = file.length() - offset;
+                final UploadFilePartRequest partRequest = new UploadFilePartRequest(getTestBucket(), key, uploadId, partNumber++);
+                partRequest.withFile(file).withOffset(offset).withLength(length);
+                futures.add(executor.submit(new Callable<MultipartPartETag>() {
+                    @Override
+                    public MultipartPartETag call() throws Exception {
+                        return client.uploadPart(partRequest);
+                    }
+                }));
+                offset += length;
+            }
+
+            // shutdown thread pool
+            executor.shutdown();
+
+            // wait for threads to finish and gather parts (future.get() will throw an exception if one occurred during execution)
+            SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
+            for (Future<MultipartPartETag> future : futures) {
+                parts.add(future.get());
+            }
+
+            int maxParts = 2;
+
+            ListPartsRequest listPartsRequest = new ListPartsRequest(getTestBucket(), key, uploadId);
+            listPartsRequest.setMaxParts(maxParts);
+            ListPartsResult listPartsResult = null;
+            List<MultipartPart> allParts = new ArrayList<MultipartPart>();
+            do {
+                if (listPartsResult != null) listPartsRequest.setMarker(listPartsResult.getNextPartNumberMarker());
+                listPartsResult = client.listParts(listPartsRequest);
+                allParts.addAll(listPartsResult.getParts());
+                Assert.assertEquals(2, listPartsResult.getParts().size());
+                Assert.assertEquals(2, listPartsResult.getMaxParts().intValue());
+            } while (listPartsResult.getTruncated());
+
+            // verify the right number of parts is returned altogether
+            Assert.assertEquals(file.length() / partSize + 1, allParts.size());
+
+            // complete MP upload
+            client.completeMultipartUpload(new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId).withParts(parts));
+        } catch (Exception e) {
+            client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
         }
-        l4j.debug("JMC submitted all parts into the executor service. About to shutdown and wait");
-        executor.shutdown();
-        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        l4j.debug("JMC all threads terminated. The wait is complete");
-        Assert.assertEquals("at least one thread failed", futures.size(), successCount.intValue());
-
-        int maxParts = 2;
-        int loopCnt = (partCnt+maxParts-1)/maxParts;
-
-        l4j.debug("JMC will need to make " + Integer.toString(loopCnt) + " listParts calls");
-        ListPartsRequest listPartsRequest = new ListPartsRequest(getTestBucket(), key, uploadId);
-        listPartsRequest.setMaxParts(maxParts);
-        ListPartsResult lpr;
-        String marker = "";
-        List<MultipartPart> mpp = new ArrayList<MultipartPart>();
-        for (int i=0; i<loopCnt; i++) {
-            lpr = client.listParts(listPartsRequest);
-            mpp.addAll(lpr.getParts());
-            marker = lpr.getNextPartNumberMarker();
-            l4j.debug("JMC setting the marker for the next listParts request marker: " + marker);
-            listPartsRequest.setMarker(marker);
-        }
-
-        l4j.debug("JMC - calling client.completeMultipartUpload");
-        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
-        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
-
-        MultipartPartETag eTag;
-        for (MultipartPart part: mpp) {
-            l4j.debug("JMC adding part# " + part.getPartNumber()   + " with etag: " + part.getETag() );
-            eTag = new MultipartPartETag(part.getPartNumber(), part.getETag());
-            parts.add(eTag);
-        }
-        completionRequest.setParts(parts);
-        l4j.debug("JMC - set the parts for the completion request");
-        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        l4j.debug("JMC - returned from client.completeMultipartUpload");
     }
 
     @Test
@@ -948,7 +826,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             tmpIs = new ByteArrayInputStream(b, 0, fiveKB);
             uploadPartsBytesList.add(tmpIs);
         }
-        l4j.debug("JMC - calling client.initiateMultipartUpload");
+
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
 
         List<Future<?>> futures = new ArrayList<Future<?>>();
@@ -956,43 +834,37 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         final AtomicInteger successCount = new AtomicInteger();
         int uploadPartNumber = 1;
         for(InputStream uploadPartStream: uploadPartsBytesList) {
-            final UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, uploadPartNumber,
-                    new InputStreamSegment(uploadPartStream, 0, fiveKB));
+            final UploadPartRequest request =
+                    new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, uploadPartNumber, uploadPartStream);
 
             futures.add(executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    l4j.debug(Thread.currentThread().getName() + " thread uploading part number: " + request.getPartNumber());
                     client.uploadPart(request);
                     successCount.incrementAndGet();
                 }
             }));
             uploadPartNumber++;
         }
-        l4j.debug("JMC submitted all parts into the executor service. About to shutdown and wait");
+
         executor.shutdown();
         executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        l4j.debug("JMC all threads terminated. The wait is complete");
+
         Assert.assertEquals("at least one thread failed", futures.size(), successCount.intValue());
 
         ListPartsResult lpr = client.listParts(getTestBucket(), key, uploadId);
         List<MultipartPart> mpp = lpr.getParts();
         Assert.assertEquals("at least one part failed according to listParts", successCount.intValue(), mpp.size());
 
-
-        l4j.debug("JMC - calling client.completeMultipartUpload");
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         MultipartPartETag eTag;
         for (MultipartPart part: mpp) {
-            l4j.debug("JMC adding part# " + part.getPartNumber()   + " with etag: " + part.getETag() );
             eTag = new MultipartPartETag(part.getPartNumber(), part.getETag());
             parts.add(eTag);
         }
         completionRequest.setParts(parts);
-        l4j.debug("JMC - set the parts for the completion request");
-        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        l4j.debug("JMC - returned from client.completeMultipartUpload");
+        client.completeMultipartUpload(completionRequest);
     }
 
     @Test
@@ -1009,32 +881,27 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         InputStream is2 = new ByteArrayInputStream(content2, 0, fiveKB);
         InputStream is3 = new ByteArrayInputStream(content3, 0, fiveKB);
 
-        System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
-        System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
-                new InputStreamSegment(is1, 0, fiveKB)));
-        System.out.println("JMC - calling client.UploadPartRequest 2");
-        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
-                new InputStreamSegment(is2, 0, fiveKB)));
-        System.out.println("JMC - calling client.UploadPartRequest 3");
-        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
-                new InputStreamSegment(is3, 0, fiveKB)));
+
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1));
+
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 2, is2));
+
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 3, is3));
 
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
         parts.add(mp2);
         parts.add(mp3);
-        System.out.println("JMC - calling client.completeMultipartUpload");
+
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
         completionRequest.setParts(parts);
-        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        System.out.println("JMC - returned from client.completeMultipartUpload");
+        client.completeMultipartUpload(completionRequest);
     }
 
     @Test
     public void testSingleMultipartUploadSimple() throws Exception {
-        String key = "TestObject_" + UUID.randomUUID();
+        String key = "testMpuSimple";
         int fiveMB = 5 * 1024 * 1024;
         byte[] content = new byte[11 * 1024 * 1024];
         new Random().nextBytes(content);
@@ -1042,88 +909,43 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         InputStream is2 = new ByteArrayInputStream(content, fiveMB, fiveMB);
         InputStream is3 = new ByteArrayInputStream(content, 2 * fiveMB, content.length - (2 * fiveMB));
 
-        System.out.println("JMC - calling client.initiateMultipartUpload");
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
-        System.out.println("JMC - calling client.UploadPartRequest 1");
-        MultipartPartETag mp1 =  client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1,
-                new InputStreamSegment(is1, 0, fiveMB)));
-        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2,
-                new InputStreamSegment(is2, 0, fiveMB)));
-        System.out.println("JMC - calling client.UploadPartRequest 3");
-        /*
-        MultipartPart mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
-                new InputStreamSegment(is3, 0, content.length - (2 * fiveMB))));
-*/
 
-        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3,
-                new InputStreamSegment(is3, 0, 2*fiveMB)));
-        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
-        parts.add(mp1);
-        parts.add(mp2);
-        parts.add(mp3);
-        System.out.println("JMC - calling client.completeMultipartUpload");
-        CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
-        completionRequest.setParts(parts);
-        CompleteMultipartUploadResult completionResult = client.completeMultipartUpload(completionRequest);
-        System.out.println("JMC - returned from client.completeMultipartUpload");
+        MultipartPartETag mp1 = client.uploadPart(
+                new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1).withContentLength((long) fiveMB));
+        MultipartPartETag mp2 = client.uploadPart(
+                new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 2, is2).withContentLength((long) fiveMB));
+        MultipartPartETag mp3 = client.uploadPart(
+                new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 3, is3)
+                        .withContentLength((long) content.length - (2 * fiveMB)));
+
+        TreeSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
+        parts.addAll(Arrays.asList(mp1, mp2, mp3));
+
+        client.completeMultipartUpload(new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId).withParts(parts));
     }
 
-    protected void uploadMultipartFileParts(String bucket, String uploadId, String key, String fileName) throws Exception {
-        System.out.println("JMC Entered this.uploadMultipartFileParts");
-        File fileObj = new File(fileName);
-        long fileLength = fileObj.length();
-        int partNum = 1; //the UploadPartRequest partNum is 1 based, not 0 based
-        long segmentOffset = 0;
-        //long segmentLen = 5*1024*1024;
-        long segmentLen = 5*1024;
-        long sendLen = segmentLen;
-        long totalLengthSent = 0;
-        //InputStreamSegment(InputStream inputStream, long offset, long length)
-        System.out.println("JMC about to loop over parts fileLength: " + fileLength + "\tsegmentLen: " + segmentLen);
-        /*
-        while(segmentOffset < fileLength) {
-            System.out.println("JMC about to upload part: " + partNum + "\tuploadId: " + uploadId + "\tkey: " + key);
-            client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, partNum,
-                    new InputStreamSegment(new FileInputStream(fileName), segmentOffset, sendLen)));
-            totalLengthSent += segmentLen;
-            partNum++;
-            segmentOffset += segmentLen;
-            if (fileLength-totalLengthSent < segmentLen) {
-                sendLen = fileLength-totalLengthSent;
-            }
-            System.out.println("JMC - uploaded multipart segment");
-        }
-        */
-        client.uploadPart(new UploadFilePartRequest(getTestBucket(), key, uploadId, partNum)
-                .withFile(new File(fileName)).withOffset(segmentOffset).withLength(segmentLen));
-        System.out.println("JMC - finished uploading parts of multipart upload of file key: " + key);
-    }
-
-    @Test
+    //TODO
+    //@Test
     public void testUpdateObject() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator + "test.properties";
         //create the initial object
-        client.putObject(getTestBucket(), "testObject1", fileName, "text/plain");
-        l4j.debug("JMC testCreateObject [1] seemed to succeed. Need to list objects for verification!!!!!!!!!!!!!!!");
- 
+        client.putObject(getTestBucket(), "testObject1", "Hello Create!", "text/plain");
+
         //TODO figure out this Range class thing
         //client.updateObject(getTestBucket(), "testObect1", range, content);
     }
 
     @Test
     public void testPutObject() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
-        l4j.debug("JMC - Seemed to succeed");
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
         Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
         Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
-        l4j.debug("JMC - Success");
     }
 
     @Test
@@ -1173,7 +995,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
-    @Ignore // TODO: blocked by STORAGE-374 and STORAGE-3674
+    @Ignore // TODO: blocked by STORAGE-374
     @Test
     public void testCopyObjectWithMeta() throws Exception {
         String key1 = "object1", key2 = "object2", key3 = "object3";
@@ -1281,20 +1103,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testVerifyRead() throws Exception {
-        l4j.debug("JMC Entered testVerifyRead");
-        String fileName = System.getProperty("user.home") + File.separator + "test.properties";;
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
+        String content = "Hello Object!";
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, content);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
-        l4j.debug("JMC - successfully created the test object. will read object");
 
-        String content = client.readObject(getTestBucket(), key, String.class);
-        l4j.debug("JMC - readObject seemed to succeed. Will confirm the object contest");
-        Assert.assertEquals("Wring object content", fileName, content);
-        l4j.debug("JMC content: " + content);
-
-        l4j.debug("JMC - Success");
+        String readContent = client.readObject(getTestBucket(), key, String.class);
+        Assert.assertEquals("Wring object content", content, readContent);
     }
 
     @Test
@@ -1344,14 +1160,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
   
     @Test
     public void testReadObjectStreamRange() throws Exception {
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, fileName);
+        String content = "Object Content";
+        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, content);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
         l4j.debug("JMC - successfully created the test object. will read object");
 
-        Range range = new Range((long) 0, (long) (fileName.length() / 2));
+        Range range = new Range((long) 0, (long) (content.length() / 2));
         InputStream is = client.readObjectStream(getTestBucket(), key, range);
         l4j.debug("JMC - readObjectStream seemed to succeed. Will confirm the object contest");
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
@@ -1455,11 +1271,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //int numObjects = 5;
         //this.createTestObjects(getTestBucket(), "delObjPrefex", numObjects);
 
+        String content = "Object Content";
         String testObject1 = "/objectPrefix/testObject1";
         String testObject2 = "/objectPrefix/testObject2";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject1, fileName, "text/plain");
-        client.putObject(getTestBucket(), testObject2, fileName, "text/plain");
+        client.putObject(getTestBucket(), testObject1, content, "text/plain");
+        client.putObject(getTestBucket(), testObject2, content, "text/plain");
   
         DeleteObjectsRequest request = new DeleteObjectsRequest(getTestBucket())
             .withKeys(testObject1, testObject2);      
@@ -1467,7 +1283,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         List<AbstractDeleteResult> resultList = results.getResults();
         Assert.assertEquals(2, resultList.size());
         for(AbstractDeleteResult result: resultList) {
-            System.out.println("deleteResult.key: " + result.getKey());
             if (result instanceof DeleteError ) {
                 this.inspectDeleteError((DeleteError)result);
             }
@@ -1477,23 +1292,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     } 
     protected void inspectDeleteError(DeleteError deleteResult) {
-        System.out.println("JMC - Entered inspectDeleteResult - DeleteError");
         Assert.assertNotNull(deleteResult);
-        System.out.println("deleteResult.code: " + deleteResult.getCode());
-        System.out.println("deleteResult.message: " + deleteResult.getMessage());
     }
     protected void inspectDeleteSuccess(DeleteSuccess deleteResult) {
-        System.out.println("JMC - Entered inspectDeleteResult - DeleteSuccess");
-        System.out.println("deleteResult.deleteMarker: " + deleteResult.getDeleteMarker());
-        System.out.println("deleteResult.deleteMarkerVersionId: " + deleteResult.getDeleteMarkerVersionId());
+        Assert.assertNotNull(deleteResult);
     }
-    
-    //S3ObjectMetadata getObjectMetadata(String bucketName, String key);
+
     @Test
     public void testGetObjectMetadata() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        String content = "Object Content";
+        client.putObject(getTestBucket(), testObject, content, "text/plain");
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), testObject);
         this.validateMetadataValues(objectMetadata);
     }
@@ -1501,8 +1310,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testGetObjectMetadataRequest() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        String content = "Object Content";
+        client.putObject(getTestBucket(), testObject, content, "text/plain");
         GetObjectMetadataRequest request = new GetObjectMetadataRequest(getTestBucket(), testObject);
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(request);
         this.validateMetadataValues(objectMetadata);
@@ -1510,39 +1319,43 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     
     protected void validateMetadataValues(S3ObjectMetadata objectMetadata) throws Exception {
         Assert.assertNotNull(objectMetadata);
-        System.out.println("objectMetadata.getContentType(): " + objectMetadata.getContentType());
-        System.out.println("objectMetadata.getContentLength(): " + objectMetadata.getContentLength());
-        System.out.println("objectMetadata.getLastModified(): " + objectMetadata.getLastModified());
-        System.out.println("objectMetadata.getETag(): " + objectMetadata.getETag());
-        System.out.println("objectMetadata.getContentMd5(): " + objectMetadata.getContentMd5());
-        System.out.println("objectMetadata.getContentDisposition(): " + objectMetadata.getContentDisposition());
-        System.out.println("objectMetadata.getContentEncoding(): " + objectMetadata.getContentEncoding());
-        System.out.println("objectMetadata.getCacheControl(): " + objectMetadata.getCacheControl());
-        System.out.println("objectMetadata.getHttpExpires(): " + objectMetadata.getHttpExpires());
-        System.out.println("objectMetadata.getVersionId(): " + objectMetadata.getVersionId());
-        System.out.println("objectMetadata.getExpirationDate(): " + objectMetadata.getExpirationDate());
-        System.out.println("objectMetadata.getExpirationRuleId(): " + objectMetadata.getExpirationRuleId());
-        System.out.println("printing the " + objectMetadata.getUserMetadata().size() + " user meta data key/value pairs");
-        for (String userMetaKey : objectMetadata.getUserMetadata().keySet()) {
-            System.out.println("user meta Key: " + userMetaKey + "\tvalue: " + objectMetadata.getUserMetadata(userMetaKey));
+    }
+
+    @Test
+    public void testGetObjectAcl() throws Exception {
+        String key = "getAclTest";
+        client.putObject(getTestBucket(), key, "Hello ACLs!", "text/plain");
+
+        AccessControlList acl = client.getObjectAcl(getTestBucket(), key);
+        Assert.assertNotNull(acl.getOwner());
+        Assert.assertNotNull(acl.getGrants());
+        Assert.assertTrue(acl.getGrants().size() > 0);
+        for (Grant grant : acl.getGrants()) {
+            Assert.assertNotNull(grant.getGrantee());
+            Assert.assertNotNull(grant.getPermission());
         }
     }
     
     @Test
     public void testSetObjectAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
-        AccessControlList acl = this.createAcl();
+        client.putObject(getTestBucket(), testObject, "Hello ACLs!", "text/plain");
+
+        String identity = createS3Config().getIdentity();
+        CanonicalUser owner = new CanonicalUser(identity, identity);
+        AccessControlList acl = new AccessControlList();
+        acl.setOwner(owner);
+        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+
         client.setObjectAcl(getTestBucket(), testObject, acl);
-        this.getAndVerifyObjectAcl(getTestBucket(), testObject, acl);
+        assertSameAcl(acl, client.getBucketAcl(getTestBucket()));
     }
     
     @Test
     public void testSetObjectCannedAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        String content = "Object Content";
+        client.putObject(getTestBucket(), testObject, content, "text/plain");
         client.setObjectAcl(getTestBucket(), testObject, CannedAcl.BucketOwnerFullControl);
         //TODO - need to validate this against a real acl
     }
@@ -1550,47 +1363,33 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectAclRequestAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
-        AccessControlList acl = this.createAcl();
+        String content = "Object Content";
+        client.putObject(getTestBucket(), testObject, content, "text/plain");
+
+        String identity = createS3Config().getIdentity();
+        CanonicalUser owner = new CanonicalUser(identity, identity);
+        AccessControlList acl = new AccessControlList();
+        acl.setOwner(owner);
+        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
         l4j.debug("JMC calling request.setAcl");
         request.setAcl(acl);
         client.setObjectAcl(request);
-        l4j.debug("JMC the object acl has been set. About to verify that the same acl is retrieved");
-        this.getAndVerifyObjectAcl(getTestBucket(), testObject, acl);
+
+        assertSameAcl(acl, client.getObjectAcl(getTestBucket(), testObject));
     }
-    
 
     @Test
     public void testSetObjectAclRequestCanned() throws Exception {
         String testObject = "/objectPrefix/testObject1";
-        String fileName = System.getProperty("user.home") + File.separator +"test.properties";
-        client.putObject(getTestBucket(), testObject, fileName, "text/plain");
+        String content = "Object Content";
+        client.putObject(getTestBucket(), testObject, content, "text/plain");
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
         request.setCannedAcl(CannedAcl.BucketOwnerFullControl);
         client.setObjectAcl(request);
         //TODO - need to verify the returned acl is comparable to the canned acl
     }
-    
-    
-    protected void getAndVerifyObjectAcl(String bucketName, String key, AccessControlList originalAcl) throws Exception {
-        l4j.debug("JMC Entered getAndVerifyObjectAcl");
-        AccessControlList responseAcl = client.getObjectAcl(bucketName, key);
-        l4j.debug("JMC retrieved the response object acl for verification purposes");
-        this.testAclsEqual(originalAcl, responseAcl);
-    }
-    
-    //AccessControlList getObjectAcl(String bucketName, String key);
-    //tested in the set acl tests
-    
-    
-    
-    protected List<URI> parseUris(String uriString) throws Exception {
-        List<URI> uris = new ArrayList<URI>();
-        for (String uri : uriString.split(",")) {
-            uris.add(new URI(uri));
-        }
-        return uris;
-    }
+
+    //TODO: AccessControlList getObjectAcl(String bucketName, String key);
 }

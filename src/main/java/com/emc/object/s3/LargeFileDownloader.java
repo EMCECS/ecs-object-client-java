@@ -125,7 +125,7 @@ public class LargeFileDownloader implements Runnable {
         } finally {
 
             // make sure all spawned threads are shut down
-            executorService.shutdownNow();
+            executorService.shutdown();
         }
     }
 
