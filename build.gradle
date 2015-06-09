@@ -36,8 +36,6 @@ buildscript {
 
 apply from: "$commonBuildDir/ecs-publish.gradle"
 
-version '1.2-beta.5'
-
 dependencies {
     compile 'com.emc.ecs:smart-client:1.0.2',
             'com.emc.vipr:vipr-object-transformations:2.0.3',
