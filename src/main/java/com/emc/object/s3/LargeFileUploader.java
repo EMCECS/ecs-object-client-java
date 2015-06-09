@@ -167,7 +167,7 @@ public class LargeFileUploader implements Runnable {
         List<Future> futures = new ArrayList<Future>();
 
         // create empty object (sets metadata/acl)
-        PutObjectRequest<Void> request = new PutObjectRequest<Void>(bucket, key, null);
+        PutObjectRequest request = new PutObjectRequest(bucket, key, null);
         request.setObjectMetadata(objectMetadata);
         request.setAcl(acl);
         request.setCannedAcl(cannedAcl);
@@ -175,13 +175,13 @@ public class LargeFileUploader implements Runnable {
 
         try {
             // submit all upload tasks
-            PutObjectRequest<InputStreamSegment> rangeRequest;
+            PutObjectRequest rangeRequest;
             long offset = 0, length = partSize;
             while (offset < file.length()) {
                 if (offset + length > file.length()) length = file.length() - offset;
                 Range range = Range.fromOffsetLength(offset, length);
                 InputStreamSegment segment = new InputStreamSegment(new FileInputStream(file), offset, length);
-                rangeRequest = new PutObjectRequest<InputStreamSegment>(bucket, key, segment).withRange(range);
+                rangeRequest = new PutObjectRequest(bucket, key, segment).withRange(range);
                 futures.add(executorService.submit(new PutObjectTask(rangeRequest)));
                 offset += length;
             }

@@ -269,12 +269,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public void putObject(String bucketName, String key, Object content, String contentType) {
         S3ObjectMetadata metadata = new S3ObjectMetadata().withContentType(contentType);
-        putObject(new PutObjectRequest<Object>(bucketName, key, content).withObjectMetadata(metadata));
+        putObject(new PutObjectRequest(bucketName, key, content).withObjectMetadata(metadata));
     }
 
     @Override
     public void putObject(String bucketName, String key, Range range, Object content) {
-        putObject(new PutObjectRequest<Object>(bucketName, key, content).withRange(range));
+        putObject(new PutObjectRequest(bucketName, key, content).withRange(range));
     }
 
     @Override
@@ -290,7 +290,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public long appendObject(String bucketName, String key, Object content) {
-        return putObject(new PutObjectRequest<Object>(bucketName, key, content)
+        return putObject(new PutObjectRequest(bucketName, key, content)
                 .withRange(Range.fromOffset(-1))).getAppendOffset();
     }
 

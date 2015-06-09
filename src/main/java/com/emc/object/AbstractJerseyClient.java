@@ -28,7 +28,6 @@ package com.emc.object;
 
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.SizeOverrideWriter;
-import com.emc.rest.util.SizedInputStream;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -66,7 +65,7 @@ public abstract class AbstractJerseyClient {
                 String contentType = RestUtil.DEFAULT_CONTENT_TYPE;
                 Object entity = new byte[0];
                 if (request instanceof EntityRequest) {
-                    EntityRequest<?> entityRequest = (EntityRequest) request;
+                    EntityRequest entityRequest = (EntityRequest) request;
 
                     if (entityRequest.getContentType() != null) contentType = entityRequest.getContentType();
 

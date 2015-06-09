@@ -34,14 +34,14 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class UploadPartRequest<T> extends S3ObjectRequest implements EntityRequest<T> {
+public class UploadPartRequest extends S3ObjectRequest implements EntityRequest {
     private String uploadId;
     private int partNumber;
-    private T object;
+    private Object object;
     private Long contentLength;
     private String contentMd5;
 
-    public UploadPartRequest(String bucketName, String key, String uploadId, int partNumber, T object) {
+    public UploadPartRequest(String bucketName, String key, String uploadId, int partNumber, Object object) {
         super(Method.PUT, bucketName, key, null);
         this.uploadId = uploadId;
         this.partNumber = partNumber;
@@ -64,7 +64,7 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
     }
 
     @Override
-    public T getEntity() {
+    public Object getEntity() {
         return getObject();
     }
 
@@ -86,11 +86,11 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
         return partNumber;
     }
 
-    public T getObject() {
+    public Object getObject() {
         return object;
     }
 
-    public void setObject(T object) {
+    public void setObject(Object object) {
         this.object = object;
     }
 
@@ -106,7 +106,7 @@ public class UploadPartRequest<T> extends S3ObjectRequest implements EntityReque
         this.contentMd5 = contentMd5;
     }
 
-    public UploadPartRequest withObject(T object) {
+    public UploadPartRequest withObject(Object object) {
         setObject(object);
         return this;
     }

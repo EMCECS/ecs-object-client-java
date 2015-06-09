@@ -36,7 +36,7 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class SetObjectAclRequest extends S3ObjectRequest implements EntityRequest<AccessControlList> {
+public class SetObjectAclRequest extends S3ObjectRequest implements EntityRequest {
     private String versionId;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
@@ -60,7 +60,7 @@ public class SetObjectAclRequest extends S3ObjectRequest implements EntityReques
     }
 
     @Override
-    public AccessControlList getEntity() {
+    public Object getEntity() {
         return acl;
     }
 
