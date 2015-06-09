@@ -35,7 +35,7 @@ import com.emc.object.util.RestUtil;
 import java.util.Map;
 import java.util.SortedSet;
 
-public class CompleteMultipartUploadRequest extends S3ObjectRequest implements EntityRequest<CompleteMultipartUpload> {
+public class CompleteMultipartUploadRequest extends S3ObjectRequest implements EntityRequest {
     private String uploadId;
     private SortedSet<MultipartPartETag> parts;
 
@@ -52,7 +52,7 @@ public class CompleteMultipartUploadRequest extends S3ObjectRequest implements E
     }
 
     @Override
-    public CompleteMultipartUpload getEntity() {
+    public Object getEntity() {
         return new CompleteMultipartUpload(parts);
     }
 

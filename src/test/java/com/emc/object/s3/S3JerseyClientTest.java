@@ -114,6 +114,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         client.deleteBucket(bucketName);
         client.bucketExists(bucketName); // workaround for STORAGE-3299
+        client.bucketExists(bucketName); // workaround for STORAGE-3299
+        client.bucketExists(bucketName); // workaround for STORAGE-3299
         Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
 
         //JMC need to note that the @After cleanup will fail
@@ -532,7 +534,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateObjectWithRequest() throws Exception {
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), "/objectPrefix/testObject1", "object content");
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", "object content");
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
@@ -543,7 +545,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         byte[] data =  new byte[size];
         new Random().nextBytes(data);
         String dataStr = new String(data);
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), "/objectPrefix/testObject1", dataStr);
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", dataStr);
         //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
 
         //request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
@@ -569,7 +571,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
         objectMetadata.withHttpExpires(expires.getTime());
         objectMetadata.setUserMetadata(userMeta);
-        client.putObject(new PutObjectRequest<String>(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals(ct, objectMetadata.getContentType());
         Assert.assertEquals(cc, objectMetadata.getCacheControl());
@@ -688,7 +690,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         InputStream is1 = new ByteArrayInputStream(content1, 0, fiveKB);
 
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
-        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1));
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, is1));
 
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
@@ -713,11 +715,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
 
-        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1));
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, is1));
 
-        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 2, is2));
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2, is2));
 
-        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 3, is3));
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3, is3));
 
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
@@ -835,7 +837,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         int uploadPartNumber = 1;
         for(InputStream uploadPartStream: uploadPartsBytesList) {
             final UploadPartRequest request =
-                    new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, uploadPartNumber, uploadPartStream);
+                    new UploadPartRequest(getTestBucket(), key, uploadId, uploadPartNumber, uploadPartStream);
 
             futures.add(executor.submit(new Runnable() {
                 @Override
@@ -883,11 +885,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
 
-        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1));
+        MultipartPartETag mp1 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, is1));
 
-        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 2, is2));
+        MultipartPartETag mp2 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 2, is2));
 
-        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 3, is3));
+        MultipartPartETag mp3 = client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 3, is3));
 
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         parts.add(mp1);
@@ -912,11 +914,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
 
         MultipartPartETag mp1 = client.uploadPart(
-                new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 1, is1).withContentLength((long) fiveMB));
+                new UploadPartRequest(getTestBucket(), key, uploadId, 1, is1).withContentLength((long) fiveMB));
         MultipartPartETag mp2 = client.uploadPart(
-                new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 2, is2).withContentLength((long) fiveMB));
+                new UploadPartRequest(getTestBucket(), key, uploadId, 2, is2).withContentLength((long) fiveMB));
         MultipartPartETag mp3 = client.uploadPart(
-                new UploadPartRequest<InputStream>(getTestBucket(), key, uploadId, 3, is3)
+                new UploadPartRequest(getTestBucket(), key, uploadId, 3, is3)
                         .withContentLength((long) content.length - (2 * fiveMB)));
 
         TreeSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
@@ -938,7 +940,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testPutObject() throws Exception {
         String key = "objectKey";
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, "Object Content");
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
 
@@ -1013,7 +1015,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
         objectMetadata.withHttpExpires(expires.getTime());
         objectMetadata.setUserMetadata(userMeta);
-        client.putObject(new PutObjectRequest<String>(getTestBucket(), key1, content).withObjectMetadata(objectMetadata));
+        client.putObject(new PutObjectRequest(getTestBucket(), key1, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key1);
         Assert.assertEquals(ct, objectMetadata.getContentType());
         Assert.assertEquals(cc, objectMetadata.getCacheControl());
@@ -1071,7 +1073,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
         objectMetadata.withHttpExpires(expires.getTime());
         objectMetadata.setUserMetadata(userMeta);
-        client.putObject(new PutObjectRequest<String>(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals(ct, objectMetadata.getContentType());
         Assert.assertEquals(cc, objectMetadata.getCacheControl());
@@ -1105,7 +1107,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testVerifyRead() throws Exception {
         String key = "objectKey";
         String content = "Hello Object!";
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, content);
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
 
@@ -1142,13 +1144,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
             // stream to third bucket
             InputStream inputStream = client.readObjectStream(getTestBucket(), key1, null);
-            PutObjectRequest<InputStream> request = new PutObjectRequest<InputStream>(bucket3, key1, inputStream);
+            PutObjectRequest request = new PutObjectRequest(bucket3, key1, inputStream);
             request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size1));
             client.putObject(request);
             Assert.assertEquals(size1, client.readObject(bucket3, key1, byte[].class).length);
 
             inputStream = client.readObjectStream(getTestBucket(), key2, null);
-            request = new PutObjectRequest<InputStream>(bucket3, key2, inputStream);
+            request = new PutObjectRequest(bucket3, key2, inputStream);
             request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size2));
             client.putObject(request);
             Assert.assertEquals(size2, client.readObject(bucket3, key2, byte[].class).length);
@@ -1162,7 +1164,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testReadObjectStreamRange() throws Exception {
         String key = "objectKey";
         String content = "Object Content";
-        PutObjectRequest<String> request = new PutObjectRequest<String>(getTestBucket(), key, content);
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
         l4j.debug("JMC - successfully created the test object. will read object");

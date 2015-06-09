@@ -123,12 +123,27 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
     }
 
     @Test
+    public void testWithMetadata() throws Exception {
+        String key = "metadata-test";
+        String content = "Hello Metadata!!";
+        String m1 = "meta1", v1 = "value1", m2 = "meta2", v2 = "value2";
+        S3ObjectMetadata metadata = new S3ObjectMetadata().addUserMetadata(m1, v1).addUserMetadata(m2, v2);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(metadata));
+
+        metadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertNotNull(metadata.getUserMetadata(m1));
+        Assert.assertNotNull(metadata.getUserMetadata(m2));
+        Assert.assertEquals(v1, metadata.getUserMetadata(m1));
+        Assert.assertEquals(v2, metadata.getUserMetadata(m2));
+    }
+
+    @Test
     public void testStream() throws Exception {
         String key = "test-file.txt";
         InputStream rawInput = getClass().getClassLoader().getResourceAsStream("uncompressed.txt");
         Assume.assumeNotNull(rawInput);
 
-        client.putObject(new PutObjectRequest<InputStream>(getTestBucket(), key, rawInput)
+        client.putObject(new PutObjectRequest(getTestBucket(), key, rawInput)
                 .withObjectMetadata(new S3ObjectMetadata().withContentLength(2516125L)));
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), key);
 
@@ -152,7 +167,7 @@ public class S3EncryptionClientKeyStoreTest extends S3JerseyClientTest {
         int size = 5 * 1024 * 1024 + 13;
         RandomInputStream rs = new RandomInputStream(size);
 
-        client.putObject(new PutObjectRequest<InputStream>(getTestBucket(), key, rs)
+        client.putObject(new PutObjectRequest(getTestBucket(), key, rs)
                 .withObjectMetadata(new S3ObjectMetadata().withContentLength((long) size)));
         GetObjectResult<byte[]> result = client.getObject(new GetObjectRequest(getTestBucket(), key), byte[].class);
 

@@ -36,7 +36,7 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class SetBucketAclRequest extends AbstractBucketRequest implements EntityRequest<AccessControlList> {
+public class SetBucketAclRequest extends AbstractBucketRequest implements EntityRequest {
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
@@ -52,7 +52,7 @@ public class SetBucketAclRequest extends AbstractBucketRequest implements Entity
     }
 
     @Override
-    public AccessControlList getEntity() {
+    public Object getEntity() {
         return getAcl();
     }
 

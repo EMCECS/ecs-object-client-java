@@ -108,7 +108,6 @@ public class CodecFilter extends ClientFilter {
                 out = new CloseEventOutputStream(transform.getEncodedOutputStream(), new Runnable() {
                     @Override
                     public void run() {
-                        encMeta.clear();
                         encMeta.putAll(transform.getEncodedMetadata());
                         EncryptionConfig.setEncryptionMode(encMeta, transform.getTransformConfig());
                     }

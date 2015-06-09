@@ -38,19 +38,19 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class PutObjectRequest<T> extends S3ObjectRequest implements EntityRequest<T> {
+public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     private S3ObjectMetadata objectMetadata;
-    private T object;
+    private Object object;
     private Range range;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
-    public PutObjectRequest(String bucketName, String key, T object) {
+    public PutObjectRequest(String bucketName, String key, Object object) {
         super(Method.PUT, bucketName, key, null);
         this.object = object;
     }
 
-    public PutObjectRequest(PutObjectRequest<T> other) {
+    public PutObjectRequest(PutObjectRequest other) {
         super(other);
         this.objectMetadata = other.objectMetadata;
         this.object = other.object;
@@ -70,7 +70,7 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
     }
 
     @Override
-    public T getEntity() {
+    public Object getEntity() {
         return getObject();
     }
 
@@ -92,7 +92,7 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
         this.objectMetadata = objectMetadata;
     }
 
-    public T getObject() {
+    public Object getObject() {
         return object;
     }
 
@@ -120,22 +120,22 @@ public class PutObjectRequest<T> extends S3ObjectRequest implements EntityReques
         this.cannedAcl = cannedAcl;
     }
 
-    public PutObjectRequest<T> withObjectMetadata(S3ObjectMetadata objectMetadata) {
+    public PutObjectRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
     }
 
-    public PutObjectRequest<T> withRange(Range range) {
+    public PutObjectRequest withRange(Range range) {
         setRange(range);
         return this;
     }
 
-    public PutObjectRequest<T> withAcl(AccessControlList acl) {
+    public PutObjectRequest withAcl(AccessControlList acl) {
         setAcl(acl);
         return this;
     }
 
-    public PutObjectRequest<T> withCannedAcl(CannedAcl cannedAcl) {
+    public PutObjectRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
         return this;
     }

@@ -32,7 +32,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-public class UploadFilePartRequest extends UploadPartRequest<InputStreamSegment> {
+public class UploadFilePartRequest extends UploadPartRequest {
     private File file;
     private long offset = -1;
     private long length;
@@ -42,7 +42,7 @@ public class UploadFilePartRequest extends UploadPartRequest<InputStreamSegment>
     }
 
     @Override
-    public InputStreamSegment getEntity() {
+    public Object getEntity() {
         try {
             return new InputStreamSegment(new FileInputStream(file), offset, length);
         } catch (IOException e) {
