@@ -47,4 +47,9 @@ public class VersioningConfiguration {
     public static enum Status {
         Enabled, Suspended
     }
+
+    public VersioningConfiguration withStatus(Status status) {
+        setStatus(status);
+        return this;
+    }
 }
