@@ -34,7 +34,7 @@ import com.emc.object.util.RestUtil;
 
 import java.util.Arrays;
 
-public class DeleteObjectsRequest extends AbstractBucketRequest implements EntityRequest<DeleteObjects> {
+public class DeleteObjectsRequest extends AbstractBucketRequest implements EntityRequest {
     private DeleteObjects deleteObjects;
 
     public DeleteObjectsRequest(String bucketName) {
@@ -42,7 +42,7 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
     }
 
     @Override
-    public DeleteObjects getEntity() {
+    public Object getEntity() {
         return getDeleteObjects();
     }
 

@@ -26,10 +26,10 @@
  */
 package com.emc.object;
 
-public interface EntityRequest<T> {
-    public T getEntity();
+public interface EntityRequest {
+    Object getEntity();
 
-    public String getContentType();
+    String getContentType();
 
-    public Long getContentLength();
+    Long getContentLength();
 }
