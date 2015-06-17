@@ -31,6 +31,9 @@ import javax.xml.bind.annotation.XmlType;
 
 @XmlType(name = "Group")
 public class Group extends AbstractGrantee {
+    public static final Group ALL_USERS = new Group("http://acs.amazonaws.com/groups/global/AllUsers");
+    public static final Group AUTHENTICATED_USERS = new Group("http://acs.amazonaws.com/groups/global/AuthenticatedUsers");
+
     private String uri;
 
     public Group() {
