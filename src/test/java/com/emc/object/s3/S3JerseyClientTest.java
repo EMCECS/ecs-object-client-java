@@ -533,6 +533,35 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testCreateObjectByteArray() throws Exception {
+        byte[] data;
+        Random random = new Random();
+
+        data = new byte[15];
+        random.nextBytes(data);
+        client.putObject(getTestBucket(), "hello-bytes-small", data, null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-small", byte[].class));
+
+        data = new byte[32 * 1024 - 1];
+        random.nextBytes(data);
+        client.putObject(getTestBucket(), "hello-bytes-less", data, null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-less", byte[].class));
+
+        data = new byte[32 * 1024 + 1];
+        random.nextBytes(data);
+        client.putObject(getTestBucket(), "hello-bytes-more", data, null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-more", byte[].class));
+    }
+
+    @Test
+    public void testCreateObjectString() throws Exception {
+        String key = "string-test";
+        String content = "Hello Strings!";
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
     public void testCreateObjectWithRequest() throws Exception {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", "object content");
         PutObjectResult result = client.putObject(request);
@@ -1337,7 +1366,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertNotNull(grant.getPermission());
         }
     }
-    
+
     @Test
     public void testSetObjectAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";

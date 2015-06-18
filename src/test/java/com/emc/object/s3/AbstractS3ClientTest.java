@@ -48,7 +48,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
     @Override
     protected void cleanUpBucket(String bucketName) throws Exception {
-        try {
+        if (client != null && client.bucketExists(bucketName)) {
             if (client.getBucketVersioning(bucketName).getStatus() == VersioningConfiguration.Status.Enabled) {
                 for (AbstractVersion version : client.listVersions(bucketName, null).getVersions()) {
                     client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
@@ -59,8 +59,6 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
                 }
             }
             client.deleteBucket(bucketName);
-        } catch (S3Exception e) {
-            if (!"NoSuchBucket".equals(e.getErrorCode())) throw e;
         }
     }
 

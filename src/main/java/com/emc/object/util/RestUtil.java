@@ -66,6 +66,7 @@ public final class RestUtil {
     public static final String PROPERTY_USER_METADATA = "com.emc.object.userMetadata";
     public static final String PROPERTY_ENCODE_ENTITY = "com.emc.object.codec.encodeEntity";
     public static final String PROPERTY_DECODE_ENTITY = "com.emc.object.codec.decodeEntity";
+    public static final String PROPERTY_KEEP_ENCODE_HEADERS = "com.emc.object.codec.keepEncodeHeaders";
     public static final String PROPERTY_VERIFY_READ_CHECKSUM = "com.emc.object.verifyReadChecksum";
     public static final String PROPERTY_VERIFY_WRITE_CHECKSUM = "com.emc.object.verifyWriteChecksum";
 

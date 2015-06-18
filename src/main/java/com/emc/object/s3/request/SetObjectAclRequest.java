@@ -71,7 +71,12 @@ public class SetObjectAclRequest extends S3ObjectRequest implements EntityReques
 
     @Override
     public Long getContentLength() {
-        return null; // assume chunked encoding or buffering
+        return null; // assume buffering
+    }
+
+    @Override
+    public boolean isChunkable() {
+        return false;
     }
 
     public String getVersionId() {

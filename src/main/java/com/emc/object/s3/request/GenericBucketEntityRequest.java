@@ -50,7 +50,12 @@ public class GenericBucketEntityRequest<T> extends GenericBucketRequest implemen
 
     @Override
     public Long getContentLength() {
-        return null; // assume chunked encoding or buffering
+        return null; // assume buffering
+    }
+
+    @Override
+    public boolean isChunkable() {
+        return false;
     }
 
     public void setContentType(String contentType) {

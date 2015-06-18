@@ -66,6 +66,11 @@ public class CompleteMultipartUploadRequest extends S3ObjectRequest implements E
         return null; // assume chunked encoding or buffering
     }
 
+    @Override
+    public boolean isChunkable() {
+        return false;
+    }
+
     public String getUploadId() {
         return uploadId;
     }

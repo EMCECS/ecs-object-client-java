@@ -34,9 +34,6 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
 
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.MessageBodyWriter;
-import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.util.Map;
@@ -71,30 +68,15 @@ public abstract class AbstractJerseyClient {
 
                     if (entityRequest.getEntity() != null) entity = entityRequest.getEntity();
 
-                    // calculate and set content-length
-                    Long size = entityRequest.getContentLength();
-                    if (size == null) {
-                        // try and find an entity writer that can determine the size
-                        // TODO: can remove when chunked encoding is supported
-                        MediaType mediaType = MediaType.valueOf(contentType);
-                        MessageBodyWriter writer = client.getProviders().getMessageBodyWriter(entity.getClass(), entity.getClass(),
-                                EMPTY_ANNOTATIONS, mediaType);
-                        size = writer.getSize(entity, entity.getClass(), entity.getClass(), EMPTY_ANNOTATIONS, mediaType);
-                    }
+                    // if content-length is set (perhaps by user), force jersey to use it
+                    if (entityRequest.getContentLength() != null) {
+                        SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
 
-                    // if size cannot be determined, enable buffering to let HttpClient set the content-length
-                    // NOTE: if a non-apache client handler is used, this has no effect and chunked encoding will always be enabled
-                    // NOTE2: if the entity is an input stream, it will be streamed into memory to determine its size. this
-                    //        may cause OutOfMemoryException if there is not enough memory to hold the data
-                    // TODO: can remove when chunked encoding is supported
-                    if (size < 0) {
-                        l4j.info("entity size cannot be determined; enabling Apache client entity buffering...");
-                        if (entity instanceof InputStream)
-                            l4j.warn("set a content-length for input streams to save memory");
+                        // otherwise chunked encoding will be used. if the request does not support it, turn on
+                        // buffering in the apache client (will set content length from buffered write)
+                    } else if (!entityRequest.isChunkable()) {
                         request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
                     }
-
-                    SizeOverrideWriter.setEntitySize(size);
                 } else {
 
                     // no entity, but make sure the apache handler doesn't mess up the content-length somehow
