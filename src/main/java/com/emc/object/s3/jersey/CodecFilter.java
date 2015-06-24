@@ -26,30 +26,26 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.EncryptionConfig;
+import com.emc.codec.CodecChain;
 import com.emc.object.s3.S3ObjectMetadata;
-import com.emc.object.util.CloseEventOutputStream;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.SizeOverrideWriter;
-import com.emc.rest.util.SizedInputStream;
-import com.emc.vipr.transform.InputTransform;
-import com.emc.vipr.transform.OutputTransform;
-import com.emc.vipr.transform.TransformException;
-import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
 
-import java.io.File;
+import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class CodecFilter extends ClientFilter {
-    EncryptionTransformFactory factory;
+    private CodecChain encodeChain;
+    private Map<String, Object> codecProperties;
 
-    public CodecFilter(EncryptionTransformFactory factory) {
-        this.factory = factory;
+    public CodecFilter(CodecChain encodeChain) {
+        this.encodeChain = encodeChain;
     }
 
     @SuppressWarnings("unchecked")
@@ -60,10 +56,8 @@ public class CodecFilter extends ClientFilter {
         Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
         if (encode != null && encode) {
 
-            // alter entity size (if necessary) to reflect encrypted size
-            Long contentLength = SizeOverrideWriter.getEntitySize();
-            if (contentLength != null && contentLength >= 0)
-                SizeOverrideWriter.setEntitySize((contentLength / 16 + 1) * 16);
+            // we don't know what the size will be; this will turn on chunked encoding in the apache client
+            SizeOverrideWriter.setEntitySize(-1L);
 
             // wrap output stream with encryptor
             request.setAdapter(new EncryptAdapter(request.getAdapter(), userMeta));
@@ -72,21 +66,41 @@ public class CodecFilter extends ClientFilter {
         // execute request
         ClientResponse response = getNext().handle(request);
 
-        try {
+        // get user metadata from response headers
+        MultivaluedMap<String, String> headers = response.getHeaders();
+        Map<String, String> storedMeta = S3ObjectMetadata.getUserMetadata(headers);
+        Set<String> keysToRemove = new HashSet<String>();
+        keysToRemove.addAll(storedMeta.keySet());
+
+        // get encode specs from user metadata
+        String[] encodeSpecs = CodecChain.getEncodeSpecs(storedMeta);
+        if (encodeSpecs != null) {
+
+            // create codec chain
+            CodecChain decodeChain = new CodecChain(encodeSpecs).withProperties(codecProperties);
+
+            // do we need to decode the entity?
             Boolean decode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_DECODE_ENTITY);
             if (decode != null && decode) {
 
-                // get encryption spec from metadata
-                Map<String, String> userMetadata = S3ObjectMetadata.getUserMetadata(response.getHeaders());
-                String encryptionMode = EncryptionConfig.getEncryptionMode(userMetadata);
+                // wrap input stream with decryptor (this will remove any encode metadata from storedMeta)
+                response.setEntityInputStream(decodeChain.getDecodeStream(response.getEntityInputStream(), storedMeta));
+            } else {
 
-                // wrap input stream with decryptor
-                InputTransform transform = factory.getInputTransform(encryptionMode, response.getEntityInputStream(), userMetadata);
-                response.setEntityInputStream(transform.getDecodedInputStream());
+                // need to remove any encode metadata so we can update the headers
+                decodeChain.removeEncodeMetadata(storedMeta, decodeChain.getEncodeMetadataList(storedMeta));
             }
-        } catch (Exception e) {
-            if (e instanceof RuntimeException) throw (RuntimeException) e;
-            throw new ClientHandlerException("error decrypting object content", e);
+
+            // should we keep the encode headers?
+            Boolean keepHeaders = (Boolean) request.getProperties().get(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS);
+            if (keepHeaders == null || !keepHeaders) {
+
+                // remove encode metadata from headers (storedMeta now contains only user-defined metadata)
+                keysToRemove.removeAll(storedMeta.keySet()); // all metadata - user-defined metadata
+                for (String key : keysToRemove) {
+                    headers.remove(S3ObjectMetadata.getHeaderName(key));
+                }
+            }
         }
 
         return response;
@@ -103,19 +117,20 @@ public class CodecFilter extends ClientFilter {
 
         @Override
         public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
-            try {
-                final OutputTransform transform = factory.getOutputTransform(out, new HashMap<String, String>());
-                out = new CloseEventOutputStream(transform.getEncodedOutputStream(), new Runnable() {
-                    @Override
-                    public void run() {
-                        encMeta.putAll(transform.getEncodedMetadata());
-                        EncryptionConfig.setEncryptionMode(encMeta, transform.getTransformConfig());
-                    }
-                });
-                return getAdapter().adapt(request, out); // don't break the chain
-            } catch (TransformException e) {
-                throw new ClientHandlerException("error encrypting object content", e);
-            }
+            return getAdapter().adapt(request, encodeChain.getEncodeStream(out, encMeta)); // don't break the chain
         }
+    }
+
+    public Map<String, Object> getCodecProperties() {
+        return codecProperties;
+    }
+
+    public void setCodecProperties(Map<String, Object> codecProperties) {
+        this.codecProperties = codecProperties;
+    }
+
+    public CodecFilter withCodecProperties(Map<String, Object> codecProperties) {
+        setCodecProperties(codecProperties);
+        return this;
     }
 }

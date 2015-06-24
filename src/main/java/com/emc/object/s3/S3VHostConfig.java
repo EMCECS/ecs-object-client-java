@@ -28,6 +28,7 @@ package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
+import com.emc.rest.smart.ecs.Vdc;
 
 import java.net.URI;
 
@@ -43,14 +44,15 @@ import java.net.URI;
  */
 public class S3VHostConfig extends S3Config {
     public S3VHostConfig(URI endpoint) {
-        super(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
+        super(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), new Vdc(endpoint.getHost()));
 
         // standard VHost type signs namespace
         useVHost = true;
         signNamespace = true;
 
-        // make sure we don't poll for individual nodes
-        property(ObjectConfig.PROPERTY_DISABLE_POLLING, "true");
+        // make sure we disable "smart" features
+        setProperty(ObjectConfig.PROPERTY_DISABLE_HOST_UPDATE, "true");
+        setProperty(ObjectConfig.PROPERTY_DISABLE_HEALTH_CHECK, "true");
     }
 
     /**

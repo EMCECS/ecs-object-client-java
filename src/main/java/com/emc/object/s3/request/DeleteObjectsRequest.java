@@ -56,6 +56,11 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
         return null; // assume chunked encoding or buffering
     }
 
+    @Override
+    public boolean isChunkable() {
+        return false;
+    }
+
     public DeleteObjects getDeleteObjects() {
         return deleteObjects;
     }

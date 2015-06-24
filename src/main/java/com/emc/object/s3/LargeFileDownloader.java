@@ -48,19 +48,16 @@ import java.util.concurrent.Future;
 public class LargeFileDownloader implements Runnable {
     public static final Logger l4j = Logger.getLogger(LargeFileDownloader.class);
 
-    public static final int MIN_PART_SIZE = 1024 * 1024; // 1MB
-    public static final int DEFAULT_PART_SIZE = 5 * MIN_PART_SIZE; // 5MB
+    public static final int MIN_PART_SIZE = 2 * 1024 * 1024; // 2MB
+    public static final int DEFAULT_PART_SIZE = 4 * 1024 * 1024; // 4MB
 
-    public static final int DEFAULT_BUFFER_SIZE = 32 * 1024; // 32KB
-
-    public static final int DEFAULT_THREADS = 6;
+    public static final int DEFAULT_THREADS = 8;
 
     private S3Client s3Client;
     private String bucket;
     private String key;
     private File file;
     private long partSize = DEFAULT_PART_SIZE;
-    private int bufferSize = DEFAULT_BUFFER_SIZE;
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
 
@@ -103,7 +100,6 @@ public class LargeFileDownloader implements Runnable {
 
 
             // submit all download tasks
-            GetObjectRequest request;
             long offset = 0, length = partSize;
             while (offset < objectSize) {
                 if (offset + length > objectSize) length = objectSize - offset;
@@ -155,17 +151,6 @@ public class LargeFileDownloader implements Runnable {
      */
     public void setPartSize(long partSize) {
         this.partSize = partSize;
-    }
-
-    public int getBufferSize() {
-        return bufferSize;
-    }
-
-    /**
-     * Sets the size of the buffer to use when reading object parts. Default is 32K
-     */
-    public void setBufferSize(int bufferSize) {
-        this.bufferSize = bufferSize;
     }
 
     public int getThreads() {

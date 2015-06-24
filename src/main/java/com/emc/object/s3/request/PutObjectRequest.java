@@ -84,6 +84,11 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         return objectMetadata != null ? objectMetadata.getContentLength() : null;
     }
 
+    @Override
+    public boolean isChunkable() {
+        return true;
+    }
+
     public S3ObjectMetadata getObjectMetadata() {
         return objectMetadata;
     }

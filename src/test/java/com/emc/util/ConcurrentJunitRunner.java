@@ -65,7 +65,7 @@ public class ConcurrentJunitRunner extends BlockJUnit4ClassRunner {
                 } catch (ExecutionException e) {
                     e.printStackTrace(); // (JUnit *should* fail the test)
                 } finally {
-                    executorService.shutdownNow();
+                    executorService.shutdown();
                 }
             }
         });

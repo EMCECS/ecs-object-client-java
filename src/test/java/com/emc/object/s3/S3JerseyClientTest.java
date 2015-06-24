@@ -26,13 +26,17 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.ObjectConfig;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
+import com.emc.rest.smart.Host;
+import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -52,6 +56,45 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Override
     public void initClient() throws Exception {
         client = new S3JerseyClient(createS3Config());
+    }
+
+    @Test
+    public void testListDataNodes() throws Exception {
+        ListDataNode listDataNode = client.listDataNodes();
+        Assert.assertNotNull(listDataNode.getVersionInfo());
+        Assert.assertNotNull(listDataNode.getDataNodes());
+        Assert.assertFalse(listDataNode.getDataNodes().isEmpty());
+    }
+
+    @Test
+    public void testMultipleVdcs() throws Exception {
+        S3Config config = createS3Config();
+
+        Assume.assumeFalse(config.isUseVHost());
+
+        try {
+            client.listDataNodes();
+        } catch (Exception e) {
+            Assume.assumeNoException(e);
+        }
+
+        // just going to use the same VDC twice for lack of a geo env.
+        List<Host> hosts = config.getVdcs().get(0).getHosts();
+        Vdc vdc1 = new Vdc("vdc1", hosts), vdc2 = new Vdc("vdc2", new ArrayList<Host>(hosts));
+
+        String proxyUri = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
+        config = new S3Config(config.getProtocol(), config.getPort(), vdc1, vdc2)
+                .withIdentity(config.getIdentity()).withSecretKey(config.getSecretKey());
+        if (proxyUri != null) config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
+
+        S3JerseyClient tempClient = new S3JerseyClient(config);
+
+        Thread.sleep(500); // wait for polling daemon to finish initial poll
+
+        Assert.assertTrue(vdc1.getHosts().size() > 1);
+        Assert.assertTrue(vdc2.getHosts().size() > 1);
+        Assert.assertEquals(vdc1.getHosts().size() + vdc2.getHosts().size(),
+                tempClient.getLoadBalancer().getAllHosts().size());
     }
 
     @Test
@@ -94,8 +137,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         l4j.debug("JMC testBucketExists succeeded!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 
-    //this is tested by default in the @Before method
-    //void createBucket(String bucketName);
     @Test
     public void testCreateBucketRequest() throws Exception {
         String bucketName = getTestBucket() + "-x";
@@ -113,13 +154,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertTrue("failed to create bucket " + bucketName, client.bucketExists(bucketName));
 
         client.deleteBucket(bucketName);
-        client.bucketExists(bucketName); // workaround for STORAGE-3299
-        client.bucketExists(bucketName); // workaround for STORAGE-3299
-        client.bucketExists(bucketName); // workaround for STORAGE-3299
         Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
-
-        //JMC need to note that the @After cleanup will fail
-        l4j.debug("JMC - deleteBucket seemed to work");
     }
 
 
@@ -163,6 +198,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.assertSameAcl(acl, client.getBucketAcl(getTestBucket()));
     }
 
+    @Ignore // TODO: blocked by STORAGE-7422
     @Test
     public void testSetBucketAclCanned() {
         client.setBucketAcl(getTestBucket(), CannedAcl.BucketOwnerFullControl);
@@ -533,6 +569,35 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testCreateObjectByteArray() throws Exception {
+        byte[] data;
+        Random random = new Random();
+
+        data = new byte[15];
+        random.nextBytes(data);
+        client.putObject(getTestBucket(), "hello-bytes-small", data, null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-small", byte[].class));
+
+        data = new byte[32 * 1024 - 1];
+        random.nextBytes(data);
+        client.putObject(getTestBucket(), "hello-bytes-less", data, null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-less", byte[].class));
+
+        data = new byte[32 * 1024 + 1];
+        random.nextBytes(data);
+        client.putObject(getTestBucket(), "hello-bytes-more", data, null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-more", byte[].class));
+    }
+
+    @Test
+    public void testCreateObjectString() throws Exception {
+        String key = "string-test";
+        String content = "Hello Strings!";
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
     public void testCreateObjectWithRequest() throws Exception {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", "object content");
         PutObjectResult result = client.putObject(request);
@@ -623,6 +688,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
         Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
+
+        // test issue 1 (https://github.com/emcvipr/ecs-object-client-java/issues/1)
+        objectMetadata = new S3ObjectMetadata();
+        objectMetadata.withContentLength(size);
+        uploader = new LargeFileUploader(client, getTestBucket(), key + ".2", file);
+        uploader.setObjectMetadata(objectMetadata);
+        uploader.doByteRangeUpload();
     }
 
     @Test
@@ -1337,7 +1409,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertNotNull(grant.getPermission());
         }
     }
-    
+
     @Test
     public void testSetObjectAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";

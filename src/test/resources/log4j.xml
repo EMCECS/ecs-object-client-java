@@ -12,7 +12,7 @@
 	</logger>
 
 	<root>
-		<priority value="DEBUG" />
+		<priority value="INFO" />
 		<appender-ref ref="mainAppender" />
 	</root>
 </log4j:configuration>
