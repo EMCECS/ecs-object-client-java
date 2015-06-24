@@ -34,9 +34,11 @@ import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
+import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -52,6 +54,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     protected S3Config s3Config;
     protected Client client;
+    protected LoadBalancer loadBalancer;
 
     public S3JerseyClient(S3Config s3Config) {
         super(s3Config);
@@ -60,6 +63,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // add Checksum
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
+        loadBalancer = smartConfig.getLoadBalancer();
 
         // creates a standard (non-load-balancing) jersey client
         client = SmartClientFactory.createStandardClient(smartConfig);
@@ -69,24 +73,28 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - ENDPOINT POLLING
             // create a host list provider based on the S3 ?endpoint call (will use the standard client we just made)
-            S3HostListProvider hostListProvider = new S3HostListProvider(client, smartConfig.getLoadBalancer(),
+            EcsHostListProvider hostListProvider = new EcsHostListProvider(client, loadBalancer,
                     s3Config.getIdentity(), s3Config.getSecretKey());
             smartConfig.setHostListProvider(hostListProvider);
 
-            if (s3Config.property(S3Config.PROPERTY_POLL_PROTOCOL) != null)
-                hostListProvider.setProtocol(s3Config.propAsString(S3Config.PROPERTY_POLL_PROTOCOL));
+            if (s3Config.getProperty(S3Config.PROPERTY_POLL_PROTOCOL) != null)
+                hostListProvider.setProtocol(s3Config.getPropAsString(S3Config.PROPERTY_POLL_PROTOCOL));
             else
                 hostListProvider.setProtocol(s3Config.getProtocol().toString());
 
-            if (s3Config.property(S3Config.PROPERTY_POLL_PORT) != null) {
+            if (s3Config.getProperty(S3Config.PROPERTY_POLL_PORT) != null) {
                 try {
-                    hostListProvider.setPort(Integer.parseInt(s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)));
+                    hostListProvider.setPort(Integer.parseInt(s3Config.getPropAsString(S3Config.PROPERTY_POLL_PORT)));
                 } catch (NumberFormatException e) {
                     throw new RuntimeException(String.format("invalid poll port (%s=%s)",
-                            S3Config.PROPERTY_POLL_PORT, s3Config.propAsString(S3Config.PROPERTY_POLL_PORT)), e);
+                            S3Config.PROPERTY_POLL_PORT, s3Config.getPropAsString(S3Config.PROPERTY_POLL_PORT)), e);
                 }
-            } else
+            } else {
                 hostListProvider.setPort(s3Config.getPort());
+            }
+
+            // S.C. - VDC CONFIGURATION
+            hostListProvider.setVdcs(s3Config.getVdcs());
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
@@ -115,6 +123,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         l4j.debug("terminating polling daemon");
         PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
         if (pollingDaemon != null) pollingDaemon.terminate();
+    }
+
+    public LoadBalancer getLoadBalancer() {
+        return loadBalancer;
     }
 
     @Override

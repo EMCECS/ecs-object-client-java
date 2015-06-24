@@ -256,6 +256,11 @@ public class S3ObjectMetadata {
         return this;
     }
 
+    public S3ObjectMetadata withContentLength(int contentLength) {
+        return withContentLength((long) contentLength);
+    }
+
+
     public S3ObjectMetadata withContentMd5(String contentMd5) {
         setContentMd5(contentMd5);
         return this;
