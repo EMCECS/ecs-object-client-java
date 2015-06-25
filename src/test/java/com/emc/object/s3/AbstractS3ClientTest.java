@@ -51,8 +51,10 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
     @After
     public void dumpLBStats() {
-        LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
-        l4j.info(Arrays.toString(loadBalancer.getHostStats()));
+        if (client != null) {
+            LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
+            l4j.info(Arrays.toString(loadBalancer.getHostStats()));
+        }
     }
 
     @Override
