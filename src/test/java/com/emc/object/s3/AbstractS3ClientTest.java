@@ -32,14 +32,30 @@ import com.emc.object.Protocol;
 import com.emc.object.s3.bean.AbstractVersion;
 import com.emc.object.s3.bean.S3Object;
 import com.emc.object.s3.bean.VersioningConfiguration;
+import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.TestProperties;
+import com.emc.rest.smart.LoadBalancer;
+import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
+import org.apache.log4j.Logger;
+import org.junit.After;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Properties;
 
 public abstract class AbstractS3ClientTest extends AbstractClientTest {
+    private static final Logger l4j = Logger.getLogger(AbstractS3ClientTest.class);
+
     protected S3Client client;
+
+    @After
+    public void dumpLBStats() {
+        if (client != null) {
+            LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
+            l4j.info(Arrays.toString(loadBalancer.getHostStats()));
+        }
+    }
 
     @Override
     protected void createBucket(String bucketName) throws Exception {
@@ -48,7 +64,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
     @Override
     protected void cleanUpBucket(String bucketName) throws Exception {
-        try {
+        if (client != null && client.bucketExists(bucketName)) {
             if (client.getBucketVersioning(bucketName).getStatus() == VersioningConfiguration.Status.Enabled) {
                 for (AbstractVersion version : client.listVersions(bucketName, null).getVersions()) {
                     client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
@@ -59,8 +75,6 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
                 }
             }
             client.deleteBucket(bucketName);
-        } catch (S3Exception e) {
-            if (!"NoSuchBucket".equals(e.getErrorCode())) throw e;
         }
     }
 
@@ -77,13 +91,13 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         if (enableVhost) {
             s3Config = new S3VHostConfig(endpoint);
         } else if (endpoint.getPort() > 0) {
-            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
+            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), new Vdc(endpoint.getHost()));
         } else {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
-        if (proxyUri != null) s3Config.property(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
+        if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
         // uncomment to hit a single node
         //s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);

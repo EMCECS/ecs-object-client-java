@@ -28,6 +28,8 @@ package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
+import com.emc.rest.smart.Host;
+import com.emc.rest.smart.ecs.Vdc;
 
 /**
  * By default, the smart client is enabled, which means virtual host-style buckets/namespaces cannot be used. To use
@@ -47,17 +49,27 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected boolean useVHost = false;
     protected boolean signNamespace = true;
 
+    /**
+     * Single VDC constructor.
+     */
     public S3Config(Protocol protocol, String... hostList) {
         super(protocol, defaultPort(protocol), hostList);
     }
 
-    public S3Config(Protocol protocol, int port, String... hostList) {
-        super(protocol, port, hostList);
+    /**
+     * Multiple VDC constructor.
+     */
+    public S3Config(Protocol protocol, Vdc... vdcs) {
+        this(protocol, defaultPort(protocol), vdcs);
+    }
+
+    public S3Config(Protocol protocol, int port, Vdc... vdcs) {
+        super(protocol, port, vdcs);
     }
 
     @Override
-    public String resolveHost() {
-        return getHosts().get(0);
+    public Host resolveHost() {
+        return getVdcs().get(0).getHosts().get(0);
     }
 
     public boolean isUseVHost() {

@@ -54,7 +54,7 @@ public class LargeFileUploader implements Runnable {
 
     public static final int DEFAULT_THREADS = 8;
 
-    public static final long MIN_PART_SIZE = 5 * 1024 * 1024; // 5MB
+    public static final long MIN_PART_SIZE = 4 * 1024 * 1024; // 4MB
     public static final int MAX_PARTS = 10000;
 
     private S3Client s3Client;
@@ -90,8 +90,11 @@ public class LargeFileUploader implements Runnable {
         if (!file.exists() || !file.canRead())
             throw new IllegalArgumentException("cannot read file: " + file.getPath());
 
+        // make sure content-length isn't set
+        if (objectMetadata != null) objectMetadata.setContentLength(null);
+
         long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
-        l4j.info(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
+        l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
 
         if (partSize == null) partSize = minPartSize;
         if (partSize < minPartSize) {
@@ -152,8 +155,11 @@ public class LargeFileUploader implements Runnable {
         if (!file.exists() || !file.canRead())
             throw new IllegalArgumentException("cannot read file: " + file.getPath());
 
+        // make sure content-length isn't set
+        if (objectMetadata != null) objectMetadata.setContentLength(null);
+
         long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
-        l4j.info(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
+        l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
 
         if (partSize == null) partSize = minPartSize;
         if (partSize < minPartSize) {

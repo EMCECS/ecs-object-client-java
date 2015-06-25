@@ -26,15 +26,15 @@
  */
 package com.emc.object.s3.jersey;
 
+import com.emc.codec.CodecChain;
+import com.emc.codec.encryption.DoesNotNeedRekeyException;
+import com.emc.codec.encryption.EncryptionCodec;
 import com.emc.object.EncryptionConfig;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
-import com.emc.vipr.transform.TransformException;
-import com.emc.vipr.transform.encryption.DoesNotNeedRekeyException;
-import com.emc.vipr.transform.encryption.EncryptionTransformFactory;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.filter.ClientFilter;
 
@@ -107,11 +107,17 @@ public class S3EncryptionClient extends S3JerseyClient {
     private static final String PARTIAL_READ_MSG = "Partial object reads are not "
             + "supported by the encryption client";
 
-    private EncryptionTransformFactory factory;
+    private EncryptionConfig encryptionConfig;
 
     public S3EncryptionClient(S3Config s3Config, EncryptionConfig encryptionConfig) {
         super(s3Config);
-        this.factory = encryptionConfig.getFactory();
+        this.encryptionConfig = encryptionConfig;
+
+        // create an encode chain based on parameters
+        CodecChain encodeChain = encryptionConfig.isCompressionEnabled()
+                ? new CodecChain(encryptionConfig.getCompressionSpec(), encryptionConfig.getEncryptionSpec())
+                : new CodecChain(encryptionConfig.getEncryptionSpec());
+        encodeChain.setProperties(encryptionConfig.getCodecProperties());
 
         // insert codec filter into chain before the checksum filter
         // as usual, Jersey makes this quite hard
@@ -123,7 +129,7 @@ public class S3EncryptionClient extends S3JerseyClient {
             ClientFilter filter = (ClientFilter) handler;
             if (filter instanceof ChecksumFilter) {
                 // insert codec filter before checksum filter
-                filters.add(new CodecFilter(factory));
+                filters.add(new CodecFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
             }
             filters.add(filter);
             handler = filter.getNext();
@@ -149,39 +155,27 @@ public class S3EncryptionClient extends S3JerseyClient {
      * @return true if the object was successfully rekeyed, false if the object already uses the new key
      * @throws java.lang.IllegalArgumentException if the object is not encrypted
      */
-    public boolean rekey(String bucketName, String key) throws DoesNotNeedRekeyException {
+    public boolean rekey(String bucketName, String key) {
 
         // read the metadata for the object
-        S3ObjectMetadata objectMetadata = getObjectMetadata(bucketName, key);
+        GetObjectMetadataRequest request = new GetObjectMetadataRequest(bucketName, key);
+        request.property(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS, Boolean.TRUE);
+        S3ObjectMetadata objectMetadata = getObjectMetadata(request);
         Map<String, String> userMetadata = objectMetadata.getUserMetadata();
 
-        // get the encryption spec used
-        String encMode = EncryptionConfig.getEncryptionMode(userMetadata);
-        if (encMode == null) {
-            throw new IllegalArgumentException("Object is not encrypted");
-        }
+        try {
+            // re-sign the object encryption key
+            // note this call will update userMetadata
+            new EncryptionCodec().rekey(userMetadata, encryptionConfig.getCodecProperties());
 
-        if (factory.canDecode(encMode, userMetadata)) {
-            try {
-                // re-sign the object encryption key
-                Map<String, String> rekeyMeta = factory.rekey(userMetadata);
-                for (String name : rekeyMeta.keySet()) {
-                    objectMetadata.addUserMetadata(name, rekeyMeta.get(name));
-                }
+            // push the re-signed keys as metadata
+            AccessControlList acl = getObjectAcl(bucketName, key);
+            super.copyObject(new CopyObjectRequest(bucketName, key, bucketName, key)
+                    .withAcl(acl).withObjectMetadata(objectMetadata));
 
-                // push the re-signed keys as metadata
-                AccessControlList acl = getObjectAcl(bucketName, key);
-                super.copyObject(new CopyObjectRequest(bucketName, key, bucketName, key)
-                        .withAcl(acl).withObjectMetadata(objectMetadata));
-
-                return true;
-            } catch (DoesNotNeedRekeyException e) {
-                return false;
-            } catch (TransformException e) {
-                throw new RuntimeException("Error rekeying object: " + bucketName + "/" + key, e);
-            }
-        } else {
-            throw new RuntimeException("Cannot handle encryption mode '" + encMode + "'");
+            return true;
+        } catch (DoesNotNeedRekeyException e) {
+            return false;
         }
     }
 

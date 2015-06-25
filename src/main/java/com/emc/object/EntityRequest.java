@@ -32,4 +32,6 @@ public interface EntityRequest {
     String getContentType();
 
     Long getContentLength();
+
+    boolean isChunkable();
 }

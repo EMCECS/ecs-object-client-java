@@ -69,13 +69,18 @@ public class UploadPartRequest extends S3ObjectRequest implements EntityRequest 
     }
 
     @Override
+    public String getContentType() {
+        return null;
+    }
+
+    @Override
     public Long getContentLength() {
         return contentLength;
     }
 
     @Override
-    public String getContentType() {
-        return null;
+    public boolean isChunkable() {
+        return true;
     }
 
     public String getUploadId() {

@@ -28,14 +28,12 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 import java.util.*;
 
 @XmlRootElement(name = "AccessControlPolicy")
 @XmlType(propOrder = {"owner", "grants"})
+@XmlSeeAlso({CanonicalUser.class, Group.class})
 public class AccessControlList {
     private CanonicalUser owner;
     private Set<Grant> grants = new LinkedHashSet<Grant>();

@@ -26,15 +26,14 @@
  */
 package com.emc.object;
 
+import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
+import com.emc.rest.smart.ecs.Vdc;
 import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private static final Logger l4j = Logger.getLogger(ObjectConfig.class);
@@ -42,7 +41,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final String PROPERTY_POLL_PROTOCOL = "com.emc.object.pollProtocol";
     public static final String PROPERTY_POLL_PORT = "com.emc.object.pollPort";
     public static final String PROPERTY_POLL_INTERVAL = "com.emc.object.pollInterval";
-    public static final String PROPERTY_DISABLE_POLLING = "com.emc.object.disablePolling";
+    public static final String PROPERTY_DISABLE_HEALTH_CHECK = "com.emc.object.disableHealthCheck";
+    public static final String PROPERTY_DISABLE_HOST_UPDATE = "com.emc.object.disableHostUpdate";
     public static final String PROPERTY_PROXY_URI = "com.emc.object.proxyUri";
     public static final String PROPERTY_PROXY_USER = "com.emc.object.proxyUser";
     public static final String PROPERTY_PROXY_PASS = "com.emc.object.proxyPass";
@@ -53,7 +53,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
             System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"));
 
     private Protocol protocol;
-    private List<String> hosts;
+    private List<Vdc> vdcs;
     private int port = -1;
     private String rootContext;
     private String namespace;
@@ -65,19 +65,30 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
-    public ObjectConfig(Protocol protocol, int port, String... hostList) {
-        this.protocol = protocol;
-        this.port = port;
-        this.hosts = Arrays.asList(hostList);
+    /**
+     * Single VDC or virtual host constructor.
+     */
+    public ObjectConfig(Protocol protocol, int port, String... hosts) {
+        this(protocol, port, new Vdc(hosts));
     }
 
-    public abstract String resolveHost();
+    /**
+     * Multiple VDC constructor.
+     */
+    public ObjectConfig(Protocol protocol, int port, Vdc... vdcs) {
+        this.protocol = protocol;
+        this.port = port;
+        this.vdcs = Arrays.asList(vdcs);
+    }
+
+    public abstract Host resolveHost();
 
     /**
      * Resolves a path relative to the API context. The returned URI will be of the format
      * scheme://host[:port]/[rootContext/]relativePath?query. The scheme and port are pulled from the first endpoint in
      * the endpoints list. The host to use may be virtual (to be resolved by a load balancer) or calculated in
-     * implementations as round-robin or single-host.
+     * implementations as round-robin or single-host. Note this is not to be confused with the client-side load
+     * balancing provided by the smart client, which overrides any host set here.
      */
     public URI resolvePath(String relativePath, String query) {
         String path = "/";
@@ -89,7 +100,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         path += relativePath;
 
         try {
-            URI uri = new URI(protocol.toString(), null, resolveHost(), port, path, query, null);
+            URI uri = new URI(protocol.toString(), null, resolveHost().getName(), port, path, query, null);
 
             l4j.debug("raw path & query: " + path + "?" + query);
             l4j.debug("resolved URI: " + uri);
@@ -102,9 +113,15 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
 
     public SmartConfig toSmartConfig() {
-        SmartConfig smartConfig = new SmartConfig(hosts);
+        List<Host> allHosts = new ArrayList<Host>();
+        for (Vdc vdc : vdcs) {
+            allHosts.addAll(vdc.getHosts());
+        }
 
-        smartConfig.setDisablePolling(Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_POLLING)));
+        SmartConfig smartConfig = new SmartConfig(allHosts);
+
+        smartConfig.setHealthCheckEnabled(!Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_HEALTH_CHECK)));
+        smartConfig.setHostUpdateEnabled(!Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_HOST_UPDATE)));
 
         if (properties.containsKey(PROPERTY_POLL_INTERVAL)) {
             try {
@@ -117,15 +134,15 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
         try {
             if (properties.containsKey(PROPERTY_PROXY_URI))
-                smartConfig.setProxyUri(new URI(propAsString(PROPERTY_PROXY_URI)));
+                smartConfig.setProxyUri(new URI(getPropAsString(PROPERTY_PROXY_URI)));
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException("invalid proxy URI", e);
         }
-        smartConfig.setProxyUser(propAsString(PROPERTY_PROXY_USER));
-        smartConfig.setProxyPass(propAsString(PROPERTY_PROXY_PASS));
+        smartConfig.setProxyUser(getPropAsString(PROPERTY_PROXY_USER));
+        smartConfig.setProxyPass(getPropAsString(PROPERTY_PROXY_PASS));
 
         for (String prop : properties.keySet()) {
-            smartConfig.property(prop, properties.get(prop));
+            smartConfig.withProperty(prop, properties.get(prop));
         }
 
         return smartConfig;
@@ -140,8 +157,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return protocol;
     }
 
-    public List<String> getHosts() {
-        return hosts;
+    public List<Vdc> getVdcs() {
+        return vdcs;
     }
 
     public int getPort() {
@@ -213,19 +230,19 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return properties;
     }
 
-    public Object property(String propName) {
+    public Object getProperty(String propName) {
         return properties.get(propName);
     }
 
-    public String propAsString(String propName) {
-        Object value = property(propName);
+    public String getPropAsString(String propName) {
+        Object value = getProperty(propName);
         return value == null ? null : value.toString();
     }
 
     /**
      * Allows custom properties to be set. These will be passed on to other client components (i.e. Jersey ClientConfig)
      */
-    public void property(String propName, Object value) {
+    public void setProperty(String propName, Object value) {
         properties.put(propName, value);
     }
 
@@ -267,7 +284,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
     @SuppressWarnings("unchecked")
     public T withProperty(String propName, Object value) {
-        property(propName, value);
+        setProperty(propName, value);
         return (T) this;
     }
 
@@ -275,7 +292,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public String toString() {
         return "ObjectConfig{" +
                 "protocol=" + protocol +
-                ", hosts=" + hosts +
+                ", vdcs=" + vdcs +
                 ", port=" + port +
                 ", rootContext='" + rootContext + '\'' +
                 ", namespace='" + namespace + '\'' +

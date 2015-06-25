@@ -66,6 +66,11 @@ public class SetBucketAclRequest extends AbstractBucketRequest implements Entity
         return null; // assume chunked encoding or buffering
     }
 
+    @Override
+    public boolean isChunkable() {
+        return false;
+    }
+
     public AccessControlList getAcl() {
         return acl;
     }
