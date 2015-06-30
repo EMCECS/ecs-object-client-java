@@ -60,8 +60,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         super(s3Config);
         this.s3Config = s3Config;
 
-        // add Checksum
-
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
 
@@ -96,6 +94,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - VDC CONFIGURATION
             hostListProvider.setVdcs(s3Config.getVdcs());
 
+            // S.C. - GEO-PINNING
+            if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
+
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
             client = SmartClientFactory.createSmartClient(smartConfig);
@@ -107,6 +108,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.addFilter(new AuthorizationFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
+        if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
     }
 
     @Override
