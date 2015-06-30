@@ -24,21 +24,22 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3.jersey;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import com.emc.rest.smart.Host;
+import com.emc.rest.smart.HostVetoRule;
+import com.emc.rest.smart.ecs.Vdc;
+import com.emc.rest.smart.ecs.VdcHost;
 
-buildscript {
-    ext.commonBuildVersion = '1.3.1'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/emcvipr/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
+import java.util.Map;
 
-apply from: "$commonBuildDir/ecs-publish.gradle"
+public class GeoPinningRule implements HostVetoRule {
+    public static final String PROP_GEO_PINNED_VDC = "com.emc.object.geoPinnedVdc";
 
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.0.1',
-            'com.emc.ecs:object-transform:1.0.0',
-            'org.jdom:jdom2:2.0.5'
-    testCompile 'junit:junit:4.11'
+    @Override
+    public boolean shouldVeto(Host host, Map<String, Object> requestProperties) {
+        Vdc vdc = (Vdc) requestProperties.get(PROP_GEO_PINNED_VDC);
+
+        return (vdc != null && host instanceof VdcHost && !vdc.equals(((VdcHost) host).getVdc()));
+    }
 }

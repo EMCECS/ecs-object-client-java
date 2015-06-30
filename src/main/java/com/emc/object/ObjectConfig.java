@@ -62,6 +62,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private long serverClockSkew;
     private String userAgent = DEFAULT_USER_AGENT;
     private EncryptionConfig encryptionConfig;
+    private boolean geoPinningEnabled = false;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -226,6 +227,14 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.encryptionConfig = encryptionConfig;
     }
 
+    public boolean isGeoPinningEnabled() {
+        return geoPinningEnabled;
+    }
+
+    public void setGeoPinningEnabled(boolean geoPinningEnabled) {
+        this.geoPinningEnabled = geoPinningEnabled;
+    }
+
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -277,8 +286,14 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    public ObjectConfig withEncryptionConfig(EncryptionConfig encryptionConfig) {
+    public T withEncryptionConfig(EncryptionConfig encryptionConfig) {
         setEncryptionConfig(encryptionConfig);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withGeoPinningEnabled(boolean geoPinningEnabled) {
+        setGeoPinningEnabled(geoPinningEnabled);
         return (T) this;
     }
 

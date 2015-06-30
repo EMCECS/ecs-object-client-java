@@ -79,8 +79,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
 
         // just going to use the same VDC twice for lack of a geo env.
-        List<Host> hosts = config.getVdcs().get(0).getHosts();
-        Vdc vdc1 = new Vdc("vdc1", hosts), vdc2 = new Vdc("vdc2", new ArrayList<Host>(hosts));
+        List<? extends Host> hosts = config.getVdcs().get(0).getHosts();
+        Vdc vdc1 = new Vdc("vdc1", new ArrayList<Host>(hosts)), vdc2 = new Vdc("vdc2", new ArrayList<Host>(hosts));
 
         String proxyUri = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
         config = new S3Config(config.getProtocol(), config.getPort(), vdc1, vdc2)
