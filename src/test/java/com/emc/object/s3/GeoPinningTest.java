@@ -79,11 +79,19 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         GeoPinningTestFilter filter = new GeoPinningTestFilter(s3Config);
 
         Assert.assertEquals("my/object/key",
-                filter.getRequestGuid(new ClientRequestImpl(new URI("http://foo.s3.bar.com/my/object/key"), null)));
+                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com/my/object/key"), null), getTestBucket()));
         Assert.assertEquals("/my/object/key",
-                filter.getRequestGuid(new ClientRequestImpl(new URI("http://foo.s3.bar.com//my/object/key"), null)));
+                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com//my/object/key"), null), getTestBucket()));
         Assert.assertEquals("/my/object/key",
-                filter.getRequestGuid(new ClientRequestImpl(new URI("http://foo.s3.bar.com/%2Fmy/object/key"), null)));
+                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com/%2Fmy/object/key"), null), getTestBucket()));
+
+        String bucketName = getTestBucket();
+        Assert.assertEquals(bucketName,
+                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com"), null), bucketName));
+        Assert.assertEquals(bucketName,
+                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com/"), null), bucketName));
+        Assert.assertEquals(bucketName,
+                filter.getGeoId(new ClientRequestImpl(new URI("http://s3.bar.com/"), null), bucketName));
     }
 
     @Test
@@ -130,6 +138,13 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         testKeyDistribution(key1, hash1 % vdcs.size());
         testKeyDistribution(key2, hash2 % vdcs.size());
         testKeyDistribution(key3, hash3 % vdcs.size());
+
+        String bucket1 = "my-test-bucket", bucket2 = "foo-bar3baz", bucket3 = "test-bucket-12345-xxzz-blah";
+
+        int bHash1 = 0xc6c1ae, bHash2 = 0x2d4526, bHash3 = 0x9e3f48;
+        testBucketDistribution(bucket1, bHash1 % vdcs.size());
+        testBucketDistribution(bucket2, bHash2 % vdcs.size());
+        testBucketDistribution(bucket3, bHash3 % vdcs.size());
     }
 
     protected void testKeyDistribution(String key, int vdcIndex) {
@@ -146,7 +161,37 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         Assert.assertEquals(10, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            if (vdcs.get(vdcIndex) == ((VdcHost) stats).getVdc()) {
+            if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
+                // all hosts in the appropriate VDC should have been used at least once
+                Assert.assertTrue(stats.getTotalConnections() > 0);
+            } else {
+                // hosts in other VDCs should *not* be used
+                Assert.assertEquals(0, stats.getTotalConnections());
+            }
+        }
+    }
+
+    protected void testBucketDistribution(String bucket, int vdcIndex) {
+        LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
+        loadBalancer.resetStats();
+
+        // make some requests to the bucket
+        int requestCount = 8;
+        client.createBucket(bucket);
+        client.getBucketAcl(bucket);
+        client.getBucketLocation(bucket);
+        client.getBucketLocation(bucket);
+        client.getBucketLocation(bucket);
+        client.getBucketLocation(bucket);
+        client.getBucketLocation(bucket);
+        client.deleteBucket(bucket);
+
+        // check no errors and total count
+        Assert.assertEquals(0, loadBalancer.getTotalErrors());
+        Assert.assertEquals(requestCount, loadBalancer.getTotalConnections());
+
+        for (HostStats stats : loadBalancer.getHostStats()) {
+            if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
                 // all hosts in the appropriate VDC should have been used at least once
                 Assert.assertTrue(stats.getTotalConnections() > 0);
             } else {
@@ -162,8 +207,8 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
 
         @Override
-        public String getRequestGuid(ClientRequest cr) {
-            return super.getRequestGuid(cr);
+        public String getGeoId(ClientRequest cr, String bucketName) {
+            return super.getGeoId(cr, bucketName);
         }
 
         @Override

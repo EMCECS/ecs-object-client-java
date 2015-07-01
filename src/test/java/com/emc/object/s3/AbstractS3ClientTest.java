@@ -57,6 +57,11 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
+    @After
+    public void shutdownClient() {
+        if (client != null) client.shutdown();
+    }
+
     @Override
     protected void createBucket(String bucketName) throws Exception {
         client.createBucket(bucketName);

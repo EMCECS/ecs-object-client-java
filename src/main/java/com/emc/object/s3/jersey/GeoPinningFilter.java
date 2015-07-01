@@ -27,6 +27,7 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.ObjectConfig;
+import com.emc.object.s3.S3Constants;
 import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -49,9 +50,19 @@ public class GeoPinningFilter extends ClientFilter {
         this.objectConfig = objectConfig;
     }
 
-    protected String getRequestGuid(ClientRequest cr) {
-        String key = cr.getURI().getPath();
+    /**
+     * If this is a bucket request, the bucket is the ID.
+     * If this is an object request, the key is the ID.
+     */
+    protected String getGeoId(ClientRequest request, String bucketName) {
+        String key = request.getURI().getPath();
+
+        if (key == null) return bucketName;
+
         if (key.startsWith("/")) key = key.substring(1);
+
+        if (key.length() == 0) return bucketName;
+
         return key;
     }
 
@@ -62,18 +73,22 @@ public class GeoPinningFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-        List<Vdc> healthyVdcs = new ArrayList<Vdc>();
+    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+        // if there's no bucket, we don't need to pin the request (there's no write or read)
+        String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
+        if (bucketName != null) {
+            List<Vdc> healthyVdcs = new ArrayList<Vdc>();
 
-        for (Vdc vdc : objectConfig.getVdcs()) {
-            if (vdc.isHealthy()) healthyVdcs.add(vdc);
+            for (Vdc vdc : objectConfig.getVdcs()) {
+                if (vdc.isHealthy()) healthyVdcs.add(vdc);
+            }
+
+            int geoPinIndex = getGeoPinIndex(getGeoId(request, bucketName), healthyVdcs.size());
+
+            request.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
         }
 
-        int geoPinIndex = getGeoPinIndex(getRequestGuid(cr), healthyVdcs.size());
-
-        cr.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
-
-        return getNext().handle(cr);
+        return getNext().handle(request);
     }
 
     public ObjectConfig getObjectConfig() {
