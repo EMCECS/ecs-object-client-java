@@ -89,7 +89,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         S3JerseyClient tempClient = new S3JerseyClient(config);
 
-        Thread.sleep(500); // wait for poll to complete
+        Thread.sleep(1000); // wait for poll to complete
 
         Assert.assertTrue(vdc1.getHosts().size() > 1);
         Assert.assertTrue(vdc2.getHosts().size() > 1);
