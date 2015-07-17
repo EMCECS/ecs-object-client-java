@@ -1037,6 +1037,59 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testPutObjectWithPlus() throws Exception {
+        String key = "This+Has+a+Plus.txt";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
+        request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+        client.putObject(request);
+
+        ListObjectsResult result = client.listObjects(getTestBucket());
+        List<S3Object> objList = result.getObjects();
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+    }
+
+    @Test
+    public void testPutObjectWithPercent() throws Exception {
+        String key = "This is 100% or something.txt";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
+        request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+        client.putObject(request);
+
+        ListObjectsResult result = client.listObjects(getTestBucket());
+        List<S3Object> objList = result.getObjects();
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+    }
+
+    @Test
+    public void testPutObjectWithChinese() throws Exception {
+        String key = "解析依頼C1B068.txt";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
+        request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+        client.putObject(request);
+
+        ListObjectsResult result = client.listObjects(getTestBucket());
+        List<S3Object> objList = result.getObjects();
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+    }
+
+
+    @Test
+    public void testPutObjectWithSmartQuote() throws Exception {
+        String key = "This is an ‘object’.txt";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
+        request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+        client.putObject(request);
+
+        ListObjectsResult result = client.listObjects(getTestBucket());
+        List<S3Object> objList = result.getObjects();
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+    }
+
+    @Test
     public void testAppendObject() throws Exception {
         String key = "appendTest";
         String content = "Hello";
@@ -1054,6 +1107,135 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testCopyObject() throws Exception {
         String key1 = "source-object";
         String key2 = "copied-object";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectPlusSource() throws Exception {
+        String key1 = "source+object+plus";
+        String key2 = "copied-object-plus";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectPlusDest() throws Exception {
+        String key1 = "source-object-plus-dest";
+        String key2 = "copied+object+plus+dest";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+
+    @Test
+    public void testCopyObjectPlusBoth() throws Exception {
+        String key1 = "source+object+plus+both";
+        String key2 = "copied+object+plus+both";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectSpaceSrc() throws Exception {
+        String key1 = "source object space src";
+        String key2 = "copied-object-space-src";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectSpaceDest() throws Exception {
+        String key1 = "source-object-space-dest";
+        String key2 = "copied object space dest";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+
+    @Test
+    public void testCopyObjectSpaceBoth() throws Exception {
+        String key1 = "source object space both";
+        String key2 = "copied object space both";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+
+    @Test
+    public void testCopyObjectChineseSrc() throws Exception {
+        String key1 = "source-object-服务器-src";
+        String key2 = "copied object chinese src";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectChineseDest() throws Exception {
+        String key1 = "source-object-chinese-dest";
+        String key2 = "copied object 服务器 dest";
+        String content = "Hello Copy!";
+
+        client.putObject(getTestBucket(), key1, content, null);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+
+        client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+    }
+
+    @Test
+    public void testCopyObjectChineseBoth() throws Exception {
+        String key1 = "source-object-服务器-both";
+        String key2 = "copied object 服务器 both";
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
@@ -1393,6 +1575,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), testObject, content, "text/plain");
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(getTestBucket(), testObject);
         this.validateMetadataValues(objectMetadata);
+    }
+
+
+    @Test
+    public void testGetObjectMetadataNoExist() throws Exception {
+        String testObject = "/objectPrefix/noExist.txt";
+
+        try {
+            client.getObjectMetadata(getTestBucket(), testObject);
+        } catch(S3Exception e) {
+            Assert.assertEquals("Wrong HTTP status", 404, e.getHttpCode());
+            Assert.assertEquals("Wrong ErrorCode", "NoSuchKey", e.getErrorCode());
+
+            // Should not chain a SAX error
+            Assert.assertNull("Should not be chained exception", e.getCause());
+        }
     }
     
     @Test
