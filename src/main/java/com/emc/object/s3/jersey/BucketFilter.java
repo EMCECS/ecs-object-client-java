@@ -32,6 +32,8 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
+import org.apache.http.HttpHost;
+import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
 import java.net.URI;
@@ -44,13 +46,11 @@ public class BucketFilter extends ClientFilter {
         try {
             if (useVHost) { // prepend to hostname (i.e. bucket.s3.company.com)
                 String hostname = bucketName + "." + uri.getHost();
-                uri = new URI(uri.getScheme(), uri.getUserInfo(), hostname, uri.getPort(),
-                        uri.getPath(), uri.getQuery(), uri.getFragment());
+                uri = URIUtils.rewriteURI(uri, new HttpHost(hostname, uri.getPort(), uri.getScheme()));
 
             } else { // prepend to resource path (i.e. s3.company.com/bucket)
-                String resource = "/" + bucketName + uri.getPath();
-                uri = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(),
-                        resource, uri.getQuery(), uri.getFragment());
+                String resource = "/" + bucketName + uri.getRawPath();
+                uri = URIUtils.createURI(uri.getScheme(), uri.getHost(), uri.getPort(), resource, uri.getRawQuery(), uri.getRawFragment());
             }
 
             l4j.debug("URI including bucket: " + uri);

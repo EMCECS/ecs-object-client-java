@@ -29,6 +29,7 @@ package com.emc.object;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
 import java.net.URI;
@@ -101,7 +102,10 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         path += relativePath;
 
         try {
-            URI uri = new URI(protocol.toString(), null, resolveHost().getName(), port, path, query, null);
+            URI uri = new URI(protocol.toString().toLowerCase(), null, resolveHost().getName(), port, path, query, null);
+
+            // Special case to handle "+" characters that URI doesn't handle well.
+            uri = new URI(uri.toASCIIString().replace("+", "%2b"));
 
             l4j.debug("raw path & query: " + path + "?" + query);
             l4j.debug("resolved URI: " + uri);
