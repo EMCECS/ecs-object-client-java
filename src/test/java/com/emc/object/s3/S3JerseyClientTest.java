@@ -1206,8 +1206,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCopyObjectChineseSrc() throws Exception {
-        String key1 = "source-object-服务器-src";
-        String key2 = "copied object chinese src";
+        String key1 = "prefix/source-object-服务器-src";
+        String key2 = "prefix/copied object chinese src";
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
@@ -1220,8 +1220,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCopyObjectChineseDest() throws Exception {
-        String key1 = "source-object-chinese-dest";
-        String key2 = "copied object 服务器 dest";
+        String key1 = "prefix/source-object-chinese-dest";
+        String key2 = "prefix/copied object 服务器 dest";
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);

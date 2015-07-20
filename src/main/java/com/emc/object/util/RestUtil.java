@@ -27,6 +27,7 @@
 package com.emc.object.util;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -178,6 +179,16 @@ public final class RestUtil {
         } catch (ParseException e) {
             throw new RuntimeException("invalid date header: " + dateString, e);
         }
+    }
+
+    public static String getEncodedPath(URI uri) {
+
+        // this is the only way I've found to get the true encoded path
+        String rawUri = uri.toASCIIString();
+        String path = rawUri.substring(rawUri.indexOf("/", 9));
+        if (path.contains("?")) path = path.substring(0, path.indexOf("?"));
+        if (path.contains("#")) path = path.substring(0, path.indexOf("#"));
+        return path;
     }
 
     public static String urlEncode(String value) {

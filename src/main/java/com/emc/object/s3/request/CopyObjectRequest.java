@@ -61,7 +61,7 @@ public class CopyObjectRequest extends S3ObjectRequest {
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
 
-        String source = String.format("/%s/%s", sourceBucketName, sourceKey);
+        String source = String.format("/%s/%s", RestUtil.urlEncode(sourceBucketName), RestUtil.urlEncode(sourceKey));
         if (sourceVersionId != null) source += "?versionId=" + sourceVersionId;
         RestUtil.putSingle(headers, S3Constants.AMZ_COPY_SOURCE, source);
 
