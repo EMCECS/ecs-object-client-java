@@ -1089,6 +1089,37 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
+    /**
+     * Tests all the items in the java.net.URI "punct" character class.
+     */
+    @Test
+    public void testPutObjectWithUriPunct() throws Exception {
+        String key = "URI punct characters ,;:$&+=.txt";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
+        request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+        client.putObject(request);
+
+        ListObjectsResult result = client.listObjects(getTestBucket());
+        List<S3Object> objList = result.getObjects();
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+    }
+
+    /**
+     * Tests all the items in the java.net.URI "reserved" character class.
+     */
+    @Test
+    public void testPutObjectWithUriReserved() throws Exception {
+        String key = "URI reserved characters ?/[]@.txt";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
+        request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
+        client.putObject(request);
+
+        ListObjectsResult result = client.listObjects(getTestBucket());
+        List<S3Object> objList = result.getObjects();
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+    }
     @Test
     public void testAppendObject() throws Exception {
         String key = "appendTest";
