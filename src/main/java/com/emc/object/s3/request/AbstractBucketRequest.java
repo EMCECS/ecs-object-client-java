@@ -48,6 +48,7 @@ public abstract class AbstractBucketRequest extends ObjectRequest {
     }
 
     public void setBucketName(String bucketName) {
+        if (bucketName == null || "".equals(bucketName)) throw new IllegalArgumentException("bucket is required");
         this.bucketName = bucketName;
         property(S3Constants.PROPERTY_BUCKET_NAME, bucketName);
     }
