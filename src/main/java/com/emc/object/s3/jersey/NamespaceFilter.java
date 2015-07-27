@@ -32,8 +32,6 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.http.HttpHost;
-import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
 import java.net.URI;
@@ -49,7 +47,7 @@ public class NamespaceFilter extends ClientFilter {
         try {
             String hostname = namespace + "." + uri.getHost();
             l4j.debug(String.format("hostname including namespace: %s", hostname));
-            return URIUtils.rewriteURI(uri, new HttpHost(hostname, uri.getPort(), uri.getScheme()));
+            return RestUtil.replaceHost(uri, hostname);
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("namespace \"%s\" generated an invalid URI", namespace), e);
         }

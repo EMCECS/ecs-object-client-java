@@ -28,12 +28,11 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
+import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.http.HttpHost;
-import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
 import java.net.URI;
@@ -46,11 +45,11 @@ public class BucketFilter extends ClientFilter {
         try {
             if (useVHost) { // prepend to hostname (i.e. bucket.s3.company.com)
                 String hostname = bucketName + "." + uri.getHost();
-                uri = URIUtils.rewriteURI(uri, new HttpHost(hostname, uri.getPort(), uri.getScheme()));
+                uri = RestUtil.replaceHost(uri, hostname);
 
             } else { // prepend to resource path (i.e. s3.company.com/bucket)
-                String resource = "/" + bucketName + uri.getRawPath();
-                uri = URIUtils.createURI(uri.getScheme(), uri.getHost(), uri.getPort(), resource, uri.getRawQuery(), uri.getRawFragment());
+                String resource = "/" + bucketName + uri.getPath();
+                uri = RestUtil.replacePath(uri, resource);
             }
 
             l4j.debug("URI including bucket: " + uri);

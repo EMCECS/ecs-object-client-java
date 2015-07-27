@@ -28,6 +28,7 @@ package com.emc.object.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -211,6 +212,21 @@ public final class RestUtil {
         }
     }
 
+    public static URI buildUri(String scheme, String host, int port, String path, String query, String fragment)
+            throws URISyntaxException {
+        URI uri = new URI(scheme, null, host, port, path, query, fragment);
+
+        // Special case to handle "+" characters that URI doesn't handle well.
+        return new URI(uri.toASCIIString().replace("+", "%2b"));
+    }
+
+    public static URI replaceHost(URI uri, String host) throws URISyntaxException {
+        return buildUri(uri.getScheme(), host, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+    }
+
+    public static URI replacePath(URI uri, String path) throws URISyntaxException {
+        return buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), path, uri.getQuery(), uri.getFragment());
+    }
     private static DateFormat getHeaderFormat() {
         DateFormat format = headerFormat.get();
         if (format == null) {
