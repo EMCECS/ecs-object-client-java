@@ -50,6 +50,9 @@ public interface S3Client {
      */
     void shutdown();
 
+    /**
+     * Lists all of the data nodes in the current VDC.
+     */
     ListDataNode listDataNodes();
 
     /**
@@ -63,68 +66,179 @@ public interface S3Client {
     ListBucketsResult listBuckets(ListBucketsRequest request);
 
     /**
-     * Returns whether a bucket exists in the user's namespace (or the configured namespace of the client). This call
-     * will return true if the bucket exists even if the user does not have access to the bucket. If this call returns
-     * false, a subsequent call to createBucket with the same name should succeed.
+     * Returns whether <code>bucketName</code> exists in the user's namespace (or the configured namespace of the
+     * client). This call will return true if the bucket exists even if the user does not have access to the bucket. If
+     * this call returns false, a subsequent call to createBucket with the same name should succeed.
      */
     boolean bucketExists(String bucketName);
 
+    /**
+     * Creates a bucket with the specified name in the default namespace and with the default replication group.
+     */
     void createBucket(String bucketName);
 
+    /**
+     * Creates a bucket using the parameters specified in the request object.
+     *
+     * @see CreateBucketRequest
+     */
     void createBucket(CreateBucketRequest request);
 
+    /**
+     * Deletes <code>bucketName</code>. The bucket must be empty of all objects and versions before it can be deleted.
+     */
     void deleteBucket(String bucketName);
 
+    /**
+     * Sets the specified ACL on <code>bucketName</code>
+     *
+     * @see AccessControlList
+     */
     void setBucketAcl(String bucketName, AccessControlList acl);
 
+    /**
+     * Sets the specified canned ACL on <code>bucketName</code>
+     *
+     * @see CannedAcl
+     */
     void setBucketAcl(String bucketName, CannedAcl cannedAcl);
 
+    /**
+     * Sets the ACL of a bucket using parameters in the request object.
+     *
+     * @see SetBucketAclRequest
+     */
     void setBucketAcl(SetBucketAclRequest request);
 
+    /**
+     * Retrieves the ACL of <code>bucketName</code>
+     *
+     * @see AccessControlList
+     */
     AccessControlList getBucketAcl(String bucketName);
 
+    /**
+     * Sets the CORS configuration for <code>bucketName</code>
+     *
+     * @see CorsConfiguration
+     */
     void setBucketCors(String bucketName, CorsConfiguration corsConfiguration);
 
+    /**
+     * Retrieves the CORS configuration for <code>bucketName</code>
+     *
+     * @see CorsConfiguration
+     */
     CorsConfiguration getBucketCors(String bucketName);
 
+    /**
+     * Removes the CORS configuration for <code>bucketName</code>
+     */
     void deleteBucketCors(String bucketName);
 
+    /**
+     * Sets the lifecycle configuration for <code>bucketName</code>
+     *
+     * @see LifecycleConfiguration
+     */
     void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration);
 
+    /**
+     * Retrieves the lifecycle configuration for <code>bucketName</code>
+     *
+     * @see LifecycleConfiguration
+     */
     LifecycleConfiguration getBucketLifecycle(String bucketName);
 
+    /**
+     * Deletes the lifecycle configuration for <code>bucketName</code>
+     */
     void deleteBucketLifecycle(String bucketName);
 
+    /**
+     * Gets the location of <code>bucketName</code>. This call will return the name of the primary VDC of the bucket
+     */
     LocationConstraint getBucketLocation(String bucketName);
 
+    /**
+     * Enables or suspends versioning on <code>bucketName</code>
+     */
     void setBucketVersioning(String bucketName, VersioningConfiguration versioningConfiguration);
 
+    /**
+     * Retrieves the versioning status of <code>bucketName</code> (none, enabled or suspended)
+     */
     VersioningConfiguration getBucketVersioning(String bucketName);
 
+    /**
+     * Lists all objects in <code>bucketName</code> with no restrictions
+     */
     ListObjectsResult listObjects(String bucketName);
 
+    /**
+     * Lists objects in <code>bucketName</code> that start with <code>prefix</code>
+     */
     ListObjectsResult listObjects(String bucketName, String prefix);
 
+    /**
+     * Lists objects in a bucket using parameters specified in the request object
+     */
     ListObjectsResult listObjects(ListObjectsRequest request);
 
+    /**
+     * Lists all versions of all objects in <code>bucketName</code> that start with <code>prefix</code>
+     */
     ListVersionsResult listVersions(String bucketName, String prefix);
 
+    /**
+     * Lists all versions of all objects in a bucket using the parameters specified in the request object
+     */
     ListVersionsResult listVersions(ListVersionsRequest request);
 
+    /**
+     * Creates or overwrites an object in <code>bucketName</code> named <code>key</code> containing <code>content</code>
+     * and having <code>contentType</code>
+     */
     void putObject(String bucketName, String key, Object content, String contentType);
 
+    /**
+     * Updates object <code>key</code> in bucket <code>bucketName</code> at the specified byte <code>range</code> with
+     * new <code>content</code>
+     */
     void putObject(String bucketName, String key, Range range, Object content);
 
+    /**
+     * Creates or updates an object using the parameters specified in the request object
+     */
     PutObjectResult putObject(PutObjectRequest request);
 
+    /**
+     * Atomically appends to the end of object <code>key</code> in bucket <code>bucketName</code> with
+     * <code>content</code> and returns the starting offset of the append operation
+     */
     long appendObject(String bucketName, String key, Object content);
 
+    /**
+     * Remotely copies object <code>sourceKey</code> in bucket <code>sourceBucketName</code> to <code>key</code> in
+     * <code>bucketName</code>
+     */
     CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String bucketName, String key);
 
+    /**
+     * Remotely copies an object using the parameters specified in the request object
+     */
     CopyObjectResult copyObject(CopyObjectRequest request);
 
+    /**
+     * Reads object <code>key</code> in bucket <code>bucketName</code> and converts it to <code>objectType</code>,
+     * provided the conversion is supported by the implementation
+     */
     <T> T readObject(String bucketName, String key, Class<T> objectType);
 
+    /**
+     * Reads version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code> and converts
+     * it to <code>objectType</code>, provided the conversion is supported by the implementation
+     */
     <T> T readObject(String bucketName, String key, String versionId, Class<T> objectType);
 
     InputStream readObjectStream(String bucketName, String key, Range range);

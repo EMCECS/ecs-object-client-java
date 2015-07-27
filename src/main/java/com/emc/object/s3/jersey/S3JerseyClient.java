@@ -49,6 +49,67 @@ import java.io.StringReader;
 import java.net.URL;
 import java.util.Date;
 
+/**
+ * Reference implementation of S3Client.
+ * <p/>
+ * This implementation uses the JAX-RS reference implementation (Jersey) as it's REST client.  When sending or
+ * receiving data, the following content handlers are supported by default.  Be sure to use the appropriate content-type
+ * associated with each object type or the handlers will not understand the request.
+ * <p/>
+ * <table>
+ * <tr><th>Object Type (class)</th><th>Expected Content-Type(s)</th></tr>
+ * <tr><td>byte[]</td><td>*any*</td></tr>
+ * <tr><td>java.lang.String</td><td>*any*</td></tr>
+ * <tr><td>java.io.File (send-only)</td><td>*any*</td></tr>
+ * <tr><td>java.io.InputStream (send-only)</td><td>*any*</td></tr>
+ * <tr><td>any annotated JAXB root element bean</td><td>text/xml, application/xml</td></tr>
+ * </table>
+ * <p/>
+ * Also keep in mind that you can always send/receive byte[] and do your own conversion.
+ * <p/>
+ * To use, simply pass a new {@link S3Config} (or {@link S3VHostConfig}) object to the constructor like so:
+ * <pre>
+ *     // for client-side load balancing and direct connection to all nodes
+ *     //   single-VDC (client will auto-discover the remaining nodes):
+ *     S3Config config1 = new S3Config(Protocol.HTTP, "10.10.10.11", "10.10.10.12");
+ *     //   multiple VDCs (client will auto-discover remaining nodes in specified VDCs):
+ *     Vdc boston = new Vdc("10.10.10.11", "10.10.10.12").withName("Boston");
+ *     Vdc seattle = new Vdc("10.20.20.11", "10.20.20.12").withName("Seattle");
+ *     S3Config config2 = new S3Config(Protocol.HTTPS, boston, seattle);
+ *
+ *     // to use a load balancer will full wildcard DNS setup
+ *     S3Config config3 = new S3VHostConfig(new URI("https://s3.company.com")); // use your load balancer
+ *
+ *     // in all cases, you need to provide your credentials
+ *     configX.withIdentity("my_full_token_id").withSecretKey("my_secret_key");
+ *     S3Client s3Client = new S3JerseyClient(configX);
+ * </pre>
+ * <p/>
+ * To create an object, simply pass the object in to one of the putObject methods. The object type must be one of
+ * the supported types above.
+ * <pre>
+ *     String stringContent = "Hello World!";
+ *     s3Client.putObject("my-bucket", "my-key", stringContent, "text/plain");
+ *
+ *     File fileContent = new File( "spreadsheet.xls" );
+ *     s3Client.putObject("my-bucket", "my-data", fileContent, "application/vnd.ms-excel");
+ *
+ *     byte[] binaryContent;
+ *     ... // load binary content to store as an object
+ *     s3Client.putObject("my-bucket", "my-bits", binaryContent, null ); // default content-type is application/octet-stream
+ * </pre>
+ * <p/>
+ * To read an object, specify the type of object you want to receive from a readObject method. The same rules apply to
+ * this type.
+ * <pre>
+ *     String stringContent = s3Client.readObject("my-bucket", "my-key", String.class);
+ *
+ *     byte[] fileContent = s3Client.readObject("my-bucket", "my-data", byte[].class);
+ *     // do something with file content (stream to client? save in local filesystem?)
+ *
+ *     byte[] binaryContent = s3Client.readObject("my-bucket", "my-bits", byte[].class);
+ * </pre>
+ */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     private static final Logger l4j = Logger.getLogger(S3JerseyClient.class);
 
