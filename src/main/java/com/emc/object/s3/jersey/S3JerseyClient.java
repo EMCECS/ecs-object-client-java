@@ -40,6 +40,7 @@ import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import org.apache.log4j.Logger;
@@ -118,6 +119,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected LoadBalancer loadBalancer;
 
     public S3JerseyClient(S3Config s3Config) {
+        this(s3Config, null);
+    }
+
+    /**
+     * Provide a specific Jersey ClientHandler implementation (default is ApacheHttpClient4Handler). If you experience
+     * performance problems, you might try using URLConnectionClientHandler, but note that it will not support the
+     * Expect: 100-Continue header. Also note that when using that handler, you should set the "http.maxConnections"
+     * system property to match your thread count (default is 5).
+     */
+    public S3JerseyClient(S3Config s3Config, ClientHandler clientHandler) {
         super(s3Config);
         this.s3Config = s3Config;
 
@@ -125,7 +136,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         loadBalancer = smartConfig.getLoadBalancer();
 
         // creates a standard (non-load-balancing) jersey client
-        client = SmartClientFactory.createStandardClient(smartConfig);
+        if (clientHandler == null) {
+            client = SmartClientFactory.createStandardClient(smartConfig);
+        } else {
+            client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
+        }
 
         if (!s3Config.isUseVHost()) {
             // SMART CLIENT SETUP
@@ -160,7 +175,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            client = SmartClientFactory.createSmartClient(smartConfig);
+            if (clientHandler == null) {
+                client = SmartClientFactory.createSmartClient(smartConfig);
+            } else {
+                client = SmartClientFactory.createSmartClient(smartConfig, clientHandler);
+            }
         }
 
         // jersey filters
