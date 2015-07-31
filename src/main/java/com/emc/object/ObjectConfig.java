@@ -56,6 +56,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private Protocol protocol;
     private List<Vdc> vdcs;
     private int port = -1;
+    private boolean smartClient = true;
     private String rootContext;
     private String namespace;
     private String identity;
@@ -68,7 +69,15 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private Map<String, Object> properties = new HashMap<String, Object>();
 
     /**
-     * Single VDC or virtual host constructor.
+     * Single endpoint constructor (disables smart-client).
+     */
+    public ObjectConfig(URI endpoint) {
+        this(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
+        setSmartClient(false);
+    }
+
+    /**
+     * Single VDC constructor.
      */
     public ObjectConfig(Protocol protocol, int port, String... hosts) {
         this(protocol, port, new Vdc(hosts));
@@ -81,6 +90,23 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.protocol = protocol;
         this.port = port;
         this.vdcs = Arrays.asList(vdcs);
+    }
+
+    /**
+     * Cloning constructor.
+     */
+    public ObjectConfig(ObjectConfig<T> other) {
+        this.protocol = other.protocol;
+        this.vdcs = new ArrayList<Vdc>(other.vdcs);
+        this.port = other.port;
+        this.rootContext = other.rootContext;
+        this.namespace = other.namespace;
+        this.identity = other.identity;
+        this.secretKey = other.secretKey;
+        this.serverClockSkew = other.serverClockSkew;
+        this.userAgent = other.userAgent;
+        this.encryptionConfig = new EncryptionConfig(other.encryptionConfig);
+        this.geoPinningEnabled = other.geoPinningEnabled;
     }
 
     public abstract Host resolveHost();
@@ -122,8 +148,10 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
         SmartConfig smartConfig = new SmartConfig(allHosts);
 
-        smartConfig.setHealthCheckEnabled(!Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_HEALTH_CHECK)));
-        smartConfig.setHostUpdateEnabled(!Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_HOST_UPDATE)));
+        if (!smartClient || Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_HEALTH_CHECK)))
+            smartConfig.setHealthCheckEnabled(false);
+        if (!smartClient || Boolean.parseBoolean(propAsString(properties, PROPERTY_DISABLE_HOST_UPDATE)))
+            smartConfig.setHostUpdateEnabled(false);
 
         if (properties.containsKey(PROPERTY_POLL_INTERVAL)) {
             try {
@@ -165,6 +193,18 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
     public int getPort() {
         return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public boolean isSmartClient() {
+        return smartClient;
+    }
+
+    public void setSmartClient(boolean smartClient) {
+        this.smartClient = smartClient;
     }
 
     public String getRootContext() {
@@ -257,6 +297,18 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     }
 
     @SuppressWarnings("unchecked")
+    public T withPort(int port) {
+        setPort(port);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withSmartClient(boolean smartClient) {
+        setSmartClient(smartClient);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
     public T withRootContext(String rootContext) {
         setRootContext(rootContext);
         return (T) this;
@@ -310,6 +362,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 "protocol=" + protocol +
                 ", vdcs=" + vdcs +
                 ", port=" + port +
+                ", smartClient=" + smartClient +
                 ", rootContext='" + rootContext + '\'' +
                 ", namespace='" + namespace + '\'' +
                 ", identity='" + identity + '\'' +
@@ -317,6 +370,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", serverClockSkew=" + serverClockSkew +
                 ", userAgent='" + userAgent + '\'' +
                 ", encryptionConfig=" + encryptionConfig +
+                ", geoPinningEnabled=" + geoPinningEnabled +
                 ", properties=" + properties +
                 '}';
     }

@@ -63,7 +63,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         vdcs = Arrays.asList(vdc1, vdc2, vdc3);
 
         String proxyUri = s3Config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
-        s3Config = new S3Config(s3Config.getProtocol(), s3Config.getPort(), vdc1, vdc2, vdc3)
+        s3Config = new S3Config(s3Config.getProtocol(), vdc1, vdc2, vdc3).withPort(s3Config.getPort())
                 .withIdentity(s3Config.getIdentity()).withSecretKey(s3Config.getSecretKey());
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 

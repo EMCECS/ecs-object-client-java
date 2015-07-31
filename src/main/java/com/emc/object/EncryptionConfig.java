@@ -82,6 +82,16 @@ public class EncryptionConfig {
         codecProperties.put(EncryptionCodec.PROP_KEY_PROVIDER, keyProvider);
     }
 
+    /**
+     * Cloning constructor.
+     */
+    public EncryptionConfig(EncryptionConfig other) {
+        this.encryptionSpec = other.encryptionSpec;
+        this.compressionEnabled = other.compressionEnabled;
+        this.compressionSpec = other.compressionSpec;
+        this.codecProperties = new HashMap<String, Object>(codecProperties);
+    }
+
     public KeyProvider getKeyProvider() {
         return EncryptionCodec.getKeyProvider(codecProperties);
     }

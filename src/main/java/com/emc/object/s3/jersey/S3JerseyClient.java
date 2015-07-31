@@ -68,7 +68,7 @@ import java.util.Date;
  * <p/>
  * Also keep in mind that you can always send/receive byte[] and do your own conversion.
  * <p/>
- * To use, simply pass a new {@link S3Config} (or {@link S3VHostConfig}) object to the constructor like so:
+ * To use, simply pass a new {@link S3Config} object to the constructor like so:
  * <pre>
  *     // for client-side load balancing and direct connection to all nodes
  *     //   single-VDC (client will auto-discover the remaining nodes):
@@ -79,7 +79,7 @@ import java.util.Date;
  *     S3Config config2 = new S3Config(Protocol.HTTPS, boston, seattle);
  *
  *     // to use a load balancer will full wildcard DNS setup
- *     S3Config config3 = new S3VHostConfig(new URI("https://s3.company.com")); // use your load balancer
+ *     S3Config config3 = new S3Config(new URI("https://s3.company.com")).withUseVHost(true);
  *
  *     // in all cases, you need to provide your credentials
  *     configX.withIdentity("my_full_token_id").withSecretKey("my_secret_key");
@@ -110,6 +110,20 @@ import java.util.Date;
  *
  *     byte[] binaryContent = s3Client.readObject("my-bucket", "my-bits", byte[].class);
  * </pre>
+ * <p/>
+ * <em>Performance</em>
+ * <p/>
+ * If you are experiencing performance issues, you might try tuning Jersey's IO buffer size, which defaults to 8k.
+ * <pre>
+ *     System.setProperty(ReaderWriter.BUFFER_SIZE_SYSTEM_PROPERTY, "" + 128 * 1024); // 128k
+ * </pre>
+ * You can also try using Jersey's URLConnectionClientHandler, but be aware that this handler does not support
+ * <code>Expect: 100-Continue</code> behavior if that is important to you. You should also increase
+ * <code>http.maxConnections</code> to match your thread count.
+ * <pre>
+ *     System.setProperty("http.maxConnections", "" + 32); // if you have 32 threads
+ *     S3Client s3Client = new S3JerseyClient(configX, new URLConnectionClientHandler());
+ * </pre>
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     private static final Logger l4j = Logger.getLogger(S3JerseyClient.class);
@@ -126,7 +140,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      * Provide a specific Jersey ClientHandler implementation (default is ApacheHttpClient4Handler). If you experience
      * performance problems, you might try using URLConnectionClientHandler, but note that it will not support the
      * Expect: 100-Continue header. Also note that when using that handler, you should set the "http.maxConnections"
-     * system property to match your thread count (default is 5).
+     * system property to match your thread count (default is only 5).
      */
     public S3JerseyClient(S3Config s3Config, ClientHandler clientHandler) {
         super(s3Config);
@@ -142,7 +156,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
         }
 
-        if (!s3Config.isUseVHost()) {
+        if (s3Config.isSmartClient()) {
             // SMART CLIENT SETUP
 
             // S.C. - ENDPOINT POLLING

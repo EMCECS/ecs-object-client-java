@@ -83,7 +83,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Vdc vdc1 = new Vdc("vdc1", new ArrayList<Host>(hosts)), vdc2 = new Vdc("vdc2", new ArrayList<Host>(hosts));
 
         String proxyUri = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
-        config = new S3Config(config.getProtocol(), config.getPort(), vdc1, vdc2)
+        config = new S3Config(config.getProtocol(), vdc1, vdc2).withPort(config.getPort())
                 .withIdentity(config.getIdentity()).withSecretKey(config.getSecretKey());
         if (proxyUri != null) config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 

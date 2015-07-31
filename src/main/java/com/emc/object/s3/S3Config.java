@@ -31,10 +31,32 @@ import com.emc.object.Protocol;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 
+import java.net.URI;
+
 /**
- * By default, the smart client is enabled, which means virtual host-style buckets/namespaces cannot be used. To use
- * virtual host-style requests, construct an {@link S3VHostConfig} instead. That will disable the smart
- * client and set a single host endpoint, prepending namespaces and buckets as appropriate.
+ * To enable the smart-client with a single VDC, use the {@link #S3Config(Protocol, String...)} constructor:
+ * <pre>
+ *     S3Config s3Config = new S3Config(Protocol.HTTP, "10.10.10.11", "10.10.10.12");
+ * </pre>
+ * <p/>
+ * To enable the smart-client with multiple VDCs, use the {@link #S3Config(Protocol, Vdc...)} constructor:
+ * <pre>
+ *     S3Config s3Config = new S3Config(Protocol.HTTP, new Vdc("10.10.10.11", "10.10.10.12"), new Vdc("10.20.10.11", "10.20.10.12"));
+ * </pre>
+ * <p/>
+ * To use an external load balancer without virtual-host-style requests use the {@link #S3Config(URI)} constructor:
+ * <pre>
+ *     S3Config s3Config = new S3Config("https://10.10.10.10:8443");
+ * </pre>
+ * <p/>
+ * To use an external load balancer <em>with</em> virtual-host-style requests (where <code>bucket.namespace.</code> is
+ * prepended to the hostname), use the {@link #S3Config(URI)} constructor and {@link #setUseVHost(boolean)} to true:
+ * <pre>
+ *     S3Config s3Config = new S3Config("https://s3.company.com").withUseVHost(true);
+ * </pre>
+ * <p/>
+ * <em>NOTE:</em> If you enable virtual-host-style requests, you must specify your namespace or set it to null and
+ * include it in the hostname of the endpoint.
  */
 public class S3Config extends ObjectConfig<S3Config> {
     public static final int DEFAULT_HTTP_PORT = 9020;
@@ -50,21 +72,36 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected boolean signNamespace = true;
 
     /**
-     * Single VDC constructor.
+     * External load balancer constructor (no smart-client).
+     * <p/>
+     * <em>NOTE:</em> To use virtual-host-style requests where
+     * <code>bucket.namespace.</code> is prepended to the host, you must {@link #setUseVHost(boolean)} to true.
+     */
+    public S3Config(URI endpoint) {
+        super(endpoint);
+    }
+
+    /**
+     * Single VDC smart-client constructor.
      */
     public S3Config(Protocol protocol, String... hostList) {
         super(protocol, defaultPort(protocol), hostList);
     }
 
     /**
-     * Multiple VDC constructor.
+     * Multiple VDC smart-client constructor.
      */
     public S3Config(Protocol protocol, Vdc... vdcs) {
-        this(protocol, defaultPort(protocol), vdcs);
+        super(protocol, defaultPort(protocol), vdcs);
     }
 
-    public S3Config(Protocol protocol, int port, Vdc... vdcs) {
-        super(protocol, port, vdcs);
+    /**
+     * Cloning constructor.
+     */
+    public S3Config(S3Config other) {
+        super(other);
+        this.useVHost = other.useVHost;
+        this.signNamespace = other.signNamespace;
     }
 
     @Override
@@ -76,8 +113,39 @@ public class S3Config extends ObjectConfig<S3Config> {
         return useVHost;
     }
 
+    /**
+     * Set to true to enable virtual-host-style requests. This prepends namespaces and buckets as appropriate
+     * for each request.
+     * <p/>
+     * <em>NOTE:</em> To use virtual host configuration, you must disable the smart client by using the
+     * {@link #S3Config(URI)} constructor. You must also specify your namespace or set it to null and include
+     * it in the hostname of the endpoint.
+     */
+    public void setUseVHost(boolean useVHost) {
+        this.useVHost = useVHost;
+    }
+
     public boolean isSignNamespace() {
         return signNamespace;
+    }
+
+    /**
+     * Standard ECS configurations require signing the namespace to support cross-namespace
+     * requests. To change this behavior to a legacy type virtual host,
+     * which is isolated to the default namespace of the user, set this to false.
+     */
+    public void setSignNamespace(boolean signNamespace) {
+        this.signNamespace = signNamespace;
+    }
+
+    public S3Config withUseVHost(boolean useVHost) {
+        setUseVHost(useVHost);
+        return this;
+    }
+
+    public S3Config withSignNamespace(boolean signNamespace) {
+        setSignNamespace(signNamespace);
+        return this;
     }
 
     @Override

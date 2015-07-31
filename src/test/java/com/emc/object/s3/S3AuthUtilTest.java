@@ -163,7 +163,7 @@ public class S3AuthUtilTest {
 
     @Test
     public void testPresignedUrl() throws Exception {
-        S3Config s3Config = new S3VHostConfig(new URI("http://s3.amazonaws.com"))
+        S3Config s3Config = new S3Config(new URI("http://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
 
         PresignedUrlRequest request = new PresignedUrlRequest(Method.GET, "johnsmith", "photos/puppy.jpg",

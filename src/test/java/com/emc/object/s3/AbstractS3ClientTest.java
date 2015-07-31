@@ -94,9 +94,10 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
         S3Config s3Config;
         if (enableVhost) {
-            s3Config = new S3VHostConfig(endpoint);
+            s3Config = new S3Config(endpoint).withUseVHost(true);
         } else if (endpoint.getPort() > 0) {
-            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), new Vdc(endpoint.getHost()));
+            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), new Vdc(endpoint.getHost()));
+            s3Config.setPort(endpoint.getPort());
         } else {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
