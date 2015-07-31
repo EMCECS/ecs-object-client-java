@@ -70,6 +70,7 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     protected boolean useVHost = false;
     protected boolean signNamespace = true;
+    protected boolean checksumEnabled = true;
 
     /**
      * External load balancer constructor (no smart-client).
@@ -138,6 +139,18 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.signNamespace = signNamespace;
     }
 
+    public boolean isChecksumEnabled() {
+        return checksumEnabled;
+    }
+
+    /**
+     * By default, MD5 sums are verified on whole-object reads and writes whenever possible.  You can disable that by
+     * setting this to false.
+     */
+    public void setChecksumEnabled(boolean checksumEnabled) {
+        this.checksumEnabled = checksumEnabled;
+    }
+
     public S3Config withUseVHost(boolean useVHost) {
         setUseVHost(useVHost);
         return this;
@@ -145,6 +158,11 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public S3Config withSignNamespace(boolean signNamespace) {
         setSignNamespace(signNamespace);
+        return this;
+    }
+
+    public S3Config withChecksumEnabled(boolean checksumEnabled) {
+        setChecksumEnabled(checksumEnabled);
         return this;
     }
 

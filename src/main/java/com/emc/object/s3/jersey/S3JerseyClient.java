@@ -198,7 +198,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
         // jersey filters
         client.addFilter(new ErrorFilter());
-        client.addFilter(new ChecksumFilter());
+        if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter());
         client.addFilter(new AuthorizationFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
