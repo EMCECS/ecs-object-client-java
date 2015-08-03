@@ -91,6 +91,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         Thread.sleep(1000); // wait for poll to complete
 
+        // the client will clone the config, so we have to get new references
+        vdc1 = tempClient.getS3Config().getVdcs().get(0);
+        vdc2 = tempClient.getS3Config().getVdcs().get(1);
+
         Assert.assertTrue(vdc1.getHosts().size() > 1);
         Assert.assertTrue(vdc2.getHosts().size() > 1);
         Assert.assertEquals(vdc1.getHosts().size() + vdc2.getHosts().size(),
@@ -145,6 +149,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.cleanUpBucket(bucketName);
     }
 
+    // TODO: blocked by STORAGE-7816
+    @Ignore
     @Test
     public void testDeleteBucket() throws Exception {
         String bucketName = getTestBucket() + "-x";

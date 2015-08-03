@@ -32,17 +32,11 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import org.apache.log4j.Logger;
 
-import java.lang.annotation.Annotation;
 import java.net.URI;
 import java.util.Map;
 
 public abstract class AbstractJerseyClient {
-    private static final Logger l4j = Logger.getLogger(AbstractJerseyClient.class);
-
-    protected static final Annotation[] EMPTY_ANNOTATIONS = new Annotation[0];
-
     protected ObjectConfig objectConfig;
 
     protected AbstractJerseyClient(ObjectConfig objectConfig) {
@@ -144,5 +138,9 @@ public abstract class AbstractJerseyClient {
         }
 
         return builder;
+    }
+
+    public ObjectConfig getObjectConfig() {
+        return objectConfig;
     }
 }

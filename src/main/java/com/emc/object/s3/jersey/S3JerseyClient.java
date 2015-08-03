@@ -142,9 +142,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      * Expect: 100-Continue header. Also note that when using that handler, you should set the "http.maxConnections"
      * system property to match your thread count (default is only 5).
      */
-    public S3JerseyClient(S3Config s3Config, ClientHandler clientHandler) {
-        super(s3Config);
-        this.s3Config = s3Config;
+    public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
+        super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
+        s3Config = (S3Config) super.getObjectConfig();
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
@@ -591,5 +591,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
                 throw e;
             }
         }
+    }
+
+    public S3Config getS3Config() {
+        return s3Config;
     }
 }

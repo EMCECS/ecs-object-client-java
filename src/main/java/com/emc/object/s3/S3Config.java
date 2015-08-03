@@ -68,6 +68,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         throw new IllegalArgumentException("unknown protocol: " + protocol);
     }
 
+    // NOTE: if you add a property, make sure you add it to the cloning constructor!
     protected boolean useVHost = false;
     protected boolean signNamespace = true;
     protected boolean checksumEnabled = true;
@@ -103,6 +104,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         super(other);
         this.useVHost = other.useVHost;
         this.signNamespace = other.signNamespace;
+        this.checksumEnabled = other.checksumEnabled;
     }
 
     @Override

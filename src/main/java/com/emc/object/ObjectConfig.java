@@ -53,6 +53,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
             (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : ""), System.getProperty("java.version"),
             System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"));
 
+    // NOTE: if you add a property, make sure you add it to the cloning constructor!
     private Protocol protocol;
     private List<Vdc> vdcs;
     private int port = -1;
@@ -97,15 +98,20 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
      */
     public ObjectConfig(ObjectConfig<T> other) {
         this.protocol = other.protocol;
-        this.vdcs = new ArrayList<Vdc>(other.vdcs);
+        // deep copy the VDCs to avoid two clients referencing the same host lists (SDK-122)
+        this.vdcs = new ArrayList<Vdc>();
+        for (Vdc vdc : other.getVdcs()) {
+            this.vdcs.add(new Vdc(vdc.getName(), vdc.getHosts()));
+        }
         this.port = other.port;
+        this.smartClient = other.smartClient;
         this.rootContext = other.rootContext;
         this.namespace = other.namespace;
         this.identity = other.identity;
         this.secretKey = other.secretKey;
         this.serverClockSkew = other.serverClockSkew;
         this.userAgent = other.userAgent;
-        this.encryptionConfig = new EncryptionConfig(other.encryptionConfig);
+        if (other.encryptionConfig != null) this.encryptionConfig = new EncryptionConfig(other.encryptionConfig);
         this.geoPinningEnabled = other.geoPinningEnabled;
     }
 
