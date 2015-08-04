@@ -38,23 +38,23 @@ import java.net.URI;
  * <pre>
  *     S3Config s3Config = new S3Config(Protocol.HTTP, "10.10.10.11", "10.10.10.12");
  * </pre>
- * <p/>
+ * <p>
  * To enable the smart-client with multiple VDCs, use the {@link #S3Config(Protocol, Vdc...)} constructor:
  * <pre>
  *     S3Config s3Config = new S3Config(Protocol.HTTP, new Vdc("10.10.10.11", "10.10.10.12"), new Vdc("10.20.10.11", "10.20.10.12"));
  * </pre>
- * <p/>
+ * <p>
  * To use an external load balancer without virtual-host-style requests use the {@link #S3Config(URI)} constructor:
  * <pre>
  *     S3Config s3Config = new S3Config("https://10.10.10.10:8443");
  * </pre>
- * <p/>
+ * <p>
  * To use an external load balancer <em>with</em> virtual-host-style requests (where <code>bucket.namespace.</code> is
  * prepended to the hostname), use the {@link #S3Config(URI)} constructor and {@link #setUseVHost(boolean)} to true:
  * <pre>
  *     S3Config s3Config = new S3Config("https://s3.company.com").withUseVHost(true);
  * </pre>
- * <p/>
+ * <p>
  * <em>NOTE:</em> If you enable virtual-host-style requests, you must specify your namespace or set it to null and
  * include it in the hostname of the endpoint.
  */
@@ -75,7 +75,7 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     /**
      * External load balancer constructor (no smart-client).
-     * <p/>
+     * <p>
      * <em>NOTE:</em> To use virtual-host-style requests where
      * <code>bucket.namespace.</code> is prepended to the host, you must {@link #setUseVHost(boolean)} to true.
      */
@@ -119,7 +119,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     /**
      * Set to true to enable virtual-host-style requests. This prepends namespaces and buckets as appropriate
      * for each request.
-     * <p/>
+     * <p>
      * <em>NOTE:</em> To use virtual host configuration, you must disable the smart client by using the
      * {@link #S3Config(URI)} constructor. You must also specify your namespace or set it to null and include
      * it in the hostname of the endpoint.

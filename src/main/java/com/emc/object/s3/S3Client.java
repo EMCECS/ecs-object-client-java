@@ -39,7 +39,7 @@ import java.util.Date;
  * ECS does not implement all S3 operations in the API specification.  Some methods have yet to be implemented, while
  * many do not apply to a private cloud infrastructure.  ECS also extends the S3 API by providing methods not included
  * in the original specification, such as mutable objects (byte-range update) and atomic appends (returning offset).
- * <p/>
+ * <p>
  * Any calls resulting in an error will throw S3Exception.  All available information from the error will be included in
  * the exception instance.  If an exception is not thrown, you may assume the call was successful.
  */
@@ -51,41 +51,41 @@ public interface S3Client {
     void shutdown();
 
     /**
-     * Lists all of the data nodes in the current VDC.
+     * Lists all of the data nodes in the current VDC
      */
     ListDataNode listDataNodes();
 
     /**
-     * Lists the buckets owned by the user.
+     * Lists the buckets owned by the user
      */
     ListBucketsResult listBuckets();
 
     /**
-     * List the buckets owned by the user.  ListBucketsRequest provides all available options for this call.
+     * List the buckets owned by the user using the parameters specified in <code>request</code>
      */
     ListBucketsResult listBuckets(ListBucketsRequest request);
 
     /**
      * Returns whether <code>bucketName</code> exists in the user's namespace (or the configured namespace of the
      * client). This call will return true if the bucket exists even if the user does not have access to the bucket. If
-     * this call returns false, a subsequent call to createBucket with the same name should succeed.
+     * this call returns false, a subsequent call to createBucket with the same name should succeed
      */
     boolean bucketExists(String bucketName);
 
     /**
-     * Creates a bucket with the specified name in the default namespace and with the default replication group.
+     * Creates a bucket with the specified name in the default namespace and with the default replication group
      */
     void createBucket(String bucketName);
 
     /**
-     * Creates a bucket using the parameters specified in the request object.
+     * Creates a bucket using the parameters specified in <code>request</code>
      *
      * @see CreateBucketRequest
      */
     void createBucket(CreateBucketRequest request);
 
     /**
-     * Deletes <code>bucketName</code>. The bucket must be empty of all objects and versions before it can be deleted.
+     * Deletes <code>bucketName</code>. The bucket must be empty of all objects and versions before it can be deleted
      */
     void deleteBucket(String bucketName);
 
@@ -104,7 +104,7 @@ public interface S3Client {
     void setBucketAcl(String bucketName, CannedAcl cannedAcl);
 
     /**
-     * Sets the ACL of a bucket using parameters in the request object.
+     * Sets the ACL of a bucket using parameters in <code>request</code>
      *
      * @see SetBucketAclRequest
      */
@@ -181,7 +181,7 @@ public interface S3Client {
     ListObjectsResult listObjects(String bucketName, String prefix);
 
     /**
-     * Lists objects in a bucket using parameters specified in the request object
+     * Lists objects in a bucket using parameters specified in <code>request</code>
      */
     ListObjectsResult listObjects(ListObjectsRequest request);
 
@@ -191,7 +191,7 @@ public interface S3Client {
     ListVersionsResult listVersions(String bucketName, String prefix);
 
     /**
-     * Lists all versions of all objects in a bucket using the parameters specified in the request object
+     * Lists all versions of all objects in a bucket using the parameters specified in <code>request</code>
      */
     ListVersionsResult listVersions(ListVersionsRequest request);
 
@@ -208,7 +208,7 @@ public interface S3Client {
     void putObject(String bucketName, String key, Range range, Object content);
 
     /**
-     * Creates or updates an object using the parameters specified in the request object
+     * Creates or updates an object using the parameters specified in <code>request</code>
      */
     PutObjectResult putObject(PutObjectRequest request);
 
@@ -225,7 +225,7 @@ public interface S3Client {
     CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String bucketName, String key);
 
     /**
-     * Remotely copies an object using the parameters specified in the request object
+     * Remotely copies an object using the parameters specified in <code>request</code>
      */
     CopyObjectResult copyObject(CopyObjectRequest request);
 
@@ -241,26 +241,63 @@ public interface S3Client {
      */
     <T> T readObject(String bucketName, String key, String versionId, Class<T> objectType);
 
+    /**
+     * Reads <code>range</code> bytes of object <code>key</code> in bucket <code>bucketName</code> as a stream
+     */
     InputStream readObjectStream(String bucketName, String key, Range range);
 
+    /**
+     * Gets object <code>key</code> in bucket <code>bucketName</code>. Object details as well as the data stream
+     * (obtained from {@link GetObjectResult#getObject()} are contained in the {@link GetObjectResult} instance
+     */
     GetObjectResult<InputStream> getObject(String bucketName, String key);
 
+    /**
+     * Gets an object using the parameters specified in <code>request</code>. Object details as well as the translated
+     * data (converted to <code>objectType</code>) are contained in the {@link GetObjectResult} instance
+     */
     <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 
+    /**
+     * Generates a pre-signed URL to read object <code>key</code> in bucket <code>bucketName</code>. The URL will be
+     * valid until <code>expirationTime</code>
+     */
     URL getPresignedUrl(String bucketName, String key, Date expirationTime);
 
+    /**
+     * Generates a pre-signed URL using the parameters specified in <code>request</code>
+     */
     URL getPresignedUrl(PresignedUrlRequest request);
 
+    /**
+     * Deletes object <code>key</code> from bucket <code>bucketName</code>
+     */
     void deleteObject(String bucketName, String key);
 
+    /**
+     * Delets version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code>. NOTE:
+     * versioning must be enabled in the bucket
+     */
     void deleteVersion(String bucketName, String key, String versionId);
 
+    /**
+     * Deletes objects using the parameters specified in <code>request</code>
+     */
     DeleteObjectsResult deleteObjects(DeleteObjectsRequest request);
 
+    /**
+     * Sets metadata on object <code>key</code> in bucket <code>bucketName</code>
+     */
     void setObjectMetadata(String bucketName, String key, S3ObjectMetadata objectMetadata);
 
+    /**
+     * Gets metadata for object <code>key</code> in bucket <code>bucketName</code>
+     */
     S3ObjectMetadata getObjectMetadata(String bucketName, String key);
 
+    /**
+     * Gets metadata using the parameters specified in <code>request</code>
+     */
     S3ObjectMetadata getObjectMetadata(GetObjectMetadataRequest request);
 
     void setObjectAcl(String bucketName, String key, AccessControlList acl);

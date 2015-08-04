@@ -52,11 +52,11 @@ import java.util.Date;
 
 /**
  * Reference implementation of S3Client.
- * <p/>
+ * <p>
  * This implementation uses the JAX-RS reference implementation (Jersey) as it's REST client.  When sending or
  * receiving data, the following content handlers are supported by default.  Be sure to use the appropriate content-type
  * associated with each object type or the handlers will not understand the request.
- * <p/>
+ * <p>
  * <table>
  * <tr><th>Object Type (class)</th><th>Expected Content-Type(s)</th></tr>
  * <tr><td>byte[]</td><td>*any*</td></tr>
@@ -65,9 +65,9 @@ import java.util.Date;
  * <tr><td>java.io.InputStream (send-only)</td><td>*any*</td></tr>
  * <tr><td>any annotated JAXB root element bean</td><td>text/xml, application/xml</td></tr>
  * </table>
- * <p/>
+ * <p>
  * Also keep in mind that you can always send/receive byte[] and do your own conversion.
- * <p/>
+ * <p>
  * To use, simply pass a new {@link S3Config} object to the constructor like so:
  * <pre>
  *     // for client-side load balancing and direct connection to all nodes
@@ -85,7 +85,7 @@ import java.util.Date;
  *     configX.withIdentity("my_full_token_id").withSecretKey("my_secret_key");
  *     S3Client s3Client = new S3JerseyClient(configX);
  * </pre>
- * <p/>
+ * <p>
  * To create an object, simply pass the object in to one of the putObject methods. The object type must be one of
  * the supported types above.
  * <pre>
@@ -99,7 +99,7 @@ import java.util.Date;
  *     ... // load binary content to store as an object
  *     s3Client.putObject("my-bucket", "my-bits", binaryContent, null ); // default content-type is application/octet-stream
  * </pre>
- * <p/>
+ * <p>
  * To read an object, specify the type of object you want to receive from a readObject method. The same rules apply to
  * this type.
  * <pre>
@@ -110,9 +110,9 @@ import java.util.Date;
  *
  *     byte[] binaryContent = s3Client.readObject("my-bucket", "my-bits", byte[].class);
  * </pre>
- * <p/>
+ * <p>
  * <em>Performance</em>
- * <p/>
+ * <p>
  * If you are experiencing performance issues, you might try tuning Jersey's IO buffer size, which defaults to 8k.
  * <pre>
  *     System.setProperty(ReaderWriter.BUFFER_SIZE_SYSTEM_PROPERTY, "" + 128 * 1024); // 128k
