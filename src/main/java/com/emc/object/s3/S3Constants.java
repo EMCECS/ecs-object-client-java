@@ -78,6 +78,13 @@ public final class S3Constants {
 
     public static final String PROPERTY_BUCKET_NAME = "com.emc.object.s3.bucketName";
 
+    public static final String ERROR_NO_SUCH_KEY = "NoSuchKey";
+    public static final String ERROR_NO_SUCH_BUCKET = "NoSuchBucket";
+    public static final String ERROR_NO_ACCESS_DENIED = "AccessDenied";
+    public static final String ERROR_INTERNAL = "InternalError";
+    public static final String ERROR_INVALID_ARGUMENT = "InvalidArgument";
+    public static final String ERROR_METHOD_NOT_ALLOWED = "MethodNotAllowed";
+
     private S3Constants() {
     }
 }

@@ -47,8 +47,7 @@ public class NamespaceFilter extends ClientFilter {
         try {
             String hostname = namespace + "." + uri.getHost();
             l4j.debug(String.format("hostname including namespace: %s", hostname));
-            return new URI(uri.getScheme(), uri.getUserInfo(), hostname, uri.getPort(),
-                    uri.getPath(), uri.getQuery(), uri.getFragment());
+            return RestUtil.replaceHost(uri, hostname);
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("namespace \"%s\" generated an invalid URI", namespace), e);
         }

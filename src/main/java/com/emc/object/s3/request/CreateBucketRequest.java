@@ -35,6 +35,9 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Encapsulates parameters for a create bucket request.
+ */
 public class CreateBucketRequest extends AbstractBucketRequest {
     private CannedAcl cannedAcl;
     private AccessControlList acl;

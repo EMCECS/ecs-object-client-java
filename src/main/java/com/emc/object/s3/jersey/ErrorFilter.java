@@ -38,6 +38,7 @@ import org.jdom2.Document;
 import org.jdom2.Namespace;
 import org.jdom2.input.SAXBuilder;
 
+import javax.ws.rs.core.Response;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
@@ -48,10 +49,34 @@ public class ErrorFilter extends ClientFilter {
         ClientResponse response = getNext().handle(request);
 
         if (response.getStatus() > 299) {
-            throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
+            if(response.hasEntity()) {
+                throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
+            } else {
+                // No response entity.  Don't try to parse it.
+                Response.StatusType st = response.getStatusInfo();
+                throw new S3Exception(st.getReasonPhrase(), st.getStatusCode(), guessStatus(st.getStatusCode()),
+                        response.getHeaders().getFirst("x-amz-request-id"));
+            }
         }
 
         return response;
+    }
+
+    private String guessStatus(int statusCode) {
+        switch (statusCode) {
+            case 400:
+                return S3Constants.ERROR_INVALID_ARGUMENT;
+            case 403:
+                return S3Constants.ERROR_NO_ACCESS_DENIED;
+            case 404:
+                return S3Constants.ERROR_NO_SUCH_KEY;
+            case 405:
+                return S3Constants.ERROR_METHOD_NOT_ALLOWED;
+            case 500:
+                return S3Constants.ERROR_INTERNAL;
+            default:
+                return "";
+        }
     }
 
     public static S3Exception parseErrorResponse(Reader reader, int statusCode) {

@@ -43,6 +43,7 @@ import java.util.Set;
  * {@link KeyProvider} as well.
  */
 public class EncryptionConfig {
+    // NOTE: if you add a property, make sure you add it to the cloning constructor!
     private String encryptionSpec = new EncryptionCodec().getDefaultEncodeSpec();
     private boolean compressionEnabled = false;
     private String compressionSpec = new DeflateCodec().getDefaultEncodeSpec();
@@ -80,6 +81,16 @@ public class EncryptionConfig {
 
     public EncryptionConfig(KeyProvider keyProvider) {
         codecProperties.put(EncryptionCodec.PROP_KEY_PROVIDER, keyProvider);
+    }
+
+    /**
+     * Cloning constructor.
+     */
+    public EncryptionConfig(EncryptionConfig other) {
+        this.encryptionSpec = other.encryptionSpec;
+        this.compressionEnabled = other.compressionEnabled;
+        this.compressionSpec = other.compressionSpec;
+        this.codecProperties = new HashMap<String, Object>(codecProperties);
     }
 
     public KeyProvider getKeyProvider() {

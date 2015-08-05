@@ -24,32 +24,20 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.request;
+package com.emc.object.s3;
 
-import com.emc.object.Method;
-import com.emc.object.ObjectRequest;
-import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.jersey.S3JerseyClient;
+import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
-public abstract class AbstractBucketRequest extends ObjectRequest {
-    private String bucketName;
-
-    public AbstractBucketRequest(Method method, String bucketName, String path, String subresource) {
-        super(method, path, subresource);
-        setBucketName(bucketName);
+public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
+    @Override
+    protected String getTestBucketPrefix() {
+        return "s3-url-connection-test";
     }
 
-    public AbstractBucketRequest(AbstractBucketRequest other) {
-        super(other);
-        setBucketName(other.bucketName);
-    }
-
-    public String getBucketName() {
-        return bucketName;
-    }
-
-    public void setBucketName(String bucketName) {
-        if (bucketName == null || "".equals(bucketName)) throw new IllegalArgumentException("bucket is required");
-        this.bucketName = bucketName;
-        property(S3Constants.PROPERTY_BUCKET_NAME, bucketName);
+    @Override
+    public void initClient() throws Exception {
+        System.setProperty("http.maxConnections", "100");
+        client = new S3JerseyClient(createS3Config(), new URLConnectionClientHandler());
     }
 }
