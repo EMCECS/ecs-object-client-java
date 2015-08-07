@@ -35,7 +35,6 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.LoadBalancer;
-import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
@@ -43,7 +42,6 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
-import org.apache.log4j.Logger;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -126,8 +124,6 @@ import java.util.Date;
  * </pre>
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
-    private static final Logger l4j = Logger.getLogger(S3JerseyClient.class);
-
     protected S3Config s3Config;
     protected Client client;
     protected LoadBalancer loadBalancer;
@@ -208,17 +204,33 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     protected void finalize() throws Throwable {
         try {
-            shutdown();
+            destroy();
         } finally {
             super.finalize(); // make sure we call super.finalize() no matter what!
         }
     }
 
+    /**
+     * @deprecated (2.0.3) use destroy() instead
+     */
     @Override
     public void shutdown() {
-        l4j.debug("terminating polling daemon");
-        PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
-        if (pollingDaemon != null) pollingDaemon.terminate();
+        destroy();
+    }
+
+    /**
+     * Destroy the client. Any system resources associated with the client
+     * will be cleaned up.
+     * <p/>
+     * This method must be called when there are not responses pending otherwise
+     * undefined behavior will occur.
+     * <p/>
+     * The client must not be reused after this method is called otherwise
+     * undefined behavior will occur.
+     */
+    @Override
+    public void destroy() {
+        SmartClientFactory.destroy(client);
     }
 
     public LoadBalancer getLoadBalancer() {

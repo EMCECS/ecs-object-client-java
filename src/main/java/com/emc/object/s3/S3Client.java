@@ -45,8 +45,13 @@ import java.util.Date;
  */
 public interface S3Client {
     /**
-     * Always call .shutdown() when finished with a client to ensure that any attached resources and background processes
-     * are released/terminated (i.e. polling threads for host list providers)
+     * Always call .destroy() when finished with a client to ensure that any attached resources and background processes
+     * are released/terminated (i.e. polling threads, host list providers and connection pools)
+     */
+    void destroy();
+
+    /**
+     * @deprecated (2.0.3) use destroy() instead
      */
     void shutdown();
 
