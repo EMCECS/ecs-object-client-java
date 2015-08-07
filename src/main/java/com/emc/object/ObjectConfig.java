@@ -64,7 +64,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private String secretKey;
     private long serverClockSkew;
     private String userAgent = DEFAULT_USER_AGENT;
-    private EncryptionConfig encryptionConfig;
     private boolean geoPinningEnabled = false;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
@@ -111,7 +110,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.secretKey = other.secretKey;
         this.serverClockSkew = other.serverClockSkew;
         this.userAgent = other.userAgent;
-        if (other.encryptionConfig != null) this.encryptionConfig = new EncryptionConfig(other.encryptionConfig);
         this.geoPinningEnabled = other.geoPinningEnabled;
     }
 
@@ -266,14 +264,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.userAgent = userAgent;
     }
 
-    public EncryptionConfig getEncryptionConfig() {
-        return encryptionConfig;
-    }
-
-    public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
-        this.encryptionConfig = encryptionConfig;
-    }
-
     public boolean isGeoPinningEnabled() {
         return geoPinningEnabled;
     }
@@ -345,12 +335,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    public T withEncryptionConfig(EncryptionConfig encryptionConfig) {
-        setEncryptionConfig(encryptionConfig);
-        return (T) this;
-    }
-
-    @SuppressWarnings("unchecked")
     public T withGeoPinningEnabled(boolean geoPinningEnabled) {
         setGeoPinningEnabled(geoPinningEnabled);
         return (T) this;
@@ -375,7 +359,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", secretKey='" + secretKey + '\'' +
                 ", serverClockSkew=" + serverClockSkew +
                 ", userAgent='" + userAgent + '\'' +
-                ", encryptionConfig=" + encryptionConfig +
                 ", geoPinningEnabled=" + geoPinningEnabled +
                 ", properties=" + properties +
                 '}';
