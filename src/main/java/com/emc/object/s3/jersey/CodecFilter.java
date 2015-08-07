@@ -56,8 +56,13 @@ public class CodecFilter extends ClientFilter {
         Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
         if (encode != null && encode) {
 
-            // we don't know what the size will be; this will turn on chunked encoding in the apache client
-            SizeOverrideWriter.setEntitySize(-1L);
+            // if encoded size is predictable and we know the original size, we can set a content-length and avoid chunked encoding
+            if (encodeChain.isSizePredictable() && SizeOverrideWriter.getEntitySize() != null) {
+                SizeOverrideWriter.setEntitySize(encodeChain.getEncodedSize(SizeOverrideWriter.getEntitySize()));
+            } else {
+                // we don't know what the size will be; this will turn on chunked encoding in the apache client
+                SizeOverrideWriter.setEntitySize(-1L);
+            }
 
             // wrap output stream with encryptor
             request.setAdapter(new EncryptAdapter(request.getAdapter(), userMeta));
