@@ -264,6 +264,20 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.userAgent = userAgent;
     }
 
+    /**
+     * @deprecated (2.0.3) always returns null (see {@link #setEncryptionConfig(EncryptionConfig)})
+     */
+    public EncryptionConfig getEncryptionConfig() {
+        return null;
+    }
+
+    /**
+     * @deprecated (2.0.3) this method does nothing. EncryptionConfig instance should be passed to the constructor of
+     * an encryption client
+     */
+    public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
+    }
+
     public boolean isGeoPinningEnabled() {
         return geoPinningEnabled;
     }
@@ -331,6 +345,16 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     @SuppressWarnings("unchecked")
     public T withUserAgent(String userAgent) {
         setUserAgent(userAgent);
+        return (T) this;
+    }
+
+    /**
+     * @deprecated (2.0.3) this method does nothing. EncryptionConfig instance should be passed to the constructor of
+     * an encryption client
+     */
+    @SuppressWarnings("unchecked")
+    public T withEncryptionConfig(EncryptionConfig encryptionConfig) {
+        setEncryptionConfig(encryptionConfig);
         return (T) this;
     }
 
