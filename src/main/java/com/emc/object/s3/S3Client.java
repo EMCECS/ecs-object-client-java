@@ -130,7 +130,8 @@ public interface S3Client {
     void setBucketCors(String bucketName, CorsConfiguration corsConfiguration);
 
     /**
-     * Retrieves the CORS configuration for <code>bucketName</code>
+     * Retrieves the CORS configuration for <code>bucketName</code>. If no CORS configuration exists for the specified
+     * bucket, <code>null</code> is returned
      *
      * @see CorsConfiguration
      */
@@ -149,7 +150,8 @@ public interface S3Client {
     void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration);
 
     /**
-     * Retrieves the lifecycle configuration for <code>bucketName</code>
+     * Retrieves the lifecycle configuration for <code>bucketName</code>. If no lifecycle exists for the specified
+     * bucket, <code>null</code> is returned
      *
      * @see LifecycleConfiguration
      */

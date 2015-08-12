@@ -183,6 +183,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - GEO-PINNING
             if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
 
+            // S.C. - RETRY CONFIG
+            if (s3Config.isRetryEnabled())
+                smartConfig.setProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
+
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
             if (clientHandler == null) {
@@ -194,6 +198,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
         // jersey filters
         client.addFilter(new ErrorFilter());
+        if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
         if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter());
         client.addFilter(new AuthorizationFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
@@ -316,7 +321,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public CorsConfiguration getBucketCors(String bucketName) {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "cors");
-        return executeRequest(client, request, CorsConfiguration.class);
+        try {
+            return executeRequest(client, request, CorsConfiguration.class);
+        } catch (S3Exception e) {
+            if ("NoSuchCORSConfiguration".equals(e.getErrorCode())) return null;
+            throw e;
+        }
     }
 
     @Override
@@ -334,7 +344,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public LifecycleConfiguration getBucketLifecycle(String bucketName) {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "lifecycle");
-        return executeRequest(client, request, LifecycleConfiguration.class);
+        try {
+            return executeRequest(client, request, LifecycleConfiguration.class);
+        } catch (S3Exception e) {
+            if ("NoSuchBucketPolicy".equals(e.getErrorCode())) return null;
+            throw e;
+        }
     }
 
     @Override
