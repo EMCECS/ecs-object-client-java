@@ -32,6 +32,8 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.SizeOverrideWriter;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
+import org.apache.log4j.LogMF;
+import org.apache.log4j.Logger;
 
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
@@ -41,6 +43,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class CodecFilter extends ClientFilter {
+    private static final Logger l4j = Logger.getLogger(CodecFilter.class);
+
     private CodecChain encodeChain;
     private Map<String, Object> codecProperties;
 
@@ -57,8 +61,11 @@ public class CodecFilter extends ClientFilter {
         if (encode != null && encode) {
 
             // if encoded size is predictable and we know the original size, we can set a content-length and avoid chunked encoding
-            if (encodeChain.isSizePredictable() && SizeOverrideWriter.getEntitySize() != null) {
-                SizeOverrideWriter.setEntitySize(encodeChain.getEncodedSize(SizeOverrideWriter.getEntitySize()));
+            Long originalSize = SizeOverrideWriter.getEntitySize();
+            if (encodeChain.isSizePredictable() && originalSize != null) {
+                long encodedSize = encodeChain.getEncodedSize(originalSize);
+                LogMF.debug(l4j, "updating content-length for encoded data (original: {0}, encoded: {1})", originalSize, encodedSize);
+                SizeOverrideWriter.setEntitySize(encodedSize);
             } else {
                 // we don't know what the size will be; this will turn on chunked encoding in the apache client
                 SizeOverrideWriter.setEntitySize(-1L);
