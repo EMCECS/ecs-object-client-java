@@ -110,7 +110,11 @@ public class S3EncryptionClient extends S3JerseyClient {
     private EncryptionConfig encryptionConfig;
 
     public S3EncryptionClient(S3Config s3Config, EncryptionConfig encryptionConfig) {
-        super(s3Config);
+        this(s3Config, null, encryptionConfig);
+    }
+
+    public S3EncryptionClient(S3Config s3Config, ClientHandler clientHandler, EncryptionConfig encryptionConfig) {
+        super(s3Config, clientHandler);
         this.encryptionConfig = encryptionConfig;
 
         // create an encode chain based on parameters
