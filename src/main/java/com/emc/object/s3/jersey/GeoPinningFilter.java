@@ -34,6 +34,7 @@ import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -44,6 +45,8 @@ import java.util.List;
  * the path to extract the object key)
  */
 public class GeoPinningFilter extends ClientFilter {
+    private static final Logger l4j = Logger.getLogger(GeoPinningFilter.class);
+
     private ObjectConfig<?> objectConfig;
 
     public GeoPinningFilter(ObjectConfig<?> objectConfig) {
@@ -83,9 +86,13 @@ public class GeoPinningFilter extends ClientFilter {
                 if (vdc.isHealthy()) healthyVdcs.add(vdc);
             }
 
-            int geoPinIndex = getGeoPinIndex(getGeoId(request, bucketName), healthyVdcs.size());
+            if (healthyVdcs.isEmpty()) {
+                l4j.warn("there are no healthy VDCs!");
+            } else {
+                int geoPinIndex = getGeoPinIndex(getGeoId(request, bucketName), healthyVdcs.size());
 
-            request.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
+                request.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
+            }
         }
 
         return getNext().handle(request);

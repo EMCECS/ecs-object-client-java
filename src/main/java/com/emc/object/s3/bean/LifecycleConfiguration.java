@@ -29,6 +29,7 @@ package com.emc.object.s3.bean;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @XmlRootElement(name = "LifecycleConfiguration")
@@ -42,5 +43,15 @@ public class LifecycleConfiguration {
 
     public void setRules(List<LifecycleRule> rules) {
         this.rules = rules;
+    }
+
+    public LifecycleConfiguration withRules(List<LifecycleRule> rules) {
+        setRules(rules);
+        return this;
+    }
+
+    public LifecycleConfiguration withRules(LifecycleRule... rules) {
+        setRules(Arrays.asList(rules));
+        return this;
     }
 }

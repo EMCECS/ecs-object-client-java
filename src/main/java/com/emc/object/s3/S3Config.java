@@ -61,6 +61,9 @@ import java.net.URI;
 public class S3Config extends ObjectConfig<S3Config> {
     public static final int DEFAULT_HTTP_PORT = 9020;
     public static final int DEFAULT_HTTPS_PORT = 9021;
+    public static final int DEFAULT_INITIAL_RETRY_DELAY = 1000; // ms
+    public static final int DEFAULT_RETRY_LIMIT = 3;
+    public static final int DEFAULT_RETRY_BUFFER_SIZE = 2 * 1024 * 1024;
 
     protected static int defaultPort(Protocol protocol) {
         if (protocol == Protocol.HTTP) return DEFAULT_HTTP_PORT;
@@ -72,6 +75,10 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected boolean useVHost = false;
     protected boolean signNamespace = true;
     protected boolean checksumEnabled = true;
+    protected boolean retryEnabled = true;
+    protected int initialRetryDelay = DEFAULT_INITIAL_RETRY_DELAY;
+    protected int retryLimit = DEFAULT_RETRY_LIMIT;
+    protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
 
     /**
      * External load balancer constructor (no smart-client).
@@ -105,6 +112,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.useVHost = other.useVHost;
         this.signNamespace = other.signNamespace;
         this.checksumEnabled = other.checksumEnabled;
+        this.retryEnabled = other.retryEnabled;
     }
 
     @Override
@@ -153,6 +161,41 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.checksumEnabled = checksumEnabled;
     }
 
+    public boolean isRetryEnabled() {
+        return retryEnabled;
+    }
+
+    /**
+     * Set to false to disable automatic retry of (retriable) requests
+     */
+    public void setRetryEnabled(boolean retryEnabled) {
+        this.retryEnabled = retryEnabled;
+    }
+
+    public int getInitialRetryDelay() {
+        return initialRetryDelay;
+    }
+
+    public void setInitialRetryDelay(int initialRetryDelay) {
+        this.initialRetryDelay = initialRetryDelay;
+    }
+
+    public int getRetryLimit() {
+        return retryLimit;
+    }
+
+    public void setRetryLimit(int retryLimit) {
+        this.retryLimit = retryLimit;
+    }
+
+    public int getRetryBufferSize() {
+        return retryBufferSize;
+    }
+
+    public void setRetryBufferSize(int retryBufferSize) {
+        this.retryBufferSize = retryBufferSize;
+    }
+
     public S3Config withUseVHost(boolean useVHost) {
         setUseVHost(useVHost);
         return this;
@@ -165,6 +208,26 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public S3Config withChecksumEnabled(boolean checksumEnabled) {
         setChecksumEnabled(checksumEnabled);
+        return this;
+    }
+
+    public S3Config withRetryEnabled(boolean retryEnabled) {
+        setRetryEnabled(retryEnabled);
+        return this;
+    }
+
+    public S3Config withInitialRetryDelay(int initialRetryDelay) {
+        setInitialRetryDelay(initialRetryDelay);
+        return this;
+    }
+
+    public S3Config withRetryLimit(int retryLimit) {
+        setRetryLimit(retryLimit);
+        return this;
+    }
+
+    public S3Config withRetryBufferSize(int retryBufferSize) {
+        setRetryBufferSize(retryBufferSize);
         return this;
     }
 

@@ -140,4 +140,35 @@ public class CorsRule {
     public CorsRule withAllowedHeaders(String... allowedHeaders) {
         return withAllowedHeaders(Arrays.asList(allowedHeaders));
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CorsRule)) return false;
+
+        CorsRule corsRule = (CorsRule) o;
+
+        if (id != null ? !id.equals(corsRule.id) : corsRule.id != null) return false;
+        if (allowedMethods != null ? !allowedMethods.equals(corsRule.allowedMethods) : corsRule.allowedMethods != null)
+            return false;
+        if (allowedOrigins != null ? !allowedOrigins.equals(corsRule.allowedOrigins) : corsRule.allowedOrigins != null)
+            return false;
+        if (maxAgeSeconds != null ? !maxAgeSeconds.equals(corsRule.maxAgeSeconds) : corsRule.maxAgeSeconds != null)
+            return false;
+        if (exposeHeaders != null ? !exposeHeaders.equals(corsRule.exposeHeaders) : corsRule.exposeHeaders != null)
+            return false;
+        return !(allowedHeaders != null ? !allowedHeaders.equals(corsRule.allowedHeaders) : corsRule.allowedHeaders != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (allowedMethods != null ? allowedMethods.hashCode() : 0);
+        result = 31 * result + (allowedOrigins != null ? allowedOrigins.hashCode() : 0);
+        result = 31 * result + (maxAgeSeconds != null ? maxAgeSeconds.hashCode() : 0);
+        result = 31 * result + (exposeHeaders != null ? exposeHeaders.hashCode() : 0);
+        result = 31 * result + (allowedHeaders != null ? allowedHeaders.hashCode() : 0);
+        return result;
+    }
 }

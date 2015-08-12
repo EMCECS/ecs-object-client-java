@@ -45,8 +45,13 @@ import java.util.Date;
  */
 public interface S3Client {
     /**
-     * Always call .shutdown() when finished with a client to ensure that any attached resources and background processes
-     * are released/terminated (i.e. polling threads for host list providers)
+     * Always call .destroy() when finished with a client to ensure that any attached resources and background processes
+     * are released/terminated (i.e. polling threads, host list providers and connection pools)
+     */
+    void destroy();
+
+    /**
+     * @deprecated (2.0.3) use destroy() instead
      */
     void shutdown();
 
@@ -125,7 +130,8 @@ public interface S3Client {
     void setBucketCors(String bucketName, CorsConfiguration corsConfiguration);
 
     /**
-     * Retrieves the CORS configuration for <code>bucketName</code>
+     * Retrieves the CORS configuration for <code>bucketName</code>. If no CORS configuration exists for the specified
+     * bucket, <code>null</code> is returned
      *
      * @see CorsConfiguration
      */
@@ -144,7 +150,8 @@ public interface S3Client {
     void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration);
 
     /**
-     * Retrieves the lifecycle configuration for <code>bucketName</code>
+     * Retrieves the lifecycle configuration for <code>bucketName</code>. If no lifecycle exists for the specified
+     * bucket, <code>null</code> is returned
      *
      * @see LifecycleConfiguration
      */

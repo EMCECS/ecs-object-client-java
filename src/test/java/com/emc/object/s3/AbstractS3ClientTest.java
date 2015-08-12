@@ -59,7 +59,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
     @After
     public void shutdownClient() {
-        if (client != null) client.shutdown();
+        if (client != null) client.destroy();
     }
 
     @Override

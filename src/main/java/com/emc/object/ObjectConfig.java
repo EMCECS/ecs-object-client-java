@@ -64,7 +64,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private String secretKey;
     private long serverClockSkew;
     private String userAgent = DEFAULT_USER_AGENT;
-    private EncryptionConfig encryptionConfig;
     private boolean geoPinningEnabled = false;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
@@ -111,7 +110,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.secretKey = other.secretKey;
         this.serverClockSkew = other.serverClockSkew;
         this.userAgent = other.userAgent;
-        if (other.encryptionConfig != null) this.encryptionConfig = new EncryptionConfig(other.encryptionConfig);
         this.geoPinningEnabled = other.geoPinningEnabled;
     }
 
@@ -266,12 +264,18 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.userAgent = userAgent;
     }
 
+    /**
+     * @deprecated (2.0.3) always returns null (see {@link #setEncryptionConfig(EncryptionConfig)})
+     */
     public EncryptionConfig getEncryptionConfig() {
-        return encryptionConfig;
+        return null;
     }
 
+    /**
+     * @deprecated (2.0.3) this method does nothing. EncryptionConfig instance should be passed to the constructor of
+     * an encryption client
+     */
     public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
-        this.encryptionConfig = encryptionConfig;
     }
 
     public boolean isGeoPinningEnabled() {
@@ -344,6 +348,10 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return (T) this;
     }
 
+    /**
+     * @deprecated (2.0.3) this method does nothing. EncryptionConfig instance should be passed to the constructor of
+     * an encryption client
+     */
     @SuppressWarnings("unchecked")
     public T withEncryptionConfig(EncryptionConfig encryptionConfig) {
         setEncryptionConfig(encryptionConfig);
@@ -375,7 +383,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", secretKey='" + secretKey + '\'' +
                 ", serverClockSkew=" + serverClockSkew +
                 ", userAgent='" + userAgent + '\'' +
-                ", encryptionConfig=" + encryptionConfig +
                 ", geoPinningEnabled=" + geoPinningEnabled +
                 ", properties=" + properties +
                 '}';

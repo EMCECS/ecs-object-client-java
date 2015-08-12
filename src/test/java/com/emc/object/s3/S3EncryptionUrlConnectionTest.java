@@ -24,21 +24,22 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import com.emc.object.s3.jersey.S3EncryptionClient;
+import com.emc.object.s3.jersey.S3JerseyClient;
+import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
-buildscript {
-    ext.commonBuildVersion = '1.3.2'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/emcvipr/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
+public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
+    @Override
+    protected String getTestBucketPrefix() {
+        return "s3-url-connection-test";
+    }
 
-apply from: "$commonBuildDir/ecs-publish.gradle"
-
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.0.3',
-            'com.emc.ecs:object-transform:1.0.2',
-            'org.jdom:jdom2:2.0.6'
-    testCompile 'junit:junit:4.12'
+    @Override
+    public void initClient() throws Exception {
+        System.setProperty("http.maxConnections", "100");
+        rclient = new S3JerseyClient(createS3Config(), new URLConnectionClientHandler());
+        client = eclient = new S3EncryptionClient(createS3Config(), new URLConnectionClientHandler(), createEncryptionConfig());
+    }
 }
