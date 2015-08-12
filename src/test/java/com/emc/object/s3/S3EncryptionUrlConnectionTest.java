@@ -24,34 +24,22 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.bean;
+package com.emc.object.s3;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.emc.object.s3.jersey.S3EncryptionClient;
+import com.emc.object.s3.jersey.S3JerseyClient;
+import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
-@XmlRootElement(name = "LifecycleConfiguration")
-public class LifecycleConfiguration {
-    private List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
-
-    @XmlElement(name = "Rule")
-    public List<LifecycleRule> getRules() {
-        return rules;
+public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
+    @Override
+    protected String getTestBucketPrefix() {
+        return "s3-url-connection-test";
     }
 
-    public void setRules(List<LifecycleRule> rules) {
-        this.rules = rules;
-    }
-
-    public LifecycleConfiguration withRules(List<LifecycleRule> rules) {
-        setRules(rules);
-        return this;
-    }
-
-    public LifecycleConfiguration withRules(LifecycleRule... rules) {
-        setRules(Arrays.asList(rules));
-        return this;
+    @Override
+    public void initClient() throws Exception {
+        System.setProperty("http.maxConnections", "100");
+        rclient = new S3JerseyClient(createS3Config(), new URLConnectionClientHandler());
+        client = eclient = new S3EncryptionClient(createS3Config(), new URLConnectionClientHandler(), createEncryptionConfig());
     }
 }

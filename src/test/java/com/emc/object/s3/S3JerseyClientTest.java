@@ -128,17 +128,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ListBucketsRequest request = new ListBucketsRequest();
         ListBucketsResult result = client.listBuckets(request);
         Assert.assertNotNull(result);
-        List<Bucket> bucketList = result.getBuckets();
-        l4j.debug("There are " + Integer.toString(bucketList.size()) + " existing buckets");
-        for (Bucket b: bucketList) {
-            l4j.debug("JMC bucket: " + b.getName());
-        }
+        Assert.assertNotNull(result.getOwner());
+        Assert.assertNotNull(result.getBuckets());
+
+        Bucket bucket = new Bucket();
+        bucket.setName(getTestBucket());
+        Assert.assertTrue(result.getBuckets().contains(bucket));
     }
     
     @Test
     public void testBucketExists() throws Exception {
         Assert.assertTrue("Bucket " + getTestBucket() + " should exist but does NOT", client.bucketExists(getTestBucket()));
-        l4j.debug("JMC testBucketExists succeeded!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 
     @Test
@@ -146,6 +146,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String bucketName = getTestBucket() + "-x";
         CreateBucketRequest request = new CreateBucketRequest(bucketName);
         client.createBucket(request);
+
+        Assert.assertTrue(client.bucketExists(bucketName));
         this.cleanUpBucket(bucketName);
     }
 
@@ -166,8 +168,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteBucketWithObjects() throws Exception {
-        createTestObjects(getTestBucket(), "prefix/", 5);
-        l4j.debug("Objects in bucket " + getTestBucket() + " have been created");
+        createTestObjects("prefix/", 5);
         try {
             client.deleteBucket(getTestBucket());
             Assert.fail("Test succeeds. Fail was expected. Can NOT delete bucket with existing objects");
@@ -176,23 +177,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    protected void assertSameAcl(AccessControlList acl1, AccessControlList acl2) {
-        Assert.assertEquals(acl1.getOwner().getId(), acl2.getOwner().getId());
-
-        Set<Grant> gs1 = acl1.getGrants();
-        Set<Grant> gs2 = acl2.getGrants();
-
-        Assert.assertEquals(gs1.size(), gs2.size());
-        Iterator<Grant> grantI = acl2.getGrants().iterator();
-        for (Grant g1 : acl1.getGrants()) {
-            Grant g2 = grantI.next();
-            Assert.assertEquals(g1.getGrantee(), g2.getGrantee());
-            Assert.assertEquals(g1.getPermission(), g2.getPermission());
-        }
-    }
-
     @Test
-    public void testSetBucketAcl() throws Exception {
+    public void testSetGetBucketAcl() throws Exception {
         String identity = createS3Config().getIdentity();
         CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
@@ -201,144 +187,82 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         client.setBucketAcl(getTestBucket(), acl);
 
-        this.assertSameAcl(acl, client.getBucketAcl(getTestBucket()));
+        this.assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
 
     @Ignore // TODO: blocked by STORAGE-7422
     @Test
-    public void testSetBucketAclCanned() {
+    public void testSetBucketAclCanned() throws Exception {
+        String identity = createS3Config().getIdentity();
+        CanonicalUser owner = new CanonicalUser(identity, identity);
+        AccessControlList acl = new AccessControlList();
+        acl.setOwner(owner);
+        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+
         client.setBucketAcl(getTestBucket(), CannedAcl.BucketOwnerFullControl);
+
+        this.assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
 
-    //TODO
-    //void setBucketAcl(SetBucketAclRequest request);
-    
-    //tested by testSetBucketAcl
-    //AccessControlList getBucketAcl(String bucketName);
-
-    //tested by testGetBucketCors
-    //void setBucketCors(String bucketName, CorsConfiguration corsConfiguration);
-
-    
     @Test
-    public void testGetBucketCors() throws Exception {
-        //CorsConfiguration getBucketCors(String bucketName);
+    public void testSetGetBucketCors() throws Exception {
+        CorsRule cr0 = new CorsRule().withId("corsRuleTestId0");
+        cr0.withAllowedOrigins("10.10.10.10").withAllowedMethods(CorsMethod.GET);
 
-        ArrayList<CorsRule> crArr = new ArrayList<CorsRule>();
-        List<CorsRule> crArrVerify = new ArrayList<CorsRule>();
+        CorsRule cr1 = new CorsRule().withId("corsRuleTestId1");
+        cr1.withAllowedOrigins("10.10.10.10").withAllowedMethods(CorsMethod.GET);
 
-        CorsRule cr0 = new CorsRule();
-        cr0.setId("corsRuleTestId0");
-        cr0.withAllowedOrigins("10.10.10.10");
-        cr0.withAllowedMethods(CorsMethod.GET);
-        crArr.add(cr0);
-        crArrVerify.add(cr0);
+        CorsRule cr2 = new CorsRule().withId("corsRuleTestId2");
+        cr2.withAllowedOrigins("10.10.10.10").withAllowedMethods(CorsMethod.GET);
 
-        CorsRule cr1 = new CorsRule();
-        cr1.setId("corsRuleTestId1");
-        cr1.withAllowedOrigins("10.10.10.10");
-        cr1.withAllowedMethods(CorsMethod.GET);
-        crArr.add(cr1);
-        crArrVerify.add(cr1);
-
-        CorsRule cr2 = new CorsRule();
-        cr2.setId("corsRuleTestId2");
-        cr2.withAllowedOrigins("10.10.10.10");
-        cr2.withAllowedMethods(CorsMethod.GET);
-        crArr.add(cr2);
-        crArrVerify.add(cr2);
-
-        CorsConfiguration cc = new CorsConfiguration();
-        cc.setCorsRules(crArr);
-
+        CorsConfiguration cc = new CorsConfiguration().withCorsRules(cr0, cr1, cr2);
         client.setBucketCors(getTestBucket(), cc);
 
         CorsConfiguration ccVerify = client.getBucketCors(getTestBucket());
         Assert.assertNotNull("CorsConfiguration should NOT be null but is", ccVerify);
-        crArrVerify = ccVerify.getCorsRules();
-        Assert.assertNotNull("CorsRule list should NOT be null but is", crArrVerify);
-        Assert.assertEquals("There are NOT the same number of CorsRule items", crArr.size(), crArrVerify.size());
- 
-        //JMC the rules might not come back in the same order! need to change
-        //maybe could brute force or look into sort or rules (based upon id maybe)
-        int testResults = 0x0;
-        for (CorsRule aCrArrVerify : crArrVerify) {
-            if (cr0.getId().equals(aCrArrVerify.getId())) {
-                //Assert.assertEquals(crArr.get(i).getId(), crArrVerify.get(i).getId());
-                testResults = testResults | 0x001;
-            }
-            if (cr1.getId().equals(aCrArrVerify.getId())) {
-                //Assert.assertEquals(crArr.get(i).getId(), crArrVerify.get(i).getId());
-                testResults = testResults | 0x010;
-            }
-            if (cr1.getId().equals(aCrArrVerify.getId())) {
-                //Assert.assertEquals(crArr.get(i).getId(), crArrVerify.get(i).getId());
-                testResults = testResults | 0x100;
-            }
+        Assert.assertEquals(cc.getCorsRules().size(), ccVerify.getCorsRules().size());
+
+        for (CorsRule rule : cc.getCorsRules()) {
+            Assert.assertTrue(ccVerify.getCorsRules().contains(rule));
         }
-        Assert.assertEquals("Incorrect CorRules returned", 0x111, testResults);
     }
 
-    
     @Test
     public void testDeleteBucketCors() throws Exception {
-        ArrayList<CorsRule> crArr = new ArrayList<CorsRule>();
+        CorsRule cr0 = new CorsRule().withId("corsRuleTestId0");
+        cr0.withAllowedOrigins("10.10.10.10").withAllowedMethods(CorsMethod.GET);
 
-        CorsRule cr = new CorsRule();
-        cr.setId("corsRuleTestId");
-        cr.withAllowedMethods(CorsMethod.GET).withAllowedOrigins("10.10.10.10");
-        crArr.add(cr);
-
-        CorsConfiguration cc = new CorsConfiguration();
-        cc.setCorsRules(crArr);
+        CorsConfiguration cc = new CorsConfiguration().withCorsRules(cr0);
         client.setBucketCors(getTestBucket(), cc);
 
-        CorsConfiguration ccVerify = client.getBucketCors(getTestBucket());
-        Assert.assertNotNull("deleteBucketCors NOT tested ccVerify prereq is null", ccVerify);
+        Assert.assertNotNull(client.getBucketCors(getTestBucket()));
 
-        client.deleteBucketCors(getTestBucket());//PRIMARY TEST CALL
-        try {
-            client.getBucketCors(getTestBucket());
-            Assert.fail("getting non-existing cors config should throw exception");
-        } catch (S3Exception e) {
-            Assert.assertEquals("Wrong error code when getting non-existing cors config", "NoSuchCORSConfiguration", e.getErrorCode());
-        }
+        client.deleteBucketCors(getTestBucket());
 
-        //make sure the bucket still exists
-        Assert.assertTrue("deleteBucketCors succeeded, but bucket does not exist", client.bucketExists(getTestBucket()));
+        Assert.assertNull(client.getBucketCors(getTestBucket()));
     }
     
-    //see testDeleteBucketLifecycle
-    //void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration);
-
-    //see testDeleteBucketLifecycle
-    //LifecycleConfiguration getBucketLifecycle(String bucketName);
-
-    
-    //TODO
     @Test
-    public void testDeleteBucketLifecycle() throws Exception {
-        String bn = getTestBucket();
-        LifecycleRule lcr = new LifecycleRule();
-        ArrayList<LifecycleRule> lcrList = new ArrayList<LifecycleRule>();
-        lcrList.add(lcr);
+    public void testBucketLifecycle() throws Exception {
+        Calendar end = Calendar.getInstance();
+        end.add(Calendar.YEAR, 300);
         LifecycleConfiguration lc = new LifecycleConfiguration();
-        lc.setRules(lcrList);
+        lc.withRules(new LifecycleRule("archive-expires-30", "archive/", LifecycleRule.Status.Enabled, 180),
+                new LifecycleRule("archive-disabled", "archive/", LifecycleRule.Status.Disabled, 365),
+                new LifecycleRule("armageddon", "", LifecycleRule.Status.Enabled, end.getTime()));
 
-        //String bucketName = createBucketAndName();
-        client.setBucketLifecycle(bn, lc);
-        Assert.assertNotNull(client.getBucketLifecycle(bn));
-        client.deleteBucketLifecycle(bn); //PRIMARY TEST CALL
-        try {
-            client.getBucketLifecycle(bn);
-            Assert.fail("getting non-existing bucket lifecycle should throw exception");
-        } catch (S3Exception e) {
-            Assert.assertEquals("wrong error code for getting non-existing bucket lifecycle", "NoSuchBucketPolicy", e.getErrorCode());
+        client.setBucketLifecycle(getTestBucket(), lc);
+
+        LifecycleConfiguration lc2 = client.getBucketLifecycle(getTestBucket());
+        Assert.assertNotNull(lc2);
+        Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
+
+        for (LifecycleRule rule : lc.getRules()) {
+            Assert.assertTrue(lc2.getRules().contains(rule));
         }
 
-        //make sure the bucket still exists
-        Assert.assertTrue("deleteBucketLifecycle succeeded, but bucket does not exist", client.bucketExists(bn));
-        //cleanUpBucket(bn);
+        client.deleteBucketLifecycle(getTestBucket());
+        Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
     }
     
     @Test 
@@ -505,20 +429,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //Assert.assertNotNull(lvr.getTruncated());
         Assert.assertNotNull(lvr.getVersions());
     }
-    
-    protected void createTestObjects(String prefixWithDelim, int numObjects) throws Exception {
-        this.createTestObjects(getTestBucket(), prefixWithDelim, numObjects);
-    }
 
-    protected void createTestObjects(String bucket, String prefixWithDelim, int numObjects) throws Exception {
-        String objectName;
+    protected void createTestObjects(String prefix, int numObjects) throws Exception {
+        if (prefix == null) prefix = "";
 
-        byte[] content1 = new byte[5 * 1024];
-        new Random().nextBytes(content1);
+        byte[] content = new byte[5 * 1024];
+        new Random().nextBytes(content);
 
         for(int i=0; i<numObjects; i++) {
-            objectName = "TestObject_" + i;
-            client.putObject(bucket, prefixWithDelim + objectName, content1, "text/plain");
+            client.putObject(getTestBucket(), prefix + "TestObject_" + i, content, null);
         }
     }
 
@@ -1671,7 +1590,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
 
         client.setObjectAcl(getTestBucket(), testObject, acl);
-        assertSameAcl(acl, client.getBucketAcl(getTestBucket()));
+        assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
     
     @Test
@@ -1700,7 +1619,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.setAcl(acl);
         client.setObjectAcl(request);
 
-        assertSameAcl(acl, client.getObjectAcl(getTestBucket(), testObject));
+        assertAclEquals(acl, client.getObjectAcl(getTestBucket(), testObject));
     }
 
     @Test
@@ -1715,4 +1634,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     //TODO: AccessControlList getObjectAcl(String bucketName, String key);
+
+    protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
+        Assert.assertEquals(acl1.getOwner(), acl2.getOwner());
+        Assert.assertEquals(acl1.getGrants(), acl2.getGrants());
+    }
 }

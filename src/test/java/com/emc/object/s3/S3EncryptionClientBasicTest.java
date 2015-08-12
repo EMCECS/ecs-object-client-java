@@ -368,7 +368,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testSetBucketAcl() throws Exception {
+    public void testSetGetBucketAcl() throws Exception {
     }
 
     @Ignore
@@ -378,7 +378,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testGetBucketCors() throws Exception {
+    public void testSetGetBucketCors() throws Exception {
     }
 
     @Ignore
@@ -388,7 +388,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testDeleteBucketLifecycle() throws Exception {
+    public void testBucketLifecycle() throws Exception {
     }
 
     @Ignore
