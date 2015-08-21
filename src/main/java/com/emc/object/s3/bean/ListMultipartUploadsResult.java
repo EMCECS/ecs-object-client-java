@@ -45,7 +45,7 @@ public class ListMultipartUploadsResult {
     private String uploadIdMarker;
     private String nextKeyMarker;
     private String nextUploadIdMarker;
-    private Boolean truncated;
+    private boolean truncated;
     private List<Upload> uploads = new ArrayList<Upload>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
 
@@ -131,11 +131,11 @@ public class ListMultipartUploadsResult {
     }
 
     @XmlElement(name = "IsTruncated")
-    public Boolean getTruncated() {
+    public boolean isTruncated() {
         return truncated;
     }
 
-    public void setTruncated(Boolean truncated) {
+    public void setTruncated(boolean truncated) {
         this.truncated = truncated;
     }
 

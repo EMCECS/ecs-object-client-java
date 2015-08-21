@@ -31,15 +31,15 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "Deleted")
 public class DeleteSuccess extends AbstractDeleteResult {
-    private Boolean deleteMarker;
+    private boolean deleteMarker;
     private String deleteMarkerVersionId;
 
     @XmlElement(name = "DeleteMarker")
-    public Boolean getDeleteMarker() {
+    public boolean isDeleteMarker() {
         return deleteMarker;
     }
 
-    public void setDeleteMarker(Boolean deleteMarker) {
+    public void setDeleteMarker(boolean deleteMarker) {
         this.deleteMarker = deleteMarker;
     }
 

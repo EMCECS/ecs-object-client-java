@@ -155,7 +155,7 @@ public class ListVersionsResultTest {
         Assert.assertEquals(object.getNextVersionIdMarker(), unmarshalledObject.getNextVersionIdMarker());
         Assert.assertEquals(object.getMaxKeys(), unmarshalledObject.getMaxKeys());
         Assert.assertEquals(object.getDelimiter(), unmarshalledObject.getDelimiter());
-        Assert.assertEquals(object.getTruncated(), unmarshalledObject.getTruncated());
+        Assert.assertEquals(object.isTruncated(), unmarshalledObject.isTruncated());
         Assert.assertEquals(object.getCommonPrefixes(), unmarshalledObject.getCommonPrefixes());
         Assert.assertEquals(object.getVersions().size(), unmarshalledObject.getVersions().size());
         for (int i = 0; i < object.getVersions().size(); i++) {
@@ -165,7 +165,7 @@ public class ListVersionsResultTest {
             Assert.assertEquals(ver.getKey(), unver.getKey());
             Assert.assertEquals(ver.getOwner(), unver.getOwner());
             Assert.assertEquals(ver.getLastModified(), unver.getLastModified());
-            Assert.assertEquals(ver.getLatest(), unver.getLatest());
+            Assert.assertEquals(ver.isLatest(), unver.isLatest());
             Assert.assertEquals(ver.getVersionId(), unver.getVersionId());
             if (ver instanceof Version) {
                 Assert.assertEquals(((Version) ver).geteTag(), ((Version) unver).geteTag());

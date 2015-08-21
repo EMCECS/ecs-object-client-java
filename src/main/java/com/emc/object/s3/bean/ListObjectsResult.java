@@ -43,7 +43,7 @@ public class ListObjectsResult {
     private EncodingType encodingType;
     private String marker;
     private String nextMarker;
-    private Boolean truncated;
+    private boolean truncated;
     private List<S3Object> objects = new ArrayList<S3Object>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
 
@@ -111,11 +111,11 @@ public class ListObjectsResult {
     }
 
     @XmlElement(name = "IsTruncated")
-    public Boolean getTruncated() {
+    public boolean isTruncated() {
         return truncated;
     }
 
-    public void setTruncated(Boolean truncated) {
+    public void setTruncated(boolean truncated) {
         this.truncated = truncated;
     }
 

@@ -420,7 +420,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //Assert.assertNotNull(lvr.getVersionIdMarker());
         //Assert.assertNotNull(lvr.getCommonPrefixes());
         //Assert.assertNotNull(lvr.getMaxKeys());
-        //Assert.assertNotNull(lvr.getTruncated());
+        //Assert.assertNotNull(lvr.isTruncated());
     }
 
     @Test
@@ -436,7 +436,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //Assert.assertNotNull(lvr.getVersionIdMarker());
         //Assert.assertNotNull(lvr.getCommonPrefixes());
         //Assert.assertNotNull(lvr.getMaxKeys());
-        //Assert.assertNotNull(lvr.getTruncated());
+        //Assert.assertNotNull(lvr.isTruncated());
         Assert.assertNotNull(lvr.getVersions());
     }
 
@@ -809,7 +809,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 allParts.addAll(listPartsResult.getParts());
                 Assert.assertEquals(2, listPartsResult.getParts().size());
                 Assert.assertEquals(2, listPartsResult.getMaxParts().intValue());
-            } while (listPartsResult.getTruncated());
+            } while (listPartsResult.isTruncated());
 
             // verify the right number of parts is returned altogether
             Assert.assertEquals(file.length() / partSize + 1, allParts.size());
@@ -1457,7 +1457,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(content1.length(), (long) ((Version) version).getSize());
             Assert.assertNotNull(((Version) version).geteTag());
             Assert.assertNotNull(((Version) version).getStorageClass());
-            if (version.getLatest()) {
+            if (version.isLatest()) {
                 Assert.assertEquals(content2, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
             } else {
                 Assert.assertEquals(content1, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
@@ -1473,7 +1473,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(3, versions.size());
         String thirdVersionId = null;
         for (AbstractVersion version : versions) {
-            if (version.getLatest()) thirdVersionId = version.getVersionId();
+            if (version.isLatest()) thirdVersionId = version.getVersionId();
         }
 
         // delete object (creates a delete marker)
@@ -1483,7 +1483,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(4, versions.size());
         String fourthVersionId = null;
         for (AbstractVersion version : versions) {
-            if (version.getLatest()) fourthVersionId = version.getVersionId();
+            if (version.isLatest()) fourthVersionId = version.getVersionId();
         }
 
         // delete explicit versions, which should revert back to prior version
@@ -1492,7 +1492,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         versions = client.listVersions(getTestBucket(), null).getVersions();
         Assert.assertEquals(3, versions.size());
         for (AbstractVersion version : versions) {
-            if (version.getLatest()) Assert.assertEquals(thirdVersionId, version.getVersionId());
+            if (version.isLatest()) Assert.assertEquals(thirdVersionId, version.getVersionId());
         }
         Assert.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
 

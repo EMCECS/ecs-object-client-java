@@ -38,7 +38,7 @@ public class ListBucketsResult {
     private Integer maxBuckets;
     private String marker;
     private String nextMarker;
-    private Boolean truncated;
+    private boolean truncated;
     private List<Bucket> buckets = new ArrayList<Bucket>();
 
     @XmlElement(name = "Owner")
@@ -78,11 +78,11 @@ public class ListBucketsResult {
     }
 
     @XmlElement(name = "IsTruncated")
-    public Boolean getTruncated() {
+    public boolean isTruncated() {
         return truncated;
     }
 
-    public void setTruncated(Boolean truncated) {
+    public void setTruncated(boolean truncated) {
         this.truncated = truncated;
     }
 

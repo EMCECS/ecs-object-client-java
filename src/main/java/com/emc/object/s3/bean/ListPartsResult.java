@@ -44,7 +44,7 @@ public class ListPartsResult {
     private EncodingType encodingType;
     private String partNumberMarker;
     private String nextPartNumberMarker;
-    private Boolean truncated;
+    private boolean truncated;
     private CanonicalUser initiator;
     private CanonicalUser owner;
     private StorageClass storageClass;
@@ -132,11 +132,11 @@ public class ListPartsResult {
     }
 
     @XmlElement(name = "Truncated")
-    public Boolean getTruncated() {
+    public boolean isTruncated() {
         return truncated;
     }
 
-    public void setTruncated(Boolean truncated) {
+    public void setTruncated(boolean truncated) {
         this.truncated = truncated;
     }
 
