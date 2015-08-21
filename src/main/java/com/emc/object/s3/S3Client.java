@@ -315,6 +315,8 @@ public interface S3Client {
 
     AccessControlList getObjectAcl(String bucketName, String key);
 
+    AccessControlList getObjectAcl(GetObjectAclRequest request);
+
     ListMultipartUploadsResult listMultipartUploads(String bucketName);
 
     ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);

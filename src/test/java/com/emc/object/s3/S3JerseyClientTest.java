@@ -1589,6 +1589,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testGetObjectVersionAcl() throws Exception {
+        // enable versioning on the bucket
+        client.setBucketVersioning(getTestBucket(), new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
+        String key = "getVersionAclTest";
+        client.putObject(getTestBucket(), key, "Hello Version ACLs!", "text/plain");
+
+        String versionId = client.listVersions(getTestBucket(), null).getVersions().get(0).getVersionId();
+
+        AccessControlList acl = client.getObjectAcl(new GetObjectAclRequest(getTestBucket(), key).withVersionId(versionId));
+        Assert.assertNotNull(acl.getOwner());
+        Assert.assertNotNull(acl.getGrants());
+        Assert.assertTrue(acl.getGrants().size() > 0);
+        for (Grant grant : acl.getGrants()) {
+            Assert.assertNotNull(grant.getGrantee());
+            Assert.assertNotNull(grant.getPermission());
+        }
+    }
+
+    @Test
     public void testSetObjectAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
         client.putObject(getTestBucket(), testObject, "Hello ACLs!", "text/plain");

@@ -543,7 +543,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public AccessControlList getObjectAcl(String bucketName, String key) {
-        ObjectRequest request = new S3ObjectRequest(Method.GET, bucketName, key, "acl");
+        return getObjectAcl(new GetObjectAclRequest(bucketName, key));
+    }
+
+    @Override
+    public AccessControlList getObjectAcl(GetObjectAclRequest request) {
         return executeRequest(client, request, AccessControlList.class);
     }
 
