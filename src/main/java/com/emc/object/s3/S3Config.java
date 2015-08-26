@@ -113,6 +113,9 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.signNamespace = other.signNamespace;
         this.checksumEnabled = other.checksumEnabled;
         this.retryEnabled = other.retryEnabled;
+        this.initialRetryDelay = other.initialRetryDelay;
+        this.retryLimit = other.retryLimit;
+        this.retryBufferSize = other.retryBufferSize;
     }
 
     @Override
