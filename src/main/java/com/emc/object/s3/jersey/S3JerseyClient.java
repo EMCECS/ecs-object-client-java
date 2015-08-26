@@ -392,6 +392,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public ListObjectsResult listMoreObjects(ListObjectsResult lastResult) {
+        return listObjects(new ListObjectsRequest(lastResult.getBucketName())
+                .withPrefix(lastResult.getPrefix())
+                .withDelimiter(lastResult.getDelimiter())
+                .withEncodingType(lastResult.getEncodingType())
+                .withMaxKeys(lastResult.getMaxKeys())
+                .withMarker(lastResult.getNextMarker()));
+    }
+
+    @Override
     public ListVersionsResult listVersions(String bucketName, String prefix) {
         return listVersions(new ListVersionsRequest(bucketName).withPrefix(prefix));
     }
@@ -399,6 +409,17 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public ListVersionsResult listVersions(ListVersionsRequest request) {
         return executeRequest(client, request, ListVersionsResult.class);
+    }
+
+    @Override
+    public ListVersionsResult listMoreVersions(ListVersionsResult lastResult) {
+        return listVersions(new ListVersionsRequest(lastResult.getBucketName())
+                .withPrefix(lastResult.getPrefix())
+                .withDelimiter(lastResult.getDelimiter())
+                .withEncodingType(lastResult.getEncodingType())
+                .withMaxKeys(lastResult.getMaxKeys())
+                .withKeyMarker(lastResult.getNextKeyMarker())
+                .withVersionIdMarker(lastResult.getNextVersionIdMarker()));
     }
 
     @Override
