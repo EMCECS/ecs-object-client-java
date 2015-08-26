@@ -41,6 +41,10 @@ public class PutObjectResult extends ObjectResponse {
     }
 
     @XmlTransient
+    public String getETag() {
+        return firstHeader(RestUtil.HEADER_ETAG);
+    }
+    @XmlTransient
     public Date getExpirationDate() {
         return S3ObjectMetadata.getExpirationDate(getHeaders());
     }
