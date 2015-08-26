@@ -33,6 +33,7 @@ import com.emc.object.s3.bean.ObjectKey;
 import com.emc.object.util.RestUtil;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class DeleteObjectsRequest extends AbstractBucketRequest implements EntityRequest {
     private DeleteObjects deleteObjects;
@@ -69,11 +70,15 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
         this.deleteObjects = deleteObjects;
     }
 
-    public synchronized DeleteObjectsRequest withKeys(ObjectKey... keys) {
+    public synchronized DeleteObjectsRequest withKeys(List<ObjectKey> keys) {
         if (deleteObjects == null)
             deleteObjects = new DeleteObjects();
-        deleteObjects.setKeys(Arrays.asList(keys));
+        deleteObjects.setKeys(keys);
         return this;
+    }
+
+    public DeleteObjectsRequest withKeys(ObjectKey... keys) {
+        return withKeys(Arrays.asList(keys));
     }
 
     public DeleteObjectsRequest withKeys(String... keys) {
