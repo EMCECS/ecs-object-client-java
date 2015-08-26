@@ -1455,7 +1455,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertNotNull(version.getLastModified());
             Assert.assertNotNull(version.getOwner());
             Assert.assertEquals(content1.length(), (long) ((Version) version).getSize());
-            Assert.assertNotNull(((Version) version).geteTag());
+            Assert.assertNotNull(((Version) version).getETag());
             Assert.assertNotNull(((Version) version).getStorageClass());
             if (version.isLatest()) {
                 Assert.assertEquals(content2, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));

@@ -114,7 +114,7 @@ public class ListVersionsResultTest {
         version.setVersionId("wxxQ7ezLaL5JN2Sislq66Syxxo0k7uHTUpb9qiiMxNg.");
         version.setLatest(false);
         version.setLastModified(new Date(2524608000000L));
-        ((Version) version).seteTag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
+        ((Version) version).setETag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
         ((Version) version).setSize(217L);
         version.setOwner(owner);
         ((Version) version).setStorageClass(StorageClass.STANDARD);
@@ -125,7 +125,7 @@ public class ListVersionsResultTest {
         version.setVersionId("d-d309mfjFri40QYukDozqBt3UmoQ0DBsVqmcMV15OI.");
         version.setLatest(false);
         version.setLastModified(new Date(2524608000000L));
-        ((Version) version).seteTag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
+        ((Version) version).setETag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
         ((Version) version).setSize(217L);
         version.setOwner(owner);
         ((Version) version).setStorageClass(StorageClass.STANDARD);
@@ -168,7 +168,7 @@ public class ListVersionsResultTest {
             Assert.assertEquals(ver.isLatest(), unver.isLatest());
             Assert.assertEquals(ver.getVersionId(), unver.getVersionId());
             if (ver instanceof Version) {
-                Assert.assertEquals(((Version) ver).geteTag(), ((Version) unver).geteTag());
+                Assert.assertEquals(((Version) ver).getETag(), ((Version) unver).getETag());
                 Assert.assertEquals(((Version) ver).getSize(), ((Version) unver).getSize());
                 Assert.assertEquals(((Version) ver).getStorageClass(), ((Version) unver).getStorageClass());
             }

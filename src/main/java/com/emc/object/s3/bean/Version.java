@@ -37,11 +37,11 @@ public class Version extends AbstractVersion {
     private StorageClass storageClass;
 
     @XmlElement(name = "ETag")
-    public String geteTag() {
+    public String getETag() {
         return eTag;
     }
 
-    public void seteTag(String eTag) {
+    public void setETag(String eTag) {
         this.eTag = eTag;
     }
 
