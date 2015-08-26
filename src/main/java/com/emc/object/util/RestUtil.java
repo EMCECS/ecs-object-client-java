@@ -216,8 +216,19 @@ public final class RestUtil {
             throws URISyntaxException {
         URI uri = new URI(scheme, null, host, port, path, query, fragment);
 
+        String uriString = uri.toASCIIString();
+
+        // replace double-slash with /%2f (workaround for apache client)
+        if (path != null && path.length() > 2 && path.charAt(0) == '/' && path.charAt(1) == '/') {
+            int doubleSlashIndex = uriString.indexOf("//");
+            if (scheme != null) doubleSlashIndex = uriString.indexOf("//", doubleSlashIndex + 2);
+            uriString = uriString.substring(0, doubleSlashIndex) + "/%2f" + uriString.substring(doubleSlashIndex + 2);
+        }
+
         // Special case to handle "+" characters that URI doesn't handle well.
-        return new URI(uri.toASCIIString().replace("+", "%2b"));
+        uriString = uriString.replace("+", "%2b");
+
+        return new URI(uriString);
     }
 
     public static URI replaceHost(URI uri, String host) throws URISyntaxException {
