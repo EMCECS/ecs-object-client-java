@@ -131,7 +131,7 @@ public class ListPartsResult {
         this.nextPartNumberMarker = nextPartNumberMarker;
     }
 
-    @XmlElement(name = "Truncated")
+    @XmlElement(name = "IsTruncated")
     public boolean isTruncated() {
         return truncated;
     }
