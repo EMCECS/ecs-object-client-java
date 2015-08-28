@@ -157,17 +157,6 @@ public final class RestUtil {
         return headerFormat(new Date(System.currentTimeMillis() + clockSkew));
     }
 
-    public static String delimit(List<Object> values, String delimiter) {
-        if (values == null || values.isEmpty()) return null;
-        StringBuilder delimited = new StringBuilder();
-        Iterator<Object> valuesI = values.iterator();
-        while (valuesI.hasNext()) {
-            delimited.append(valuesI.next());
-            if (valuesI.hasNext()) delimited.append(delimiter);
-        }
-        return delimited.toString();
-    }
-
     public static String headerFormat(Date date) {
         if (date == null) return null;
         return getHeaderFormat().format(date);
