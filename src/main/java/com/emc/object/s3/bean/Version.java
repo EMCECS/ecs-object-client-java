@@ -38,6 +38,14 @@ public class Version extends AbstractVersion {
     private Long size;
     private StorageClass storageClass;
 
+    /**
+     * @deprecated (2.0.4) use {@link #getETag()} instead
+     */
+    @XmlTransient
+    public String geteTag() {
+        return getETag();
+    }
+
     @XmlElement(name = "ETag")
     public String getETag() {
         return eTag;
