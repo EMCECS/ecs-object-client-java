@@ -102,7 +102,7 @@ public class S3ObjectMetadata {
         for (String name : headers.keySet()) {
             String key = getUserMetadataKey(name);
             if (key != null) {
-                userMetadata.put(key, RestUtil.getFirstAsString(headers, name));
+                userMetadata.put(key, RestUtil.urlDecode(RestUtil.getFirstAsString(headers, name)));
             }
         }
         return userMetadata;
@@ -124,7 +124,7 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_TYPE, contentType);
         RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
         for (String name : userMetadata.keySet()) {
-            RestUtil.putSingle(headers, getHeaderName(name), userMetadata.get(name));
+            RestUtil.putSingle(headers, getHeaderName(name), RestUtil.urlEncode(userMetadata.get(name)));
         }
         return headers;
     }
