@@ -81,7 +81,7 @@ public abstract class AbstractClientTest {
         l4j.info("initializing client");
         initClient();
 
-        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + (random.nextInt(8999) + 1000));
+        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + (random.nextInt(89999) + 10000));
         l4j.info("creating test bucket " + getTestBucket());
         createBucket(getTestBucket());
     }
