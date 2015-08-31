@@ -400,4 +400,24 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Override
     public void testBucketVersions() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void testListObjects() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListAndReadVersions() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListObjectsWithPrefix() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListVersionsPagingPrefixDelim() throws Exception {
+    }
 }
