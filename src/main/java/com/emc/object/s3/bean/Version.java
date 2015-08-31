@@ -26,9 +26,11 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.RestUtil;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlTransient;
 
 @XmlRootElement(name = "Version")
 public class Version extends AbstractVersion {
@@ -39,6 +41,11 @@ public class Version extends AbstractVersion {
     @XmlElement(name = "ETag")
     public String getETag() {
         return eTag;
+    }
+
+    @XmlTransient
+    public String getRawETag() {
+        return RestUtil.stripQuotes(eTag);
     }
 
     public void setETag(String eTag) {

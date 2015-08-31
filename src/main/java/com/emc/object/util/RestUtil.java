@@ -83,10 +83,22 @@ public final class RestUtil {
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
 
     public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key) {
+        return getFirstAsString(multiValueMap, key, false);
+    }
+
+    public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key, boolean stripQuotes) {
         List<T> values = multiValueMap.get(key);
         if (values == null || values.isEmpty()) return null;
         Object value = values.get(0);
-        return value == null ? null : value.toString();
+        if (value == null) return null;
+        return stripQuotes ? stripQuotes(value.toString()) : value.toString();
+    }
+
+    public static String stripQuotes(String value) {
+        int start = 0, end = value.length();
+        if (value.charAt(0) == '"') start = 1;
+        if (value.charAt(value.length() - 1) == '"') end = value.length() - 1;
+        return value.substring(start, end);
     }
 
     public static void putSingle(Map<String, List<Object>> multiValueMap, String key, Object value) {
