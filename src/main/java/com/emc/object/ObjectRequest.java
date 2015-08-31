@@ -84,8 +84,15 @@ public class ObjectRequest {
         return new HashMap<String, List<Object>>();
     }
 
+    /**
+     * @deprecated (2.0.4) use {@link #getQueryString(boolean)} instead
+     */
     public final String getQueryString() {
-        String paramString = RestUtil.generateQueryString(getQueryParams());
+        return getQueryString(true);
+    }
+
+    public final String getQueryString(boolean encodeParams) {
+        String paramString = RestUtil.generateQueryString(getQueryParams(), encodeParams);
 
         String queryString = "";
 

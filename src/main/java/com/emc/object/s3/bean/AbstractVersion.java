@@ -32,7 +32,7 @@ import java.util.Date;
 public abstract class AbstractVersion {
     private String key;
     private String versionId;
-    private Boolean latest;
+    private boolean latest;
     private Date lastModified;
     private CanonicalUser owner;
 
@@ -55,11 +55,11 @@ public abstract class AbstractVersion {
     }
 
     @XmlElement(name = "IsLatest")
-    public Boolean getLatest() {
+    public boolean isLatest() {
         return latest;
     }
 
-    public void setLatest(Boolean latest) {
+    public void setLatest(boolean latest) {
         this.latest = latest;
     }
 

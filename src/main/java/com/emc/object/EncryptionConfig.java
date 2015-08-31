@@ -149,7 +149,6 @@ public class EncryptionConfig {
      * Sets the compression spec to use for compression. Defaults to Deflate, level 5.
      *
      * @see DeflateCodec#encodeSpec(int)
-     * @see com.emc.codec.compression.lzma.LzmaCodec#encodeSpec(int)
      */
     public void setCompressionSpec(String compressionSpec) {
         this.compressionSpec = compressionSpec;

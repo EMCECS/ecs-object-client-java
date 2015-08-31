@@ -31,7 +31,6 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.s3.bean.AbstractVersion;
 import com.emc.object.s3.bean.S3Object;
-import com.emc.object.s3.bean.VersioningConfiguration;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
@@ -70,7 +69,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     @Override
     protected void cleanUpBucket(String bucketName) throws Exception {
         if (client != null && client.bucketExists(bucketName)) {
-            if (client.getBucketVersioning(bucketName).getStatus() == VersioningConfiguration.Status.Enabled) {
+            if (client.getBucketVersioning(bucketName).getStatus() != null) {
                 for (AbstractVersion version : client.listVersions(bucketName, null).getVersions()) {
                     client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
                 }

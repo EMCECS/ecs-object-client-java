@@ -33,7 +33,7 @@ import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
     @Override
     protected String getTestBucketPrefix() {
-        return "s3-url-connection-test";
+        return "s3-encryption-url-connection-test";
     }
 
     @Override

@@ -24,39 +24,36 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.bean;
+package com.emc.object.s3.request;
 
-import com.emc.object.ObjectResponse;
-import com.emc.object.s3.S3Constants;
-import com.emc.object.s3.S3ObjectMetadata;
-import com.emc.object.util.RestUtil;
+import com.emc.object.Method;
 
-import javax.xml.bind.annotation.XmlTransient;
-import java.util.Date;
+import java.util.Map;
 
-public class PutObjectResult extends ObjectResponse {
-    @XmlTransient
+public class GetObjectAclRequest extends S3ObjectRequest {
+    private String versionId;
+
+    public GetObjectAclRequest(String bucketName, String key) {
+        super(Method.GET, bucketName, key, "acl");
+    }
+
+    @Override
+    public Map<String, String> getQueryParams() {
+        Map<String, String> queryParams = super.getQueryParams();
+        if (versionId != null) queryParams.put("versionId", versionId);
+        return queryParams;
+    }
+
     public String getVersionId() {
-        return firstHeader(S3Constants.AMZ_VERSION_ID);
+        return versionId;
     }
 
-    @XmlTransient
-    public String getETag() {
-        return firstHeader(RestUtil.HEADER_ETAG);
-    }
-    @XmlTransient
-    public Date getExpirationDate() {
-        return S3ObjectMetadata.getExpirationDate(getHeaders());
+    public void setVersionId(String versionId) {
+        this.versionId = versionId;
     }
 
-    @XmlTransient
-    public String getExpirationRuleId() {
-        return S3ObjectMetadata.getExpirationRuleId(getHeaders());
-    }
-
-    @XmlTransient
-    public Long getAppendOffset() {
-        String appendOffset = firstHeader(RestUtil.EMC_APPEND_OFFSET);
-        return appendOffset == null ? null : Long.parseLong(appendOffset);
+    public GetObjectAclRequest withVersionId(String versionId) {
+        setVersionId(versionId);
+        return this;
     }
 }

@@ -26,8 +26,11 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.RestUtil;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 
 @XmlRootElement(name = "CompleteMultipartUploadResult")
 public class CompleteMultipartUploadResult {
@@ -66,6 +69,11 @@ public class CompleteMultipartUploadResult {
     @XmlElement(name = "ETag")
     public String getETag() {
         return eTag;
+    }
+
+    @XmlTransient
+    public String getRawETag() {
+        return RestUtil.stripQuotes(eTag);
     }
 
     public void setETag(String eTag) {

@@ -193,6 +193,11 @@ public interface S3Client {
     ListObjectsResult listObjects(ListObjectsRequest request);
 
     /**
+     * Gets the next page of objects using the results of a previous list-objects call
+     */
+    ListObjectsResult listMoreObjects(ListObjectsResult lastResult);
+
+    /**
      * Lists all versions of all objects in <code>bucketName</code> that start with <code>prefix</code>
      */
     ListVersionsResult listVersions(String bucketName, String prefix);
@@ -201,6 +206,11 @@ public interface S3Client {
      * Lists all versions of all objects in a bucket using the parameters specified in <code>request</code>
      */
     ListVersionsResult listVersions(ListVersionsRequest request);
+
+    /**
+     * Gets the next page of object versions using the results of a previous list-versions call
+     */
+    ListVersionsResult listMoreVersions(ListVersionsResult lastResult);
 
     /**
      * Creates or overwrites an object in <code>bucketName</code> named <code>key</code> containing <code>content</code>
@@ -314,6 +324,8 @@ public interface S3Client {
     void setObjectAcl(SetObjectAclRequest request);
 
     AccessControlList getObjectAcl(String bucketName, String key);
+
+    AccessControlList getObjectAcl(GetObjectAclRequest request);
 
     ListMultipartUploadsResult listMultipartUploads(String bucketName);
 

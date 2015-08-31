@@ -43,7 +43,7 @@ public class ListVersionsResult {
     private String versionIdMarker;
     private String nextKeyMarker;
     private String nextVersionIdMarker;
-    private Boolean truncated;
+    private boolean truncated;
     private List<AbstractVersion> versions = new ArrayList<AbstractVersion>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
 
@@ -129,11 +129,11 @@ public class ListVersionsResult {
     }
 
     @XmlElement(name = "IsTruncated")
-    public Boolean getTruncated() {
+    public boolean isTruncated() {
         return truncated;
     }
 
-    public void setTruncated(Boolean truncated) {
+    public void setTruncated(boolean truncated) {
         this.truncated = truncated;
     }
 

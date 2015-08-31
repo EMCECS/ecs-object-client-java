@@ -60,7 +60,7 @@ public class S3ObjectMetadata {
             objectMetadata.contentLength = Long.parseLong(RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_LENGTH));
         objectMetadata.contentMd5 = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_MD5);
         objectMetadata.contentType = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
-        objectMetadata.eTag = RestUtil.getFirstAsString(headers, RestUtil.HEADER_ETAG);
+        objectMetadata.eTag = RestUtil.getFirstAsString(headers, RestUtil.HEADER_ETAG, true);
         objectMetadata.httpExpires = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_EXPIRES));
         objectMetadata.lastModified = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_LAST_MODIFIED));
         objectMetadata.versionId = RestUtil.getFirstAsString(headers, S3Constants.AMZ_VERSION_ID);
@@ -76,8 +76,7 @@ public class S3ObjectMetadata {
             for (Object value : expValues) {
                 if (value.toString().startsWith(EXPIRY_DATE)) {
                     String expString = value.toString().substring(EXPIRY_DATE.length()); // after equals sign
-                    expString = expString.replaceFirst("^\"", "").replaceFirst("\"$", ""); // remove quotes
-                    return RestUtil.headerParse(expString);
+                    return RestUtil.headerParse(RestUtil.stripQuotes(expString)); // remove quotes
                 }
             }
         }
@@ -90,7 +89,7 @@ public class S3ObjectMetadata {
             for (Object value : expValues) {
                 if (value.toString().startsWith(RULE_ID)) {
                     String expString = value.toString().substring(RULE_ID.length()); // after equals sign
-                    return expString.replaceFirst("^\"", "").replaceFirst("\"$", ""); // remove quotes
+                    return RestUtil.stripQuotes(expString); // remove quotes
                 }
             }
         }
@@ -108,7 +107,7 @@ public class S3ObjectMetadata {
         return userMetadata;
     }
 
-    public static String getUserMetadataKey(String headerName) {
+    protected static String getUserMetadataKey(String headerName) {
         if (headerName.startsWith(S3Constants.AMZ_META_PREFIX)) {
             return headerName.substring(S3Constants.AMZ_META_PREFIX.length());
         }
@@ -241,9 +240,17 @@ public class S3ObjectMetadata {
         return userMetadata.get(name);
     }
 
+    public String getDecodedUserMetadata(String name) {
+        return RestUtil.urlDecode(getUserMetadata(name));
+    }
+
     public S3ObjectMetadata addUserMetadata(String name, String value) {
         userMetadata.put(name, value);
         return this;
+    }
+
+    public S3ObjectMetadata addEncodedUserMetadata(String name, String value) {
+        return addUserMetadata(name, RestUtil.urlEncode(value));
     }
 
     public S3ObjectMetadata withContentType(String contentType) {

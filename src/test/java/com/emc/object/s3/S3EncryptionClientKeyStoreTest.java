@@ -53,6 +53,11 @@ public class S3EncryptionClientKeyStoreTest extends S3EncryptionClientBasicTest 
     private BasicKeyProvider _keyProvider;
 
     @Override
+    protected String getTestBucketPrefix() {
+        return "s3-encryption-client-keystore-test";
+    }
+
+    @Override
     protected synchronized BasicKeyProvider getKeyProvider() throws Exception {
         if (_keyProvider == null) {
             String keystoreFile = "keystore.jks";

@@ -270,11 +270,6 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testInitiateListAbortMultipartUploads() throws Exception {
-    }
-
-    @Ignore
-    @Override
     public void testUpdateObjectWithRange() throws Exception {
     }
 
@@ -393,11 +388,6 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testCreateBucket() throws Exception {
-    }
-
-    @Ignore
-    @Override
     public void testBucketLocation() throws Exception {
     }
 
@@ -409,5 +399,25 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Ignore
     @Override
     public void testBucketVersions() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListObjects() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListAndReadVersions() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListObjectsWithPrefix() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testListVersionsPagingPrefixDelim() throws Exception {
     }
 }

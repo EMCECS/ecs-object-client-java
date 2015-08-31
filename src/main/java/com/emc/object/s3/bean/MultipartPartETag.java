@@ -26,7 +26,10 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.RestUtil;
+
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
 
 public class MultipartPartETag implements Comparable<MultipartPartETag> {
     private Integer partNumber;
@@ -57,6 +60,11 @@ public class MultipartPartETag implements Comparable<MultipartPartETag> {
     @XmlElement(name = "ETag")
     public String getETag() {
         return eTag;
+    }
+
+    @XmlTransient
+    public String getRawETag() {
+        return RestUtil.stripQuotes(eTag);
     }
 
     public void setETag(String eTag) {

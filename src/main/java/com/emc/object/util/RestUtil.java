@@ -83,10 +83,22 @@ public final class RestUtil {
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
 
     public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key) {
+        return getFirstAsString(multiValueMap, key, false);
+    }
+
+    public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key, boolean stripQuotes) {
         List<T> values = multiValueMap.get(key);
         if (values == null || values.isEmpty()) return null;
         Object value = values.get(0);
-        return value == null ? null : value.toString();
+        if (value == null) return null;
+        return stripQuotes ? stripQuotes(value.toString()) : value.toString();
+    }
+
+    public static String stripQuotes(String value) {
+        int start = 0, end = value.length();
+        if (value.charAt(0) == '"') start = 1;
+        if (value.charAt(value.length() - 1) == '"') end = value.length() - 1;
+        return value.substring(start, end);
     }
 
     public static void putSingle(Map<String, List<Object>> multiValueMap, String key, Object value) {
@@ -136,17 +148,27 @@ public final class RestUtil {
     }
 
     /**
-     * URL-encodes names and values
+     * @deprecated (2.0.4) use {@link #generateQueryString(Map, boolean)} instead
      */
     public static String generateQueryString(Map<String, String> parameterMap) {
+        return generateQueryString(parameterMap, true);
+    }
+
+    /**
+     * URL-encodes names and values
+     */
+    public static String generateQueryString(Map<String, String> parameterMap, boolean encodeParams) {
         StringBuilder query = new StringBuilder();
         if (parameterMap != null && !parameterMap.isEmpty()) {
             Iterator<String> paramI = parameterMap.keySet().iterator();
             while (paramI.hasNext()) {
                 String name = paramI.next();
-                query.append(urlEncode(name));
-                if (parameterMap.get(name) != null)
-                    query.append("=").append(urlEncode(parameterMap.get(name)));
+                if (encodeParams) query.append(urlEncode(name));
+                else query.append(name);
+                if (parameterMap.get(name) != null) {
+                    if (encodeParams) query.append("=").append(urlEncode(parameterMap.get(name)));
+                    else query.append("=").append(parameterMap.get(name));
+                }
                 if (paramI.hasNext()) query.append("&");
             }
         }
@@ -155,17 +177,6 @@ public final class RestUtil {
 
     public static String getRequestDate(long clockSkew) {
         return headerFormat(new Date(System.currentTimeMillis() + clockSkew));
-    }
-
-    public static String delimit(List<Object> values, String delimiter) {
-        if (values == null || values.isEmpty()) return null;
-        StringBuilder delimited = new StringBuilder();
-        Iterator<Object> valuesI = values.iterator();
-        while (valuesI.hasNext()) {
-            delimited.append(valuesI.next());
-            if (valuesI.hasNext()) delimited.append(delimiter);
-        }
-        return delimited.toString();
     }
 
     public static String headerFormat(Date date) {
@@ -216,8 +227,19 @@ public final class RestUtil {
             throws URISyntaxException {
         URI uri = new URI(scheme, null, host, port, path, query, fragment);
 
+        String uriString = uri.toASCIIString();
+
+        // replace double-slash with /%2f (workaround for apache client)
+        if (path != null && path.length() > 2 && path.charAt(0) == '/' && path.charAt(1) == '/') {
+            int doubleSlashIndex = uriString.indexOf("//");
+            if (scheme != null) doubleSlashIndex = uriString.indexOf("//", doubleSlashIndex + 2);
+            uriString = uriString.substring(0, doubleSlashIndex) + "/%2f" + uriString.substring(doubleSlashIndex + 2);
+        }
+
         // Special case to handle "+" characters that URI doesn't handle well.
-        return new URI(uri.toASCIIString().replace("+", "%2b"));
+        uriString = uriString.replace("+", "%2b");
+
+        return new URI(uriString);
     }
 
     public static URI replaceHost(URI uri, String host) throws URISyntaxException {

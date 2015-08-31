@@ -111,6 +111,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.serverClockSkew = other.serverClockSkew;
         this.userAgent = other.userAgent;
         this.geoPinningEnabled = other.geoPinningEnabled;
+        this.properties = new HashMap<String, Object>(other.properties);
     }
 
     public abstract Host resolveHost();

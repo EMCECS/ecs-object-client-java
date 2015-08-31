@@ -26,7 +26,10 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.RestUtil;
+
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.Date;
 
 public class S3Object {
@@ -56,11 +59,16 @@ public class S3Object {
     }
 
     @XmlElement(name = "ETag")
-    public String geteTag() {
+    public String getETag() {
         return eTag;
     }
 
-    public void seteTag(String eTag) {
+    @XmlTransient
+    public String getRawETag() {
+        return RestUtil.stripQuotes(eTag);
+    }
+
+    public void setETag(String eTag) {
         this.eTag = eTag;
     }
 

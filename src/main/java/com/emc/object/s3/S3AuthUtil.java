@@ -106,7 +106,7 @@ public final class S3AuthUtil {
 
         try {
             // we must manually append the query string to ensure nothing is re-encoded
-            return new URL(uri + "?" + RestUtil.generateQueryString(queryParams));
+            return new URL(uri + "?" + RestUtil.generateQueryString(queryParams, true));
         } catch (MalformedURLException e) {
             throw new RuntimeException("generated URL is not well-formed");
         }
@@ -149,7 +149,7 @@ public final class S3AuthUtil {
         // canonicalized headers
         SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
         for (String name : canonicalizedHeaders.keySet()) {
-            stringToSign.append(name).append(":").append(canonicalizedHeaders.get(name));
+            stringToSign.append(name).append(":").append(canonicalizedHeaders.get(name).trim());
             stringToSign.append("\n");
         }
 
@@ -177,7 +177,7 @@ public final class S3AuthUtil {
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
             if (lcHeader.startsWith(S3Constants.AMZ_PREFIX) || lcHeader.startsWith(RestUtil.EMC_PREFIX)) {
-                canonicalizedHeaders.put(lcHeader, RestUtil.delimit(headers.get(header), ","));
+                canonicalizedHeaders.put(lcHeader, trimAndJoin(headers.get(header), ","));
             }
         }
 
@@ -190,6 +190,17 @@ public final class S3AuthUtil {
         }
 
         return canonicalizedHeaders;
+    }
+
+    public static String trimAndJoin(List<Object> values, String delimiter) {
+        if (values == null || values.isEmpty()) return null;
+        StringBuilder delimited = new StringBuilder();
+        Iterator<Object> valuesI = values.iterator();
+        while (valuesI.hasNext()) {
+            delimited.append(valuesI.next().toString().trim());
+            if (valuesI.hasNext()) delimited.append(delimiter);
+        }
+        return delimited.toString();
     }
 
     public static String getSignature(String stringToSign, String secretKey) {
