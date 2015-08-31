@@ -276,84 +276,66 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.deleteBucketLifecycle(getTestBucket());
         Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
     }
-    
-    @Test 
-    public void testListObjectsLor() throws Exception {
-        ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
 
-        ListObjectsResult result = client.listObjects(request);
-        Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
-        List<S3Object> resultObjects = result.getObjects();
-        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
-
-        //TODO after createObject works need to test that the resultObjects list is correct
-    }
-    
     @Test
-    public void testListObjectsBucketName() throws Exception {
+    public void testListObjects() throws Exception {
+        String key = "foo", content = "Hello List!";
+        client.putObject(getTestBucket(), key, content, null);
+
         ListObjectsResult result = client.listObjects(getTestBucket());
-
         Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
+
         List<S3Object> resultObjects = result.getObjects();
         Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(1, resultObjects.size());
 
-        //TODO after createObject works need to test that the resultObjects list is correct
+        S3Object object = resultObjects.get(0);
+        Assert.assertEquals(key, object.getKey());
+        Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
     
     @Test
-    public void testListObjectsBucketNamePrefix() throws Exception {
-        l4j.debug("JMC Entered testListObjectsBucketNamePrefix");
-        String myPrefix = "testPrefix";
-        int numObjects = 10;
-        this.createTestObjects("testPrefix/", numObjects);
-        l4j.debug("JMC created all test objects. Now they will be listed");
-        ListObjectsResult result = client.listObjects(getTestBucket(), myPrefix);
+    public void testListObjectsWithPrefix() throws Exception {
+        String prefix = "testPrefix/", key = "foo", content = "Hello List Prefix!";
+        client.putObject(getTestBucket(), prefix + key, content, null);
+
+        // test different prefix
+        ListObjectsResult result = client.listObjects(getTestBucket(), "wrongPrefix/");
         Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
-        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, result.getObjects().size());
-        l4j.debug("JMC testListObjectsBucketNamePrefix succeeded. Going to print object names!!!!!");
-        l4j.debug(Integer.toString(result.getObjects().size()) + " were returned");
-        //List<S3Object> s3Objects = result.getObjects();
-        int tempInt = 0;
-        for (S3Object s3Object : result.getObjects()) {
-            l4j.debug("s3Object[" + Integer.toString(tempInt) + "]: " + s3Object.getKey());
-            tempInt++;
-        }
+        Assert.assertEquals(0, result.getObjects().size());
+
+        result = client.listObjects(getTestBucket(), prefix);
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals("The correct number of objects were NOT returned", 1, result.getObjects().size());
+
+        List<S3Object> resultObjects = result.getObjects();
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(1, resultObjects.size());
+
+        S3Object object = resultObjects.get(0);
+        Assert.assertEquals(prefix + key, object.getKey());
+        Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
 
-    /*
-     * just a basic listing of objects with paged results (ie no prefix matching)
-     */
     @Test
-    public void testListObjectsPaging1() throws Exception {
-        l4j.debug("JMC Entered testListObjectsBucketNamePrefix");
-        String myPrefix = "testPrefix";
+    public void testListObjectsPaging() throws Exception {
         int numObjects = 10;
-        int pageSize = 5;
-        int loopCnt = (numObjects+pageSize-1)/pageSize;
 
-        this.createTestObjects(myPrefix, numObjects);
-        l4j.debug("JMC created all test objects. Now they will be listed");
+        this.createTestObjects(null, numObjects);
 
-        List<S3Object> s3ObjectList = new ArrayList<S3Object>();
-        ListObjectsResult result;
-        ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
-        request.setMaxKeys(pageSize);
-        for (int i=0; i<loopCnt;i++) {
-            result = client.listObjects(request);
-            s3ObjectList.addAll(result.getObjects());
-            request.setMarker(result.getNextMarker());
-        }
+        List<S3Object> objects = new ArrayList<S3Object>();
+        ListObjectsResult result = null;
+        int requestCount = 0;
+        do {
+            if (result == null) result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMaxKeys(3));
+            else result = client.listMoreObjects(result);
+            objects.addAll(result.getObjects());
+            requestCount++;
+        } while (result.isTruncated());
 
-        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, s3ObjectList.size());
-        l4j.debug("JMC testListObjectsBucketNamePrefix succeeded. Going to print object names!!!!!");
-        l4j.debug(Integer.toString(s3ObjectList.size()) + " were returned");
-        //List<S3Object> s3Objects = result.getObjects();
-        int tempInt = 0;
-        for (S3Object s3Object : s3ObjectList) {
-            l4j.debug("s3Object[" + Integer.toString(tempInt) + "]: " + s3Object.getKey());
-            tempInt++;
-        }
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, objects.size());
+        Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
     @Test
@@ -379,51 +361,83 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateBucket() throws Exception {
-        String bn = getTestBucket();
-        //String bucketName = "TestBucket_" + UUID.randomUUID();
-        //client.createBucket(bucketName);
-        Assert.assertNotNull("testCreateBucket failed for bucket: " + bn,  client.bucketExists(bn));
-    }
-    
-    //tested in testGetBucketCors
-    //void setBucketCors(String bucketName, CorsConfiguration corsConfiguration);
-    
-    
-    //ListVersionsResult listVersions(String bucketName, String prefix);
-    @Test
-    public void testListVersions() throws Exception {
-        l4j.debug("JMC Entered testListVersions");
-        ListVersionsResult lvr = client.listVersions(getTestBucket(), getTestBucketPrefix());
-        Assert.assertNotNull(lvr.getVersions());
-        //List<AbstractVersion> vList = lvr.getVersions();
-        //l4j.debug("JMC vList.size() = " + vList.size());
-        Assert.assertNotNull(lvr.getBucketName());
-        //Assert.assertNotNull(lvr.getDelimiter());
-        //Assert.assertNotNull(lvr.getKeyMarker());
-        //Assert.assertNotNull(lvr.getNextKeyMarker());
-        Assert.assertNotNull(lvr.getPrefix());
-        //Assert.assertNotNull(lvr.getVersionIdMarker());
-        //Assert.assertNotNull(lvr.getCommonPrefixes());
-        //Assert.assertNotNull(lvr.getMaxKeys());
-        //Assert.assertNotNull(lvr.isTruncated());
+    public void testListAndReadVersions() throws Exception {
+        // turn on versioning first
+        client.setBucketVersioning(getTestBucket(),
+                new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
+        // create a few versions of the same key
+        String key = "prefix/foo", content = "Hello Versions!";
+        client.putObject(getTestBucket(), key, content, null);
+        client.deleteObject(getTestBucket(), key);
+        client.putObject(getTestBucket(), key, content, null);
+
+        // test different prefix
+        ListVersionsResult result = client.listVersions(getTestBucket(), "wrongPrefix/");
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals(0, result.getVersions().size());
+
+        result = client.listVersions(getTestBucket(), "prefix/");
+        Assert.assertNotNull(result.getVersions());
+        Assert.assertNotNull(result.getBucketName());
+
+        List<AbstractVersion> versions = result.getVersions();
+        Assert.assertNotNull(versions);
+        Assert.assertEquals(3, versions.size());
+
+        // should be version, delete-marker, version
+        Assert.assertTrue(versions.get(0) instanceof Version);
+        Assert.assertTrue(versions.get(1) instanceof DeleteMarker);
+        Assert.assertTrue(versions.get(2) instanceof Version);
+
+        for (AbstractVersion version : versions) {
+            Assert.assertEquals(key, version.getKey());
+            Assert.assertNotNull(version.getLastModified());
+            Assert.assertNotNull(version.getOwner());
+            Assert.assertNotNull(version.getVersionId());
+            if (version instanceof Version) {
+                Assert.assertEquals((long) content.length(), ((Version) version).getSize().longValue());
+                Assert.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
+                Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
+            }
+        }
     }
 
     @Test
-    public void testListVersionsReq() throws Exception {
-        ListVersionsRequest request = new ListVersionsRequest(getTestBucket());
-        request.setPrefix(getTestBucketPrefix());
-        ListVersionsResult lvr = client.listVersions(request);
-        Assert.assertNotNull(lvr.getBucketName());
-        //Assert.assertNotNull(lvr.getDelimiter());
-        //Assert.assertNotNull(lvr.getKeyMarker());
-        //Assert.assertNotNull(lvr.getNextKeyMarker());
-        Assert.assertNotNull(lvr.getPrefix());
-        //Assert.assertNotNull(lvr.getVersionIdMarker());
-        //Assert.assertNotNull(lvr.getCommonPrefixes());
-        //Assert.assertNotNull(lvr.getMaxKeys());
-        //Assert.assertNotNull(lvr.isTruncated());
-        Assert.assertNotNull(lvr.getVersions());
+    public void testListVersionsPagingPrefixDelim() throws Exception {
+        // turn on versioning first
+        client.setBucketVersioning(getTestBucket(),
+                new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
+        // create a few versions of the same key
+        String key = "prefix/foo", content = "Hello Versions!";
+        client.putObject(getTestBucket(), key, content, null);
+        client.deleteObject(getTestBucket(), key);
+        client.putObject(getTestBucket(), key, content, null);
+
+        // create key in sub-prefix
+        client.putObject(getTestBucket(), "prefix/prefix2/bar", content, null);
+        client.deleteObject(getTestBucket(), key);
+        client.putObject(getTestBucket(), "prefix/prefix2/bar", content, null);
+
+        ListVersionsRequest request = new ListVersionsRequest(getTestBucket()).withPrefix("prefix/")
+                .withDelimiter("/").withMaxKeys(2);
+        ListVersionsResult result = client.listVersions(request);
+
+        Assert.assertEquals(2, result.getVersions().size());
+        Assert.assertEquals(1, result.getCommonPrefixes().size());
+        Assert.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
+
+        List<AbstractVersion> versions = result.getVersions();
+        int callCount = 1;
+        while (result.isTruncated()) {
+            result = client.listMoreVersions(result);
+            versions.addAll(result.getVersions());
+            callCount++;
+        }
+
+        Assert.assertEquals(3, callCount);
+        Assert.assertEquals(6, versions.size());
     }
 
     protected void createTestObjects(String prefix, int numObjects) throws Exception {
@@ -437,25 +451,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    //TODO need to actually make these multi part uploads
-    //returns ArrayList of [ [uploadId,key],[uploadId,key]... ]
-    protected List<List<String>> createMultipartTestObjects(String prefix, int numObjects) throws Exception {
-        List<List<String>> upIds = new ArrayList<List<String>>();
-        ArrayList<String> tmp;
-        String objectName;
-
-        for(int i=0; i<numObjects; i++) {
-            objectName = "TestObject_" + UUID.randomUUID();
-            tmp = new ArrayList<String>();
-            tmp.add(client.initiateMultipartUpload(getTestBucket(), prefix + objectName));
-            tmp.add(prefix + objectName);
-            upIds.add(tmp);
-        }
-        return upIds;
-    }
-    
     @Test
-    public void testCreateReadObject() throws Exception {
+    public void testReadObject() throws Exception {
         String key1 = "/objectPrefix/testObject1";
         String key2 = "/objectPrefix/testObject2";
         String content1 = "Hello Object!", content2 = "Hello Object 2!!";
@@ -656,23 +653,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         VersioningConfiguration vcResult = client.getBucketVersioning(getTestBucket());
         Assert.assertEquals("status is wrong", vc.getStatus(), vcResult.getStatus());
     }
-
-    //TODO
-    //@Test
-    public void testInitiateListAbortMultipartUploads() throws Exception {
-        int numObjects = 2;
-        //String prefix = "multiPrefix/";
-        //List<List<String>> upIds = this.createMultipartTestObjects(prefix, numObjects);
-
-        ListMultipartUploadsResult result = client.listMultipartUploads(getTestBucket());
-        Assert.assertNotNull(result);
-        List<Upload> lu = result.getUploads();
-        Assert.assertEquals(numObjects, lu.size());
-    }
-
-    //TODO
-    // ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);
-
 
     @Test
     public void testSingleMultipartUploadMostSimpleOnePart() throws Exception {
@@ -920,16 +900,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.completeMultipartUpload(new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId).withParts(parts));
     }
 
-    //TODO
-    //@Test
-    public void testUpdateObject() throws Exception {
-        //create the initial object
-        client.putObject(getTestBucket(), "testObject1", "Hello Create!", "text/plain");
-
-        //TODO figure out this Range class thing
-        //client.updateObject(getTestBucket(), "testObect1", range, content);
-    }
-
     @Test
     public void testPutObject() throws Exception {
         String key = "objectKey";
@@ -1140,7 +1110,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
-
     @Test
     public void testCopyObjectSpaceBoth() throws Exception {
         String key1 = "source object space both";
@@ -1154,7 +1123,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
-
 
     @Test
     public void testCopyObjectChineseSrc() throws Exception {
@@ -1658,8 +1626,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
                 url.toString());
     }
-
-    //TODO: AccessControlList getObjectAcl(String bucketName, String key);
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
         Assert.assertEquals(acl1.getOwner(), acl2.getOwner());
