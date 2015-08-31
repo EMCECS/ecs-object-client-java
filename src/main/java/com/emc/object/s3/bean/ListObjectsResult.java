@@ -110,14 +110,6 @@ public class ListObjectsResult {
         this.nextMarker = nextMarker;
     }
 
-    /**
-     * @deprecated (2.0.4) use {@link #isTruncated()} instead
-     */
-    @XmlTransient
-    public Boolean getTruncated() {
-        return isTruncated();
-    }
-
     @XmlElement(name = "IsTruncated")
     public boolean isTruncated() {
         return truncated;

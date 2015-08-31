@@ -27,7 +27,6 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.Date;
 
 public abstract class AbstractVersion {
@@ -53,14 +52,6 @@ public abstract class AbstractVersion {
 
     public void setVersionId(String versionId) {
         this.versionId = versionId;
-    }
-
-    /**
-     * @deprecated (2.0.4) use {@link #isLatest()} instead
-     */
-    @XmlTransient
-    public Boolean getLatest() {
-        return isLatest();
     }
 
     @XmlElement(name = "IsLatest")

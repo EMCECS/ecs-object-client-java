@@ -28,20 +28,11 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
 
 @XmlRootElement(name = "Deleted")
 public class DeleteSuccess extends AbstractDeleteResult {
     private boolean deleteMarker;
     private String deleteMarkerVersionId;
-
-    /**
-     * @deprecated (2.0.4) use {@link #isDeleteMarker()} instead
-     */
-    @XmlTransient
-    public Boolean getDeleteMarker() {
-        return isDeleteMarker();
-    }
 
     @XmlElement(name = "DeleteMarker")
     public boolean isDeleteMarker() {

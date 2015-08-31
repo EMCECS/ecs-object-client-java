@@ -30,7 +30,6 @@ import com.emc.object.s3.request.EncodingType;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -130,14 +129,6 @@ public class ListPartsResult {
 
     public void setNextPartNumberMarker(String nextPartNumberMarker) {
         this.nextPartNumberMarker = nextPartNumberMarker;
-    }
-
-    /**
-     * @deprecated (2.0.4) use {@link #isTruncated()} instead
-     */
-    @XmlTransient
-    public Boolean getTruncated() {
-        return isTruncated();
     }
 
     @XmlElement(name = "IsTruncated")
