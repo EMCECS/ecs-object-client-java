@@ -167,7 +167,7 @@ public class S3AuthUtilTest {
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
 
         PresignedUrlRequest request = new PresignedUrlRequest(Method.GET, "johnsmith", "photos/puppy.jpg",
-                new Date(1175139620));
+                new Date(1175139620000L));
 
         String expectedUrl = "http://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
                 "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE" +

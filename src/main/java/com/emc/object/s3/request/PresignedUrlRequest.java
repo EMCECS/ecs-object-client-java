@@ -47,7 +47,7 @@ public class PresignedUrlRequest extends S3ObjectRequest {
     public Map<String, String> getQueryParams() {
         Map<String, String> queryParams = super.getQueryParams();
         if (versionId != null) queryParams.put(S3Constants.PARAM_VERSION_ID, versionId);
-        queryParams.put(S3Constants.PARAM_EXPIRES, Long.toString(expirationTime.getTime()));
+        queryParams.put(S3Constants.PARAM_EXPIRES, Long.toString(expirationTime.getTime() / 1000));
         for (ResponseHeaderOverride override : headerOverrides.keySet()) {
             queryParams.put(override.getQueryParam(), headerOverrides.get(override));
         }

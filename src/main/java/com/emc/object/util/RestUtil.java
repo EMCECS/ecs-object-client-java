@@ -136,17 +136,27 @@ public final class RestUtil {
     }
 
     /**
-     * URL-encodes names and values
+     * @deprecated (2.0.4) use {@link #generateQueryString(Map, boolean)} instead
      */
     public static String generateQueryString(Map<String, String> parameterMap) {
+        return generateQueryString(parameterMap, true);
+    }
+
+    /**
+     * URL-encodes names and values
+     */
+    public static String generateQueryString(Map<String, String> parameterMap, boolean encodeParams) {
         StringBuilder query = new StringBuilder();
         if (parameterMap != null && !parameterMap.isEmpty()) {
             Iterator<String> paramI = parameterMap.keySet().iterator();
             while (paramI.hasNext()) {
                 String name = paramI.next();
-                query.append(urlEncode(name));
-                if (parameterMap.get(name) != null)
-                    query.append("=").append(urlEncode(parameterMap.get(name)));
+                if (encodeParams) query.append(urlEncode(name));
+                else query.append(name);
+                if (parameterMap.get(name) != null) {
+                    if (encodeParams) query.append("=").append(urlEncode(parameterMap.get(name)));
+                    else query.append("=").append(parameterMap.get(name));
+                }
                 if (paramI.hasNext()) query.append("&");
             }
         }

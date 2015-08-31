@@ -115,7 +115,7 @@ public abstract class AbstractJerseyClient {
     }
 
     protected WebResource.Builder buildRequest(Client client, ObjectRequest request) {
-        URI uri = objectConfig.resolvePath(request.getPath(), request.getQueryString());
+        URI uri = objectConfig.resolvePath(request.getPath(), request.getQueryString(false));
         WebResource resource = client.resource(uri);
 
         // set properties

@@ -41,6 +41,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -354,42 +356,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    /*
-     * listing of objects with paged results only on those objects with matching prefix
-     */
     @Test
     public void testListObjectsPagingWithPrefix() throws Exception {
-        l4j.debug("JMC Entered testListObjectsBucketNamePrefix");
-        String myPrefixA = "testPrefixA";
-        String myPrefixB = "testPrefixB";
+        String myPrefix = "testPrefix/";
         int numObjects = 10;
-        int pageSize = 5;
-        int loopCnt = (numObjects+pageSize-1)/pageSize;
 
-        this.createTestObjects(myPrefixA, numObjects);
-        this.createTestObjects(myPrefixB, numObjects);
-        l4j.debug("JMC created all test objects. Now they will be listed");
+        this.createTestObjects(myPrefix, numObjects);
 
-        List<S3Object> s3ObjectList = new ArrayList<S3Object>();
-        ListObjectsResult result;
-        ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
-        request.setPrefix(myPrefixA);
-        request.setMaxKeys(pageSize);
-        for (int i=0; i<loopCnt;i++) {
-            result = client.listObjects(request);
-            s3ObjectList.addAll(result.getObjects());
-            request.setMarker(result.getNextMarker());
-        }
+        List<S3Object> objects = new ArrayList<S3Object>();
+        ListObjectsResult result = null;
+        int requestCount = 0;
+        do {
+            if (result == null) result = client.listObjects(new ListObjectsRequest(getTestBucket())
+                    .withPrefix(myPrefix).withMaxKeys(3));
+            else result = client.listMoreObjects(result);
+            objects.addAll(result.getObjects());
+            requestCount++;
+        } while (result.isTruncated());
 
-        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, s3ObjectList.size());
-        l4j.debug("JMC testListObjectsBucketNamePrefix succeeded. Going to print object names!!!!!");
-        l4j.debug(Integer.toString(s3ObjectList.size()) + " were returned");
-        //List<S3Object> s3Objects = result.getObjects();
-        int tempInt = 0;
-        for (S3Object s3Object : s3ObjectList) {
-            l4j.debug("s3Object[" + Integer.toString(tempInt) + "]: " + s3Object.getKey());
-            tempInt++;
-        }
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, objects.size());
+        Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
     @Test
@@ -1661,6 +1647,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.setCannedAcl(CannedAcl.BucketOwnerFullControl);
         client.setObjectAcl(request);
         //TODO - need to verify the returned acl is comparable to the canned acl
+    }
+
+    @Test
+    public void testPreSignedUrl() throws Exception {
+        S3Client tempClient = new S3JerseyClient(new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
+                .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"));
+        URL url = tempClient.getPresignedUrl("johnsmith", "photos/puppy.jpg", new Date(1175139620000L));
+        Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
+                "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
+                url.toString());
     }
 
     //TODO: AccessControlList getObjectAcl(String bucketName, String key);

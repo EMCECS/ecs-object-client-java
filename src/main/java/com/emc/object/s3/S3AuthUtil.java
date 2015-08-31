@@ -106,7 +106,7 @@ public final class S3AuthUtil {
 
         try {
             // we must manually append the query string to ensure nothing is re-encoded
-            return new URL(uri + "?" + RestUtil.generateQueryString(queryParams));
+            return new URL(uri + "?" + RestUtil.generateQueryString(queryParams, true));
         } catch (MalformedURLException e) {
             throw new RuntimeException("generated URL is not well-formed");
         }
