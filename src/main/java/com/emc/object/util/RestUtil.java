@@ -229,15 +229,18 @@ public final class RestUtil {
 
         String uriString = uri.toASCIIString();
 
+        // workaround for https://bugs.openjdk.java.net/browse/JDK-8037396
+        uriString = uriString.replace("[", "%5B").replace("]", "%5D");
+
         // replace double-slash with /%2f (workaround for apache client)
         if (path != null && path.length() > 2 && path.charAt(0) == '/' && path.charAt(1) == '/') {
             int doubleSlashIndex = uriString.indexOf("//");
             if (scheme != null) doubleSlashIndex = uriString.indexOf("//", doubleSlashIndex + 2);
-            uriString = uriString.substring(0, doubleSlashIndex) + "/%2f" + uriString.substring(doubleSlashIndex + 2);
+            uriString = uriString.substring(0, doubleSlashIndex) + "/%2F" + uriString.substring(doubleSlashIndex + 2);
         }
 
         // Special case to handle "+" characters that URI doesn't handle well.
-        uriString = uriString.replace("+", "%2b");
+        uriString = uriString.replace("+", "%2B");
 
         return new URI(uriString);
     }
