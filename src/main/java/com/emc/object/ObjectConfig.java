@@ -52,6 +52,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final String DEFAULT_USER_AGENT = String.format("ECS Java SDK%s Java/%s (%s; %s; %s)",
             (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : ""), System.getProperty("java.version"),
             System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"));
+    public static final int DEFAULT_CHUNKED_ENCODING_SIZE = 2 * 1024 * 1024; // 2MB to match ECS buffer size
 
     // NOTE: if you add a property, make sure you add it to the cloning constructor!
     private Protocol protocol;
@@ -65,6 +66,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private long serverClockSkew;
     private String userAgent = DEFAULT_USER_AGENT;
     private boolean geoPinningEnabled = false;
+    private int chunkedEncodingSize = DEFAULT_CHUNKED_ENCODING_SIZE;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -287,6 +289,14 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.geoPinningEnabled = geoPinningEnabled;
     }
 
+    public int getChunkedEncodingSize() {
+        return chunkedEncodingSize;
+    }
+
+    public void setChunkedEncodingSize(int chunkedEncodingSize) {
+        this.chunkedEncodingSize = chunkedEncodingSize;
+    }
+
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -362,6 +372,12 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     @SuppressWarnings("unchecked")
     public T withGeoPinningEnabled(boolean geoPinningEnabled) {
         setGeoPinningEnabled(geoPinningEnabled);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withChunkedEncodingSize(int chunkedEncodingSize) {
+        setChunkedEncodingSize(chunkedEncodingSize);
         return (T) this;
     }
 

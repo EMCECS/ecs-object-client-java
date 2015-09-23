@@ -32,10 +32,10 @@ import java.util.Random;
 
 public class RandomInputStream extends InputStream {
     Random random = new Random();
-    private int size;
+    private long size;
     private boolean closed = false;
 
-    public RandomInputStream(int size) {
+    public RandomInputStream(long size) {
         this.size = size;
     }
 
@@ -55,7 +55,7 @@ public class RandomInputStream extends InputStream {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
         if (size <= 0) return -1;
-        if (len > size) len = size;
+        if (len > size) len = (int) size;
         for (int i = 0; i < len; )
             for (int rnd = random.nextInt(), n = Math.min(len - i, 4); n-- > 0; rnd >>= 8)
                 b[off + i++] = (byte) rnd;
@@ -73,7 +73,7 @@ public class RandomInputStream extends InputStream {
 
     @Override
     public int available() throws IOException {
-        return size;
+        return (int) Math.min((long) Integer.MAX_VALUE, size);
     }
 
     @Override

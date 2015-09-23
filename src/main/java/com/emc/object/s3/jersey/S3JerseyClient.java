@@ -42,6 +42,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.config.ClientConfig;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -186,6 +187,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - RETRY CONFIG
             if (s3Config.isRetryEnabled())
                 smartConfig.setProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
+
+            // S.C. - CHUNKED ENCODING (match ECS buffer size)
+            smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
