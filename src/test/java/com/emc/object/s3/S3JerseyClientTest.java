@@ -34,6 +34,9 @@ import com.emc.object.s3.request.*;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -1011,6 +1014,24 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
         Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
+
+    @Test
+    public void testPutObjectWithMd5() throws Exception {
+        String key = "checksummed-object.txt";
+        String content = "Hello MD5!";
+        String md5B64 = Base64.encodeBase64String(DigestUtils.md5(content));
+
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content.getBytes("UTF-8"));
+        request.setObjectMetadata(new S3ObjectMetadata().withContentMd5(md5B64).withContentLength(content.length()));
+        client.putObject(request);
+
+        GetObjectResult<String> result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
+        Assert.assertEquals(content, result.getObject());
+
+        // apparently S3 does not return the Content-MD5 header; it's only used during a PUT object, so use ETag
+        Assert.assertEquals(md5B64, Base64.encodeBase64String(Hex.decodeHex(result.getObjectMetadata().getETag().toCharArray())));
+    }
+
     @Test
     public void testAppendObject() throws Exception {
         String key = "appendTest";

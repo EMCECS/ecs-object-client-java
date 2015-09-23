@@ -10,6 +10,9 @@
 	<logger name="org.apache.http.wire">
 		<level value="INFO" />
 	</logger>
+    <logger name="org.apache.http.headers">
+        <level value="INFO" />
+    </logger>
 
 	<root>
 		<priority value="INFO" />
