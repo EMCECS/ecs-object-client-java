@@ -420,4 +420,14 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Override
     public void testListVersionsPagingPrefixDelim() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void testPutObjectWithMd5() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testPutObjectWithRetentionPeriod() throws Exception {
+    }
 }

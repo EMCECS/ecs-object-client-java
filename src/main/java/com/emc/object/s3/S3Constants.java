@@ -55,6 +55,7 @@ public final class S3Constants {
     public static final String PARAM_ENCODING_TYPE = "encoding-type";
     public static final String PARAM_ENDPOINT = "endpoint";
     public static final String PARAM_EXPIRES = "Expires";
+    public static final String PARAM_IS_STALE_ALLOWED = "isstaleallowed";
     public static final String PARAM_KEY_MARKER = "key-marker";
     public static final String PARAM_LIMIT = "limit";
     public static final String PARAM_MARKER = "marker";

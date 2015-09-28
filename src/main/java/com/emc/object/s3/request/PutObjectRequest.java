@@ -44,6 +44,8 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     private Range range;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
+    private Long retentionPeriod;
+    private String retentionPolicy;
 
     public PutObjectRequest(String bucketName, String key, Object object) {
         super(Method.PUT, bucketName, key, null);
@@ -66,6 +68,8 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
+        if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
+        if (retentionPolicy != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_POLICY, retentionPolicy);
         return headers;
     }
 
@@ -125,6 +129,30 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         this.cannedAcl = cannedAcl;
     }
 
+    public Long getRetentionPeriod() {
+        return retentionPeriod;
+    }
+
+    /**
+     * Sets the retention (read-only) period for the object in seconds (after <code>retentionPeriod</code> seconds,
+     * you can modify or delete the object)
+     */
+    public void setRetentionPeriod(Long retentionPeriod) {
+        this.retentionPeriod = retentionPeriod;
+    }
+
+    public String getRetentionPolicy() {
+        return retentionPolicy;
+    }
+
+    /**
+     * Sets the name of the retention policy to apply to the object. Retention policies are defined within each
+     * namespace
+     */
+    public void setRetentionPolicy(String retentionPolicy) {
+        this.retentionPolicy = retentionPolicy;
+    }
+
     public PutObjectRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -142,6 +170,16 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
 
     public PutObjectRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
+        return this;
+    }
+
+    public PutObjectRequest withRetentionPeriod(long retentionPeriod) {
+        setRetentionPeriod(retentionPeriod);
+        return this;
+    }
+
+    public PutObjectRequest withRetentionPolicy(String retentionPolicy) {
+        setRetentionPolicy(retentionPolicy);
         return this;
     }
 }

@@ -59,7 +59,8 @@ public final class S3AuthUtil {
                 S3Constants.PARAM_RESPONSE_HEADER_CONTENT_LANGUAGE,
                 S3Constants.PARAM_RESPONSE_HEADER_CONTENT_TYPE,
                 S3Constants.PARAM_RESPONSE_HEADER_EXPIRES,
-                S3Constants.PARAM_ENDPOINT));
+                S3Constants.PARAM_ENDPOINT,
+                S3Constants.PARAM_IS_STALE_ALLOWED));
     }
 
     public static void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers,

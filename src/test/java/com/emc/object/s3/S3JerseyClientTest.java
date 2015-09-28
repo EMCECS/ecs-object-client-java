@@ -156,6 +156,48 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.cleanUpBucket(bucketName);
     }
 
+    @Test
+    public void testCreateFilesystemBucket() throws Exception {
+        String bucketName = getTestBucket() + "-x";
+
+        CreateBucketRequest request = new CreateBucketRequest(bucketName);
+        request.withFileSystemEnabled(true);
+        client.createBucket(request);
+
+        // there's no way to confirm this, so if no error is returned, assume success
+        client.deleteBucket(bucketName);
+    }
+
+    @Test
+    public void testCreateStaleReadAllowedBucket() throws Exception {
+        String bucketName = getTestBucket() + "-x";
+
+        CreateBucketRequest request = new CreateBucketRequest(bucketName);
+        request.withStaleReadAllowed(true);
+        client.createBucket(request);
+
+        // there's no way to confirm this, so if no error is returned, assume success
+        client.deleteBucket(bucketName);
+    }
+
+    @Test // also tests create-with-retention-period
+    public void testGetBucketInfo() throws Exception {
+        String bucketName = getTestBucket() + "-x";
+        long retentionPeriod = 3600; // 1 hour
+
+        CreateBucketRequest request = new CreateBucketRequest(bucketName);
+        request.withRetentionPeriod(retentionPeriod);
+        client.createBucket(request);
+
+        try {
+            BucketInfo info = client.getBucketInfo(bucketName);
+            Assert.assertEquals(bucketName, info.getBucketName());
+            Assert.assertEquals(new Long(retentionPeriod), info.getRetentionPeriod());
+        } finally {
+            client.deleteBucket(bucketName);
+        }
+    }
+
     // TODO: blocked by STORAGE-7816
     @Ignore
     @Test
@@ -1033,6 +1075,37 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testPutObjectWithRetentionPeriod() throws Exception {
+        String key = "object-in-retention";
+        String content = "Hello Retention!";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
+        request.withRetentionPeriod(2); // 2 seconds
+        client.putObject(request);
+
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        try {
+            client.putObject(getTestBucket(), key, "evil update!", null);
+            Assert.fail("object in retention allowed update");
+        } catch (S3Exception e) {
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
+        }
+
+        Thread.sleep(3000); // allow retention to expire
+        client.putObject(getTestBucket(), key, "good update!", null);
+    }
+
+    @Test
+    public void testPutObjectWithRetentionPolicy() throws Exception {
+        String key = "object-in-retention-policy";
+        String content = "Hello Retention Policy!";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
+        request.setRetentionPolicy("bad-policy");
+        client.putObject(request);
+
+        // no way to verify, so if no error is returned, assume success
+    }
+
+    @Test
     public void testAppendObject() throws Exception {
         String key = "appendTest";
         String content = "Hello";
@@ -1198,7 +1271,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Date originalModified = result.getObjectMetadata().getLastModified();
 
         // wait a tick so mtime is different
-        Thread.sleep(1000);
+        Thread.sleep(2000);
 
         client.copyObject(getTestBucket(), key, getTestBucket(), key);
         result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
@@ -1479,9 +1552,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     
     @Test
     public void testDeleteObjectsRequest() throws Exception {
-        //int numObjects = 5;
-        //this.createTestObjects(getTestBucket(), "delObjPrefex", numObjects);
-
         String content = "Object Content";
         String testObject1 = "/objectPrefix/testObject1";
         String testObject2 = "/objectPrefix/testObject2";
@@ -1646,6 +1716,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
                 "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
                 url.toString());
+    }
+
+    @Test
+    public void testStaleReadsAllowed() throws Exception {
+        // there's no way to test the result, so if no error is returned, assume success
+        client.setBucketStaleReadAllowed(getTestBucket(), true);
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

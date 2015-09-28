@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
@@ -35,6 +36,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.InputStream;
+import java.net.URI;
 
 public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
     @Override
@@ -45,7 +47,14 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
     @Override
     public void initClient() throws Exception {
         System.setProperty("http.maxConnections", "100");
-        client = new S3JerseyClient(createS3Config(), new URLConnectionClientHandler());
+        S3Config config = createS3Config();
+        String proxy = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
+        if (proxy != null) {
+            URI proxyUri = new URI(proxy);
+            System.setProperty("http.proxyHost", proxyUri.getHost());
+            System.setProperty("http.proxyPort", "" + proxyUri.getPort());
+        }
+        client = new S3JerseyClient(config, new URLConnectionClientHandler());
     }
 
     @Ignore // only run this test against a co-located ECS!
