@@ -24,32 +24,24 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3;
+package com.emc.object.s3.bean;
 
-import com.emc.object.ObjectConfig;
-import com.emc.object.s3.jersey.S3EncryptionClient;
-import com.emc.object.s3.jersey.S3JerseyClient;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import com.emc.object.ObjectResponse;
+import com.emc.object.util.RestUtil;
 
-import java.net.URI;
+public class BucketInfo extends ObjectResponse {
+    private String bucketName;
 
-public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
-    @Override
-    protected String getTestBucketPrefix() {
-        return "s3-encryption-url-connection-test";
+    public Long getRetentionPeriod() {
+        String value = firstHeader(RestUtil.EMC_RETENTION_PERIOD);
+        return (value == null) ? null : Long.parseLong(value);
     }
 
-    @Override
-    public void initClient() throws Exception {
-        System.setProperty("http.maxConnections", "100");
-        S3Config config = createS3Config();
-        String proxy = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
-        if (proxy != null) {
-            URI proxyUri = new URI(proxy);
-            System.setProperty("http.proxyHost", proxyUri.getHost());
-            System.setProperty("http.proxyPort", "" + proxyUri.getPort());
-        }
-        rclient = new S3JerseyClient(config, new URLConnectionClientHandler());
-        client = eclient = new S3EncryptionClient(config, new URLConnectionClientHandler(), createEncryptionConfig());
+    public String getBucketName() {
+        return bucketName;
+    }
+
+    public void setBucketName(String bucketName) {
+        this.bucketName = bucketName;
     }
 }

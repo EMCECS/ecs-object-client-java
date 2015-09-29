@@ -31,12 +31,17 @@ import com.emc.rest.smart.SizeOverrideWriter;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import org.apache.log4j.LogMF;
+import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.util.Map;
 
 public abstract class AbstractJerseyClient {
+    private static final Logger l4j = Logger.getLogger(AbstractJerseyClient.class);
+
     protected ObjectConfig objectConfig;
 
     protected AbstractJerseyClient(ObjectConfig objectConfig) {
@@ -64,12 +69,15 @@ public abstract class AbstractJerseyClient {
 
                     // if content-length is set (perhaps by user), force jersey to use it
                     if (entityRequest.getContentLength() != null) {
+                        LogMF.debug(l4j, "enabling content-length override ({0})", entityRequest.getContentLength());
                         SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
 
-                        // otherwise chunked encoding will be used. if the request does not support it, turn on
-                        // buffering in the apache client (will set content length from buffered write)
+                        // otherwise chunked encoding will be used. if the request does not support it, try to ensure
+                        // that the entity is buffered (will set content length from buffered write)
                     } else if (!entityRequest.isChunkable()) {
+                        l4j.debug("no content-length and request is not chunkable, attempting to enable buffering");
                         request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
+                        request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, null);
                     }
                 } else {
 

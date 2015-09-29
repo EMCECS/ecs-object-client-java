@@ -43,6 +43,8 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     private AccessControlList acl;
     private String vPoolId;
     private Boolean fileSystemEnabled;
+    private Boolean staleReadAllowed;
+    private Long retentionPeriod;
 
     public CreateBucketRequest(String bucketName) {
         super(Method.PUT, bucketName, "", null);
@@ -56,6 +58,8 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         if (acl != null) headers.putAll(acl.toHeaders());
         if (vPoolId != null) RestUtil.putSingle(headers, RestUtil.EMC_VPOOL, vPoolId);
         if (fileSystemEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabled);
+        if (staleReadAllowed != null) RestUtil.putSingle(headers, RestUtil.EMC_STALE_READ_ALLOWED, staleReadAllowed);
+        if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
 
         return headers;
     }
@@ -88,8 +92,39 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         return fileSystemEnabled;
     }
 
+    /**
+     * Sets whether the bucket can be access via filesystem (i.e. HDFS). This will enable some internal semantics for
+     * directories and may affect other features (i.e.
+     * {@link com.emc.object.s3.S3Client#setBucketStaleReadAllowed(String, boolean) TSO support})
+     */
     public void setFileSystemEnabled(Boolean fileSystemEnabled) {
         this.fileSystemEnabled = fileSystemEnabled;
+    }
+
+    public Boolean getStaleReadAllowed() {
+        return staleReadAllowed;
+    }
+
+    /**
+     * Sets whether stale reads are allowed on the bucket
+     *
+     * @see com.emc.object.s3.S3Client#setBucketStaleReadAllowed(String, boolean)
+     */
+    public void setStaleReadAllowed(Boolean staleReadAllowed) {
+        this.staleReadAllowed = staleReadAllowed;
+    }
+
+    public Long getRetentionPeriod() {
+        return retentionPeriod;
+    }
+
+    /**
+     * Enables a default retention period that will be applied to all objects created in the bucket
+     *
+     * @param retentionPeriod The default number of seconds each object will be in retention after creation
+     */
+    public void setRetentionPeriod(Long retentionPeriod) {
+        this.retentionPeriod = retentionPeriod;
     }
 
     public CreateBucketRequest withCannedAcl(CannedAcl cannedAcl) {
@@ -107,8 +142,18 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         return this;
     }
 
-    public CreateBucketRequest withFileSystemEnabled(Boolean fileSystemEnabled) {
+    public CreateBucketRequest withFileSystemEnabled(boolean fileSystemEnabled) {
         setFileSystemEnabled(fileSystemEnabled);
+        return this;
+    }
+
+    public CreateBucketRequest withStaleReadAllowed(boolean staleReadAllowed) {
+        setStaleReadAllowed(staleReadAllowed);
+        return this;
+    }
+
+    public CreateBucketRequest withRetentionPeriod(long retentionPeriod) {
+        setRetentionPeriod(retentionPeriod);
         return this;
     }
 }

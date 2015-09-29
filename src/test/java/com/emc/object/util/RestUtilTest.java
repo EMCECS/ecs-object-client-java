@@ -26,9 +26,13 @@
  */
 package com.emc.object.util;
 
+import com.emc.object.Method;
+import com.emc.object.s3.S3Config;
+import com.emc.object.s3.request.S3ObjectRequest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URI;
 import java.util.Map;
 
 public class RestUtilTest {
@@ -121,5 +125,23 @@ public class RestUtilTest {
         Assert.assertEquals("", parameters.get("yo"));
         Assert.assertEquals("bravo", parameters.get("alpha"));
         Assert.assertEquals(null, parameters.get("bogus"));
+    }
+
+    @Test
+    public void testReplacePath() throws Exception {
+        String host = "http://foo.com";
+        String bucket = "foo-bar";
+        String key = "foo/[ test spaces ]/bar";
+        String query = "prefix=CS_Archive2_Copy/Screens/[ Archived Toolbox ]/Country Flags";
+
+        S3Config config = new S3Config(new URI(host));
+        S3ObjectRequest request = new S3ObjectRequest(Method.GET, bucket, key, null);
+        URI uri = config.resolvePath(request.getPath(), query);
+        String post = "http://foo.com/foo-bar/foo/%5B%20test%20spaces%20%5D/bar?prefix=CS_Archive2_Copy/Screens/%5B%20Archived%20Toolbox%20%5D/Country%20Flags";
+        Assert.assertEquals(new URI(post), RestUtil.replacePath(uri, "/" + bucket + "/" + key));
+    }
+
+    private String encodePath(String path) {
+        return RestUtil.urlEncode(path).replace("%2F", "/");
     }
 }

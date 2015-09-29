@@ -42,11 +42,14 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.config.ClientConfig;
 
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URL;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Reference implementation of S3Client.
@@ -187,6 +190,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             if (s3Config.isRetryEnabled())
                 smartConfig.setProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
 
+            // S.C. - CHUNKED ENCODING (match ECS buffer size)
+            smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
+
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
             if (clientHandler == null) {
@@ -286,6 +292,14 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public BucketInfo getBucketInfo(String bucketName) {
+        BucketInfo result = new BucketInfo();
+        result.setBucketName(bucketName);
+        fillResponseEntity(result, executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null)));
+        return result;
+    }
+
+    @Override
     public void deleteBucket(String bucketName) {
         executeAndClose(client, new GenericBucketRequest(Method.DELETE, bucketName, null));
     }
@@ -374,6 +388,19 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public VersioningConfiguration getBucketVersioning(String bucketName) {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "versioning");
         return executeRequest(client, request, VersioningConfiguration.class);
+    }
+
+    @Override
+    public void setBucketStaleReadAllowed(String bucketName, final boolean staleReadAllowed) {
+        ObjectRequest request = new GenericBucketRequest(Method.PUT, bucketName, S3Constants.PARAM_IS_STALE_ALLOWED) {
+            @Override
+            public Map<String, List<Object>> getHeaders() {
+                Map<String, List<Object>> headers = super.getHeaders();
+                RestUtil.putSingle(headers, RestUtil.EMC_STALE_READ_ALLOWED, staleReadAllowed);
+                return headers;
+            }
+        };
+        executeAndClose(client, request);
     }
 
     @Override

@@ -90,6 +90,11 @@ public interface S3Client {
     void createBucket(CreateBucketRequest request);
 
     /**
+     * Gets information about a bucket
+     */
+    BucketInfo getBucketInfo(String bucketName);
+
+    /**
      * Deletes <code>bucketName</code>. The bucket must be empty of all objects and versions before it can be deleted
      */
     void deleteBucket(String bucketName);
@@ -176,6 +181,14 @@ public interface S3Client {
      * Retrieves the versioning status of <code>bucketName</code> (none, enabled or suspended)
      */
     VersioningConfiguration getBucketVersioning(String bucketName);
+
+    /**
+     * Sets whether stale reads are allowed on <code>bucketName</code>. If true, during a temporary site outage (TSO),
+     * objects in the bucket may still be read from secondary sites, but these reads are not guaranteed to be strongly
+     * consistent (they may be stale if the primary site is inaccessible). Note that stale reads are <strong>not</strong>
+     * supported on {@link CreateBucketRequest#setFileSystemEnabled(Boolean) filesystem} buckets.
+     */
+    void setBucketStaleReadAllowed(String bucketName, boolean staleReadsAllowed);
 
     /**
      * Lists all objects in <code>bucketName</code> with no restrictions

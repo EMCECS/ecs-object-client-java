@@ -60,6 +60,9 @@ public final class RestUtil {
     public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
     public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
     public static final String EMC_VPOOL = EMC_PREFIX + "vpool";
+    public static final String EMC_STALE_READ_ALLOWED = EMC_PREFIX + "is-stale-allowed";
+    public static final String EMC_RETENTION_PERIOD = EMC_PREFIX + "retention-period";
+    public static final String EMC_RETENTION_POLICY = EMC_PREFIX + "retention-policy";
 
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
     public static final String TYPE_APPLICATION_XML = "application/xml";
@@ -229,15 +232,18 @@ public final class RestUtil {
 
         String uriString = uri.toASCIIString();
 
+        // workaround for https://bugs.openjdk.java.net/browse/JDK-8037396
+        uriString = uriString.replace("[", "%5B").replace("]", "%5D");
+
         // replace double-slash with /%2f (workaround for apache client)
         if (path != null && path.length() > 2 && path.charAt(0) == '/' && path.charAt(1) == '/') {
             int doubleSlashIndex = uriString.indexOf("//");
             if (scheme != null) doubleSlashIndex = uriString.indexOf("//", doubleSlashIndex + 2);
-            uriString = uriString.substring(0, doubleSlashIndex) + "/%2f" + uriString.substring(doubleSlashIndex + 2);
+            uriString = uriString.substring(0, doubleSlashIndex) + "/%2F" + uriString.substring(doubleSlashIndex + 2);
         }
 
         // Special case to handle "+" characters that URI doesn't handle well.
-        uriString = uriString.replace("+", "%2b");
+        uriString = uriString.replace("+", "%2B");
 
         return new URI(uriString);
     }
