@@ -635,6 +635,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         out.close();
 
         LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
 
         // multipart
         uploader.doMultipartUpload();
@@ -646,6 +647,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // parallel byte-range (also test metadata)
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
         uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
 
@@ -656,8 +658,38 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata = new S3ObjectMetadata();
         objectMetadata.withContentLength(size);
         uploader = new LargeFileUploader(client, getTestBucket(), key + ".2", file);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
+    }
+
+    @Test
+    public void testLargeFileUploaderStream() throws Exception {
+        String key = "large-file-uploader-stream.bin";
+        int size = 20 * 1024 * 1024 + 123; // > 20MB
+        byte[] data = new byte[size];
+        new Random().nextBytes(data);
+
+        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key,
+                new ByteArrayInputStream(data), size);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
+
+        // multipart
+        uploader.doMultipartUpload();
+
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+
+        client.deleteObject(getTestBucket(), key);
+
+        // parallel byte-range (also test metadata)
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
+        uploader = new LargeFileUploader(client, getTestBucket(), key, new ByteArrayInputStream(data), size);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
+        uploader.setObjectMetadata(objectMetadata);
+        uploader.doByteRangeUpload();
+
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
     }
 
     @Test

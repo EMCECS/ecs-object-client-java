@@ -32,10 +32,12 @@ import com.emc.object.s3.bean.CannedAcl;
 import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
+import com.emc.rest.util.SizedInputStream;
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
@@ -55,6 +57,7 @@ public class LargeFileUploader implements Runnable {
     public static final int DEFAULT_THREADS = 8;
 
     public static final long MIN_PART_SIZE = 4 * 1024 * 1024; // 4MB
+    public static final long DEFAULT_PART_SIZE = 128 * 1024 * 1024; // 128MB
     public static final int MAX_PARTS = 10000;
 
     private S3Client s3Client;
@@ -64,7 +67,9 @@ public class LargeFileUploader implements Runnable {
     private AccessControlList acl;
     private CannedAcl cannedAcl;
     private File file;
-    private Long partSize;
+    private InputStream stream;
+    private long fullSize;
+    private Long partSize = DEFAULT_PART_SIZE;
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
 
@@ -79,33 +84,21 @@ public class LargeFileUploader implements Runnable {
         this.file = file;
     }
 
+    public LargeFileUploader(S3Client s3Client, String bucket, String key, InputStream stream, long size) {
+        this.s3Client = s3Client;
+        this.bucket = bucket;
+        this.key = key;
+        this.stream = stream;
+        this.fullSize = size;
+    }
+
     @Override
     public void run() {
         doMultipartUpload();
     }
 
     public void doMultipartUpload() {
-
-        // sanity checks
-        if (!file.exists() || !file.canRead())
-            throw new IllegalArgumentException("cannot read file: " + file.getPath());
-
-        // make sure content-length isn't set
-        if (objectMetadata != null) objectMetadata.setContentLength(null);
-
-        long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
-        l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
-
-        if (partSize == null) partSize = minPartSize;
-        if (partSize < minPartSize) {
-            l4j.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
-                    partSize / 1024, minPartSize / 1024));
-            partSize = minPartSize;
-        }
-
-        // set up thread pool
-        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
-        List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
+        configure();
 
         // initiate MP upload
         InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucket, key);
@@ -114,15 +107,21 @@ public class LargeFileUploader implements Runnable {
         request.setCannedAcl(cannedAcl);
         String uploadId = s3Client.initiateMultipartUpload(request).getUploadId();
 
+        List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
         try {
             // submit all upload tasks
-            UploadFilePartRequest partRequest;
+            UploadPartRequest partRequest;
             int partNumber = 1;
             long offset = 0, length = partSize;
-            while (offset < file.length()) {
-                if (offset + length > file.length()) length = file.length() - offset;
-                partRequest = new UploadFilePartRequest(bucket, key, uploadId, partNumber++);
-                partRequest.withFile(file).withOffset(offset).withLength(length);
+            while (offset < fullSize) {
+                if (offset + length > fullSize) length = fullSize - offset;
+                if (file != null) {
+                    partRequest = new UploadFilePartRequest(bucket, key, uploadId, partNumber++)
+                            .withFile(file).withOffset(offset).withLength(length);
+                } else {
+                    partRequest = new UploadPartRequest(bucket, key, uploadId, partNumber++,
+                            new SizedInputStream(stream, length)).withContentLength(length);
+                }
                 futures.add(executorService.submit(new UploadPartTask(partRequest)));
                 offset += length;
             }
@@ -150,27 +149,7 @@ public class LargeFileUploader implements Runnable {
     }
 
     public void doByteRangeUpload() {
-
-        // sanity checks
-        if (!file.exists() || !file.canRead())
-            throw new IllegalArgumentException("cannot read file: " + file.getPath());
-
-        // make sure content-length isn't set
-        if (objectMetadata != null) objectMetadata.setContentLength(null);
-
-        long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
-        l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
-
-        if (partSize == null) partSize = minPartSize;
-        if (partSize < minPartSize) {
-            l4j.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
-                    partSize / 1024, minPartSize / 1024));
-            partSize = minPartSize;
-        }
-
-        // set up thread pool
-        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
-        List<Future> futures = new ArrayList<Future>();
+        configure();
 
         // create empty object (sets metadata/acl)
         PutObjectRequest request = new PutObjectRequest(bucket, key, null);
@@ -179,15 +158,21 @@ public class LargeFileUploader implements Runnable {
         request.setCannedAcl(cannedAcl);
         s3Client.putObject(request);
 
+        List<Future> futures = new ArrayList<Future>();
         try {
             // submit all upload tasks
             PutObjectRequest rangeRequest;
             long offset = 0, length = partSize;
-            while (offset < file.length()) {
-                if (offset + length > file.length()) length = file.length() - offset;
+            while (offset < fullSize) {
+                if (offset + length > fullSize) length = fullSize - offset;
                 Range range = Range.fromOffsetLength(offset, length);
-                InputStreamSegment segment = new InputStreamSegment(new FileInputStream(file), offset, length);
-                rangeRequest = new PutObjectRequest(bucket, key, segment).withRange(range);
+                InputStream segmentStream;
+                if (file != null) {
+                    segmentStream = new InputStreamSegment(new FileInputStream(file), offset, length);
+                } else {
+                    segmentStream = new SizedInputStream(stream, length);
+                }
+                rangeRequest = new PutObjectRequest(bucket, key, segmentStream).withRange(range);
                 futures.add(executorService.submit(new PutObjectTask(rangeRequest)));
                 offset += length;
             }
@@ -209,6 +194,44 @@ public class LargeFileUploader implements Runnable {
         }
     }
 
+    protected void configure() {
+
+        // sanity checks
+        if (file != null) {
+            if (!file.exists() || !file.canRead())
+                throw new IllegalArgumentException("cannot read file: " + file.getPath());
+
+            fullSize = file.length();
+        } else {
+            if (stream == null)
+                throw new IllegalArgumentException("must specify a file or stream to read");
+
+            // make sure size is set
+            if (fullSize <= 0)
+                throw new IllegalArgumentException("size must be specified for stream");
+
+            // must read stream sequentially
+            executorService = null;
+            threads = 1;
+        }
+
+        // make sure content-length isn't set
+        if (objectMetadata != null) objectMetadata.setContentLength(null);
+
+        long minPartSize = Math.max(MIN_PART_SIZE, fullSize / MAX_PARTS + 1);
+        l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
+
+        if (partSize == null) partSize = minPartSize;
+        if (partSize < minPartSize) {
+            l4j.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
+                    partSize / 1024, minPartSize / 1024));
+            partSize = minPartSize;
+        }
+
+        // set up thread pool
+        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
+    }
+
     public S3Client getS3Client() {
         return s3Client;
     }
@@ -223,6 +246,10 @@ public class LargeFileUploader implements Runnable {
 
     public File getFile() {
         return file;
+    }
+
+    public InputStream getStream() {
+        return stream;
     }
 
     public S3ObjectMetadata getObjectMetadata() {
