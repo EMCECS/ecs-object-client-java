@@ -50,6 +50,11 @@ public class UploadFilePartRequest extends UploadPartRequest {
         }
     }
 
+    @Override
+    public Long getContentLength() {
+        return length;
+    }
+
     public File getFile() {
         return file;
     }
