@@ -635,10 +635,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         out.close();
 
         LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
 
         // multipart
         uploader.doMultipartUpload();
 
+        Assert.assertEquals(size, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
 
         client.deleteObject(getTestBucket(), key);
@@ -646,9 +649,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // parallel byte-range (also test metadata)
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
         uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
 
+        Assert.assertEquals(size, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
         Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
 
@@ -656,8 +662,42 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata = new S3ObjectMetadata();
         objectMetadata.withContentLength(size);
         uploader = new LargeFileUploader(client, getTestBucket(), key + ".2", file);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
+    }
+
+    @Test
+    public void testLargeFileUploaderStream() throws Exception {
+        String key = "large-file-uploader-stream.bin";
+        int size = 20 * 1024 * 1024 + 123; // > 20MB
+        byte[] data = new byte[size];
+        new Random().nextBytes(data);
+
+        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key,
+                new ByteArrayInputStream(data), size);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
+
+        // multipart
+        uploader.doMultipartUpload();
+
+        Assert.assertEquals(size, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+
+        client.deleteObject(getTestBucket(), key);
+
+        // parallel byte-range (also test metadata)
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
+        uploader = new LargeFileUploader(client, getTestBucket(), key, new ByteArrayInputStream(data), size);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
+        uploader.setObjectMetadata(objectMetadata);
+        uploader.doByteRangeUpload();
+
+        Assert.assertEquals(size, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
     }
 
     @Test
@@ -1722,6 +1762,53 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testStaleReadsAllowed() throws Exception {
         // there's no way to test the result, so if no error is returned, assume success
         client.setBucketStaleReadAllowed(getTestBucket(), true);
+    }
+
+    @Test
+    public void testMpuAbortInMiddle() throws Exception {
+        String key = "mpu-abort-test";
+        int partSize = 2 * 1024 * 1024;
+        byte[] data = new byte[9 * 1024 * 1024];
+        new Random().nextBytes(data);
+
+        // init
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        // upload parts in background threads
+        ExecutorService service = Executors.newFixedThreadPool(5);
+        List<Future> futures = new ArrayList<Future>();
+        int partNum = 1;
+        for (int offset = 0; offset < data.length; offset += partSize) {
+            int length = data.length - offset;
+            if (length > partSize) length = partSize;
+            final UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, partNum++,
+                    Arrays.copyOfRange(data, offset, offset + length));
+            futures.add(service.submit(new Runnable() {
+                @Override
+                public void run() {
+                    client.uploadPart(request);
+                }
+            }));
+        }
+
+        // abort while threads are uploading
+        client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
+
+        // let threads finish
+        String errorMessage = null;
+        for (Future future : futures) {
+            try {
+                future.get();
+            } catch (ExecutionException e) {
+                if (!(e.getCause() instanceof S3Exception)) throw e;
+                S3Exception se = (S3Exception) e.getCause();
+                if (!"NoSuchUpload".equals(se.getErrorCode()) && !"NoSuchKey".equals(se.getErrorCode()))
+                    errorMessage = se.getErrorCode() + ": " + se.getMessage();
+            }
+        }
+        Assert.assertNull(errorMessage, errorMessage);
+
+        Assert.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

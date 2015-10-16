@@ -29,13 +29,16 @@ package com.emc.object.s3;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.CompleteMultipartUploadResult;
 import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
+import com.emc.rest.util.SizedInputStream;
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
@@ -55,6 +58,7 @@ public class LargeFileUploader implements Runnable {
     public static final int DEFAULT_THREADS = 8;
 
     public static final long MIN_PART_SIZE = 4 * 1024 * 1024; // 4MB
+    public static final long DEFAULT_PART_SIZE = 128 * 1024 * 1024; // 128MB
     public static final int MAX_PARTS = 10000;
 
     private S3Client s3Client;
@@ -64,9 +68,15 @@ public class LargeFileUploader implements Runnable {
     private AccessControlList acl;
     private CannedAcl cannedAcl;
     private File file;
-    private Long partSize;
+    private InputStream stream;
+    private boolean closeStream = true;
+    private long fullSize;
+    private Long partSize = DEFAULT_PART_SIZE;
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
+
+    private long bytesTransferred;
+    private String eTag;
 
     /**
      * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
@@ -79,51 +89,47 @@ public class LargeFileUploader implements Runnable {
         this.file = file;
     }
 
+    public LargeFileUploader(S3Client s3Client, String bucket, String key, InputStream stream, long size) {
+        this.s3Client = s3Client;
+        this.bucket = bucket;
+        this.key = key;
+        this.stream = stream;
+        this.fullSize = size;
+    }
+
     @Override
     public void run() {
         doMultipartUpload();
     }
 
     public void doMultipartUpload() {
-
-        // sanity checks
-        if (!file.exists() || !file.canRead())
-            throw new IllegalArgumentException("cannot read file: " + file.getPath());
-
-        // make sure content-length isn't set
-        if (objectMetadata != null) objectMetadata.setContentLength(null);
-
-        long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
-        l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
-
-        if (partSize == null) partSize = minPartSize;
-        if (partSize < minPartSize) {
-            l4j.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
-                    partSize / 1024, minPartSize / 1024));
-            partSize = minPartSize;
-        }
-
-        // set up thread pool
-        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
-        List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
+        configure();
 
         // initiate MP upload
-        InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucket, key);
-        request.setObjectMetadata(objectMetadata);
-        request.setAcl(acl);
-        request.setCannedAcl(cannedAcl);
-        String uploadId = s3Client.initiateMultipartUpload(request).getUploadId();
+        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
+        initRequest.setObjectMetadata(objectMetadata);
+        initRequest.setAcl(acl);
+        initRequest.setCannedAcl(cannedAcl);
+        String uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
 
+        List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
+        List<SizedInputStream> segmentStreams = new ArrayList<SizedInputStream>();
         try {
             // submit all upload tasks
-            UploadFilePartRequest partRequest;
             int partNumber = 1;
             long offset = 0, length = partSize;
-            while (offset < file.length()) {
-                if (offset + length > file.length()) length = file.length() - offset;
-                partRequest = new UploadFilePartRequest(bucket, key, uploadId, partNumber++);
-                partRequest.withFile(file).withOffset(offset).withLength(length);
+            while (offset < fullSize) {
+                if (offset + length > fullSize) length = fullSize - offset;
+
+                SizedInputStream segmentStream = file != null
+                        ? new InputStreamSegment(new FileInputStream(file), offset, length)
+                        : new SizedInputStream(stream, length);
+                segmentStreams.add(segmentStream);
+
+                UploadPartRequest partRequest = new UploadPartRequest(bucket, key, uploadId, partNumber++, segmentStream);
+                partRequest.setContentLength(length);
                 futures.add(executorService.submit(new UploadPartTask(partRequest)));
+
                 offset += length;
             }
 
@@ -134,31 +140,128 @@ public class LargeFileUploader implements Runnable {
             }
 
             // complete MP upload
-            s3Client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts));
+            CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
+            CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(compRequest);
+            eTag = result.getETag();
 
         } catch (Exception e) {
 
             // abort MP upload
-            s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+            try {
+                s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+            } catch (Throwable t) {
+                l4j.warn("could not abort upload after failure", t);
+            }
             if (e instanceof RuntimeException) throw (RuntimeException) e;
-            throw new RuntimeException("error uploading file", e);
+            throw new RuntimeException("error during upload", e);
         } finally {
+            for (SizedInputStream segmentStream : segmentStreams) {
+                bytesTransferred += segmentStream.getRead();
+            }
 
             // make sure all spawned threads are shut down
             executorService.shutdown();
+
+            // make sure we close the input stream if necessary
+            if (stream != null && closeStream) {
+                try {
+                    stream.close();
+                } catch (Throwable t) {
+                    l4j.warn("could not close stream", t);
+                }
+            }
         }
     }
 
     public void doByteRangeUpload() {
+        configure();
+
+        // create empty object (sets metadata/acl)
+        PutObjectRequest request = new PutObjectRequest(bucket, key, null);
+        request.setObjectMetadata(objectMetadata);
+        request.setAcl(acl);
+        request.setCannedAcl(cannedAcl);
+        s3Client.putObject(request);
+
+        List<Future<String>> futures = new ArrayList<Future<String>>();
+        List<SizedInputStream> segmentStreams = new ArrayList<SizedInputStream>();
+        try {
+            // submit all upload tasks
+            PutObjectRequest rangeRequest;
+            long offset = 0, length = partSize;
+            while (offset < fullSize) {
+                if (offset + length > fullSize) length = fullSize - offset;
+                Range range = Range.fromOffsetLength(offset, length);
+
+                SizedInputStream segmentStream = file != null
+                        ? new InputStreamSegment(new FileInputStream(file), offset, length)
+                        : new SizedInputStream(stream, length);
+                segmentStreams.add(segmentStream);
+
+                rangeRequest = new PutObjectRequest(bucket, key, segmentStream).withRange(range);
+                futures.add(executorService.submit(new PutObjectTask(rangeRequest)));
+
+                offset += length;
+            }
+
+            // wait for threads to finish
+            for (Future<String> future : futures) {
+                eTag = future.get();
+            }
+        } catch (Exception e) {
+
+            // delete object
+            try {
+                s3Client.deleteObject(bucket, key);
+            } catch (Throwable t) {
+                l4j.warn("could not delete object after failure", t);
+            }
+            if (e instanceof RuntimeException) throw (RuntimeException) e;
+            throw new RuntimeException("error during upload", e);
+        } finally {
+            for (SizedInputStream segmentStream : segmentStreams) {
+                bytesTransferred += segmentStream.getRead();
+            }
+
+            // make sure all spawned threads are shut down
+            executorService.shutdown();
+
+            // make sure we close the input stream if necessary
+            if (stream != null && closeStream) {
+                try {
+                    stream.close();
+                } catch (Throwable t) {
+                    l4j.warn("could not close stream", t);
+                }
+            }
+        }
+    }
+
+    protected void configure() {
 
         // sanity checks
-        if (!file.exists() || !file.canRead())
-            throw new IllegalArgumentException("cannot read file: " + file.getPath());
+        if (file != null) {
+            if (!file.exists() || !file.canRead())
+                throw new IllegalArgumentException("cannot read file: " + file.getPath());
+
+            fullSize = file.length();
+        } else {
+            if (stream == null)
+                throw new IllegalArgumentException("must specify a file or stream to read");
+
+            // make sure size is set
+            if (fullSize <= 0)
+                throw new IllegalArgumentException("size must be specified for stream");
+
+            // must read stream sequentially
+            executorService = null;
+            threads = 1;
+        }
 
         // make sure content-length isn't set
         if (objectMetadata != null) objectMetadata.setContentLength(null);
 
-        long minPartSize = Math.max(MIN_PART_SIZE, file.length() / MAX_PARTS + 1);
+        long minPartSize = Math.max(MIN_PART_SIZE, fullSize / MAX_PARTS + 1);
         l4j.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
 
         if (partSize == null) partSize = minPartSize;
@@ -170,43 +273,6 @@ public class LargeFileUploader implements Runnable {
 
         // set up thread pool
         if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
-        List<Future> futures = new ArrayList<Future>();
-
-        // create empty object (sets metadata/acl)
-        PutObjectRequest request = new PutObjectRequest(bucket, key, null);
-        request.setObjectMetadata(objectMetadata);
-        request.setAcl(acl);
-        request.setCannedAcl(cannedAcl);
-        s3Client.putObject(request);
-
-        try {
-            // submit all upload tasks
-            PutObjectRequest rangeRequest;
-            long offset = 0, length = partSize;
-            while (offset < file.length()) {
-                if (offset + length > file.length()) length = file.length() - offset;
-                Range range = Range.fromOffsetLength(offset, length);
-                InputStreamSegment segment = new InputStreamSegment(new FileInputStream(file), offset, length);
-                rangeRequest = new PutObjectRequest(bucket, key, segment).withRange(range);
-                futures.add(executorService.submit(new PutObjectTask(rangeRequest)));
-                offset += length;
-            }
-
-            // wait for threads to finish
-            for (Future future : futures) {
-                future.get();
-            }
-        } catch (Exception e) {
-
-            // delete object
-            s3Client.deleteObject(bucket, key);
-            if (e instanceof RuntimeException) throw (RuntimeException) e;
-            throw new RuntimeException("error uploading file", e);
-        } finally {
-
-            // make sure all spawned threads are shut down
-            executorService.shutdown();
-        }
     }
 
     public S3Client getS3Client() {
@@ -223,6 +289,22 @@ public class LargeFileUploader implements Runnable {
 
     public File getFile() {
         return file;
+    }
+
+    public InputStream getStream() {
+        return stream;
+    }
+
+    public long getFullSize() {
+        return fullSize;
+    }
+
+    public long getBytesTransferred() {
+        return bytesTransferred;
+    }
+
+    public String getETag() {
+        return eTag;
     }
 
     public S3ObjectMetadata getObjectMetadata() {
@@ -247,6 +329,14 @@ public class LargeFileUploader implements Runnable {
 
     public void setCannedAcl(CannedAcl cannedAcl) {
         this.cannedAcl = cannedAcl;
+    }
+
+    public boolean isCloseStream() {
+        return closeStream;
+    }
+
+    public void setCloseStream(boolean closeStream) {
+        this.closeStream = closeStream;
     }
 
     public long getPartSize() {
@@ -301,6 +391,11 @@ public class LargeFileUploader implements Runnable {
         return this;
     }
 
+    public LargeFileUploader withCloseStream(boolean closeStream) {
+        setCloseStream(closeStream);
+        return this;
+    }
+
     public LargeFileUploader withPartSize(Long partSize) {
         setPartSize(partSize);
         return this;
@@ -329,7 +424,7 @@ public class LargeFileUploader implements Runnable {
         }
     }
 
-    protected class PutObjectTask implements Runnable {
+    protected class PutObjectTask implements Callable<String> {
         private PutObjectRequest request;
 
         public PutObjectTask(PutObjectRequest request) {
@@ -337,8 +432,8 @@ public class LargeFileUploader implements Runnable {
         }
 
         @Override
-        public void run() {
-            s3Client.putObject(request);
+        public String call() throws Exception {
+            return s3Client.putObject(request).getETag();
         }
     }
 }
