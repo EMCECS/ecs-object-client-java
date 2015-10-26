@@ -1811,6 +1811,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
     }
 
+    @Test
+    public void testListMarkerWithPercent() throws Exception {
+        String marker = "foo/bar/blah%blah";
+        client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker));
+    }
+
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
         Assert.assertEquals(acl1.getOwner(), acl2.getOwner());
         Assert.assertEquals(acl1.getGrants(), acl2.getGrants());

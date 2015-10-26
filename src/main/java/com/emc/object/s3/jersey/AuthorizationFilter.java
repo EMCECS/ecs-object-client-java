@@ -53,7 +53,7 @@ public class AuthorizationFilter extends ClientFilter {
 
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
-            Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getQuery());
+            Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
             String resource = RestUtil.getEncodedPath(request.getURI());
 
             // check if bucket is in hostname
