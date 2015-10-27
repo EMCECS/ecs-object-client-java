@@ -406,6 +406,29 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testListObjectsWithEncoding() throws Exception {
+        String key = "foo\u001do", content = "Hello List!";
+        client.putObject(getTestBucket(), key, content, null);
+
+        try {
+            ListObjectsRequest request = new ListObjectsRequest(getTestBucket()).withEncodingType(EncodingType.url);
+            ListObjectsResult result = client.listObjects(request);
+            Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
+
+            List<S3Object> resultObjects = result.getObjects();
+            Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+            Assert.assertEquals(1, resultObjects.size());
+
+            S3Object object = resultObjects.get(0);
+            Assert.assertEquals(key, object.getKey());
+            Assert.assertEquals((long) content.length(), object.getSize().longValue());
+
+        } finally {
+            client.deleteObject(getTestBucket(), key);
+        }
+    }
+
+    @Test
     public void testListAndReadVersions() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
