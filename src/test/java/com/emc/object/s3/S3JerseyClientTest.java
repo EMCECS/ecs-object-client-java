@@ -31,6 +31,7 @@ import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
+import com.emc.object.util.ProgressListener;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
@@ -49,6 +50,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
@@ -688,6 +690,51 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
+    }
+
+    @Test
+    public void testLargeFileUploaderProgressListener() throws Exception {
+        String key = "large-file-uploader.bin";
+        int size = 20 * 1024 * 1024 + 123; // > 20MB
+        byte[] data = new byte[size];
+        new Random().nextBytes(data);
+        File file = File.createTempFile("large-file-uploader-test", null);
+        file.deleteOnExit();
+        OutputStream out = new FileOutputStream(file);
+        out.write(data);
+        out.close();
+        final AtomicLong completed = new AtomicLong();
+        final AtomicLong total = new AtomicLong();
+        final AtomicLong transferred = new AtomicLong();
+        ProgressListener pl = new ProgressListener() {
+
+            @Override
+            public void progress(long c, long t) {
+                completed.set(c);
+                total.set(t);
+            }
+
+            @Override
+            public void tranferred(long size) {
+                transferred.addAndGet(size);
+            }
+        };
+
+        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file).withProgressListener(pl);
+        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
+
+        // multipart
+        uploader.doMultipartUpload();
+
+        Assert.assertEquals(size, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assert.assertEquals(size, completed.get());
+        Assert.assertEquals(size, total.get());
+        Assert.assertTrue(String.format("Should transfer at least %d bytes but only got %d", size, transferred.get()),
+                transferred.get() >= size);
+
+        client.deleteObject(getTestBucket(), key);
     }
 
     @Test
@@ -1777,7 +1824,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"));
         URL url = tempClient.getPresignedUrl("johnsmith", "photos/puppy.jpg", new Date(1175139620000L));
         Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
-                "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
+                        "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
                 url.toString());
     }
 

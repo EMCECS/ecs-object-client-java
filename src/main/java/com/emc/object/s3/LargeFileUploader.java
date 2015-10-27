@@ -33,6 +33,8 @@ import com.emc.object.s3.bean.CompleteMultipartUploadResult;
 import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.InputStreamSegment;
+import com.emc.object.util.ProgressInputStream;
+import com.emc.object.util.ProgressListener;
 import com.emc.rest.util.SizedInputStream;
 import org.apache.log4j.Logger;
 
@@ -47,6 +49,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Convenience class to facilitate multipart upload for large files. This class will split the file
@@ -74,8 +77,9 @@ public class LargeFileUploader implements Runnable {
     private Long partSize = DEFAULT_PART_SIZE;
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
+    private AtomicLong bytesTransferred = new AtomicLong();
+    private ProgressListener progressListener;
 
-    private long bytesTransferred;
     private String eTag;
 
     /**
@@ -122,8 +126,9 @@ public class LargeFileUploader implements Runnable {
                 if (offset + length > fullSize) length = fullSize - offset;
 
                 SizedInputStream segmentStream = file != null
-                        ? new InputStreamSegment(new FileInputStream(file), offset, length)
-                        : new SizedInputStream(stream, length);
+                        ? new InputStreamSegment(new ProgressInputStream(new FileInputStream(file), progressListener),
+                        offset, length) : new SizedInputStream(new ProgressInputStream(stream, progressListener),
+                        length);
                 segmentStreams.add(segmentStream);
 
                 UploadPartRequest partRequest = new UploadPartRequest(bucket, key, uploadId, partNumber++, segmentStream);
@@ -155,10 +160,6 @@ public class LargeFileUploader implements Runnable {
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException("error during upload", e);
         } finally {
-            for (SizedInputStream segmentStream : segmentStreams) {
-                bytesTransferred += segmentStream.getRead();
-            }
-
             // make sure all spawned threads are shut down
             executorService.shutdown();
 
@@ -194,8 +195,9 @@ public class LargeFileUploader implements Runnable {
                 Range range = Range.fromOffsetLength(offset, length);
 
                 SizedInputStream segmentStream = file != null
-                        ? new InputStreamSegment(new FileInputStream(file), offset, length)
-                        : new SizedInputStream(stream, length);
+                        ? new InputStreamSegment(new ProgressInputStream(new FileInputStream(file), progressListener),
+                        offset, length) : new SizedInputStream(new ProgressInputStream(stream, progressListener),
+                        length);
                 segmentStreams.add(segmentStream);
 
                 rangeRequest = new PutObjectRequest(bucket, key, segmentStream).withRange(range);
@@ -219,10 +221,6 @@ public class LargeFileUploader implements Runnable {
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException("error during upload", e);
         } finally {
-            for (SizedInputStream segmentStream : segmentStreams) {
-                bytesTransferred += segmentStream.getRead();
-            }
-
             // make sure all spawned threads are shut down
             executorService.shutdown();
 
@@ -300,7 +298,7 @@ public class LargeFileUploader implements Runnable {
     }
 
     public long getBytesTransferred() {
-        return bytesTransferred;
+        return bytesTransferred.get();
     }
 
     public String getETag() {
@@ -339,6 +337,14 @@ public class LargeFileUploader implements Runnable {
         this.closeStream = closeStream;
     }
 
+    public ProgressListener getProgressListener() {
+        return progressListener;
+    }
+
+    public void setProgressListener(ProgressListener progressListener) {
+        this.progressListener = progressListener;
+    }
+
     public long getPartSize() {
         return partSize;
     }
@@ -366,6 +372,14 @@ public class LargeFileUploader implements Runnable {
 
     public ExecutorService getExecutorService() {
         return executorService;
+    }
+
+    private void updateBytesTransferred(long count) {
+        long totalTransferred = bytesTransferred.addAndGet(count);
+
+        if(progressListener != null) {
+            progressListener.progress(totalTransferred, fullSize);
+        }
     }
 
     /**
@@ -411,7 +425,12 @@ public class LargeFileUploader implements Runnable {
         return this;
     }
 
-    protected class UploadPartTask implements Callable<MultipartPartETag> {
+    public LargeFileUploader withProgressListener(ProgressListener progressListener) {
+        setProgressListener(progressListener);
+        return this;
+    }
+
+    private class UploadPartTask implements Callable<MultipartPartETag> {
         private UploadPartRequest request;
 
         public UploadPartTask(UploadPartRequest request) {
@@ -420,7 +439,9 @@ public class LargeFileUploader implements Runnable {
 
         @Override
         public MultipartPartETag call() throws Exception {
-            return s3Client.uploadPart(request);
+            MultipartPartETag etag = s3Client.uploadPart(request);
+            updateBytesTransferred(request.getContentLength() == null ? 0L : request.getContentLength().longValue());
+            return etag;
         }
     }
 
@@ -433,7 +454,15 @@ public class LargeFileUploader implements Runnable {
 
         @Override
         public String call() throws Exception {
-            return s3Client.putObject(request).getETag();
+            String etag = s3Client.putObject(request).getETag();
+            long length = 0;
+            if(request.getRange() != null) {
+                length = request.getRange().getLast() - request.getRange().getFirst() + 1;
+            } else if(request.getContentLength() != null) {
+                length = request.getContentLength();
+            }
+            updateBytesTransferred(length);
+            return etag;
         }
     }
 }
