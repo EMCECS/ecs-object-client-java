@@ -43,5 +43,5 @@ public interface ProgressListener {
      * may be more than the total object size.  For reporting on percent complete, use the progress method instead.
      * @param size number of bytes transferred
      */
-    void tranferred(long size);
+    void transferred(long size);
 }

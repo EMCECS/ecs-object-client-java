@@ -26,38 +26,36 @@
  */
 package com.emc.object.util;
 
-import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
- * InputStream wrapper class that fires events when data is read so realtime performance can be measured.
+ * OutputStream wrapper class that fires events when data is written so realtime performance can be measured.
  */
-public class ProgressInputStream extends FilterInputStream {
+public class ProgressOutputStream extends FilterOutputStream {
     private final ProgressListener listener;
 
-    public ProgressInputStream(InputStream wrappedStream, ProgressListener listener) {
-        super(wrappedStream);
+    public ProgressOutputStream(OutputStream out, ProgressListener listener) {
+        super(out);
         this.listener = listener;
     }
 
     @Override
-    public int read() throws IOException {
+    public void write(int b) throws IOException {
         // This is a really, really bad idea.
         throw new RuntimeException("No, I'm not going to let you kill performance.");
     }
 
     @Override
-    public int read(byte[] b) throws IOException {
-        int count = in.read(b);
-        if(listener != null) listener.transferred(count);
-        return count;
+    public void write(byte[] b) throws IOException {
+        out.write(b);
+        listener.transferred(b.length);
     }
 
     @Override
-    public int read(byte[] b, int off, int len) throws IOException {
-        int count =  in.read(b, off, len);
-        if(listener != null) listener.transferred(count);
-        return count;
+    public void write(byte[] b, int off, int len) throws IOException {
+        out.write(b, off, len);
+        listener.transferred(len);
     }
 }

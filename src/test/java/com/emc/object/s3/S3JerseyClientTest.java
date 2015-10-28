@@ -715,7 +715,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             }
 
             @Override
-            public void tranferred(long size) {
+            public void transferred(long size) {
                 transferred.addAndGet(size);
             }
         };
