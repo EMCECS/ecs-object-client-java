@@ -117,7 +117,6 @@ public class LargeFileUploader implements Runnable {
         String uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
 
         List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
-        List<SizedInputStream> segmentStreams = new ArrayList<SizedInputStream>();
         try {
             // submit all upload tasks
             int partNumber = 1;
@@ -125,15 +124,7 @@ public class LargeFileUploader implements Runnable {
             while (offset < fullSize) {
                 if (offset + length > fullSize) length = fullSize - offset;
 
-                SizedInputStream segmentStream = file != null
-                        ? new InputStreamSegment(new ProgressInputStream(new FileInputStream(file), progressListener),
-                        offset, length) : new SizedInputStream(new ProgressInputStream(stream, progressListener),
-                        length);
-                segmentStreams.add(segmentStream);
-
-                UploadPartRequest partRequest = new UploadPartRequest(bucket, key, uploadId, partNumber++, segmentStream);
-                partRequest.setContentLength(length);
-                futures.add(executorService.submit(new UploadPartTask(partRequest)));
+                futures.add(executorService.submit(new UploadPartTask(uploadId, partNumber++, offset, length)));
 
                 offset += length;
             }
@@ -185,23 +176,13 @@ public class LargeFileUploader implements Runnable {
         s3Client.putObject(request);
 
         List<Future<String>> futures = new ArrayList<Future<String>>();
-        List<SizedInputStream> segmentStreams = new ArrayList<SizedInputStream>();
         try {
             // submit all upload tasks
-            PutObjectRequest rangeRequest;
             long offset = 0, length = partSize;
             while (offset < fullSize) {
                 if (offset + length > fullSize) length = fullSize - offset;
-                Range range = Range.fromOffsetLength(offset, length);
 
-                SizedInputStream segmentStream = file != null
-                        ? new InputStreamSegment(new ProgressInputStream(new FileInputStream(file), progressListener),
-                        offset, length) : new SizedInputStream(new ProgressInputStream(stream, progressListener),
-                        length);
-                segmentStreams.add(segmentStream);
-
-                rangeRequest = new PutObjectRequest(bucket, key, segmentStream).withRange(range);
-                futures.add(executorService.submit(new PutObjectTask(rangeRequest)));
+                futures.add(executorService.submit(new PutObjectTask(offset, length)));
 
                 offset += length;
             }
@@ -431,29 +412,56 @@ public class LargeFileUploader implements Runnable {
     }
 
     private class UploadPartTask implements Callable<MultipartPartETag> {
-        private UploadPartRequest request;
+        private String uploadId;
+        private int partNumber;
+        private long offset;
+        private long length;
 
-        public UploadPartTask(UploadPartRequest request) {
-            this.request = request;
+        public UploadPartTask(String uploadId, int partNumber, long offset, long length) {
+            this.uploadId = uploadId;
+            this.partNumber = partNumber;
+            this.offset = offset;
+            this.length = length;
         }
 
         @Override
         public MultipartPartETag call() throws Exception {
+            SizedInputStream segmentStream;
+            if (file != null) {
+                segmentStream = new InputStreamSegment(new ProgressInputStream(new FileInputStream(file), progressListener), offset, length);
+            } else {
+                segmentStream = new SizedInputStream(new ProgressInputStream(stream, progressListener), length);
+            }
+
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNumber++, segmentStream);
+            request.setContentLength(length);
+
             MultipartPartETag etag = s3Client.uploadPart(request);
-            updateBytesTransferred(request.getContentLength() == null ? 0L : request.getContentLength().longValue());
+            updateBytesTransferred(length);
             return etag;
         }
     }
 
     protected class PutObjectTask implements Callable<String> {
-        private PutObjectRequest request;
+        private long offset;
+        private long length;
 
-        public PutObjectTask(PutObjectRequest request) {
-            this.request = request;
+        public PutObjectTask(long offset, long length) {
+            this.offset = offset;
+            this.length = length;
         }
 
         @Override
         public String call() throws Exception {
+            Range range = Range.fromOffsetLength(offset, length);
+
+            SizedInputStream segmentStream = file != null
+                    ? new InputStreamSegment(new ProgressInputStream(new FileInputStream(file), progressListener),
+                    offset, length) : new SizedInputStream(new ProgressInputStream(stream, progressListener),
+                    length);
+
+            PutObjectRequest request = new PutObjectRequest(bucket, key, segmentStream).withRange(range);
+
             String etag = s3Client.putObject(request).getETag();
             long length = 0;
             if(request.getRange() != null) {
