@@ -141,6 +141,25 @@ public class RestUtilTest {
         Assert.assertEquals(new URI(post), RestUtil.replacePath(uri, "/" + bucket + "/" + key));
     }
 
+    // Unicode "OHM SYMBOL"
+    public static final byte[] OHM_UTF8 = new byte[] { (byte)0xe2, (byte)0x84, (byte)0xa6 };
+
+    /**
+     * Tests URI building to make sure that it doesn't modify UTF-8 sequences.  The default URI.toAsciiString runs the
+     * path through Unicode "Normalization" that modifies some Unicode characters.  We need to make sure any UTF-8
+     * input sequences are the same in and out so object keys are not changed.  In this test specifically, the Ohm
+     * symbol below is normalized to a plain Omega symbol, changing the UTF-8 sequence causing ECS to say the object
+     * cannot be found.
+     */
+    @Test
+    public void testUnicodeEncode() throws Exception {
+        // IntelliJ normalizes Ohm to Omega so you can't paste it as a literal.
+        String ohm = new String(OHM_UTF8, "UTF-8");
+
+        URI u = RestUtil.buildUri("http", "www.foo.com", -1, "/100 " + ohm + " Differential impedance 2.rar", null, null);
+        Assert.assertEquals("http://www.foo.com/100%20%E2%84%A6%20Differential%20impedance%202.rar", u.toString());
+    }
+
     private String encodePath(String path) {
         return RestUtil.urlEncode(path).replace("%2F", "/");
     }

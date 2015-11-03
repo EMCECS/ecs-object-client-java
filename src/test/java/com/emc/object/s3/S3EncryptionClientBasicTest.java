@@ -430,4 +430,19 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Override
     public void testPutObjectWithRetentionPeriod() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void testMpuAbortInMiddle() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testLargeFileUploaderStream() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testLargeFileUploaderProgressListener() throws Exception {
+    }
 }

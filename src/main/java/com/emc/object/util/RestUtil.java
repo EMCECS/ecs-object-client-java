@@ -26,11 +26,16 @@
  */
 package com.emc.object.util;
 
+import sun.nio.cs.ThreadLocalCoders;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -230,7 +235,7 @@ public final class RestUtil {
             throws URISyntaxException {
         URI uri = new URI(scheme, null, host, port, path, query, fragment);
 
-        String uriString = uri.toASCIIString();
+        String uriString = toASCIIString(uri);
 
         // workaround for https://bugs.openjdk.java.net/browse/JDK-8037396
         uriString = uriString.replace("[", "%5B").replace("]", "%5D");
@@ -247,6 +252,126 @@ public final class RestUtil {
 
         return new URI(uriString);
     }
+
+    /**
+     * Returns the content of this URI as a US-ASCII string.
+     *
+     * <p/><b>Note:</b> this starts our customized version of URI's toASCIIString.  We differ in only one aspect: we do
+     * NOT normalize Unicode characters.  This is because certain Unicode characters may have different compositions
+     * and normalization may change the UTF-8 sequence represented by a character.  We must maintain the same UTF-8
+     * sequence in and out and therefore we cannot normalize the sequences.
+     *
+     * <p> If this URI does not contain any characters in the <i>other</i>
+     * category then an invocation of this method will return the same value as
+     * an invocation of the {@link #toString() toString} method.  Otherwise
+     * this method works as if by invoking that method and then <a
+     * href="#encode">encoding</a> the result.  </p>
+     *
+     * @return  The string form of this URI, encoded as needed
+     *          so that it only contains characters in the US-ASCII
+     *          charset
+     */
+    public static String toASCIIString(URI u) {
+        String s = defineString(u);
+        return encode(s);
+    }
+
+    /**
+     * Defines a URI string.  Provided for our special URI encoder.
+     * @param u URI to encode
+     * @return String for the URI
+     */
+    private static String defineString(URI u) {
+
+        StringBuffer sb = new StringBuffer();
+        if (u.getScheme() != null) {
+            sb.append(u.getScheme());
+            sb.append(':');
+        }
+        if (u.isOpaque()) {
+            sb.append(u.getRawSchemeSpecificPart());
+        } else {
+            if (u.getHost() != null) {
+                sb.append("//");
+                if (u.getUserInfo() != null) {
+                    sb.append(u.getUserInfo());
+                    sb.append('@');
+                }
+                boolean needBrackets = ((u.getHost().indexOf(':') >= 0)
+                        && !u.getHost().startsWith("[")
+                        && !u.getHost().endsWith("]"));
+                if (needBrackets) sb.append('[');
+                sb.append(u.getHost());
+                if (needBrackets) sb.append(']');
+                if (u.getPort() != -1) {
+                    sb.append(':');
+                    sb.append(u.getPort());
+                }
+            } else if (u.getRawAuthority() != null) {
+                sb.append("//");
+                sb.append(u.getRawAuthority());
+            }
+            if (u.getRawPath() != null)
+                sb.append(u.getRawPath());
+            if (u.getRawQuery() != null) {
+                sb.append('?');
+                sb.append(u.getRawQuery());
+            }
+        }
+        if (u.getRawFragment() != null) {
+            sb.append('#');
+            sb.append(u.getRawFragment());
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Encodes all characters >= \u0080 into escaped, <strikethrough>normalized</strikethrough> UTF-8 octets,
+     * assuming that s is otherwise legal
+     */
+    private static String encode(String s) {
+        int n = s.length();
+        if (n == 0)
+            return s;
+
+        // First check whether we actually need to encode
+        for (int i = 0;;) {
+            if (s.charAt(i) >= '\u0080')
+                break;
+            if (++i >= n)
+                return s;
+        }
+
+        ByteBuffer bb = null;
+        try {
+            bb = ThreadLocalCoders.encoderFor("UTF-8")
+                    .encode(CharBuffer.wrap(s));
+        } catch (CharacterCodingException x) {
+            assert false;
+        }
+
+        StringBuffer sb = new StringBuffer();
+        while (bb.hasRemaining()) {
+            int b = bb.get() & 0xff;
+            if (b >= 0x80)
+                appendEscape(sb, (byte)b);
+            else
+                sb.append((char)b);
+        }
+        return sb.toString();
+    }
+
+    private final static char[] hexDigits = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+    };
+
+    private static void appendEscape(StringBuffer sb, byte b) {
+        sb.append('%');
+        sb.append(hexDigits[(b >> 4) & 0x0f]);
+        sb.append(hexDigits[(b >> 0) & 0x0f]);
+    }
+
 
     public static URI replaceHost(URI uri, String host) throws URISyntaxException {
         return buildUri(uri.getScheme(), host, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
