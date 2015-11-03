@@ -407,6 +407,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
+    @Ignore // blocked by STORAGE-9574
     @Test
     public void testListObjectsWithEncoding() throws Exception {
         String key = "foo\u001do", content = "Hello List!";
