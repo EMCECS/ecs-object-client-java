@@ -407,7 +407,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
-    @Ignore // blocked by STORAGE-9574
+    @Ignore // TODO: blocked by STORAGE-9574
     @Test
     public void testListObjectsWithEncoding() throws Exception {
         String key = "foo\u001do", content = "Hello List!";
@@ -1699,6 +1699,20 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.validateMetadataValues(objectMetadata);
     }
 
+    @Test
+    public void testGetObjectVersionMetadata() throws Exception {
+        String key = "foo", content1 = "Hello World!", content2 = "Goodbye World!";
+        String mKey = "bar", mValue = "baz";
+        S3ObjectMetadata meta = new S3ObjectMetadata().addUserMetadata(mKey, mValue).withContentType("text/plain");
+        client.setBucketVersioning(getTestBucket(), new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+        String v1 = client.putObject(new PutObjectRequest(getTestBucket(), key, content1).withObjectMetadata(meta)).getVersionId();
+        client.deleteObject(getTestBucket(), key);
+        String v2 = client.putObject(new PutObjectRequest(getTestBucket(), key, content2)).getVersionId();
+
+        Assert.assertEquals(mValue,
+                client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), key).withVersionId(v1)).getUserMetadata(mKey));
+        Assert.assertNull(client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), key).withVersionId(v2)).getUserMetadata(mKey));
+    }
 
     @Test
     public void testGetObjectMetadataNoExist() throws Exception {
@@ -1883,9 +1897,20 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListMarkerWithPercent() throws Exception {
-        String marker = "foo/bar/blah%blah";
-        client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker));
+    public void testListMarkerWithSpecialChars() throws Exception {
+        String marker = "foo/bar/blah%blah&blah";
+        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
+                .withEncodingType(EncodingType.url));
+        Assert.assertEquals(marker, result.getMarker());
+    }
+
+    @Ignore // TODO: blocked by STORAGE-9574
+    @Test
+    public void testListMarkerWithIllegalChars() throws Exception {
+        String marker = "foo/bar/blah\u001dblah\u0008blah";
+        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
+                .withEncodingType(EncodingType.url));
+        Assert.assertEquals(marker, result.getMarker());
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

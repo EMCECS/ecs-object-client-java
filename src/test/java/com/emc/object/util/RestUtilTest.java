@@ -116,14 +116,14 @@ public class RestUtilTest {
 
     @Test
     public void testQueryValue() {
-        String query = "foo=x&bar=y&baz=z&yo=&alpha=bravo";
+        String query = "foo=x&bar=y&baz=z&yo=&alpha=bra%26vo";
         Map<String, String> parameters = RestUtil.getQueryParameterMap(query);
 
         Assert.assertEquals("x", parameters.get("foo"));
         Assert.assertEquals("y", parameters.get("bar"));
         Assert.assertEquals("z", parameters.get("baz"));
         Assert.assertEquals("", parameters.get("yo"));
-        Assert.assertEquals("bravo", parameters.get("alpha"));
+        Assert.assertEquals("bra&vo", parameters.get("alpha"));
         Assert.assertEquals(null, parameters.get("bogus"));
     }
 
@@ -131,13 +131,13 @@ public class RestUtilTest {
     public void testReplacePath() throws Exception {
         String host = "http://foo.com";
         String bucket = "foo-bar";
-        String key = "foo/[ test spaces ]/bar";
-        String query = "prefix=CS_Archive2_Copy/Screens/[ Archived Toolbox ]/Country Flags";
+        String key = "foo/[ test & spaces ]/bar";
+        String query = "prefix=" + RestUtil.urlEncode("CS_Archive2_Copy/Screens/[ Archived & Toolbox ]/Country Flags");
 
         S3Config config = new S3Config(new URI(host));
         S3ObjectRequest request = new S3ObjectRequest(Method.GET, bucket, key, null);
         URI uri = config.resolvePath(request.getPath(), query);
-        String post = "http://foo.com/foo-bar/foo/%5B%20test%20spaces%20%5D/bar?prefix=CS_Archive2_Copy/Screens/%5B%20Archived%20Toolbox%20%5D/Country%20Flags";
+        String post = "http://foo.com/foo-bar/foo/%5B%20test%20&%20spaces%20%5D/bar?prefix=CS_Archive2_Copy%2FScreens%2F%5B%20Archived%20%26%20Toolbox%20%5D%2FCountry%20Flags";
         Assert.assertEquals(new URI(post), RestUtil.replacePath(uri, "/" + bucket + "/" + key));
     }
 
@@ -155,9 +155,10 @@ public class RestUtilTest {
     public void testUnicodeEncode() throws Exception {
         // IntelliJ normalizes Ohm to Omega so you can't paste it as a literal.
         String ohm = new String(OHM_UTF8, "UTF-8");
+        String query = "prefix=" + RestUtil.urlEncode("foo/bar/" + OHM_UTF8 + "/baz/");
 
-        URI u = RestUtil.buildUri("http", "www.foo.com", -1, "/100 " + ohm + " Differential impedance 2.rar", null, null);
-        Assert.assertEquals("http://www.foo.com/100%20%E2%84%A6%20Differential%20impedance%202.rar", u.toString());
+        URI u = RestUtil.buildUri("http", "www.foo.com", -1, "/100 " + ohm + " Differential impedance 2.rar", query, null);
+        Assert.assertEquals("http://www.foo.com/100%20%E2%84%A6%20Differential%20impedance%202.rar?" + query, u.toString());
     }
 
     private String encodePath(String path) {

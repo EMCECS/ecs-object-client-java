@@ -156,26 +156,24 @@ public final class RestUtil {
     }
 
     /**
-     * @deprecated (2.0.4) use {@link #generateQueryString(Map, boolean)} instead
+     * @deprecated (2.0.4) use {@link #generateRawQueryString(Map)} instead
      */
     public static String generateQueryString(Map<String, String> parameterMap) {
-        return generateQueryString(parameterMap, true);
+        return generateRawQueryString(parameterMap);
     }
 
     /**
      * URL-encodes names and values
      */
-    public static String generateQueryString(Map<String, String> parameterMap, boolean encodeParams) {
+    public static String generateRawQueryString(Map<String, String> parameterMap) {
         StringBuilder query = new StringBuilder();
         if (parameterMap != null && !parameterMap.isEmpty()) {
             Iterator<String> paramI = parameterMap.keySet().iterator();
             while (paramI.hasNext()) {
                 String name = paramI.next();
-                if (encodeParams) query.append(urlEncode(name));
-                else query.append(name);
+                query.append(urlEncode(name));
                 if (parameterMap.get(name) != null) {
-                    if (encodeParams) query.append("=").append(urlEncode(parameterMap.get(name)));
-                    else query.append("=").append(parameterMap.get(name));
+                    query.append("=").append(urlEncode(parameterMap.get(name)));
                 }
                 if (paramI.hasNext()) query.append("&");
             }
@@ -231,11 +229,17 @@ public final class RestUtil {
         }
     }
 
-    public static URI buildUri(String scheme, String host, int port, String path, String query, String fragment)
+    /**
+     * Note the rawQuery and rawFragment must already be encoded.  No URL-encoding will be done for parameters here.
+     * This is the only way ampersands (&amp;) can be encoded into a parameter value.
+     */
+    public static URI buildUri(String scheme, String host, int port, String path, String rawQuery, String rawFragment)
             throws URISyntaxException {
-        URI uri = new URI(scheme, null, host, port, path, query, fragment);
+        URI uri = new URI(scheme, null, host, port, path, null, null);
 
         String uriString = toASCIIString(uri);
+        if (rawQuery != null) uriString += "?" + rawQuery;
+        if (rawFragment != null) uriString += "#" + rawFragment;
 
         // workaround for https://bugs.openjdk.java.net/browse/JDK-8037396
         uriString = uriString.replace("[", "%5B").replace("]", "%5D");
@@ -374,11 +378,11 @@ public final class RestUtil {
 
 
     public static URI replaceHost(URI uri, String host) throws URISyntaxException {
-        return buildUri(uri.getScheme(), host, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+        return buildUri(uri.getScheme(), host, uri.getPort(), uri.getPath(), uri.getRawQuery(), uri.getRawFragment());
     }
 
     public static URI replacePath(URI uri, String path) throws URISyntaxException {
-        return buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), path, uri.getQuery(), uri.getFragment());
+        return buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), path, uri.getRawQuery(), uri.getRawFragment());
     }
     private static DateFormat getHeaderFormat() {
         DateFormat format = headerFormat.get();

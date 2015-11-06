@@ -124,8 +124,11 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
      * the endpoints list. The host to use may be virtual (to be resolved by a load balancer) or calculated in
      * implementations as round-robin or single-host. Note this is not to be confused with the client-side load
      * balancing provided by the smart client, which overrides any host set here.
+     *
+     * Note that the query string must already be encoded. This is the only way too allow ampersands (&amp;) as part
+     * of a paremeter value
      */
-    public URI resolvePath(String relativePath, String query) {
+    public URI resolvePath(String relativePath, String rawQuery) {
         String path = "/";
 
         // rootContext should be cleaned by setter
@@ -135,9 +138,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         path += relativePath;
 
         try {
-            URI uri = RestUtil.buildUri(protocol.toString().toLowerCase(), resolveHost().getName(), port, path, query, null);
+            URI uri = RestUtil.buildUri(protocol.toString().toLowerCase(), resolveHost().getName(), port, path, rawQuery, null);
 
-            l4j.debug("raw path & query: " + path + "?" + query);
+            l4j.debug("raw path & query: " + path + "?" + rawQuery);
             l4j.debug("resolved URI: " + uri);
 
             return uri;
