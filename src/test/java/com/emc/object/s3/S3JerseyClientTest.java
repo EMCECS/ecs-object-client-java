@@ -1201,7 +1201,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
         }
 
-        Thread.sleep(3000); // allow retention to expire
+        Thread.sleep(5000); // allow retention to expire
         client.putObject(getTestBucket(), key, "good update!", null);
     }
 
