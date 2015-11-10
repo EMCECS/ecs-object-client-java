@@ -85,14 +85,14 @@ public class ObjectRequest {
     }
 
     /**
-     * @deprecated (2.0.4) use {@link #getQueryString(boolean)} instead
+     * @deprecated (2.0.4) use {@link #getRawQueryString()} instead
      */
     public final String getQueryString() {
-        return getQueryString(true);
+        return getRawQueryString();
     }
 
-    public final String getQueryString(boolean encodeParams) {
-        String paramString = RestUtil.generateQueryString(getQueryParams(), encodeParams);
+    public final String getRawQueryString() {
+        String paramString = RestUtil.generateRawQueryString(getQueryParams());
 
         String queryString = "";
 

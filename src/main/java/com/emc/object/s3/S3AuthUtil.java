@@ -105,9 +105,12 @@ public final class S3AuthUtil {
         // add signature to query string
         queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
 
+        // does the request have a sub-resource (i.e. ?acl)?
+        String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
+
         try {
             // we must manually append the query string to ensure nothing is re-encoded
-            return new URL(uri + "?" + RestUtil.generateQueryString(queryParams, true));
+            return new URL(uri + "?" + subresource + RestUtil.generateRawQueryString(queryParams));
         } catch (MalformedURLException e) {
             throw new RuntimeException("generated URL is not well-formed");
         }
