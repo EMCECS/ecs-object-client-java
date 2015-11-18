@@ -1904,6 +1904,35 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(marker, result.getMarker());
     }
 
+    @Test
+    public void testListPagesNoDelimiter() throws Exception {
+        int total = 10, page = 3;
+        for (int i = 0; i < total; i++) {
+            client.putObject(getTestBucket(), "key-" + i, "key-" + i, "text/plain");
+        }
+
+        Set<String> allKeys = new HashSet<String>();
+
+        ListObjectsResult result = null;
+        String nextMarker = null;
+        do {
+            if (result == null) result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMaxKeys(page));
+            else result = client.listMoreObjects(result);
+            Assert.assertNotNull(result);
+            if (result.isTruncated()) {
+                Assert.assertEquals(page, result.getObjects().size());
+                Assert.assertNotNull(result.getNextMarker());
+                Assert.assertNotEquals(nextMarker, result.getNextMarker());
+                nextMarker = result.getNextMarker();
+            }
+            for (S3Object object : result.getObjects()) {
+                allKeys.add(object.getKey());
+            }
+        } while (result.isTruncated());
+
+        Assert.assertEquals(total, allKeys.size());
+    }
+
     @Ignore // TODO: blocked by STORAGE-9574
     @Test
     public void testListMarkerWithIllegalChars() throws Exception {
