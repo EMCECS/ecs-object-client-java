@@ -37,7 +37,7 @@ buildscript {
 apply from: "$commonBuildDir/ecs-publish.gradle"
 
 dependencies {
-    compile 'com.emc.ecs:smart-client:2.0.5',
+    compile 'com.emc.ecs:smart-client:2.0.6',
             'com.emc.ecs:object-transform:1.0.2',
             'org.jdom:jdom2:2.0.6'
     testCompile 'junit:junit:4.12'
