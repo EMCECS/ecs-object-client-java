@@ -50,21 +50,26 @@ public class ChecksumFilter extends ClientFilter {
             ClientResponse response = getNext().handle(request);
 
             // pull etag from response headers
-            String etag = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_ETAG);
-            if (etag != null) etag = etag.replaceAll("\"", "");
-            if (etag != null && (etag.length() <= 2 || etag.contains("-"))) etag = null; // look for valid etags
+            String md5Header = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_ETAG);
+            if (md5Header != null) md5Header = md5Header.replaceAll("\"", "");
+            if (md5Header != null && (md5Header.length() <= 2 || md5Header.contains("-")))
+                md5Header = null; // look for valid etags
 
-            if (verifyWrite != null && verifyWrite && etag != null) {
+            // also look for content MD5 (this trumps etag if present)
+            String contentMd5 = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.EMC_CONTENT_MD5);
+            if (contentMd5 != null) md5Header = contentMd5;
+
+            if (verifyWrite != null && verifyWrite && md5Header != null) {
                 // verify write checksum
-                if (!adapter.getChecksum().getValue().equals(etag))
-                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getValue(), etag);
+                if (!adapter.getChecksum().getValue().equals(md5Header))
+                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getValue(), md5Header);
             }
 
             Boolean verifyRead = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
-            if (verifyRead != null && verifyRead && etag != null) {
+            if (verifyRead != null && verifyRead && md5Header != null) {
                 // wrap stream to verify read checksum
                 response.setEntityInputStream(new ChecksummedInputStream(response.getEntityInputStream(),
-                        new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, etag))); // won't have length for chunked responses
+                        new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, md5Header))); // won't have length for chunked responses
             }
 
             return response;
