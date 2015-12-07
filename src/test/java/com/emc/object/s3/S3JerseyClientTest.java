@@ -27,6 +27,7 @@
 package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
+import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
@@ -34,10 +35,14 @@ import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -1933,13 +1938,61 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(total, allKeys.size());
     }
 
-    @Ignore // TODO: blocked by STORAGE-9574
     @Test
     public void testListMarkerWithIllegalChars() throws Exception {
         String marker = "foo/bar/blah\u001dblah\u0008blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
         Assert.assertEquals(marker, result.getMarker());
+    }
+
+    @Test
+    public void testPing() throws Exception {
+        S3Config s3Config = ((S3JerseyClient) client).getS3Config();
+        String host = s3Config.getVdcs().get(0).getHosts().get(0).getName();
+
+        PingResponse response = client.pingNode(host);
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+
+        response = client.pingNode(s3Config.getProtocol(), host, s3Config.getPort());
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+    }
+
+    @Test
+    public void testTimeouts() throws Exception {
+        S3Config s3Config = new S3Config(Protocol.HTTP, "10.10.10.10").withIdentity("foo").withSecretKey("bar");
+        s3Config.setRetryLimit(0); // no retries
+
+        // set timeouts
+        int SOCKET_TIMEOUT_MILLIS = 1000; // 1 second
+        int CONNECTION_TIMEOUT_MILLIS = 1000; // 1 second
+
+        HttpParams httpParams = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
+        HttpConnectionParams.setSoTimeout(httpParams, SOCKET_TIMEOUT_MILLIS);
+
+        s3Config.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
+
+        final S3Client s3Client = new S3JerseyClient(s3Config);
+
+        Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
+            @Override
+            public void run() {
+                s3Client.pingNode("10.4.4.180");
+                Assert.fail("response was not expected; choose an IP that is not in use");
+            }
+        });
+
+        try {
+            future.get(CONNECTION_TIMEOUT_MILLIS + 10, TimeUnit.MILLISECONDS); // give an extra 10ms leeway
+        } catch (TimeoutException e) {
+            Assert.fail("connection did not timeout");
+        } catch (ExecutionException e) {
+            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getMessage().contains("timed out"));
+        }
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

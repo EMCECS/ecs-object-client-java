@@ -26,10 +26,7 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.AbstractJerseyClient;
-import com.emc.object.Method;
-import com.emc.object.ObjectRequest;
-import com.emc.object.Range;
+import com.emc.object.*;
 import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
@@ -37,11 +34,9 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.SmartClientFactory;
 import com.emc.rest.smart.SmartConfig;
+import com.emc.rest.smart.SmartFilter;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.config.ClientConfig;
 
 import java.io.InputStream;
@@ -251,6 +246,19 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public ListDataNode listDataNodes() {
         return executeRequest(client, new ObjectRequest(Method.GET, "", "endpoint"), ListDataNode.class);
+    }
+
+    @Override
+    public PingResponse pingNode(String host) {
+        return pingNode(s3Config.getProtocol(), host, s3Config.getPort());
+    }
+
+    @Override
+    public PingResponse pingNode(Protocol protocol, String host, int port) {
+        String portStr = (port > 0) ? ":" + port : "";
+        WebResource resource = client.resource(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
+        resource.setProperty(SmartFilter.BYPASS_LOAD_BALANCER, true);
+        return resource.get(PingResponse.class);
     }
 
     @Override
