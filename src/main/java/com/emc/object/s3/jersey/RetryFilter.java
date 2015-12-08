@@ -41,6 +41,8 @@ import java.io.InputStream;
 public class RetryFilter extends ClientFilter {
     private static final Logger l4j = Logger.getLogger(RetryFilter.class);
 
+    public static final String PROP_RETRY_COUNT = "com.emc.object.retryCount";
+
     private S3Config s3Config;
 
     public RetryFilter(S3Config s3Config) {
@@ -100,6 +102,7 @@ public class RetryFilter extends ClientFilter {
                 }
 
                 LogMF.info(l4j, "error received in response [{0}], retrying ({1} of {2})...", t, retryCount, s3Config.getRetryLimit());
+                clientRequest.getProperties().put(PROP_RETRY_COUNT, retryCount);
             }
         }
     }

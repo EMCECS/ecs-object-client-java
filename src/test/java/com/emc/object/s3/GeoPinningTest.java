@@ -29,6 +29,7 @@ package com.emc.object.s3;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.GeoPinningFilter;
 import com.emc.object.s3.jersey.GeoPinningRule;
+import com.emc.object.s3.jersey.RetryFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.HostStats;
@@ -36,12 +37,24 @@ import com.emc.rest.smart.HostVetoRule;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
+import com.sun.jersey.api.client.ClientHandler;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.filter.Filterable;
 import com.sun.jersey.client.impl.ClientRequestImpl;
+import com.sun.jersey.core.header.InBoundHeaders;
+import com.sun.jersey.spi.MessageBodyWorkers;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.MessageBodyWriter;
+import java.io.ByteArrayInputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.*;
 
@@ -78,20 +91,12 @@ public class GeoPinningTest extends AbstractS3ClientTest {
     public void testGuidExtraction() throws Exception {
         GeoPinningTestFilter filter = new GeoPinningTestFilter(s3Config);
 
-        Assert.assertEquals("my/object/key",
-                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com/my/object/key"), null), getTestBucket()));
-        Assert.assertEquals("/my/object/key",
-                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com//my/object/key"), null), getTestBucket()));
-        Assert.assertEquals("/my/object/key",
-                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com/%2Fmy/object/key"), null), getTestBucket()));
+        Assert.assertEquals("my/object/key", filter.getGeoId(getTestBucket(), "my/object/key"));
+        Assert.assertEquals("/my/object/key", filter.getGeoId(getTestBucket(), "/my/object/key"));
 
         String bucketName = getTestBucket();
-        Assert.assertEquals(bucketName,
-                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com"), null), bucketName));
-        Assert.assertEquals(bucketName,
-                filter.getGeoId(new ClientRequestImpl(new URI("http://foo.s3.bar.com/"), null), bucketName));
-        Assert.assertEquals(bucketName,
-                filter.getGeoId(new ClientRequestImpl(new URI("http://s3.bar.com/"), null), bucketName));
+        Assert.assertEquals(bucketName, filter.getGeoId(bucketName, null));
+        Assert.assertEquals(bucketName, filter.getGeoId(bucketName, ""));
     }
 
     @Test
@@ -145,6 +150,53 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         testBucketDistribution(bucket1, bHash1 % vdcs.size());
         testBucketDistribution(bucket2, bHash2 % vdcs.size());
         testBucketDistribution(bucket3, bHash3 % vdcs.size());
+    }
+
+    @Test
+    public void testReadRetryFailoverInFilter() throws Exception {
+        S3Config s3ConfigF = new S3Config(s3Config);
+        s3ConfigF.setGeoReadRetryFailover(true);
+        GeoPinningTestFilter filter = new GeoPinningTestFilter(s3ConfigF);
+
+        String bucket = "foo";
+        String key = "my/object/key";
+        int geoIndex = 0xbb8619 % vdcs.size();
+        DummyClient client = new DummyClient();
+        client.addFilter(filter);
+
+        // test no retry
+        ClientRequest request = new ClientRequestImpl(new URI("http://s3.company.com"), null);
+        request.setMethod("GET");
+        request.getProperties().put(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        request.getProperties().put(S3Constants.PROPERTY_OBJECT_KEY, key);
+        client.handle(request);
+
+        Assert.assertEquals(vdcs.get(geoIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
+
+        // test 1st retry
+        int retries = 1;
+        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
+        client.handle(request);
+
+        int retryIndex = (geoIndex + retries) % vdcs.size();
+        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
+
+        // test 2nd retry
+        retries++;
+        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
+        client.handle(request);
+
+        retryIndex = (geoIndex + retries) % vdcs.size();
+        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
+
+        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
+        retries++;
+        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
+        client.handle(request);
+
+        retryIndex = (geoIndex + retries) % vdcs.size();
+        Assert.assertEquals(geoIndex, retryIndex);
+        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
     }
 
     protected void testKeyDistribution(String key, int vdcIndex) {
@@ -207,13 +259,70 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
 
         @Override
-        public String getGeoId(ClientRequest cr, String bucketName) {
-            return super.getGeoId(cr, bucketName);
+        public String getGeoId(String bucketName, String objectKey) {
+            return super.getGeoId(bucketName, objectKey);
         }
 
         @Override
         public int getGeoPinIndex(String guid, int vdcCount) {
             return super.getGeoPinIndex(guid, vdcCount);
+        }
+    }
+
+    private class DummyClient extends Filterable {
+        public DummyClient() {
+            super(new ClientHandler() {
+                @Override
+                public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
+                    return new ClientResponse(200, new InBoundHeaders(), new ByteArrayInputStream(new byte[0]), new DummyWorkers());
+                }
+            });
+        }
+
+        public ClientResponse handle(ClientRequest request) {
+            return getHeadHandler().handle(request);
+        }
+    }
+
+    private class DummyWorkers implements MessageBodyWorkers {
+        @Override
+        public Map<MediaType, List<MessageBodyReader>> getReaders(MediaType mediaType) {
+            return null;
+        }
+
+        @Override
+        public Map<MediaType, List<MessageBodyWriter>> getWriters(MediaType mediaType) {
+            return null;
+        }
+
+        @Override
+        public String readersToString(Map<MediaType, List<MessageBodyReader>> readers) {
+            return null;
+        }
+
+        @Override
+        public String writersToString(Map<MediaType, List<MessageBodyWriter>> writers) {
+            return null;
+        }
+
+        @Override
+        public <T> MessageBodyReader<T> getMessageBodyReader(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return null;
+        }
+
+        @Override
+        public <T> MessageBodyWriter<T> getMessageBodyWriter(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return null;
+        }
+
+        @Override
+        public <T> List<MediaType> getMessageBodyWriterMediaTypes(Class<T> type, Type genericType, Annotation[] annotations) {
+            return null;
+        }
+
+        @Override
+        public <T> MediaType getMessageBodyWriterMediaType(Class<T> type, Type genericType, Annotation[] annotations, List<MediaType> acceptableMediaTypes) {
+            return null;
         }
     }
 }

@@ -30,11 +30,13 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
+import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
+import com.emc.rest.smart.ecs.VdcHost;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
@@ -113,6 +115,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 tempClient.getLoadBalancer().getAllHosts().size());
     }
 
+    @Ignore // for now since ECS always returns a 201 (AWS returns a 409 outside of the standard US region)
     @Test
     public void testCreateExistingBucket() throws Exception {
         try {
@@ -869,13 +872,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (MultipartPart part: mpp) {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
-                Assert.assertEquals(mp1.getETag(), mpp.get(0).getETag());
+                Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
             }
             else if (part.getPartNumber() == 2) {
-                Assert.assertEquals(mp2.getETag(), mpp.get(1).getETag());
+                Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
             }
             else if (part.getPartNumber() == 3) {
-                Assert.assertEquals(mp3.getETag(), mpp.get(2).getETag());
+                Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
             }
             else {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
@@ -1938,6 +1941,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(total, allKeys.size());
     }
 
+    @Ignore // TODO: blocked by STORAGE-9574
     @Test
     public void testListMarkerWithIllegalChars() throws Exception {
         String marker = "foo/bar/blah\u001dblah\u0008blah";
@@ -1993,6 +1997,31 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
             Assert.assertTrue(e.getMessage().contains("timed out"));
         }
+    }
+
+    @Test
+    public void testFaultInjection() throws Exception {
+        float faultRate = 0.5f; // half of requests will fail
+        S3Config s3ConfigF = new S3Config(((S3JerseyClient) client).getS3Config());
+        s3ConfigF.setRetryLimit(0); // no retries (that will throw off the test)
+        s3ConfigF.setFaultInjectionRate(faultRate);
+        S3Client clientF = new S3JerseyClient(s3ConfigF);
+
+        // make 100 requests
+        int requests = 100, failures = 0;
+        for (int i = 0; i < requests; i++) {
+            List<VdcHost> hosts = s3ConfigF.getVdcs().get(0).getHosts();
+            try {
+                clientF.pingNode(hosts.get(i % hosts.size()).getName());
+            } catch (S3Exception e) {
+                if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
+                    failures++;
+                else throw e;
+            }
+        }
+
+        // roughly half should fail
+        Assert.assertTrue(Math.abs((faultRate * requests) - failures) <= 5);
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

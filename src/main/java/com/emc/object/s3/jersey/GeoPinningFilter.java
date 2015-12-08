@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3.jersey;
 
+import com.emc.object.Method;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.S3Constants;
 import com.emc.rest.smart.ecs.Vdc;
@@ -34,6 +35,7 @@ import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.log4j.LogMF;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -57,16 +59,10 @@ public class GeoPinningFilter extends ClientFilter {
      * If this is a bucket request, the bucket is the ID.
      * If this is an object request, the key is the ID.
      */
-    protected String getGeoId(ClientRequest request, String bucketName) {
-        String key = request.getURI().getPath();
+    protected String getGeoId(String bucketName, String objectKey) {
+        if (objectKey == null || objectKey.length() == 0) return bucketName;
 
-        if (key == null) return bucketName;
-
-        if (key.startsWith("/")) key = key.substring(1);
-
-        if (key.length() == 0) return bucketName;
-
-        return key;
+        return objectKey;
     }
 
     protected int getGeoPinIndex(String guid, int vdcCount) {
@@ -79,6 +75,7 @@ public class GeoPinningFilter extends ClientFilter {
     public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
         // if there's no bucket, we don't need to pin the request (there's no write or read)
         String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
+        String objectKey = (String) request.getProperties().get(S3Constants.PROPERTY_OBJECT_KEY);
         if (bucketName != null) {
             List<Vdc> healthyVdcs = new ArrayList<Vdc>();
 
@@ -87,12 +84,24 @@ public class GeoPinningFilter extends ClientFilter {
             }
 
             if (healthyVdcs.isEmpty()) {
-                l4j.warn("there are no healthy VDCs!");
-            } else {
-                int geoPinIndex = getGeoPinIndex(getGeoId(request, bucketName), healthyVdcs.size());
-
-                request.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
+                l4j.debug("there are no healthy VDCs; geo-pinning will include all VDCs");
+                healthyVdcs.addAll(objectConfig.getVdcs());
             }
+
+            int geoPinIndex = getGeoPinIndex(getGeoId(bucketName, objectKey), healthyVdcs.size());
+
+            // if this is a read and failover for retries is requested, round-robin the VDCs for each retry
+            if (objectConfig.isGeoReadRetryFailover() && Method.GET.name().equalsIgnoreCase(request.getMethod())) {
+                Integer retries = (Integer) request.getProperties().get(RetryFilter.PROP_RETRY_COUNT);
+                if (retries != null) {
+                    int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
+                    LogMF.info(l4j, "geo-pin read retry #{0}: failing over from primary VDC {1} to VDC {2}",
+                            retries, geoPinIndex, newIndex);
+                    geoPinIndex = newIndex;
+                }
+            }
+
+            request.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
         }
 
         return getNext().handle(request);

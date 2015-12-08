@@ -66,6 +66,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private long serverClockSkew;
     private String userAgent = DEFAULT_USER_AGENT;
     private boolean geoPinningEnabled = false;
+    private boolean geoReadRetryFailover = false;
     private int chunkedEncodingSize = DEFAULT_CHUNKED_ENCODING_SIZE;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
@@ -113,6 +114,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.serverClockSkew = other.serverClockSkew;
         this.userAgent = other.userAgent;
         this.geoPinningEnabled = other.geoPinningEnabled;
+        this.geoReadRetryFailover = other.geoReadRetryFailover;
         this.properties = new HashMap<String, Object>(other.properties);
     }
 
@@ -292,6 +294,14 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.geoPinningEnabled = geoPinningEnabled;
     }
 
+    public boolean isGeoReadRetryFailover() {
+        return geoReadRetryFailover;
+    }
+
+    public void setGeoReadRetryFailover(boolean geoReadRetryFailover) {
+        this.geoReadRetryFailover = geoReadRetryFailover;
+    }
+
     public int getChunkedEncodingSize() {
         return chunkedEncodingSize;
     }
@@ -404,6 +414,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", serverClockSkew=" + serverClockSkew +
                 ", userAgent='" + userAgent + '\'' +
                 ", geoPinningEnabled=" + geoPinningEnabled +
+                ", geoReadRetryFailover=" + geoReadRetryFailover +
                 ", properties=" + properties +
                 '}';
     }
