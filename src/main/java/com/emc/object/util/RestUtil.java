@@ -64,6 +64,7 @@ public final class RestUtil {
     public static final String EMC_APPEND_OFFSET = EMC_PREFIX + "append-offset";
     public static final String EMC_CONTENT_MD5 = EMC_PREFIX + "content-md5";
     public static final String EMC_FS_ENABLED = EMC_PREFIX + "file-system-access-enabled";
+    public static final String EMC_MTIME = EMC_PREFIX + "mtime";
     public static final String EMC_NAMESPACE = EMC_PREFIX + "namespace";
     public static final String EMC_VPOOL = EMC_PREFIX + "vpool";
     public static final String EMC_STALE_READ_ALLOWED = EMC_PREFIX + "is-stale-allowed";

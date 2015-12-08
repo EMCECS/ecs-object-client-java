@@ -62,7 +62,13 @@ public class S3ObjectMetadata {
         objectMetadata.contentType = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
         objectMetadata.eTag = RestUtil.getFirstAsString(headers, RestUtil.HEADER_ETAG, true);
         objectMetadata.httpExpires = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_EXPIRES));
-        objectMetadata.lastModified = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_LAST_MODIFIED));
+
+        // prefer x-emc-mtime (has millisecond granularity)
+        String mtime = RestUtil.getFirstAsString(headers, RestUtil.EMC_MTIME);
+        if (mtime != null && mtime.length() > 0) objectMetadata.lastModified = new Date(Long.parseLong(mtime));
+        else
+            objectMetadata.lastModified = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_LAST_MODIFIED));
+
         objectMetadata.versionId = RestUtil.getFirstAsString(headers, S3Constants.AMZ_VERSION_ID);
         objectMetadata.expirationDate = getExpirationDate(headers);
         objectMetadata.expirationRuleId = getExpirationRuleId(headers);
