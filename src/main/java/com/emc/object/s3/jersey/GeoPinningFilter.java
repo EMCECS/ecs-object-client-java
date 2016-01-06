@@ -49,26 +49,26 @@ import java.util.List;
 public class GeoPinningFilter extends ClientFilter {
     private static final Logger l4j = Logger.getLogger(GeoPinningFilter.class);
 
-    private ObjectConfig<?> objectConfig;
-
-    public GeoPinningFilter(ObjectConfig<?> objectConfig) {
-        this.objectConfig = objectConfig;
-    }
-
     /**
      * If this is a bucket request, the bucket is the ID.
      * If this is an object request, the key is the ID.
      */
-    protected String getGeoId(String bucketName, String objectKey) {
+    public static String getGeoId(String bucketName, String objectKey) {
         if (objectKey == null || objectKey.length() == 0) return bucketName;
 
         return objectKey;
     }
 
-    protected int getGeoPinIndex(String guid, int vdcCount) {
+    public static int getGeoPinIndex(String guid, int vdcCount) {
         // first 3 bytes of SHA1 hash modulus the number of VDCs
         byte[] sha1 = DigestUtils.sha1(guid);
         return ByteBuffer.wrap(new byte[]{0, sha1[0], sha1[1], sha1[2]}).getInt() % vdcCount;
+    }
+
+    private ObjectConfig<?> objectConfig;
+
+    public GeoPinningFilter(ObjectConfig<?> objectConfig) {
+        this.objectConfig = objectConfig;
     }
 
     @Override
