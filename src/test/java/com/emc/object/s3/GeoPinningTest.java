@@ -89,32 +89,28 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testGuidExtraction() throws Exception {
-        GeoPinningTestFilter filter = new GeoPinningTestFilter(s3Config);
-
-        Assert.assertEquals("my/object/key", filter.getGeoId(getTestBucket(), "my/object/key"));
-        Assert.assertEquals("/my/object/key", filter.getGeoId(getTestBucket(), "/my/object/key"));
+        Assert.assertEquals("my/object/key", GeoPinningFilter.getGeoId(getTestBucket(), "my/object/key"));
+        Assert.assertEquals("/my/object/key", GeoPinningFilter.getGeoId(getTestBucket(), "/my/object/key"));
 
         String bucketName = getTestBucket();
-        Assert.assertEquals(bucketName, filter.getGeoId(bucketName, null));
-        Assert.assertEquals(bucketName, filter.getGeoId(bucketName, ""));
+        Assert.assertEquals(bucketName, GeoPinningFilter.getGeoId(bucketName, null));
+        Assert.assertEquals(bucketName, GeoPinningFilter.getGeoId(bucketName, ""));
     }
 
     @Test
     public void testGeoPinningAlgorithm() {
-        GeoPinningTestFilter filter = new GeoPinningTestFilter(s3Config);
-
         String guid = "Hello GeoPinning";
         int hashNum = 0xa3fce8;
 
-        Assert.assertEquals(0, filter.getGeoPinIndex(guid, 1));
-        Assert.assertEquals(hashNum % 2, filter.getGeoPinIndex(guid, 2));
-        Assert.assertEquals(hashNum % 3, filter.getGeoPinIndex(guid, 3));
-        Assert.assertEquals(hashNum % 4, filter.getGeoPinIndex(guid, 4));
-        Assert.assertEquals(hashNum % 5, filter.getGeoPinIndex(guid, 5));
-        Assert.assertEquals(hashNum % 6, filter.getGeoPinIndex(guid, 6));
-        Assert.assertEquals(hashNum % 7, filter.getGeoPinIndex(guid, 7));
-        Assert.assertEquals(hashNum % 8, filter.getGeoPinIndex(guid, 8));
-        Assert.assertEquals(hashNum % 9, filter.getGeoPinIndex(guid, 9));
+        Assert.assertEquals(0, GeoPinningFilter.getGeoPinIndex(guid, 1));
+        Assert.assertEquals(hashNum % 2, GeoPinningFilter.getGeoPinIndex(guid, 2));
+        Assert.assertEquals(hashNum % 3, GeoPinningFilter.getGeoPinIndex(guid, 3));
+        Assert.assertEquals(hashNum % 4, GeoPinningFilter.getGeoPinIndex(guid, 4));
+        Assert.assertEquals(hashNum % 5, GeoPinningFilter.getGeoPinIndex(guid, 5));
+        Assert.assertEquals(hashNum % 6, GeoPinningFilter.getGeoPinIndex(guid, 6));
+        Assert.assertEquals(hashNum % 7, GeoPinningFilter.getGeoPinIndex(guid, 7));
+        Assert.assertEquals(hashNum % 8, GeoPinningFilter.getGeoPinIndex(guid, 8));
+        Assert.assertEquals(hashNum % 9, GeoPinningFilter.getGeoPinIndex(guid, 9));
     }
 
     @Test
@@ -156,7 +152,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
     public void testReadRetryFailoverInFilter() throws Exception {
         S3Config s3ConfigF = new S3Config(s3Config);
         s3ConfigF.setGeoReadRetryFailover(true);
-        GeoPinningTestFilter filter = new GeoPinningTestFilter(s3ConfigF);
+        GeoPinningFilter filter = new GeoPinningFilter(s3ConfigF);
 
         String bucket = "foo";
         String key = "my/object/key";
@@ -250,22 +246,6 @@ public class GeoPinningTest extends AbstractS3ClientTest {
                 // hosts in other VDCs should *not* be used
                 Assert.assertEquals(0, stats.getTotalConnections());
             }
-        }
-    }
-
-    private class GeoPinningTestFilter extends GeoPinningFilter {
-        public GeoPinningTestFilter(ObjectConfig<?> objectConfig) {
-            super(objectConfig);
-        }
-
-        @Override
-        public String getGeoId(String bucketName, String objectKey) {
-            return super.getGeoId(bucketName, objectKey);
-        }
-
-        @Override
-        public int getGeoPinIndex(String guid, int vdcCount) {
-            return super.getGeoPinIndex(guid, vdcCount);
         }
     }
 
