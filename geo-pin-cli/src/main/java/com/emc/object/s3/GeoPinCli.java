@@ -40,23 +40,19 @@ public class GeoPinCli {
 
             line = new DefaultParser().parse(options(), args);
 
-            if (line.hasOption('h')) {
-                help();
-            } else {
-                int vdcCount = Integer.parseInt(line.getOptionValue('v'));
-                String bucketName = line.getOptionValue('b');
-                String keyName = line.getOptionValue('k');
-                if (keyName == null) keyName = "";
+            int vdcCount = Integer.parseInt(line.getOptionValue('v'));
+            String bucketName = line.getOptionValue('b');
+            String keyName = line.getOptionValue('k');
+            if (keyName == null) keyName = "";
 
-                int geoPinnedVdc = GeoPinningFilter.getGeoPinIndex(GeoPinningFilter.getGeoId(bucketName, keyName), vdcCount);
+            int geoPinnedVdc = GeoPinningFilter.getGeoPinIndex(GeoPinningFilter.getGeoId(bucketName, keyName), vdcCount);
 
-                geoPinnedVdc++; // print 1-based number, not 0-based
+            geoPinnedVdc++; // print 1-based number, not 0-based
 
-                System.out.println(String.format("VDC Count: %d", vdcCount));
-                System.out.println(String.format("Bucket Name: %s", bucketName));
-                System.out.println(String.format("Key Name: %s", keyName));
-                System.out.println(String.format("** Geo-Pinned VDC: %d", geoPinnedVdc));
-            }
+            System.out.println(String.format("VDC Count: %d", vdcCount));
+            System.out.println(String.format("Bucket Name: %s", bucketName));
+            System.out.println(String.format("Key Name: %s", keyName));
+            System.out.println(String.format("** Geo-Pinned VDC: %d", geoPinnedVdc));
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
             help();
@@ -66,14 +62,16 @@ public class GeoPinCli {
     }
 
     public static Options options() {
+        OptionGroup guid = new OptionGroup();
+        guid.addOption(Option.builder("b").longOpt("bucket").desc("Name of the S3 bucket")
+                .required().hasArg().argName("bucket-name").build());
+        guid.addOption(Option.builder("k").longOpt("key").desc("Object key (name)")
+                .hasArg().argName("object-key").build());
+        guid.setRequired(true);
         Options options = new Options();
-        options.addOption(Option.builder("h").longOpt("help").desc("Print this help text").build());
+        options.addOptionGroup(guid);
         options.addOption(Option.builder("v").longOpt("vdc-count").desc("Total number of VDCs in the cloud")
                 .required().hasArg().argName("vdc-count").build());
-        options.addOption(Option.builder("b").longOpt("bucket").desc("Name of the S3 bucket")
-                .required().hasArg().argName("bucket-name").build());
-        options.addOption(Option.builder("k").longOpt("key").desc("Object key (name)")
-                .hasArg().argName("object-key").build());
         options.addOption(Option.builder().longOpt("stacktrace").desc("Prints a detailed stacktrace for errors").build());
         return options;
     }
@@ -83,7 +81,15 @@ public class GeoPinCli {
     }
 
     public static void help() {
+        System.out.println();
+        System.out.println(GeoPinCli.class.getSimpleName() +
+                " calculates which VDC a request will go to when geo-pinning is enabled");
+        System.out.println();
         HelpFormatter hf = new HelpFormatter();
         hf.printHelp("java -jar " + JAR_NAME + ".jar", options(), true);
+        System.out.println("* note that geo-pinning will only distribute among healthy, accessible VDCs");
+        System.out.println("* note also that if geo-read-retry-failover is enabled and a read request fails,");
+        System.out.println("  each retry will go to the next VDC in order");
+        System.out.println();
     }
 }
