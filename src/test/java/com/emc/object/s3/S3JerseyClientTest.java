@@ -27,17 +27,24 @@
 package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
+import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
+import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
+import com.emc.rest.smart.ecs.VdcHost;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -108,6 +115,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 tempClient.getLoadBalancer().getAllHosts().size());
     }
 
+    @Ignore // for now since ECS always returns a 201 (AWS returns a 409 outside of the standard US region)
     @Test
     public void testCreateExistingBucket() throws Exception {
         try {
@@ -864,13 +872,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (MultipartPart part: mpp) {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
-                Assert.assertEquals(mp1.getETag(), mpp.get(0).getETag());
+                Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
             }
             else if (part.getPartNumber() == 2) {
-                Assert.assertEquals(mp2.getETag(), mpp.get(1).getETag());
+                Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
             }
             else if (part.getPartNumber() == 3) {
-                Assert.assertEquals(mp3.getETag(), mpp.get(2).getETag());
+                Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
             }
             else {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
@@ -1940,6 +1948,80 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
         Assert.assertEquals(marker, result.getMarker());
+    }
+
+    @Test
+    public void testPing() throws Exception {
+        S3Config s3Config = ((S3JerseyClient) client).getS3Config();
+        String host = s3Config.getVdcs().get(0).getHosts().get(0).getName();
+
+        PingResponse response = client.pingNode(host);
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+
+        response = client.pingNode(s3Config.getProtocol(), host, s3Config.getPort());
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+    }
+
+    @Test
+    public void testTimeouts() throws Exception {
+        S3Config s3Config = new S3Config(Protocol.HTTP, "10.10.10.10").withIdentity("foo").withSecretKey("bar");
+        s3Config.setRetryLimit(0); // no retries
+
+        // set timeouts
+        int SOCKET_TIMEOUT_MILLIS = 1000; // 1 second
+        int CONNECTION_TIMEOUT_MILLIS = 1000; // 1 second
+
+        HttpParams httpParams = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
+        HttpConnectionParams.setSoTimeout(httpParams, SOCKET_TIMEOUT_MILLIS);
+
+        s3Config.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
+
+        final S3Client s3Client = new S3JerseyClient(s3Config);
+
+        Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
+            @Override
+            public void run() {
+                s3Client.pingNode("10.4.4.180");
+                Assert.fail("response was not expected; choose an IP that is not in use");
+            }
+        });
+
+        try {
+            future.get(CONNECTION_TIMEOUT_MILLIS + 10, TimeUnit.MILLISECONDS); // give an extra 10ms leeway
+        } catch (TimeoutException e) {
+            Assert.fail("connection did not timeout");
+        } catch (ExecutionException e) {
+            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getMessage().contains("timed out"));
+        }
+    }
+
+    @Test
+    public void testFaultInjection() throws Exception {
+        float faultRate = 0.5f; // half of requests will fail
+        S3Config s3ConfigF = new S3Config(((S3JerseyClient) client).getS3Config());
+        s3ConfigF.setRetryLimit(0); // no retries (that will throw off the test)
+        s3ConfigF.setFaultInjectionRate(faultRate);
+        S3Client clientF = new S3JerseyClient(s3ConfigF);
+
+        // make 100 requests
+        int requests = 100, failures = 0;
+        for (int i = 0; i < requests; i++) {
+            List<VdcHost> hosts = s3ConfigF.getVdcs().get(0).getHosts();
+            try {
+                clientF.pingNode(hosts.get(i % hosts.size()).getName());
+            } catch (S3Exception e) {
+                if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
+                    failures++;
+                else throw e;
+            }
+        }
+
+        // roughly half should fail
+        Assert.assertTrue(Math.abs((faultRate * requests) - failures) <= 5);
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

@@ -24,31 +24,42 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.request;
+package com.emc.object.s3.jersey;
 
-import com.emc.object.Method;
-import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.S3Exception;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.filter.ClientFilter;
 
-public class S3ObjectRequest extends AbstractBucketRequest {
-    private String key;
+import java.util.Random;
 
-    public S3ObjectRequest(Method method, String bucketName, String key, String subresource) {
-        super(method, bucketName, key, subresource);
-        setKey(key);
+public class FaultInjectionFilter extends ClientFilter {
+    public static final String FAULT_INJECTION_ERROR_CODE = "FaultInjection";
+    public static final String FAULT_INJECTION_ERROR_MESSAGE = "Fault Injection";
+
+    public static final float DEFAULT_FAILURE_RATE = 0.25f;
+
+    private Random random = new Random();
+    private float failureRate;
+
+    public FaultInjectionFilter() {
+        this(DEFAULT_FAILURE_RATE);
     }
 
-    public S3ObjectRequest(S3ObjectRequest other) {
-        super(other);
-        setKey(other.key);
+    public FaultInjectionFilter(float failureRate) {
+        this.failureRate = failureRate;
     }
 
-    public String getKey() {
-        return key;
+    @Override
+    public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
+        if (random.nextFloat() < failureRate)
+            throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
+
+        return getNext().handle(cr);
     }
 
-    public void setKey(String key) {
-        this.key = key;
-        setPath(key);
-        property(S3Constants.PROPERTY_OBJECT_KEY, key);
+    public float getFailureRate() {
+        return failureRate;
     }
 }

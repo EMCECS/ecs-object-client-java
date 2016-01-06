@@ -78,6 +78,7 @@ public final class S3Constants {
     public static final String PARAM_VERSION_ID_MARKER = "version-id-marker";
 
     public static final String PROPERTY_BUCKET_NAME = "com.emc.object.s3.bucketName";
+    public static final String PROPERTY_OBJECT_KEY = "com.emc.object.s3.objectKey";
 
     public static final String ERROR_NO_SUCH_KEY = "NoSuchKey";
     public static final String ERROR_NO_SUCH_BUCKET = "NoSuchBucket";

@@ -24,31 +24,47 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.request;
+package com.emc.object.s3.bean;
 
-import com.emc.object.Method;
-import com.emc.object.s3.S3Constants;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlEnum;
 
-public class S3ObjectRequest extends AbstractBucketRequest {
-    private String key;
+public class PingItem {
+    public static final String MAINTENANCE_MODE = "MAINTENANCE_MODE";
 
-    public S3ObjectRequest(Method method, String bucketName, String key, String subresource) {
-        super(method, bucketName, key, subresource);
-        setKey(key);
+    String name;
+    Status status;
+    String text;
+
+    @XmlElement(name = "Name")
+    public String getName() {
+        return name;
     }
 
-    public S3ObjectRequest(S3ObjectRequest other) {
-        super(other);
-        setKey(other.key);
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public String getKey() {
-        return key;
+    @XmlElement(name = "Status")
+    public Status getStatus() {
+        return status;
     }
 
-    public void setKey(String key) {
-        this.key = key;
-        setPath(key);
-        property(S3Constants.PROPERTY_OBJECT_KEY, key);
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    @XmlElement(name = "Text")
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    @XmlEnum
+    public static enum Status {
+        OFF, UNKNOWN, ON
     }
 }

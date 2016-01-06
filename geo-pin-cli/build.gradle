@@ -24,31 +24,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.request;
+description = 'Geo-pin CLI Tool - provides utility commands to work with geo-pinned objects.'
 
-import com.emc.object.Method;
-import com.emc.object.s3.S3Constants;
+ext.mainClass = 'com.emc.object.s3.GeoPinCli'
 
-public class S3ObjectRequest extends AbstractBucketRequest {
-    private String key;
+buildscript {
+    apply from: "$commonBuildDir/ecs-tool.buildscript.gradle", to: buildscript
+}
 
-    public S3ObjectRequest(Method method, String bucketName, String key, String subresource) {
-        super(method, bucketName, key, subresource);
-        setKey(key);
-    }
+apply from: "$commonBuildDir/ecs-tool.subproject.gradle"
 
-    public S3ObjectRequest(S3ObjectRequest other) {
-        super(other);
-        setKey(other.key);
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-        setPath(key);
-        property(S3Constants.PROPERTY_OBJECT_KEY, key);
-    }
+dependencies {
+    compile 'commons-cli:commons-cli:1.3.1',
+            project(':')
+    testCompile group: 'junit', name: 'junit', version: '4.11'
 }

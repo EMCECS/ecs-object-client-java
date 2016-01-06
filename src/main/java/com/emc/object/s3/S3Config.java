@@ -79,6 +79,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected int initialRetryDelay = DEFAULT_INITIAL_RETRY_DELAY;
     protected int retryLimit = DEFAULT_RETRY_LIMIT;
     protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
+    protected float faultInjectionRate = 0.0f;
 
     /**
      * External load balancer constructor (no smart-client).
@@ -116,6 +117,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.initialRetryDelay = other.initialRetryDelay;
         this.retryLimit = other.retryLimit;
         this.retryBufferSize = other.retryBufferSize;
+        this.faultInjectionRate = other.faultInjectionRate;
     }
 
     @Override
@@ -199,6 +201,20 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryBufferSize = retryBufferSize;
     }
 
+    public float getFaultInjectionRate() {
+        return faultInjectionRate;
+    }
+
+    /**
+     * Sets the fault injection rate. Enables fault injection when this number is > 0. The rate is a ratio expressed as
+     * a decimal between 0 and 1.  This is the rate at which faults (HTTP 500 errors) should randomly be injected into
+     * the response. When faults are injected, the real request is never sent over the wire. Fault injection is disabled
+     * by default.
+     */
+    public void setFaultInjectionRate(float faultInjectionRate) {
+        this.faultInjectionRate = faultInjectionRate;
+    }
+
     public S3Config withUseVHost(boolean useVHost) {
         setUseVHost(useVHost);
         return this;
@@ -231,6 +247,11 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public S3Config withRetryBufferSize(int retryBufferSize) {
         setRetryBufferSize(retryBufferSize);
+        return this;
+    }
+
+    public S3Config withFaultInjectionRate(float faultInjectionRate) {
+        setFaultInjectionRate(faultInjectionRate);
         return this;
     }
 

@@ -24,31 +24,41 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.request;
+package com.emc.object.s3.bean;
 
-import com.emc.object.Method;
-import com.emc.object.s3.S3Constants;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class S3ObjectRequest extends AbstractBucketRequest {
-    private String key;
+@XmlRootElement(name = "PingList")
+public class PingResponse {
+    Map<String, PingItem> pingItemMap;
 
-    public S3ObjectRequest(Method method, String bucketName, String key, String subresource) {
-        super(method, bucketName, key, subresource);
-        setKey(key);
+    @XmlElement(name = "PingItem")
+    public List<PingItem> getPingItems() {
+        if (pingItemMap == null) return null;
+        return new ArrayList<PingItem>(pingItemMap.values());
     }
 
-    public S3ObjectRequest(S3ObjectRequest other) {
-        super(other);
-        setKey(other.key);
+    public void setPingItems(List<PingItem> pingItems) {
+        if (pingItems != null) {
+            pingItemMap = new HashMap<String, PingItem>();
+            for (PingItem item : pingItems) {
+                pingItemMap.put(item.getName(), item);
+            }
+        }
     }
 
-    public String getKey() {
-        return key;
+    @XmlTransient
+    public Map<String, PingItem> getPingItemMap() {
+        return pingItemMap;
     }
 
-    public void setKey(String key) {
-        this.key = key;
-        setPath(key);
-        property(S3Constants.PROPERTY_OBJECT_KEY, key);
+    public void setPingItemMap(Map<String, PingItem> pingItemMap) {
+        this.pingItemMap = pingItemMap;
     }
 }

@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
@@ -59,6 +60,16 @@ public interface S3Client {
      * Lists all of the data nodes in the current VDC
      */
     ListDataNode listDataNodes();
+
+    /**
+     * Issues an unauthenticated ping request to the specified host.
+     */
+    PingResponse pingNode(String host);
+
+    /**
+     * Issues an unauthenticated ping request to the given host using the given protocol and port.
+     */
+    PingResponse pingNode(Protocol protocol, String host, int port);
 
     /**
      * Lists the buckets owned by the user
