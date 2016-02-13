@@ -414,6 +414,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public MetadataSearchList listBucketMetadataSearchKeys(String bucketName) {
+        ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "searchmetadata");
+        return executeRequest(client, request, MetadataSearchList.class);
+    }
+
+    @Override
     public ListObjectsResult listObjects(String bucketName) {
         return listObjects(new ListObjectsRequest(bucketName));
     }

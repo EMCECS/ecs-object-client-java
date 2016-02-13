@@ -211,20 +211,23 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test // also tests create-with-retention-period
     public void testListBucketMetadataSearchKeys() throws Exception {
         String bucketName = getTestBucket() + "-x";
-        long retentionPeriod = 3600; // 1 hour
-
         MetadataSearchKey[] keys = new MetadataSearchKey[] {
                 new MetadataSearchKey("x-amz-meta-answer", MetadataSearchDatatype.Integer)
         };
+
         CreateBucketRequest request = new CreateBucketRequest(bucketName);
         request.withMetadataSearchKeys(Arrays.asList(keys));
         client.createBucket(request);
 
         try {
-            //BucketInfo info = client.getBucketInfo(bucketName);
-            //Assert.assertEquals(bucketName, info.getBucketName());
+            MetadataSearchList list = client.listBucketMetadataSearchKeys(bucketName);
+            Assert.assertNotNull(list.getIndexableKeys());
+            Assert.assertEquals(1, list.getIndexableKeys().size());
+            MetadataSearchKey actual = list.getIndexableKeys().get(0);
+            Assert.assertEquals(keys[0].getName(), actual.getName());
+            Assert.assertEquals(keys[0].getDatatype(), actual.getDatatype());
         } finally {
-            //client.deleteBucket(bucketName);
+            client.deleteBucket(bucketName);
         }
     }
 

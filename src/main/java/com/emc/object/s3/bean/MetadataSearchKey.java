@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * Describes a metadata search key associated with a bucket.
  */
-@XmlType(propOrder = {"Name", "Datatype"})
+@XmlType(propOrder = {"name", "datatype"})
 public class MetadataSearchKey {
     private String name;
     private MetadataSearchDatatype datatype;

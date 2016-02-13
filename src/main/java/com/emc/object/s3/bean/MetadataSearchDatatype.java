@@ -26,10 +26,18 @@
  */
 package com.emc.object.s3.bean;
 
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlEnumValue;
+
+@XmlEnum
 public enum MetadataSearchDatatype {
+    @XmlEnumValue("string")
     String("string"),
+    @XmlEnumValue("integer")
     Integer("integer"),
+    @XmlEnumValue("datetime")
     Datetime("datetime"),
+    @XmlEnumValue("decimal")
     Decimal("decimal");
 
     public static MetadataSearchDatatype fromValue(String value) {
