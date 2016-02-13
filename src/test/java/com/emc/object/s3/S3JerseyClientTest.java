@@ -208,6 +208,27 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
+    @Test // also tests create-with-retention-period
+    public void testListBucketMetadataSearchKeys() throws Exception {
+        String bucketName = getTestBucket() + "-x";
+        long retentionPeriod = 3600; // 1 hour
+
+        MetadataSearchKey[] keys = new MetadataSearchKey[] {
+                new MetadataSearchKey("x-amz-meta-answer", MetadataSearchDatatype.Integer)
+        };
+        CreateBucketRequest request = new CreateBucketRequest(bucketName);
+        request.withMetadataSearchKeys(Arrays.asList(keys));
+        client.createBucket(request);
+
+        try {
+            //BucketInfo info = client.getBucketInfo(bucketName);
+            //Assert.assertEquals(bucketName, info.getBucketName());
+        } finally {
+            //client.deleteBucket(bucketName);
+        }
+    }
+
+
     // TODO: blocked by STORAGE-7816
     @Ignore
     @Test
