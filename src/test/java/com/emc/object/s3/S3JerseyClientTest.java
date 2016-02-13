@@ -208,7 +208,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    @Test // also tests create-with-retention-period
+    @Test // also tests create-with-metadata-search-keys
     public void testListBucketMetadataSearchKeys() throws Exception {
         String bucketName = getTestBucket() + "-x";
         MetadataSearchKey[] keys = new MetadataSearchKey[] {
