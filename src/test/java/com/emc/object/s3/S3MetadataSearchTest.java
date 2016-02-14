@@ -1,9 +1,6 @@
 package com.emc.object.s3;
 
-import com.emc.object.s3.bean.MetadataSearchDatatype;
-import com.emc.object.s3.bean.MetadataSearchKey;
-import com.emc.object.s3.bean.MetadataSearchList;
-import com.emc.object.s3.bean.QueryObjectsResult;
+import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
@@ -44,24 +41,51 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         client.createBucket(request);
     }
 
+    @Test
+    public void testListSystemMetadataSearchKeys() throws Exception {
+
+        MetadataSearchKey[] expectedIndexableKeys = new MetadataSearchKey[] {
+                new MetadataSearchKey("CreateTime", MetadataSearchDatatype.Datetime),
+                new MetadataSearchKey("LastModified", MetadataSearchDatatype.Datetime),
+                new MetadataSearchKey("ObjectName", MetadataSearchDatatype.String),
+                new MetadataSearchKey("Owner", MetadataSearchDatatype.String),
+                new MetadataSearchKey("Size", MetadataSearchDatatype.Integer),
+        };
+
+        MetadataSearchKey[] expectedOptionalAttributes = new MetadataSearchKey[] {
+                new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.String),
+                new MetadataSearchKey("ContentType", MetadataSearchDatatype.String),
+                new MetadataSearchKey("Expiration", MetadataSearchDatatype.Datetime),
+                new MetadataSearchKey("Expires", MetadataSearchDatatype.Datetime),
+                new MetadataSearchKey("Retention", MetadataSearchDatatype.Integer),
+        };
+
+        MetadataSearchList list = client.listSystemMetadataSearchKeys();
+        checkMetadataKeys(expectedIndexableKeys, list.getIndexableKeys());
+        checkMetadataKeys(expectedOptionalAttributes, list.getOptionalAttributes());
+    }
+
     @Test // also tests create-with-metadata-search-keys
     public void testListBucketMetadataSearchKeys() throws Exception {
 
         MetadataSearchList list = client.listBucketMetadataSearchKeys(getTestBucket());
-        Assert.assertNotNull(list.getIndexableKeys());
-        List<MetadataSearchKey> keys = list.getIndexableKeys();
-        Collections.sort(keys, new Comparator<MetadataSearchKey>() {
+        checkMetadataKeys(bucketMetadataSearchKeys, list.getIndexableKeys());
+    }
+
+    private void checkMetadataKeys(MetadataSearchKey[] expected, List<MetadataSearchKey> actual) {
+        Assert.assertNotNull(actual);
+        Collections.sort(actual, new Comparator<MetadataSearchKey>() {
             @Override
             public int compare(MetadataSearchKey o1, MetadataSearchKey o2) {
                 return o1.getName().compareTo(o2.getName());
             }
         });
-        Assert.assertEquals(bucketMetadataSearchKeys.length, keys.size());
-        for(int i = 0; i < bucketMetadataSearchKeys.length; i++)
+        Assert.assertEquals(expected.length, actual.size());
+        for(int i = 0; i < expected.length; i++)
         {
-            MetadataSearchKey actual = keys.get(i);
-            Assert.assertEquals(bucketMetadataSearchKeys[i].getName(), actual.getName());
-            Assert.assertEquals(bucketMetadataSearchKeys[i].getDatatype(), actual.getDatatype());
+            MetadataSearchKey actualKey = actual.get(i);
+            Assert.assertEquals(expected[i].getName(), actualKey.getName());
+            Assert.assertEquals(expected[i].getDatatype(), actualKey.getDatatype());
         }
     }
 
