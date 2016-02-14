@@ -207,6 +207,16 @@ public interface S3Client {
     MetadataSearchList listBucketMetadataSearchKeys(String bucketName);
 
     /**
+     * Queries objects in a bucket using parameters specified in <code>request</code>
+     */
+    QueryObjectsResult queryObjects(QueryObjectsRequest request);
+
+    /**
+     * Gets the next page of objects using the results of a previous query-objects call
+     */
+    QueryObjectsResult queryMoreObjects(QueryObjectsResult lastResult);
+
+    /**
      * Lists all objects in <code>bucketName</code> with no restrictions
      */
     ListObjectsResult listObjects(String bucketName);

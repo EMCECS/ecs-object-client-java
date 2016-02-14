@@ -208,30 +208,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    @Test // also tests create-with-metadata-search-keys
-    public void testListBucketMetadataSearchKeys() throws Exception {
-        String bucketName = getTestBucket() + "-x";
-        MetadataSearchKey[] keys = new MetadataSearchKey[] {
-                new MetadataSearchKey("x-amz-meta-answer", MetadataSearchDatatype.Integer)
-        };
-
-        CreateBucketRequest request = new CreateBucketRequest(bucketName);
-        request.withMetadataSearchKeys(Arrays.asList(keys));
-        client.createBucket(request);
-
-        try {
-            MetadataSearchList list = client.listBucketMetadataSearchKeys(bucketName);
-            Assert.assertNotNull(list.getIndexableKeys());
-            Assert.assertEquals(1, list.getIndexableKeys().size());
-            MetadataSearchKey actual = list.getIndexableKeys().get(0);
-            Assert.assertEquals(keys[0].getName(), actual.getName());
-            Assert.assertEquals(keys[0].getDatatype(), actual.getDatatype());
-        } finally {
-            client.deleteBucket(bucketName);
-        }
-    }
-
-
     // TODO: blocked by STORAGE-7816
     @Ignore
     @Test
