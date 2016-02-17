@@ -28,6 +28,7 @@ package com.emc.object.s3.request;
 
 import com.emc.object.Method;
 import com.emc.object.s3.S3Constants;
+import com.emc.object.util.RestUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +59,7 @@ public class QueryObjectsRequest extends AbstractBucketRequest {
     }
 
     private static String formatAttributes(List<String> attributes) {
-        return String.join(",", attributes);
+        return RestUtil.join(",", attributes);
     }
 
     public Integer getMaxKeys() {
@@ -127,7 +128,7 @@ public class QueryObjectsRequest extends AbstractBucketRequest {
         return this;
     }
 
-    public QueryObjectsRequest withAttribute(String attribute) {
+    public synchronized QueryObjectsRequest withAttribute(String attribute) {
         List<String> attributes = getAttributes();
         if(attributes == null) attributes = new ArrayList<String>();
         attributes.add(attribute);

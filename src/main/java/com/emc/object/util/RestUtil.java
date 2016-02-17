@@ -397,6 +397,17 @@ public final class RestUtil {
         return format;
     }
 
+    public static String join(String separator, Iterable<String> items) {
+        if(separator == null) throw new IllegalArgumentException("separator argument is null");
+        if(items == null) throw new IllegalArgumentException("items argument is null");
+        StringBuilder sb = new StringBuilder();
+        for(String item : items) {
+            if(sb.length() > 0) sb.append(separator);
+            sb.append(item);
+        }
+        return sb.toString();
+    }
+
     private RestUtil() {
     }
 }

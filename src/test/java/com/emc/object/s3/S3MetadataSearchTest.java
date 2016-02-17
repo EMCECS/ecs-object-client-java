@@ -106,12 +106,36 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
         QueryObjectsRequest request = new QueryObjectsRequest(bucketName)
                 .withAttribute("ContentType")
+                .withAttribute("Size")
                 .withQuery("(x-amz-meta-string1<='') or (x-amz-meta-string1>='')");
         QueryObjectsResult result = client.queryObjects(request);
-
+        Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
+
+        BucketQueryObject obj = result.getObjects().get(0);
+        Assert.assertEquals(key1, obj.getObjectName());
+
+        Assert.assertEquals(2, obj.getQueryMds().size());
+        BucketQueryObject.Metadata sysmd = null;
+        BucketQueryObject.Metadata usermd = null;
+        for(BucketQueryObject.Metadata m : obj.getQueryMds()) {
+            switch(m.getType()) {
+                case SYSMD: sysmd = m; break;
+                case USERMD: usermd = m; break;
+            }
+        }
+        Assert.assertNotNull(sysmd);
+        Assert.assertNotNull(usermd);
+
+        Assert.assertEquals("0", sysmd.getMdMap().get("size"));
+        Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
+
+        Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
+        Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
+        Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
+        Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
     }
 
 }

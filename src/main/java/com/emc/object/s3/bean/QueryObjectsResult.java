@@ -84,13 +84,8 @@ public class QueryObjectsResult {
         this.maxKeys = maxKeys;
     }
 
-    @XmlElement(name = "IsTruncated")
     public boolean isTruncated() {
-        return truncated;
-    }
-
-    public void setTruncated(boolean truncated) {
-        this.truncated = truncated;
+        return nextMarker != null && !nextMarker.isEmpty() && !"NO MORE PAGES".equals(nextMarker);
     }
 
     @XmlElementWrapper(name = "ObjectMatches")
