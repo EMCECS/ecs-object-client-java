@@ -5,7 +5,6 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.QueryObjectsRequest;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,8 +14,6 @@ import java.util.*;
  * Tests related to bucket metadata search.
  */
 public class S3MetadataSearchTest extends AbstractS3ClientTest {
-    private static final Logger l4j = Logger.getLogger(S3MetadataSearchTest.class);
-
     @Override
     protected String getTestBucketPrefix() {
         return "s3-metadata-search-test";
@@ -28,10 +25,10 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     }
 
     private final MetadataSearchKey[] bucketMetadataSearchKeys = new MetadataSearchKey[] {
-            new MetadataSearchKey("x-amz-meta-datetime1", MetadataSearchDatatype.Datetime),
-            new MetadataSearchKey("x-amz-meta-decimal1", MetadataSearchDatatype.Decimal),
-            new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.Integer),
-            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.String),
+            new MetadataSearchKey("x-amz-meta-datetime1", MetadataSearchDatatype.datetime),
+            new MetadataSearchKey("x-amz-meta-decimal1", MetadataSearchDatatype.decimal),
+            new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
+            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string),
     };
 
     @Override
@@ -45,19 +42,19 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     public void testListSystemMetadataSearchKeys() throws Exception {
 
         MetadataSearchKey[] expectedIndexableKeys = new MetadataSearchKey[] {
-                new MetadataSearchKey("CreateTime", MetadataSearchDatatype.Datetime),
-                new MetadataSearchKey("LastModified", MetadataSearchDatatype.Datetime),
-                new MetadataSearchKey("ObjectName", MetadataSearchDatatype.String),
-                new MetadataSearchKey("Owner", MetadataSearchDatatype.String),
-                new MetadataSearchKey("Size", MetadataSearchDatatype.Integer),
+                new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
         };
 
         MetadataSearchKey[] expectedOptionalAttributes = new MetadataSearchKey[] {
-                new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.String),
-                new MetadataSearchKey("ContentType", MetadataSearchDatatype.String),
-                new MetadataSearchKey("Expiration", MetadataSearchDatatype.Datetime),
-                new MetadataSearchKey("Expires", MetadataSearchDatatype.Datetime),
-                new MetadataSearchKey("Retention", MetadataSearchDatatype.Integer),
+                new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
+                new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
+                new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
         };
 
         MetadataSearchList list = client.listSystemMetadataSearchKeys();
@@ -111,16 +108,17 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObjectsResult result = client.queryObjects(request);
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
+        Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 
-        BucketQueryObject obj = result.getObjects().get(0);
+        QueryObject obj = result.getObjects().get(0);
         Assert.assertEquals(key1, obj.getObjectName());
 
         Assert.assertEquals(2, obj.getQueryMds().size());
-        BucketQueryObject.Metadata sysmd = null;
-        BucketQueryObject.Metadata usermd = null;
-        for(BucketQueryObject.Metadata m : obj.getQueryMds()) {
+        QueryMetadata sysmd = null;
+        QueryMetadata usermd = null;
+        for(QueryMetadata m : obj.getQueryMds()) {
             switch(m.getType()) {
                 case SYSMD: sysmd = m; break;
                 case USERMD: usermd = m; break;

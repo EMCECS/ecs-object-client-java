@@ -26,29 +26,24 @@
  */
 package com.emc.object.s3.bean;
 
-import com.emc.object.s3.request.EncodingType;
-
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@XmlRootElement(namespace = "", name = "BucketQueryResult")
+@XmlRootElement(name = "BucketQueryResult", namespace = "")
+@XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects"})
 public class QueryObjectsResult {
     private String bucketName;
     private Integer maxKeys;
     private String marker;
     private String nextMarker;
-    private boolean truncated;
-    private List<BucketQueryObject> objects = new ArrayList<BucketQueryObject>();
+    private List<QueryObject> objects = new ArrayList<QueryObject>();
     private String query;
-    private List<String> attributes;
+    private List<String> attributes = new ArrayList<String>();
     private String sorted;
     private boolean includeOlderVersions = false;
 
-    @XmlElement(name = "Name")
+    @XmlElement(name = "Name", namespace = "")
     public String getBucketName() {
         return bucketName;
     }
@@ -57,7 +52,7 @@ public class QueryObjectsResult {
         this.bucketName = bucketName;
     }
 
-    @XmlElement(name = "Marker")
+    @XmlElement(name = "Marker", namespace = "")
     public String getMarker() {
         return marker;
     }
@@ -66,7 +61,7 @@ public class QueryObjectsResult {
         this.marker = marker;
     }
 
-    @XmlElement(name = "NextMarker")
+    @XmlElement(name = "NextMarker", namespace = "")
     public String getNextMarker() {
         return nextMarker;
     }
@@ -75,7 +70,7 @@ public class QueryObjectsResult {
         this.nextMarker = nextMarker;
     }
 
-    @XmlElement(name = "MaxKeys")
+    @XmlElement(name = "MaxKeys", namespace = "")
     public Integer getMaxKeys() {
         return maxKeys;
     }
@@ -84,21 +79,23 @@ public class QueryObjectsResult {
         this.maxKeys = maxKeys;
     }
 
+    @XmlTransient
     public boolean isTruncated() {
         return nextMarker != null && !nextMarker.isEmpty() && !"NO MORE PAGES".equals(nextMarker);
     }
 
-    @XmlElementWrapper(name = "ObjectMatches")
-    @XmlElement(namespace = "", name = "object")
-    public List<BucketQueryObject> getObjects() {
+    @XmlElementWrapper(name = "ObjectMatches", namespace = "")
+    @XmlElement(name = "object", namespace = "")
+    public List<QueryObject> getObjects() {
         return objects;
     }
 
-    public void setObjects(List<BucketQueryObject> objects) {
+    public void setObjects(List<QueryObject> objects) {
         this.objects = objects;
     }
 
     // context information for 'next' query
+    @XmlTransient
     public String getQuery() {
         return query;
     }
@@ -107,6 +104,7 @@ public class QueryObjectsResult {
         this.query = query;
     }
 
+    @XmlTransient
     public List<String> getAttributes() {
         return attributes;
     }
@@ -115,6 +113,7 @@ public class QueryObjectsResult {
         this.attributes = attributes;
     }
 
+    @XmlTransient
     public String getSorted() {
         return sorted;
     }
@@ -123,6 +122,7 @@ public class QueryObjectsResult {
         this.sorted = sorted;
     }
 
+    @XmlTransient
     public boolean getIncludeOlderVersions() {
         return includeOlderVersions;
     }

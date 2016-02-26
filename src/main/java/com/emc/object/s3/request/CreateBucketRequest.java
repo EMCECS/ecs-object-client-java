@@ -140,7 +140,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         StringBuilder sb = new StringBuilder();
         for(MetadataSearchKey key : metadataSearchKeys) {
             if(sb.length() > 0) sb.append(',');
-            sb.append(key.getName()).append(';').append(key.getDatatype().getValue());
+            sb.append(key.getName()).append(';').append(key.getDatatype());
         }
         this.metadataSearchKeys = sb.toString();
     }

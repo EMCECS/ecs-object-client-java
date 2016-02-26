@@ -27,18 +27,18 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import java.util.Date;
+import javax.xml.bind.annotation.XmlType;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-public class BucketQueryObject {
+@XmlType(propOrder = {"objectName", "objectId", "versionId", "queryMds"})
+public class QueryObject {
     private String objectName;
     private String objectId;
     private String versionId;
-    private List<Metadata> queryMds;
+    private List<QueryMetadata> queryMds = new ArrayList<QueryMetadata>();
 
-    @XmlElement(name = "objectName")
+    @XmlElement(name = "objectName", namespace = "")
     public String getObjectName() {
         return objectName;
     }
@@ -47,14 +47,14 @@ public class BucketQueryObject {
         this.objectName = objectName;
     }
 
-    @XmlElement(name = "objectId")
+    @XmlElement(name = "objectId", namespace = "")
     public String getObjectId() {
         return objectId;
     }
 
     public void setObjectId(String objectId) { this.objectId = objectId; }
 
-    @XmlElement(name = "versionId")
+    @XmlElement(name = "versionId", namespace = "")
     public String getVersionId() {
         return versionId;
     }
@@ -63,31 +63,13 @@ public class BucketQueryObject {
         this.versionId = versionId;
     }
 
-    @XmlElement(name = "queryMds")
-    public List<Metadata> getQueryMds() {
+    @XmlElement(name = "queryMds", namespace = "")
+    public List<QueryMetadata> getQueryMds() {
         return queryMds;
     }
 
-    public void setQueryMds(List<Metadata> queryMds) {
+    public void setQueryMds(List<QueryMetadata> queryMds) {
         this.queryMds = queryMds;
     }
 
-    public static class Metadata {
-        private MetadataType type;
-        private Map<String,String> mdMap;
-
-        @XmlElement(name = "type")
-        public MetadataType getType() { return type; }
-
-        public void setType(MetadataType type) {
-            this.type = type;
-        }
-
-        @XmlElement(name = "mdMap")
-        public Map<String,String> getMdMap() {
-            return mdMap;
-        }
-
-        public void setMdMap(Map<String,String> mdMap) { this.mdMap = mdMap; }
-    }
 }
