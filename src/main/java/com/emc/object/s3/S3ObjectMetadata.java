@@ -239,8 +239,12 @@ public class S3ObjectMetadata {
         return userMetadata;
     }
 
+    /**
+     * Stores a copy of the map to prevent internal alterations (i.e. codecs) from affecting the original map
+     */
     public void setUserMetadata(Map<String, String> userMetadata) {
-        this.userMetadata = userMetadata;
+        if (userMetadata == null) this.userMetadata = null;
+        else this.userMetadata = new HashMap<String, String>(userMetadata);
     }
 
     public String getUserMetadata(String name) {

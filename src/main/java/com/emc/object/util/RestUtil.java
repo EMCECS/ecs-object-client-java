@@ -106,6 +106,7 @@ public final class RestUtil {
     }
 
     public static String stripQuotes(String value) {
+        if (value == null) return null;
         int start = 0, end = value.length();
         if (value.charAt(0) == '"') start = 1;
         if (value.charAt(value.length() - 1) == '"') end = value.length() - 1;
