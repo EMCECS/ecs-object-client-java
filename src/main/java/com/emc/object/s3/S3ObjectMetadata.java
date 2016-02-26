@@ -61,7 +61,8 @@ public class S3ObjectMetadata {
         objectMetadata.contentMd5 = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_MD5);
         objectMetadata.contentType = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
         objectMetadata.eTag = RestUtil.getFirstAsString(headers, RestUtil.HEADER_ETAG, true);
-        objectMetadata.httpExpires = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_EXPIRES));
+        objectMetadata.httpExpires = RestUtil.headerParse(
+                RestUtil.stripQuotes(RestUtil.getFirstAsString(headers, RestUtil.HEADER_EXPIRES)));
 
         // prefer x-emc-mtime (has millisecond granularity)
         String mtime = RestUtil.getFirstAsString(headers, RestUtil.EMC_MTIME);
