@@ -70,6 +70,7 @@ public final class RestUtil {
     public static final String EMC_STALE_READ_ALLOWED = EMC_PREFIX + "is-stale-allowed";
     public static final String EMC_RETENTION_PERIOD = EMC_PREFIX + "retention-period";
     public static final String EMC_RETENTION_POLICY = EMC_PREFIX + "retention-policy";
+    public static final String EMC_METADATA_SEARCH = EMC_PREFIX + "metadata-search";
 
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
     public static final String TYPE_APPLICATION_XML = "application/xml";
@@ -105,6 +106,7 @@ public final class RestUtil {
     }
 
     public static String stripQuotes(String value) {
+        if (value == null) return null;
         int start = 0, end = value.length();
         if (value.charAt(0) == '"') start = 1;
         if (value.charAt(value.length() - 1) == '"') end = value.length() - 1;
@@ -394,6 +396,17 @@ public final class RestUtil {
             headerFormat.set(format);
         }
         return format;
+    }
+
+    public static String join(String separator, Iterable<String> items) {
+        if(separator == null) throw new IllegalArgumentException("separator argument is null");
+        if(items == null) throw new IllegalArgumentException("items argument is null");
+        StringBuilder sb = new StringBuilder();
+        for(String item : items) {
+            if(sb.length() > 0) sb.append(separator);
+            sb.append(item);
+        }
+        return sb.toString();
     }
 
     private RestUtil() {

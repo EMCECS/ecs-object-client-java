@@ -30,6 +30,7 @@ import com.emc.object.Method;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.MetadataSearchKey;
 import com.emc.object.util.RestUtil;
 
 import java.util.List;
@@ -45,6 +46,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     private Boolean fileSystemEnabled;
     private Boolean staleReadAllowed;
     private Long retentionPeriod;
+    private String metadataSearchKeys;
 
     public CreateBucketRequest(String bucketName) {
         super(Method.PUT, bucketName, "", null);
@@ -60,6 +62,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         if (fileSystemEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabled);
         if (staleReadAllowed != null) RestUtil.putSingle(headers, RestUtil.EMC_STALE_READ_ALLOWED, staleReadAllowed);
         if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
+        if (metadataSearchKeys != null) RestUtil.putSingle(headers, RestUtil.EMC_METADATA_SEARCH, metadataSearchKeys);
 
         return headers;
     }
@@ -127,6 +130,21 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         this.retentionPeriod = retentionPeriod;
     }
 
+    /**
+     * Assigns a list of system- and user-metadata keynames that can be used later in bucket searches
+     * for the purpose of filtering object lists based querying these keys.
+     *
+     * @param metadataSearchKeys The set of keys to index.
+     */
+    public void setMetadataSearchKeys(List<MetadataSearchKey> metadataSearchKeys) {
+        StringBuilder sb = new StringBuilder();
+        for(MetadataSearchKey key : metadataSearchKeys) {
+            if(sb.length() > 0) sb.append(',');
+            sb.append(key.getName()).append(';').append(key.getDatatype());
+        }
+        this.metadataSearchKeys = sb.toString();
+    }
+
     public CreateBucketRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
         return this;
@@ -154,6 +172,11 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
     public CreateBucketRequest withRetentionPeriod(long retentionPeriod) {
         setRetentionPeriod(retentionPeriod);
+        return this;
+    }
+
+    public CreateBucketRequest withMetadataSearchKeys(List<MetadataSearchKey> metadataSearchKeys) {
+        setMetadataSearchKeys(metadataSearchKeys);
         return this;
     }
 }

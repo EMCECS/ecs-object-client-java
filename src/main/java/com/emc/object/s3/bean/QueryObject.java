@@ -24,23 +24,52 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3.bean;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+import java.util.ArrayList;
+import java.util.List;
 
-buildscript {
-    ext.commonBuildVersion = '1.4.1'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
+@XmlType(propOrder = {"objectName", "objectId", "versionId", "queryMds"})
+public class QueryObject {
+    private String objectName;
+    private String objectId;
+    private String versionId;
+    private List<QueryMetadata> queryMds = new ArrayList<QueryMetadata>();
 
-allprojects {
-    apply from: "$commonBuildDir/ecs-publish.gradle"
-}
+    @XmlElement(name = "objectName", namespace = "")
+    public String getObjectName() {
+        return objectName;
+    }
 
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.0.7',
-            'com.emc.ecs:object-transform:1.0.2',
-            'org.jdom:jdom2:2.0.6'
-    testCompile 'junit:junit:4.12'
+    public void setObjectName(String objectName) {
+        this.objectName = objectName;
+    }
+
+    @XmlElement(name = "objectId", namespace = "")
+    public String getObjectId() {
+        return objectId;
+    }
+
+    public void setObjectId(String objectId) { this.objectId = objectId; }
+
+    @XmlElement(name = "versionId", namespace = "")
+    public String getVersionId() {
+        return versionId;
+    }
+
+    public void setVersionId(String versionId) {
+        this.versionId = versionId;
+    }
+
+    @XmlElement(name = "queryMds", namespace = "")
+    public List<QueryMetadata> getQueryMds() {
+        return queryMds;
+    }
+
+    public void setQueryMds(List<QueryMetadata> queryMds) {
+        this.queryMds = queryMds;
+    }
+
 }

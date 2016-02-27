@@ -51,10 +51,12 @@ public final class S3Constants {
     public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";
 
     public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";
+    public static final String PARAM_ATTRIBUTES = "attributes";
     public static final String PARAM_DELIMITER = "delimiter";
     public static final String PARAM_ENCODING_TYPE = "encoding-type";
     public static final String PARAM_ENDPOINT = "endpoint";
     public static final String PARAM_EXPIRES = "Expires";
+    public static final String PARAM_INCLUDE_OLDER_VERSIONS = "include-older-versions";
     public static final String PARAM_IS_STALE_ALLOWED = "isstaleallowed";
     public static final String PARAM_KEY_MARKER = "key-marker";
     public static final String PARAM_LIMIT = "limit";
@@ -65,6 +67,7 @@ public final class S3Constants {
     public static final String PARAM_PART_NUMBER = "partNumber";
     public static final String PARAM_PART_NUMBER_MARKER = "part-number-marker";
     public static final String PARAM_PREFIX = "prefix";
+    public static final String PARAM_QUERY = "query";
     public static final String PARAM_RESPONSE_HEADER_CACHE_CONTROL = "response-cache-control";
     public static final String PARAM_RESPONSE_HEADER_CONTENT_DISPOSITION = "response-content-disposition";
     public static final String PARAM_RESPONSE_HEADER_CONTENT_ENCODING = "response-content-encoding";
@@ -72,6 +75,7 @@ public final class S3Constants {
     public static final String PARAM_RESPONSE_HEADER_CONTENT_TYPE = "response-content-type";
     public static final String PARAM_RESPONSE_HEADER_EXPIRES = "response-expires";
     public static final String PARAM_SIGNATURE = "Signature";
+    public static final String PARAM_SORTED = "sorted";
     public static final String PARAM_UPLOAD_ID = "uploadId";
     public static final String PARAM_UPLOAD_ID_MARKER = "upload-id-marker";
     public static final String PARAM_VERSION_ID = "versionId";

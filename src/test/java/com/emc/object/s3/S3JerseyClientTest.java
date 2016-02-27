@@ -34,6 +34,7 @@ import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
+import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
@@ -208,8 +209,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    // TODO: blocked by STORAGE-7816
-    @Ignore
     @Test
     public void testDeleteBucket() throws Exception {
         String bucketName = getTestBucket() + "-x";
@@ -247,7 +246,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
 
-    @Ignore // TODO: blocked by STORAGE-7422
+    @Ignore // TODO: blocked by some combination of ACL-related ECS bugs (too complex to sort through prior to 2.2 release)
     @Test
     public void testSetBucketAclCanned() throws Exception {
         String identity = createS3Config().getIdentity();
@@ -415,7 +414,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
-    @Ignore // TODO: blocked by STORAGE-9574
     @Test
     public void testListObjectsWithEncoding() throws Exception {
         String key = "foo\u001do", content = "Hello List!";
@@ -431,8 +429,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(1, resultObjects.size());
 
             S3Object object = resultObjects.get(0);
-            Assert.assertEquals(key, object.getKey());
-            Assert.assertEquals((long) content.length(), object.getSize().longValue());
+            Assert.assertEquals(RestUtil.urlEncode(key), object.getKey());
 
         } finally {
             client.deleteObject(getTestBucket(), key);
@@ -617,7 +614,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertNotNull(result);
     }
 
-    @Ignore // TODO: blocked by STORAGE-374
     @Test
     public void testCreateObjectWithMetadata() throws Exception {
         String key = "meta-test", content = "Hello Metadata!";
@@ -1398,7 +1394,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
-    @Ignore // TODO: blocked by STORAGE-374
+    @Ignore // TODO: blocked by STORAGE-12050
     @Test
     public void testCopyObjectWithMeta() throws Exception {
         String key1 = "object1", key2 = "object2", key3 = "object3";
@@ -1456,7 +1452,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
-    @Ignore // TODO: blocked by STORAGE-374
+    @Ignore // TODO: blocked by STORAGE-9447
     @Test
     public void testUpdateMetadata() throws Exception {
         String key = "update-metadata";
@@ -1909,7 +1905,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String marker = "foo/bar/blah%blah&blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
-        Assert.assertEquals(marker, result.getMarker());
+        Assert.assertEquals(RestUtil.urlEncode(marker), result.getMarker());
+        Assert.assertEquals(EncodingType.url, result.getEncodingType());
     }
 
     @Test
@@ -1941,13 +1938,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(total, allKeys.size());
     }
 
-    @Ignore // TODO: blocked by STORAGE-9574
     @Test
     public void testListMarkerWithIllegalChars() throws Exception {
         String marker = "foo/bar/blah\u001dblah\u0008blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
-        Assert.assertEquals(marker, result.getMarker());
+        Assert.assertEquals(RestUtil.urlEncode(marker), result.getMarker());
     }
 
     @Test

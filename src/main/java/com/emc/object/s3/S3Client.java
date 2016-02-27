@@ -202,6 +202,26 @@ public interface S3Client {
     void setBucketStaleReadAllowed(String bucketName, boolean staleReadsAllowed);
 
     /**
+     * Lists the system metadata search keys.
+     */
+    MetadataSearchList listSystemMetadataSearchKeys();
+
+    /**
+     * Lists the metadata search keys associated with the givne bucket.
+     */
+    MetadataSearchList listBucketMetadataSearchKeys(String bucketName);
+
+    /**
+     * Queries objects in a bucket using parameters specified in <code>request</code>
+     */
+    QueryObjectsResult queryObjects(QueryObjectsRequest request);
+
+    /**
+     * Gets the next page of objects using the results of a previous query-objects call
+     */
+    QueryObjectsResult queryMoreObjects(QueryObjectsResult lastResult);
+
+    /**
      * Lists all objects in <code>bucketName</code> with no restrictions
      */
     ListObjectsResult listObjects(String bucketName);

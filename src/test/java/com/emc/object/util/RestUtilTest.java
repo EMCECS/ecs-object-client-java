@@ -33,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Map;
 
 public class RestUtilTest {
@@ -163,5 +164,12 @@ public class RestUtilTest {
 
     private String encodePath(String path) {
         return RestUtil.urlEncode(path).replace("%2F", "/");
+    }
+
+    @Test
+    public void testJoin() throws Exception {
+        Assert.assertEquals("", RestUtil.join(",", Arrays.asList(new String[0])));
+        Assert.assertEquals("x", RestUtil.join(",", Arrays.asList("x")));
+        Assert.assertEquals("x,y", RestUtil.join(",", Arrays.asList("x","y")));
     }
 }

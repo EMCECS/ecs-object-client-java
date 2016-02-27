@@ -414,6 +414,42 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public MetadataSearchList listSystemMetadataSearchKeys() {
+        return executeRequest(client, new ObjectRequest(Method.GET, "", "searchmetadata"), MetadataSearchList.class);
+    }
+
+    @Override
+    public MetadataSearchList listBucketMetadataSearchKeys(String bucketName) {
+        ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "searchmetadata");
+        return executeRequest(client, request, MetadataSearchList.class);
+    }
+
+    @Override
+    public QueryObjectsResult queryObjects(QueryObjectsRequest request) {
+        String query = request.getQuery();
+        if(query == null || query.isEmpty()) {
+            throw new IllegalArgumentException("QueryObjectsRequest must contain a query expression.");
+        }
+        QueryObjectsResult result = executeRequest(client, request, QueryObjectsResult.class);
+        result.setQuery(query);
+        result.setAttributes(request.getAttributes());
+        result.setSorted(request.getSorted());
+        result.setIncludeOlderVersions(request.getIncludeOlderVersions());
+        return result;
+    }
+
+    @Override
+    public QueryObjectsResult queryMoreObjects(QueryObjectsResult lastResult) {
+        return queryObjects(new QueryObjectsRequest(lastResult.getBucketName())
+                .withQuery(lastResult.getQuery())
+                .withAttributes(lastResult.getAttributes())
+                .withSorted(lastResult.getSorted())
+                .withIncludeOlderVersions(lastResult.getIncludeOlderVersions())
+                .withMaxKeys(lastResult.getMaxKeys())
+                .withMarker(lastResult.getNextMarker()));
+    }
+
+    @Override
     public ListObjectsResult listObjects(String bucketName) {
         return listObjects(new ListObjectsRequest(bucketName));
     }

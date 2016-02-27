@@ -24,23 +24,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3.bean;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import javax.xml.bind.annotation.XmlEnum;
 
-buildscript {
-    ext.commonBuildVersion = '1.4.1'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
-
-allprojects {
-    apply from: "$commonBuildDir/ecs-publish.gradle"
-}
-
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.0.7',
-            'com.emc.ecs:object-transform:1.0.2',
-            'org.jdom:jdom2:2.0.6'
-    testCompile 'junit:junit:4.12'
+@XmlEnum
+public enum MetadataSearchDatatype {
+    string, integer, datetime, decimal
 }
