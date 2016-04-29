@@ -69,9 +69,10 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     }
 
     @Override
-    public void initClient() throws Exception {
+    public S3Client createS3Client() throws Exception {
         rclient = new S3JerseyClient(createS3Config());
-        client = eclient = new S3EncryptionClient(createS3Config(), createEncryptionConfig());
+        eclient = new S3EncryptionClient(createS3Config(), createEncryptionConfig());
+        return eclient;
     }
 
     protected EncryptionConfig createEncryptionConfig() throws Exception {

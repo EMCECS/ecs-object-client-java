@@ -59,12 +59,11 @@ import java.net.URI;
 import java.util.*;
 
 public class GeoPinningTest extends AbstractS3ClientTest {
-    private S3Config s3Config;
     private List<Vdc> vdcs;
 
     @Override
-    protected void initClient() throws Exception {
-        s3Config = createS3Config();
+    protected S3Config createS3Config() throws Exception {
+        S3Config s3Config = super.createS3Config();
         Assume.assumeFalse(s3Config.isUseVHost());
 
         // just going to use the same VDC thrice for lack of a geo env.
@@ -81,10 +80,16 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
         s3Config.setGeoPinningEnabled(true);
+        return s3Config;
+    }
 
-        client = new S3JerseyClient(s3Config);
+    @Override
+    protected S3Client createS3Client() throws Exception {
+        S3Client client = new S3JerseyClient(createS3Config());
 
         Thread.sleep(500); // wait for polling daemon to finish initial poll
+
+        return client;
     }
 
     @Test
@@ -150,7 +155,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testReadRetryFailoverInFilter() throws Exception {
-        S3Config s3ConfigF = new S3Config(s3Config);
+        S3Config s3ConfigF = new S3Config(createS3Config());
         s3ConfigF.setGeoReadRetryFailover(true);
         GeoPinningFilter filter = new GeoPinningFilter(s3ConfigF);
 

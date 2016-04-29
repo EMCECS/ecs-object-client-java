@@ -48,6 +48,12 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
     protected S3Client client;
 
+    protected abstract S3Client createS3Client() throws Exception;
+
+    protected final void initClient() throws Exception {
+        this.client = createS3Client();
+    }
+
     @After
     public void dumpLBStats() {
         if (client != null) {
