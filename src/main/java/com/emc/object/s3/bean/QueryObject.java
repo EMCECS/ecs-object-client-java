@@ -31,14 +31,14 @@ import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.List;
 
-@XmlType(propOrder = {"objectName", "objectId", "versionId", "queryMds"})
+@XmlType(propOrder = {"objectName", "objectId", "versionId", "queryMds"}, namespace = "")
 public class QueryObject {
     private String objectName;
     private String objectId;
     private String versionId;
     private List<QueryMetadata> queryMds = new ArrayList<QueryMetadata>();
 
-    @XmlElement(name = "objectName", namespace = "")
+    @XmlElement(name = "objectName")
     public String getObjectName() {
         return objectName;
     }
@@ -47,14 +47,14 @@ public class QueryObject {
         this.objectName = objectName;
     }
 
-    @XmlElement(name = "objectId", namespace = "")
+    @XmlElement(name = "objectId")
     public String getObjectId() {
         return objectId;
     }
 
     public void setObjectId(String objectId) { this.objectId = objectId; }
 
-    @XmlElement(name = "versionId", namespace = "")
+    @XmlElement(name = "versionId")
     public String getVersionId() {
         return versionId;
     }
@@ -63,7 +63,7 @@ public class QueryObject {
         this.versionId = versionId;
     }
 
-    @XmlElement(name = "queryMds", namespace = "")
+    @XmlElement(name = "queryMds")
     public List<QueryMetadata> getQueryMds() {
         return queryMds;
     }

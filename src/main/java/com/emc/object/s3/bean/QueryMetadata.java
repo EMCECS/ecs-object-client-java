@@ -27,20 +27,16 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-@XmlType(propOrder = {"type", "queryMetadataEntries"})
+@XmlType(namespace = "")
 public class QueryMetadata {
     private QueryMetadataType type;
     private Map<String, String> mdMap = new HashMap<String, String>();
 
-    @XmlElement(name = "type", namespace = "")
+    @XmlElement(name = "type")
     public QueryMetadataType getType() {
         return type;
     }
@@ -49,67 +45,12 @@ public class QueryMetadata {
         this.type = type;
     }
 
-    @XmlTransient
+    @XmlElement(name = "mdMap")
     public Map<String, String> getMdMap() {
         return mdMap;
     }
 
     public void setMdMap(Map<String, String> mdMap) {
         this.mdMap = mdMap;
-    }
-
-    /**
-     * @deprecated Use {@link #getMdMap()} instead.
-     */
-    @XmlElementWrapper(name = "mdMap", namespace = "")
-    @XmlElement(name = "entry", namespace = "")
-    public List<QueryMetadataEntry> getQueryMetadataEntries() {
-        if (mdMap == null) return null;
-        List<QueryMetadataEntry> queryMetadataEntries = new ArrayList<QueryMetadataEntry>();
-        for (String key : mdMap.keySet()) {
-            queryMetadataEntries.add(new QueryMetadataEntry(key, mdMap.get(key)));
-        }
-        return queryMetadataEntries;
-    }
-
-    /**
-     * @deprecated Use {@link #setMdMap(Map)} instead.
-     */
-    public void setQueryMetadataEntries(List<QueryMetadataEntry> queryMetadataEntries) {
-        mdMap = new HashMap<String, String>();
-        for (QueryMetadataEntry entry : queryMetadataEntries) {
-            mdMap.put(entry.getKey(), entry.getValue());
-        }
-    }
-
-    public static class QueryMetadataEntry {
-        private String key;
-        private String value;
-
-        public QueryMetadataEntry() {
-        }
-
-        public QueryMetadataEntry(String key, String value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        @XmlElement(name = "key", namespace = "")
-        public String getKey() {
-            return key;
-        }
-
-        public void setKey(String key) {
-            this.key = key;
-        }
-
-        @XmlElement(name = "value", namespace = "")
-        public String getValue() {
-            return value;
-        }
-
-        public void setValue(String value) {
-            this.value = value;
-        }
     }
 }
