@@ -40,7 +40,7 @@ public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
     }
 
     @Override
-    public void initClient() throws Exception {
+    public S3Client createS3Client() throws Exception {
         System.setProperty("http.maxConnections", "100");
         S3Config config = createS3Config();
         String proxy = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
@@ -50,6 +50,7 @@ public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
         rclient = new S3JerseyClient(config, new URLConnectionClientHandler());
-        client = eclient = new S3EncryptionClient(config, new URLConnectionClientHandler(), createEncryptionConfig());
+        eclient = new S3EncryptionClient(config, new URLConnectionClientHandler(), createEncryptionConfig());
+        return eclient;
     }
 }

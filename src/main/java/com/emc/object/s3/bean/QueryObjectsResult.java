@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "BucketQueryResult", namespace = "")
-@XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects"})
+@XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects"}, namespace = "")
 public class QueryObjectsResult {
     private String bucketName;
     private Integer maxKeys;
@@ -43,7 +43,7 @@ public class QueryObjectsResult {
     private String sorted;
     private boolean includeOlderVersions = false;
 
-    @XmlElement(name = "Name", namespace = "")
+    @XmlElement(name = "Name")
     public String getBucketName() {
         return bucketName;
     }
@@ -52,7 +52,7 @@ public class QueryObjectsResult {
         this.bucketName = bucketName;
     }
 
-    @XmlElement(name = "Marker", namespace = "")
+    @XmlElement(name = "Marker")
     public String getMarker() {
         return marker;
     }
@@ -61,7 +61,7 @@ public class QueryObjectsResult {
         this.marker = marker;
     }
 
-    @XmlElement(name = "NextMarker", namespace = "")
+    @XmlElement(name = "NextMarker")
     public String getNextMarker() {
         return nextMarker;
     }
@@ -70,7 +70,7 @@ public class QueryObjectsResult {
         this.nextMarker = nextMarker;
     }
 
-    @XmlElement(name = "MaxKeys", namespace = "")
+    @XmlElement(name = "MaxKeys")
     public Integer getMaxKeys() {
         return maxKeys;
     }
@@ -84,8 +84,8 @@ public class QueryObjectsResult {
         return nextMarker != null && !nextMarker.isEmpty() && !"NO MORE PAGES".equals(nextMarker);
     }
 
-    @XmlElementWrapper(name = "ObjectMatches", namespace = "")
-    @XmlElement(name = "object", namespace = "")
+    @XmlElementWrapper(name = "ObjectMatches")
+    @XmlElement(name = "object")
     public List<QueryObject> getObjects() {
         return objects;
     }

@@ -20,8 +20,8 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     }
 
     @Override
-    public void initClient() throws Exception {
-        client = new S3JerseyClient(createS3Config());
+    public S3Client createS3Client() throws Exception {
+        return new S3JerseyClient(createS3Config());
     }
 
     private final MetadataSearchKey[] bucketMetadataSearchKeys = new MetadataSearchKey[] {

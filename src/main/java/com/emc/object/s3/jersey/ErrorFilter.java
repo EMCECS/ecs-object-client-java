@@ -28,6 +28,7 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3Exception;
+import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
@@ -41,6 +42,7 @@ import org.jdom2.input.SAXBuilder;
 import javax.ws.rs.core.Response;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.Date;
 
 public class ErrorFilter extends ClientFilter {
     private static final Logger l4j = Logger.getLogger(ErrorFilter.class);
@@ -49,6 +51,20 @@ public class ErrorFilter extends ClientFilter {
         ClientResponse response = getNext().handle(request);
 
         if (response.getStatus() > 299) {
+
+            // check for clock skew (can save hours of troubleshooting)
+            if (response.getStatus() == 403) {
+                Date clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(request.getHeaders(), S3Constants.AMZ_DATE));
+                if (clientTime == null)
+                    clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_DATE));
+                Date serverTime = RestUtil.headerParse(RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_DATE));
+                if (clientTime != null && serverTime != null) {
+                    long skew = clientTime.getTime() - serverTime.getTime();
+                    if (Math.abs(skew) > 5 * 60 * 1000) { // +/- 5 minutes
+                        l4j.warn("clock skew detected! client is more than 5 minutes off from server (" + skew + "ms)");
+                    }
+                }
+            }
             if(response.hasEntity()) {
                 throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
             } else {

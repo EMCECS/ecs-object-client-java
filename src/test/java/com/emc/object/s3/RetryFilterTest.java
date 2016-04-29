@@ -36,23 +36,21 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class RetryFilterTest extends AbstractS3ClientTest {
-    protected S3Config s3Config;
-
     @Override
     protected String getTestBucketPrefix() {
         return "s3-retry-test";
     }
 
     @Override
-    protected void initClient() throws Exception {
-        client = new S3JerseyClient(createS3Config());
-        s3Config = ((S3JerseyClient) client).getS3Config();
+    protected S3Client createS3Client() throws Exception {
+        return new S3JerseyClient(createS3Config());
     }
 
     @Test
     public void testRetryFilter() throws Exception {
         int retryLimit = 3;
         final String flagMessage = "XXXXX";
+        S3Config s3Config = ((S3JerseyClient) client).getS3Config();
 
         S3ObjectMetadata metadata = new S3ObjectMetadata().withContentLength(1).withContentType("text/plain");
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "foo",

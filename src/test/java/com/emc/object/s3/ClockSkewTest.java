@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -24,52 +24,40 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.bean;
+package com.emc.object.s3;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlType;
-import java.util.ArrayList;
+import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.s3.request.ListBucketsRequest;
+import com.emc.object.util.RestUtil;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
-@XmlType(propOrder = {"objectName", "objectId", "versionId", "queryMds"}, namespace = "")
-public class QueryObject {
-    private String objectName;
-    private String objectId;
-    private String versionId;
-    private List<QueryMetadata> queryMds = new ArrayList<QueryMetadata>();
-
-    @XmlElement(name = "objectName")
-    public String getObjectName() {
-        return objectName;
+public class ClockSkewTest extends AbstractS3ClientTest {
+    @Override
+    protected S3Client createS3Client() throws Exception {
+        return new S3JerseyClient(createS3Config());
     }
 
-    public void setObjectName(String objectName) {
-        this.objectName = objectName;
+    @Test
+    public void testClockSkew() throws Exception {
+        try {
+            ListBucketsRequest request = new ListBucketsRequest() {
+                @Override
+                public Map<String, List<Object>> getHeaders() {
+                    Map<String, List<Object>> headers = super.getHeaders();
+                    // set x-amz-date, subtracting 30 minutes from current time
+                    Date oldDate = new Date(System.currentTimeMillis() - (30 * 60 * 1000));
+                    RestUtil.putSingle(headers, S3Constants.AMZ_DATE, RestUtil.headerFormat(oldDate));
+                    return headers;
+                }
+            };
+            client.listBuckets(request);
+        } catch (S3Exception e) {
+            Assert.assertEquals(403, e.getHttpCode());
+        }
     }
-
-    @XmlElement(name = "objectId")
-    public String getObjectId() {
-        return objectId;
-    }
-
-    public void setObjectId(String objectId) { this.objectId = objectId; }
-
-    @XmlElement(name = "versionId")
-    public String getVersionId() {
-        return versionId;
-    }
-
-    public void setVersionId(String versionId) {
-        this.versionId = versionId;
-    }
-
-    @XmlElement(name = "queryMds")
-    public List<QueryMetadata> getQueryMds() {
-        return queryMds;
-    }
-
-    public void setQueryMds(List<QueryMetadata> queryMds) {
-        this.queryMds = queryMds;
-    }
-
 }

@@ -69,8 +69,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Override
-    public void initClient() throws Exception {
-        client = new S3JerseyClient(createS3Config());
+    public S3Client createS3Client() throws Exception {
+        return new S3JerseyClient(createS3Config());
     }
 
     @Test
@@ -1986,7 +1986,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         });
 
         try {
-            future.get(CONNECTION_TIMEOUT_MILLIS + 10, TimeUnit.MILLISECONDS); // give an extra 10ms leeway
+            future.get(CONNECTION_TIMEOUT_MILLIS + 100, TimeUnit.MILLISECONDS); // give an extra 100ms leeway
         } catch (TimeoutException e) {
             Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {

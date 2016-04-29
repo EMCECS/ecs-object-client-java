@@ -45,7 +45,7 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
     }
 
     @Override
-    public void initClient() throws Exception {
+    public S3Client createS3Client() throws Exception {
         System.setProperty("http.maxConnections", "100");
         S3Config config = createS3Config();
         String proxy = config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
@@ -54,7 +54,7 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        client = new S3JerseyClient(config, new URLConnectionClientHandler());
+        return new S3JerseyClient(config, new URLConnectionClientHandler());
     }
 
     @Ignore // only run this test against a co-located ECS!
