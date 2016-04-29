@@ -30,6 +30,7 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.ListBucketsRequest;
 import com.emc.object.util.RestUtil;
 import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Date;
 import java.util.List;
@@ -41,6 +42,7 @@ public class ClockSkewTest extends AbstractS3ClientTest {
         return new S3JerseyClient(createS3Config());
     }
 
+    @Test
     public void testClockSkew() throws Exception {
         try {
             ListBucketsRequest request = new ListBucketsRequest() {
@@ -48,7 +50,8 @@ public class ClockSkewTest extends AbstractS3ClientTest {
                 public Map<String, List<Object>> getHeaders() {
                     Map<String, List<Object>> headers = super.getHeaders();
                     // set x-amz-date, subtracting 30 minutes from current time
-                    RestUtil.putSingle(headers, S3Constants.AMZ_DATE, new Date(System.currentTimeMillis() - (30 * 60 * 1000)));
+                    Date oldDate = new Date(System.currentTimeMillis() - (30 * 60 * 1000));
+                    RestUtil.putSingle(headers, S3Constants.AMZ_DATE, RestUtil.headerFormat(oldDate));
                     return headers;
                 }
             };
