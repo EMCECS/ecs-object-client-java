@@ -40,7 +40,7 @@ allprojects {
 
 dependencies {
     compile 'com.emc.ecs:smart-client:2.0.7',
-            'com.emc.ecs:object-transform:1.0.2',
+            'com.emc.ecs:object-transform:1.1.0',
             'org.jdom:jdom2:2.0.6'
     testCompile 'junit:junit:4.12'
 }

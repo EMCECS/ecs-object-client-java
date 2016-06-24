@@ -129,6 +129,12 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_TYPE, contentType);
         RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
+        headers.putAll(getUmdHeaders(userMetadata));
+        return headers;
+    }
+
+    public static Map<String, List<Object>> getUmdHeaders(Map<String, String> userMetadata) {
+        Map<String, List<Object>> headers = new HashMap<String, List<Object>>();
         for (String name : userMetadata.keySet()) {
             RestUtil.putSingle(headers, getHeaderName(name), userMetadata.get(name));
         }
