@@ -38,6 +38,7 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
+import com.emc.util.RandomInputStream;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
@@ -211,11 +212,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteBucket() throws Exception {
+        Thread.sleep(1000); // discover all hosts
+
         String bucketName = getTestBucket() + "-x";
         Assert.assertFalse("bucket should not exist " + bucketName, client.bucketExists(bucketName));
 
         client.createBucket(bucketName);
         Assert.assertTrue("failed to create bucket " + bucketName, client.bucketExists(bucketName));
+
+        // write and delete an object
+        client.putObject(bucketName, "foo", "bar", null);
+        client.deleteObject(bucketName, "foo");
 
         client.deleteBucket(bucketName);
         Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
@@ -569,6 +576,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         data = new byte[15];
         random.nextBytes(data);
+        // FYI, this will set a content-length
         client.putObject(getTestBucket(), "hello-bytes-small", data, null);
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-small", byte[].class));
 
@@ -581,6 +589,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         random.nextBytes(data);
         client.putObject(getTestBucket(), "hello-bytes-more", data, null);
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-more", byte[].class));
+    }
+
+    @Test
+    public void testCreateObjectWithStream() throws Exception {
+        byte[] data = new byte[100];
+        Random random = new Random();
+        random.nextBytes(data);
+
+        // FYI, this will set a content-length
+        client.putObject(getTestBucket(), "byte-array-test", new ByteArrayInputStream(data), null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "byte-array-test", byte[].class));
+
+        // ... and this will use chunked-encoding
+        client.putObject(getTestBucket(), "random-array-test", new RandomInputStream(100), null);
+        Assert.assertEquals(new Long(100), client.getObjectMetadata(getTestBucket(), "random-array-test").getContentLength());
     }
 
     @Test
@@ -605,11 +628,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         new Random().nextBytes(data);
         String dataStr = new String(data);
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", dataStr);
+
         //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
-
         //request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
+        //request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
 
-        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
