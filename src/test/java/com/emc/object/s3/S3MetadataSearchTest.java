@@ -52,9 +52,16 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         MetadataSearchKey[] expectedOptionalAttributes = new MetadataSearchKey[] {
                 new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
                 new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
+                new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
                 new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
                 new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
+                new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
                 new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
+                new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
         };
 
         MetadataSearchList list = client.listSystemMetadataSearchKeys();
