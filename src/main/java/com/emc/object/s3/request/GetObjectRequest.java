@@ -144,6 +144,30 @@ public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectReq
     }
 
     @SuppressWarnings("unchecked")
+    public T withIfModifiedSince(Date ifModifiedSince) {
+        setIfModifiedSince(ifModifiedSince);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withIfUnmodifiedSince(Date ifUnmodifiedSince) {
+        setIfUnmodifiedSince(ifUnmodifiedSince);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withIfMatch(String ifMatch) {
+        setIfMatch(ifMatch);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withIfNoneMatch(String ifNoneMatch) {
+        setIfNoneMatch(ifNoneMatch);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
     public T headerOverride(ResponseHeaderOverride override, String value) {
         headerOverrides.put(override, value);
         return (T) this;

@@ -35,6 +35,7 @@ import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
 import com.emc.object.util.RestUtil;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +43,10 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     private S3ObjectMetadata objectMetadata;
     private Object object;
     private Range range;
+    private Date ifModifiedSince;
+    private Date ifUnmodifiedSince;
+    private String ifMatch;
+    private String ifNoneMatch;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
     private Long retentionPeriod;
@@ -66,6 +71,12 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         Map<String, List<Object>> headers = super.getHeaders();
         if (range != null) RestUtil.putSingle(headers, RestUtil.HEADER_RANGE, "bytes=" + range.toString());
         if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
+        if (ifModifiedSince != null)
+            RestUtil.putSingle(headers, RestUtil.HEADER_IF_MODIFIED_SINCE, RestUtil.headerFormat(ifModifiedSince));
+        if (ifUnmodifiedSince != null)
+            RestUtil.putSingle(headers, RestUtil.HEADER_IF_UNMODIFIED_SINE, RestUtil.headerFormat(ifUnmodifiedSince));
+        if (ifMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_MATCH, ifMatch);
+        if (ifNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifNoneMatch);
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
@@ -111,6 +122,38 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
 
     public void setRange(Range range) {
         this.range = range;
+    }
+
+    public Date getIfModifiedSince() {
+        return ifModifiedSince;
+    }
+
+    public void setIfModifiedSince(Date ifModifiedSince) {
+        this.ifModifiedSince = ifModifiedSince;
+    }
+
+    public Date getIfUnmodifiedSince() {
+        return ifUnmodifiedSince;
+    }
+
+    public void setIfUnmodifiedSince(Date ifUnmodifiedSince) {
+        this.ifUnmodifiedSince = ifUnmodifiedSince;
+    }
+
+    public String getIfMatch() {
+        return ifMatch;
+    }
+
+    public void setIfMatch(String ifMatch) {
+        this.ifMatch = ifMatch;
+    }
+
+    public String getIfNoneMatch() {
+        return ifNoneMatch;
+    }
+
+    public void setIfNoneMatch(String ifNoneMatch) {
+        this.ifNoneMatch = ifNoneMatch;
     }
 
     public AccessControlList getAcl() {
@@ -160,6 +203,26 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
 
     public PutObjectRequest withRange(Range range) {
         setRange(range);
+        return this;
+    }
+
+    public PutObjectRequest withIfModifiedSince(Date ifModifiedSince) {
+        setIfModifiedSince(ifModifiedSince);
+        return this;
+    }
+
+    public PutObjectRequest withIfUnmodifiedSince(Date ifUnmodifiedSince) {
+        setIfUnmodifiedSince(ifUnmodifiedSince);
+        return this;
+    }
+
+    public PutObjectRequest withIfMatch(String ifMatch) {
+        setIfMatch(ifMatch);
+        return this;
+    }
+
+    public PutObjectRequest withIfNoneMatch(String ifNoneMatch) {
+        setIfNoneMatch(ifNoneMatch);
         return this;
     }
 

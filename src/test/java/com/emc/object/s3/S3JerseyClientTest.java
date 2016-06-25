@@ -570,6 +570,152 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testGetObjectPreconditions() throws Exception {
+        String key = "testGetPreconditions";
+        String content = "hello GET preconditions!";
+
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MINUTE, -5); // 5 minutes ago
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        String etag = client.getObjectMetadata(getTestBucket(), key).getETag();
+
+        // test if-modified pass
+        GetObjectRequest request = new GetObjectRequest(getTestBucket(), key);
+        request.withIfModifiedSince(cal.getTime());
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-unmodified fail
+        request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
+        Assert.assertNull(client.getObject(request, String.class));
+
+        // test if-modified fail
+        cal.add(Calendar.MINUTE, 10); // 5 minutes from now
+        request.withIfUnmodifiedSince(null).withIfModifiedSince(cal.getTime());
+        Assert.assertNull(client.getObject(request, String.class));
+
+        // test if-unmodified pass
+        request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-match pass
+        request.withIfUnmodifiedSince(null).withIfMatch(etag);
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-none-match fail
+        request.withIfMatch(null).withIfNoneMatch(etag);
+        Assert.assertNull(client.getObject(request, String.class));
+
+        etag = "d41d8cd98f00b204e9800998ecf8427e";
+
+        // test if-none-match pass
+        request.withIfNoneMatch(etag);
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-match fail
+        request.withIfNoneMatch(null).withIfMatch(etag);
+        Assert.assertNull(client.getObject(request, String.class));
+    }
+
+    // REQUIRES: ECS >= 2.2.1 HF1
+    @Test
+    public void testPutObjectPreconditions() {
+        String key = "testGetPreconditions";
+        String content = "hello GET preconditions!";
+
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MINUTE, -5); // 5 minutes ago
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        String etag = client.getObjectMetadata(getTestBucket(), key).getETag();
+
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
+
+        // test if-unmodified fail
+        request.withIfUnmodifiedSince(cal.getTime());
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-modified pass
+        request.withIfUnmodifiedSince(null).withIfModifiedSince(cal.getTime());
+        client.putObject(request);
+
+        // test if-modified fail
+        cal.add(Calendar.MINUTE, 10); // 5 minutes from now
+        request.withIfModifiedSince(cal.getTime());
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-unmodified pass
+        request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
+        client.putObject(request);
+
+        // test if-match pass
+        request.withIfUnmodifiedSince(null).withIfMatch(etag);
+        client.putObject(request);
+
+        // test if-none-match fail
+        request.withIfMatch(null).withIfNoneMatch(etag);
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        etag = "d41d8cd98f00b204e9800998ecf8427e";
+
+        // test if-none-match pass
+        request.withIfNoneMatch(etag);
+        client.putObject(request);
+
+        // test if-match fail
+        request.withIfNoneMatch(null).withIfMatch(etag);
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-match * (if key exists, i.e. update only) pass
+        request.withIfNoneMatch(null).withIfMatch("*");
+        client.putObject(request);
+
+        // test if-none-match * (if key is new, i.e. create only) fail
+        request.withIfMatch(null).withIfNoneMatch("*");
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        request.setKey("bogus-key");
+
+        // test if-match * fail
+        request.withIfNoneMatch(null).withIfMatch("*");
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-none-match * pass
+        request.withIfMatch(null).withIfNoneMatch("*");
+        client.putObject(request);
+    }
+
+    @Test
     public void testCreateObjectByteArray() throws Exception {
         byte[] data;
         Random random = new Random();

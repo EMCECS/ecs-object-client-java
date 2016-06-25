@@ -538,17 +538,20 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public <T> T readObject(String bucketName, String key, Class<T> objectType) {
-        return getObject(new GetObjectRequest(bucketName, key), objectType).getObject();
+        GetObjectResult<T> result = getObject(new GetObjectRequest(bucketName, key), objectType);
+        return result == null ? null : result.getObject();
     }
 
     @Override
     public <T> T readObject(String bucketName, String key, String versionId, Class<T> objectType) {
-        return getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId), objectType).getObject();
+        GetObjectResult<T> result = getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId), objectType);
+        return result == null ? null : result.getObject();
     }
 
     @Override
     public InputStream readObjectStream(String bucketName, String key, Range range) {
-        return getObject(new GetObjectRequest(bucketName, key).withRange(range), InputStream.class).getObject();
+        GetObjectResult<InputStream> result = getObject(new GetObjectRequest(bucketName, key).withRange(range), InputStream.class);
+        return result == null ? null : result.getObject();
     }
 
     @Override
