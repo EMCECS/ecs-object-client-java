@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -33,11 +33,11 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
 import org.jdom2.Document;
 import org.jdom2.Namespace;
 import org.jdom2.input.SAXBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.Response;
 import java.io.InputStreamReader;
@@ -45,7 +45,8 @@ import java.io.Reader;
 import java.util.Date;
 
 public class ErrorFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(ErrorFilter.class);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ErrorFilter.class);
 
     public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
         ClientResponse response = getNext().handle(request);
@@ -61,7 +62,7 @@ public class ErrorFilter extends ClientFilter {
                 if (clientTime != null && serverTime != null) {
                     long skew = clientTime.getTime() - serverTime.getTime();
                     if (Math.abs(skew) > 5 * 60 * 1000) { // +/- 5 minutes
-                        l4j.warn("clock skew detected! client is more than 5 minutes off from server (" + skew + "ms)");
+                        LOGGER.warn("clock skew detected! client is more than 5 minutes off from server (" + skew + "ms)");
                     }
                 }
             }
@@ -110,7 +111,7 @@ public class ErrorFilter extends ClientFilter {
             try {
                 reader.close();
             } catch (Throwable t) {
-                l4j.warn("could not close reader", t);
+                LOGGER.warn("could not close reader", t);
             }
         }
 
@@ -131,7 +132,7 @@ public class ErrorFilter extends ClientFilter {
             return new S3Exception("no code or message in error response", statusCode);
         }
 
-        LogMF.debug(l4j, "Error: {0}, message: {1}, requestId: {2}", code, message, requestId);
+        LOGGER.debug("Error: {}, message: {}, requestId: {}", new Object[] { code, message, requestId });
         return new S3Exception(message, statusCode, code, requestId);
     }
 }

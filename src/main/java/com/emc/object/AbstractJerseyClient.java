@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -33,14 +33,16 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public abstract class AbstractJerseyClient {
-    private static final Logger l4j = Logger.getLogger(AbstractJerseyClient.class);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractJerseyClient.class);
 
     protected ObjectConfig objectConfig;
 
@@ -69,13 +71,13 @@ public abstract class AbstractJerseyClient {
 
                     // if content-length is set (perhaps by user), force jersey to use it
                     if (entityRequest.getContentLength() != null) {
-                        LogMF.debug(l4j, "enabling content-length override ({0})", entityRequest.getContentLength());
+                        LOGGER.debug("enabling content-length override ({})", entityRequest.getContentLength().toString());
                         SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
 
                         // otherwise chunked encoding will be used. if the request does not support it, try to ensure
                         // that the entity is buffered (will set content length from buffered write)
                     } else if (!entityRequest.isChunkable()) {
-                        l4j.debug("no content-length and request is not chunkable, attempting to enable buffering");
+                        LOGGER.debug("no content-length and request is not chunkable, attempting to enable buffering");
                         request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
                         request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, null);
                     }

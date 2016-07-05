@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -32,10 +32,12 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.SizeOverrideWriter;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
 
 import javax.ws.rs.core.MultivaluedMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,7 +46,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class CodecFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(CodecFilter.class);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CodecFilter.class);
 
     private CodecChain encodeChain;
     private Map<String, Object> codecProperties;
@@ -65,7 +68,7 @@ public class CodecFilter extends ClientFilter {
             Long originalSize = SizeOverrideWriter.getEntitySize();
             if (encodeChain.isSizePredictable() && originalSize != null) {
                 long encodedSize = encodeChain.getEncodedSize(originalSize);
-                LogMF.debug(l4j, "updating content-length for encoded data (original: {0}, encoded: {1})", originalSize, encodedSize);
+                LOGGER.debug("updating content-length for encoded data (original: {}, encoded: {})", originalSize, encodedSize);
                 SizeOverrideWriter.setEntitySize(encodedSize);
             } else {
                 // we don't know what the size will be; this will turn on chunked encoding in the apache client

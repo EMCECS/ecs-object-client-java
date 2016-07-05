@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -30,14 +30,17 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
-import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public abstract class ObjectConfig<T extends ObjectConfig<T>> {
-    private static final Logger l4j = Logger.getLogger(ObjectConfig.class);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ObjectConfig.class);
 
     public static final String PROPERTY_POLL_PROTOCOL = "com.emc.object.pollProtocol";
     public static final String PROPERTY_POLL_PORT = "com.emc.object.pollPort";
@@ -142,8 +145,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         try {
             URI uri = RestUtil.buildUri(protocol.toString().toLowerCase(), resolveHost().getName(), port, path, rawQuery, null);
 
-            l4j.debug("raw path & query: " + path + "?" + rawQuery);
-            l4j.debug("resolved URI: " + uri);
+            LOGGER.debug("raw path & query: " + path + "?" + rawQuery);
+            LOGGER.debug("resolved URI: " + uri);
 
             return uri;
         } catch (URISyntaxException e) {

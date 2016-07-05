@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -32,13 +32,16 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class NamespaceFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(NamespaceFilter.class);
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NamespaceFilter.class);
 
     /**
      * prepend to hostname (i.e. namespace.s3.company.com)
@@ -46,7 +49,7 @@ public class NamespaceFilter extends ClientFilter {
     public static URI insertNamespace(URI uri, String namespace) {
         try {
             String hostname = namespace + "." + uri.getHost();
-            l4j.debug(String.format("hostname including namespace: %s", hostname));
+            LOGGER.debug(String.format("hostname including namespace: %s", hostname));
             return RestUtil.replaceHost(uri, hostname);
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("namespace \"%s\" generated an invalid URI", namespace), e);
