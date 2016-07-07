@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ObjectConfig.class);
+    private static final Logger log = LoggerFactory.getLogger(ObjectConfig.class);
 
     public static final String PROPERTY_POLL_PROTOCOL = "com.emc.object.pollProtocol";
     public static final String PROPERTY_POLL_PORT = "com.emc.object.pollPort";
@@ -145,8 +145,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         try {
             URI uri = RestUtil.buildUri(protocol.toString().toLowerCase(), resolveHost().getName(), port, path, rawQuery, null);
 
-            LOGGER.debug("raw path & query: " + path + "?" + rawQuery);
-            LOGGER.debug("resolved URI: " + uri);
+            log.debug("raw path & query: " + path + "?" + rawQuery);
+            log.debug("resolved URI: " + uri);
 
             return uri;
         } catch (URISyntaxException e) {

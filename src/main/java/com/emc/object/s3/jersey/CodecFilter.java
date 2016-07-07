@@ -47,7 +47,7 @@ import java.util.Set;
 
 public class CodecFilter extends ClientFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CodecFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);
 
     private CodecChain encodeChain;
     private Map<String, Object> codecProperties;
@@ -68,7 +68,7 @@ public class CodecFilter extends ClientFilter {
             Long originalSize = SizeOverrideWriter.getEntitySize();
             if (encodeChain.isSizePredictable() && originalSize != null) {
                 long encodedSize = encodeChain.getEncodedSize(originalSize);
-                LOGGER.debug("updating content-length for encoded data (original: {}, encoded: {})", originalSize, encodedSize);
+                log.debug("updating content-length for encoded data (original: {}, encoded: {})", originalSize, encodedSize);
                 SizeOverrideWriter.setEntitySize(encodedSize);
             } else {
                 // we don't know what the size will be; this will turn on chunked encoding in the apache client

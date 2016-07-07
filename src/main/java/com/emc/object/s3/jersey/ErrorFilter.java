@@ -46,7 +46,7 @@ import java.util.Date;
 
 public class ErrorFilter extends ClientFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ErrorFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(ErrorFilter.class);
 
     public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
         ClientResponse response = getNext().handle(request);
@@ -62,7 +62,7 @@ public class ErrorFilter extends ClientFilter {
                 if (clientTime != null && serverTime != null) {
                     long skew = clientTime.getTime() - serverTime.getTime();
                     if (Math.abs(skew) > 5 * 60 * 1000) { // +/- 5 minutes
-                        LOGGER.warn("clock skew detected! client is more than 5 minutes off from server (" + skew + "ms)");
+                        log.warn("clock skew detected! client is more than 5 minutes off from server (" + skew + "ms)");
                     }
                 }
             }
@@ -111,7 +111,7 @@ public class ErrorFilter extends ClientFilter {
             try {
                 reader.close();
             } catch (Throwable t) {
-                LOGGER.warn("could not close reader", t);
+                log.warn("could not close reader", t);
             }
         }
 
@@ -132,7 +132,7 @@ public class ErrorFilter extends ClientFilter {
             return new S3Exception("no code or message in error response", statusCode);
         }
 
-        LOGGER.debug("Error: {}, message: {}, requestId: {}", new Object[] { code, message, requestId });
+        log.debug("Error: {}, message: {}, requestId: {}", new Object[] { code, message, requestId });
         return new S3Exception(message, statusCode, code, requestId);
     }
 }

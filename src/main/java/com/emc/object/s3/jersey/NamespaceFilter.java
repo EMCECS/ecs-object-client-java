@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 public class NamespaceFilter extends ClientFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NamespaceFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(NamespaceFilter.class);
 
     /**
      * prepend to hostname (i.e. namespace.s3.company.com)
@@ -49,7 +49,7 @@ public class NamespaceFilter extends ClientFilter {
     public static URI insertNamespace(URI uri, String namespace) {
         try {
             String hostname = namespace + "." + uri.getHost();
-            LOGGER.debug(String.format("hostname including namespace: %s", hostname));
+            log.debug(String.format("hostname including namespace: %s", hostname));
             return RestUtil.replaceHost(uri, hostname);
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("namespace \"%s\" generated an invalid URI", namespace), e);

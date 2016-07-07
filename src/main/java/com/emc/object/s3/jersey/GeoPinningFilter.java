@@ -48,7 +48,7 @@ import java.util.List;
  */
 public class GeoPinningFilter extends ClientFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GeoPinningFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(GeoPinningFilter.class);
 
     /**
      * If this is a bucket request, the bucket is the ID.
@@ -85,7 +85,7 @@ public class GeoPinningFilter extends ClientFilter {
             }
 
             if (healthyVdcs.isEmpty()) {
-                LOGGER.debug("there are no healthy VDCs; geo-pinning will include all VDCs");
+                log.debug("there are no healthy VDCs; geo-pinning will include all VDCs");
                 healthyVdcs.addAll(objectConfig.getVdcs());
             }
 
@@ -96,7 +96,7 @@ public class GeoPinningFilter extends ClientFilter {
                 Integer retries = (Integer) request.getProperties().get(RetryFilter.PROP_RETRY_COUNT);
                 if (retries != null) {
                     int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
-                    LOGGER.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",
+                    log.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",
                             new Object[] { retries, geoPinIndex, newIndex });
                     geoPinIndex = newIndex;
                 }

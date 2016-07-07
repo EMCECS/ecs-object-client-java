@@ -46,7 +46,7 @@ import java.util.*;
 
 public final class S3AuthUtil {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(S3AuthUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(S3AuthUtil.class);
 
     public static SortedSet<String> SIGNED_PARAMETERS;
 
@@ -88,7 +88,7 @@ public final class S3AuthUtil {
                     resource = "/" + namespace + resource; // prepend to resource path for signing
             } else {
                 // issue warning if namespace is specified and vhost is disabled because we can't put the namespace in the URL
-                LOGGER.warn("vHost namespace is disabled, so there is no way to specify a namespace in a pre-signed URL");
+                log.warn("vHost namespace is disabled, so there is no way to specify a namespace in a pre-signed URL");
             }
         }
 
@@ -172,7 +172,7 @@ public final class S3AuthUtil {
         }
 
         String stringToSignStr = stringToSign.toString();
-        LOGGER.debug("stringToSign:\n" + stringToSignStr);
+        log.debug("stringToSign:\n" + stringToSignStr);
         return stringToSignStr;
     }
 
@@ -214,7 +214,7 @@ public final class S3AuthUtil {
             Mac mac = Mac.getInstance("HmacSHA1");
             mac.init(new SecretKeySpec(secretKey.getBytes("UTF-8"), "HmacSHA1")); // AWS does not B64-decode the secret key!
             String signature = new String(Base64.encodeBase64(mac.doFinal(stringToSign.getBytes("UTF-8"))));
-            LOGGER.debug("signature:\n" + signature);
+            log.debug("signature:\n" + signature);
             return signature;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("HmacSHA1 algorithm is not supported on this platform", e);

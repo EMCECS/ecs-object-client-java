@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 public class RetryFilter extends ClientFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RetryFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(RetryFilter.class);
 
     public static final String PROP_RETRY_COUNT = "com.emc.object.retryCount";
 
@@ -87,7 +87,7 @@ public class RetryFilter extends ClientFilter {
                         if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
                         entityStream.reset();
                     } catch (IOException e) {
-                        LOGGER.warn("could not reset entity stream for retry: " + e);
+                        log.warn("could not reset entity stream for retry: " + e);
                         throw orig;
                     }
                 }
@@ -96,14 +96,14 @@ public class RetryFilter extends ClientFilter {
                 if (s3Config.getInitialRetryDelay() > 0) {
                     int retryDelay = s3Config.getInitialRetryDelay() * (int) Math.pow(2, retryCount - 1);
                     try {
-                        LOGGER.debug("waiting {}ms before retry", retryDelay);
+                        log.debug("waiting {}ms before retry", retryDelay);
                         Thread.sleep(retryDelay);
                     } catch (InterruptedException e) {
-                        LOGGER.warn("interrupted while waiting to retry: " + e.getMessage());
+                        log.warn("interrupted while waiting to retry: " + e.getMessage());
                     }
                 }
 
-                LOGGER.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
+                log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
                 clientRequest.getProperties().put(PROP_RETRY_COUNT, retryCount);
             }
         }

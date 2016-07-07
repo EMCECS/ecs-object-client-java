@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  */
 public class LargeFileUploader implements Runnable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LargeFileUploader.class);
+    private static final Logger log = LoggerFactory.getLogger(LargeFileUploader.class);
 
     public static final int DEFAULT_THREADS = 8;
 
@@ -149,7 +149,7 @@ public class LargeFileUploader implements Runnable {
             try {
                 s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
             } catch (Throwable t) {
-                LOGGER.warn("could not abort upload after failure", t);
+                log.warn("could not abort upload after failure", t);
             }
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException("error during upload", e);
@@ -162,7 +162,7 @@ public class LargeFileUploader implements Runnable {
                 try {
                     stream.close();
                 } catch (Throwable t) {
-                    LOGGER.warn("could not close stream", t);
+                    log.warn("could not close stream", t);
                 }
             }
         }
@@ -200,7 +200,7 @@ public class LargeFileUploader implements Runnable {
             try {
                 s3Client.deleteObject(bucket, key);
             } catch (Throwable t) {
-                LOGGER.warn("could not delete object after failure", t);
+                log.warn("could not delete object after failure", t);
             }
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException("error during upload", e);
@@ -213,7 +213,7 @@ public class LargeFileUploader implements Runnable {
                 try {
                     stream.close();
                 } catch (Throwable t) {
-                    LOGGER.warn("could not close stream", t);
+                    log.warn("could not close stream", t);
                 }
             }
         }
@@ -244,11 +244,11 @@ public class LargeFileUploader implements Runnable {
         if (objectMetadata != null) objectMetadata.setContentLength(null);
 
         long minPartSize = Math.max(MIN_PART_SIZE, fullSize / MAX_PARTS + 1);
-        LOGGER.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
+        log.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
 
         if (partSize == null) partSize = minPartSize;
         if (partSize < minPartSize) {
-            LOGGER.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
+            log.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
                     partSize / 1024, minPartSize / 1024));
             partSize = minPartSize;
         }

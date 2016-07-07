@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class AbstractJerseyClient {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractJerseyClient.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractJerseyClient.class);
 
     protected ObjectConfig objectConfig;
 
@@ -71,13 +71,13 @@ public abstract class AbstractJerseyClient {
 
                     // if content-length is set (perhaps by user), force jersey to use it
                     if (entityRequest.getContentLength() != null) {
-                        LOGGER.debug("enabling content-length override ({})", entityRequest.getContentLength().toString());
+                        log.debug("enabling content-length override ({})", entityRequest.getContentLength().toString());
                         SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
 
                         // otherwise chunked encoding will be used. if the request does not support it, try to ensure
                         // that the entity is buffered (will set content length from buffered write)
                     } else if (!entityRequest.isChunkable()) {
-                        LOGGER.debug("no content-length and request is not chunkable, attempting to enable buffering");
+                        log.debug("no content-length and request is not chunkable, attempting to enable buffering");
                         request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
                         request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, null);
                     }

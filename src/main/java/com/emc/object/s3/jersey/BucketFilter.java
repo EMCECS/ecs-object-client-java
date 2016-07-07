@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 public class BucketFilter extends ClientFilter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BucketFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(BucketFilter.class);
 
     public static URI insertBucket(URI uri, String bucketName, boolean useVHost) {
         try {
@@ -55,7 +55,7 @@ public class BucketFilter extends ClientFilter {
                 uri = RestUtil.replacePath(uri, resource);
             }
 
-            LOGGER.debug("URI including bucket: " + uri);
+            log.debug("URI including bucket: " + uri);
             return uri;
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("bucket name \"%s\" generated an invalid URI", bucketName), e);

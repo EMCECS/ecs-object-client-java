@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  */
 public class LargeFileDownloader implements Runnable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LargeFileDownloader.class);
+    private static final Logger log = LoggerFactory.getLogger(LargeFileDownloader.class);
 
     public static final int MIN_PART_SIZE = 2 * 1024 * 1024; // 2MB
     public static final int DEFAULT_PART_SIZE = 4 * 1024 * 1024; // 4MB
@@ -82,7 +82,7 @@ public class LargeFileDownloader implements Runnable {
             throw new IllegalArgumentException("cannot write to file: " + file.getPath());
 
         if (partSize < MIN_PART_SIZE) {
-            LOGGER.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
+            log.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
                     partSize / 1024, MIN_PART_SIZE / 1024));
             partSize = MIN_PART_SIZE;
         }
