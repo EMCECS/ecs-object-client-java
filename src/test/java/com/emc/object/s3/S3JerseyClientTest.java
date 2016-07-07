@@ -809,6 +809,38 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testCreateObjectWithRetentionPeriod() throws Exception {
+        String key = "object-in-retention";
+        String content = "Hello Retention!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setRetentionPeriod(2L);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals((Long) 2L, objectMetadata.getRetentionPeriod());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        try {
+            client.putObject(getTestBucket(), key, "evil update!", null);
+            Assert.fail("object in retention allowed update");
+        } catch (S3Exception e) {
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
+        }
+
+        Thread.sleep(5000); // allow retention to expire
+        client.putObject(getTestBucket(), key, "good update!", null);
+    }
+
+    @Test
+    public void testCreateObjectWithRetentionPolicy() throws Exception {
+        String key = "object-in-retention-policy";
+        String content = "Hello Retention Policy!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setRetentionPolicy("bad-policy");
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+
+        // no way to verify, so if no error is returned, assume success
+    }
+
+    @Test
     public void testLargeObjectContentLength() throws Exception {
         String key = "large-object";
         int size = 1024 * 1024;
