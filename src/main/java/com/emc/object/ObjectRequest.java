@@ -46,7 +46,7 @@ public class ObjectRequest {
      *                    dynamic path properties such as bucket or namespace. Since this is context-relative, also exclude
      *                    the base context of the service (i.e. /rest for Atmos).
      * @param subresource the subresource of the request. This will be the first parameter in the querystring and will
-     *                    not have an associated value (i.e. "acl" => ?acl).
+     *                    not have an associated value (i.e. "acl" =&gt; ?acl).
      */
     public ObjectRequest(Method method, String path, String subresource) {
         this.method = method;

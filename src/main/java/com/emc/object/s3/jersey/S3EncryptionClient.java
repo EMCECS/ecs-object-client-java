@@ -65,7 +65,7 @@ import java.util.Map;
  *   -keysize 2048 -dname "CN=My Name, OU=My Division, O=My Company, L=My Location, ST=MA, C=US"
  * Enter keystore password: changeit
  * Re-enter new password: changeit
- * Enter key password for <masterkey>
+ * Enter key password for &lt;masterkey&gt;
  *   (RETURN if same as keystore password):
  * </pre>
  * Inside your application, you can then construct and load a Keystore object,

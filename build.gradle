@@ -29,7 +29,7 @@ description = 'EMC Object Client for Java - provides REST access to object data 
 ext.githubProjectName = 'ecs-object-client-java'
 
 buildscript {
-    ext.commonBuildVersion = '1.4.1'
+    ext.commonBuildVersion = '1.5'
     ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
     apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
 }
@@ -39,9 +39,11 @@ allprojects {
 }
 
 dependencies {
-    compile 'com.emc.ecs:smart-client:2.0.7',
+    compile 'com.emc.ecs:smart-client:2.1.0',
             'com.emc.ecs:object-transform:1.1.0',
             'commons-codec:commons-codec:1.10',
-            'org.jdom:jdom2:2.0.6'
+            'org.jdom:jdom2:2.0.6',
+            'org.slf4j:slf4j-api:1.7.5'
+    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
     testCompile 'junit:junit:4.12'
 }

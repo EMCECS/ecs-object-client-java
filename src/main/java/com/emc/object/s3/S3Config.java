@@ -206,7 +206,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     }
 
     /**
-     * Sets the fault injection rate. Enables fault injection when this number is > 0. The rate is a ratio expressed as
+     * Sets the fault injection rate. Enables fault injection when this number is &gt; 0. The rate is a ratio expressed as
      * a decimal between 0 and 1.  This is the rate at which faults (HTTP 500 errors) should randomly be injected into
      * the response. When faults are injected, the real request is never sent over the wire. Fault injection is disabled
      * by default.
