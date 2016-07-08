@@ -264,16 +264,16 @@ public final class RestUtil {
     /**
      * Returns the content of this URI as a US-ASCII string.
      *
-     * <p/><b>Note:</b> this starts our customized version of URI's toASCIIString.  We differ in only one aspect: we do
+     * <p><b>Note:</b> this starts our customized version of URI's toASCIIString.  We differ in only one aspect: we do
      * NOT normalize Unicode characters.  This is because certain Unicode characters may have different compositions
      * and normalization may change the UTF-8 sequence represented by a character.  We must maintain the same UTF-8
-     * sequence in and out and therefore we cannot normalize the sequences.
+     * sequence in and out and therefore we cannot normalize the sequences.</p>
      *
      * <p> If this URI does not contain any characters in the <i>other</i>
      * category then an invocation of this method will return the same value as
      * an invocation of the {@link #toString() toString} method.  Otherwise
-     * this method works as if by invoking that method and then <a
-     * href="#encode">encoding</a> the result.  </p>
+     * this method works as if by invoking that method and then
+     * <a href="#encode">encoding</a> the result.  </p>
      *
      * @return  The string form of this URI, encoded as needed
      *          so that it only contains characters in the US-ASCII

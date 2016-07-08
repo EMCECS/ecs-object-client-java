@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -33,13 +33,16 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.log4j.Logger;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class BucketFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(BucketFilter.class);
+
+    private static final Logger log = LoggerFactory.getLogger(BucketFilter.class);
 
     public static URI insertBucket(URI uri, String bucketName, boolean useVHost) {
         try {
@@ -52,7 +55,7 @@ public class BucketFilter extends ClientFilter {
                 uri = RestUtil.replacePath(uri, resource);
             }
 
-            l4j.debug("URI including bucket: " + uri);
+            log.debug("URI including bucket: " + uri);
             return uri;
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("bucket name \"%s\" generated an invalid URI", bucketName), e);

@@ -451,4 +451,19 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Override
     public void testCopyObjectWithMeta() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void testCreateObjectWithStream() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testCreateObjectWithRetentionPeriod() throws Exception {
+    }
+
+    @Ignore
+    @Override
+    public void testCreateObjectWithRetentionPolicy() throws Exception {
+    }
 }

@@ -35,6 +35,7 @@ import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
 import com.emc.object.util.RestUtil;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -42,10 +43,12 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     private S3ObjectMetadata objectMetadata;
     private Object object;
     private Range range;
+    private Date ifModifiedSince;
+    private Date ifUnmodifiedSince;
+    private String ifMatch;
+    private String ifNoneMatch;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
-    private Long retentionPeriod;
-    private String retentionPolicy;
 
     public PutObjectRequest(String bucketName, String key, Object object) {
         super(Method.PUT, bucketName, key, null);
@@ -66,10 +69,14 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         Map<String, List<Object>> headers = super.getHeaders();
         if (range != null) RestUtil.putSingle(headers, RestUtil.HEADER_RANGE, "bytes=" + range.toString());
         if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
+        if (ifModifiedSince != null)
+            RestUtil.putSingle(headers, RestUtil.HEADER_IF_MODIFIED_SINCE, RestUtil.headerFormat(ifModifiedSince));
+        if (ifUnmodifiedSince != null)
+            RestUtil.putSingle(headers, RestUtil.HEADER_IF_UNMODIFIED_SINE, RestUtil.headerFormat(ifUnmodifiedSince));
+        if (ifMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_MATCH, ifMatch);
+        if (ifNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifNoneMatch);
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
-        if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
-        if (retentionPolicy != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_POLICY, retentionPolicy);
         return headers;
     }
 
@@ -113,6 +120,38 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         this.range = range;
     }
 
+    public Date getIfModifiedSince() {
+        return ifModifiedSince;
+    }
+
+    public void setIfModifiedSince(Date ifModifiedSince) {
+        this.ifModifiedSince = ifModifiedSince;
+    }
+
+    public Date getIfUnmodifiedSince() {
+        return ifUnmodifiedSince;
+    }
+
+    public void setIfUnmodifiedSince(Date ifUnmodifiedSince) {
+        this.ifUnmodifiedSince = ifUnmodifiedSince;
+    }
+
+    public String getIfMatch() {
+        return ifMatch;
+    }
+
+    public void setIfMatch(String ifMatch) {
+        this.ifMatch = ifMatch;
+    }
+
+    public String getIfNoneMatch() {
+        return ifNoneMatch;
+    }
+
+    public void setIfNoneMatch(String ifNoneMatch) {
+        this.ifNoneMatch = ifNoneMatch;
+    }
+
     public AccessControlList getAcl() {
         return acl;
     }
@@ -129,28 +168,48 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         this.cannedAcl = cannedAcl;
     }
 
+    /**
+     * @deprecated Use the method <code>com.emc.object.s3.S3ObjectMetadata.getRetentionPeriod</code> in preference to this one.
+     * @return The retention period in seconds.
+     */
+    @Deprecated
     public Long getRetentionPeriod() {
-        return retentionPeriod;
+        return (objectMetadata == null) ? null : objectMetadata.getRetentionPeriod();
     }
 
     /**
      * Sets the retention (read-only) period for the object in seconds (after <code>retentionPeriod</code> seconds,
      * you can modify or delete the object)
+     * @deprecated Use the method <code>com.emc.object.s3.S3ObjectMetadata.setRetentionPeriod</code> in preference to this one.
      */
+    @Deprecated
     public void setRetentionPeriod(Long retentionPeriod) {
-        this.retentionPeriod = retentionPeriod;
+        if (objectMetadata == null) {
+            objectMetadata = new S3ObjectMetadata();
+        }
+        objectMetadata.setRetentionPeriod(retentionPeriod);
     }
 
+    /**
+     * @deprecated Use the method <code>com.emc.object.s3.S3ObjectMetadata.getRetentionPolicy</code> in preference to this one.
+     * @return The retention policy name.
+     */
+    @Deprecated
     public String getRetentionPolicy() {
-        return retentionPolicy;
+        return (objectMetadata == null) ? null : objectMetadata.getRetentionPolicy();
     }
 
     /**
      * Sets the name of the retention policy to apply to the object. Retention policies are defined within each
      * namespace
+     * @deprecated Use the method <code>com.emc.object.s3.S3ObjectMetadata.setRetentionPolicy</code> in preference to this one.
      */
+    @Deprecated
     public void setRetentionPolicy(String retentionPolicy) {
-        this.retentionPolicy = retentionPolicy;
+        if (objectMetadata == null) {
+            objectMetadata = new S3ObjectMetadata();
+        }
+        objectMetadata.setRetentionPolicy(retentionPolicy);
     }
 
     public PutObjectRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
@@ -160,6 +219,26 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
 
     public PutObjectRequest withRange(Range range) {
         setRange(range);
+        return this;
+    }
+
+    public PutObjectRequest withIfModifiedSince(Date ifModifiedSince) {
+        setIfModifiedSince(ifModifiedSince);
+        return this;
+    }
+
+    public PutObjectRequest withIfUnmodifiedSince(Date ifUnmodifiedSince) {
+        setIfUnmodifiedSince(ifUnmodifiedSince);
+        return this;
+    }
+
+    public PutObjectRequest withIfMatch(String ifMatch) {
+        setIfMatch(ifMatch);
+        return this;
+    }
+
+    public PutObjectRequest withIfNoneMatch(String ifNoneMatch) {
+        setIfNoneMatch(ifNoneMatch);
         return this;
     }
 
@@ -173,11 +252,25 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         return this;
     }
 
+    /**
+     * Convenience method.
+     * @deprecated Use the method <code>com.emc.object.s3.S3ObjectMetadata.setRetentionPeriod</code> in preference to this one.
+     * @param retentionPeriod
+     * @return The request.
+     */
+    @Deprecated
     public PutObjectRequest withRetentionPeriod(long retentionPeriod) {
         setRetentionPeriod(retentionPeriod);
         return this;
     }
 
+    /**
+     * Convenience method.
+     * @deprecated Use the method <code>com.emc.object.s3.S3ObjectMetadata.setRetentionPolicy</code> in preference to this one.
+     * @param retentionPolicy
+     * @return The request.
+     */
+    @Deprecated
     public PutObjectRequest withRetentionPolicy(String retentionPolicy) {
         setRetentionPolicy(retentionPolicy);
         return this;

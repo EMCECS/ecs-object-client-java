@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -32,10 +32,13 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.SizeOverrideWriter;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
 
 import javax.ws.rs.core.MultivaluedMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashSet;
@@ -43,7 +46,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class CodecFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(CodecFilter.class);
+
+    private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);
 
     private CodecChain encodeChain;
     private Map<String, Object> codecProperties;
@@ -64,15 +68,24 @@ public class CodecFilter extends ClientFilter {
             Long originalSize = SizeOverrideWriter.getEntitySize();
             if (encodeChain.isSizePredictable() && originalSize != null) {
                 long encodedSize = encodeChain.getEncodedSize(originalSize);
-                LogMF.debug(l4j, "updating content-length for encoded data (original: {0}, encoded: {1})", originalSize, encodedSize);
+                log.debug("updating content-length for encoded data (original: {}, encoded: {})", originalSize, encodedSize);
                 SizeOverrideWriter.setEntitySize(encodedSize);
             } else {
                 // we don't know what the size will be; this will turn on chunked encoding in the apache client
                 SizeOverrideWriter.setEntitySize(-1L);
             }
 
+            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
+            // a "dangling" output stream and connect it in the adapter
+            // NOTE: we can't alter the headers in the adapt() method because they've already been a) signed and b) sent
+            DanglingOutputStream danglingStream = new DanglingOutputStream();
+            OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
+
+            // add pre-stream encode metadata
+            request.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
+
             // wrap output stream with encryptor
-            request.setAdapter(new EncryptAdapter(request.getAdapter(), userMeta));
+            request.setAdapter(new EncryptAdapter(request.getAdapter(), danglingStream, encodeStream));
         }
 
         // execute request
@@ -120,16 +133,19 @@ public class CodecFilter extends ClientFilter {
 
     // only way to set the output stream
     private class EncryptAdapter extends AbstractClientRequestAdapter {
-        Map<String, String> encMeta;
+        DanglingOutputStream danglingStream;
+        OutputStream encodeStream;
 
-        EncryptAdapter(ClientRequestAdapter parent, Map<String, String> encMeta) {
+        EncryptAdapter(ClientRequestAdapter parent, DanglingOutputStream danglingStream, OutputStream encodeStream) {
             super(parent);
-            this.encMeta = encMeta;
+            this.danglingStream = danglingStream;
+            this.encodeStream = encodeStream;
         }
 
         @Override
         public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
-            return getAdapter().adapt(request, encodeChain.getEncodeStream(out, encMeta)); // don't break the chain
+            danglingStream.setOutputStream(out); // connect the dangling output stream
+            return getAdapter().adapt(request, encodeStream); // don't break the chain
         }
     }
 
@@ -144,5 +160,32 @@ public class CodecFilter extends ClientFilter {
     public CodecFilter withCodecProperties(Map<String, Object> codecProperties) {
         setCodecProperties(codecProperties);
         return this;
+    }
+
+    private static class DanglingOutputStream extends FilterOutputStream {
+        private static final OutputStream BOGUS_STREAM = new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                throw new RuntimeException("you didn't connect a dangling output stream!");
+            }
+        };
+
+        DanglingOutputStream() {
+            super(BOGUS_STREAM);
+        }
+
+        void setOutputStream(OutputStream out) {
+            this.out = out;
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            out.write(b, off, len);
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            throw new UnsupportedOperationException("single-byte write called!");
+        }
     }
 }

@@ -36,29 +36,31 @@ import java.util.Map;
 
 @XmlRootElement(name = "PingList")
 public class PingResponse {
-    Map<String, PingItem> pingItemMap;
+    private List<PingItem> pingItems = new ArrayList<PingItem>();
 
     @XmlElement(name = "PingItem")
     public List<PingItem> getPingItems() {
-        if (pingItemMap == null) return null;
-        return new ArrayList<PingItem>(pingItemMap.values());
+        return pingItems;
     }
 
     public void setPingItems(List<PingItem> pingItems) {
+        this.pingItems = pingItems;
+    }
+
+    @XmlTransient
+    public Map<String, PingItem> getPingItemMap() {
+        Map<String, PingItem> pingItemMap = null;
         if (pingItems != null) {
             pingItemMap = new HashMap<String, PingItem>();
             for (PingItem item : pingItems) {
                 pingItemMap.put(item.getName(), item);
             }
         }
-    }
-
-    @XmlTransient
-    public Map<String, PingItem> getPingItemMap() {
         return pingItemMap;
     }
 
     public void setPingItemMap(Map<String, PingItem> pingItemMap) {
-        this.pingItemMap = pingItemMap;
+        if (pingItemMap == null) this.pingItems = null;
+        else this.pingItems = new ArrayList<PingItem>(pingItemMap.values());
     }
 }

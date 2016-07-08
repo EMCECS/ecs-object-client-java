@@ -292,30 +292,35 @@ public interface S3Client {
 
     /**
      * Reads object <code>key</code> in bucket <code>bucketName</code> and converts it to <code>objectType</code>,
-     * provided the conversion is supported by the implementation
+     * provided the conversion is supported by the implementation.
+     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
      */
     <T> T readObject(String bucketName, String key, Class<T> objectType);
 
     /**
      * Reads version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code> and converts
-     * it to <code>objectType</code>, provided the conversion is supported by the implementation
+     * it to <code>objectType</code>, provided the conversion is supported by the implementation.
+     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
      */
     <T> T readObject(String bucketName, String key, String versionId, Class<T> objectType);
 
     /**
-     * Reads <code>range</code> bytes of object <code>key</code> in bucket <code>bucketName</code> as a stream
+     * Reads <code>range</code> bytes of object <code>key</code> in bucket <code>bucketName</code> as a stream.
+     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
      */
     InputStream readObjectStream(String bucketName, String key, Range range);
 
     /**
      * Gets object <code>key</code> in bucket <code>bucketName</code>. Object details as well as the data stream
-     * (obtained from {@link GetObjectResult#getObject()} are contained in the {@link GetObjectResult} instance
+     * (obtained from {@link GetObjectResult#getObject()} are contained in the {@link GetObjectResult} instance.
+     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
      */
     GetObjectResult<InputStream> getObject(String bucketName, String key);
 
     /**
      * Gets an object using the parameters specified in <code>request</code>. Object details as well as the translated
-     * data (converted to <code>objectType</code>) are contained in the {@link GetObjectResult} instance
+     * data (converted to <code>objectType</code>) are contained in the {@link GetObjectResult} instance.
+     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
      */
     <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 

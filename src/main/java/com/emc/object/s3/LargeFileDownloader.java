@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -28,7 +28,6 @@ package com.emc.object.s3;
 
 import com.emc.object.Range;
 import com.emc.object.s3.request.GetObjectRequest;
-import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -41,12 +40,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Convenience class to facilitate multi-threaded download for large objects. This class will split the object
  * and download it in parts, transferring several parts simultaneously to maximize efficiency.
  */
 public class LargeFileDownloader implements Runnable {
-    public static final Logger l4j = Logger.getLogger(LargeFileDownloader.class);
+
+    private static final Logger log = LoggerFactory.getLogger(LargeFileDownloader.class);
 
     public static final int MIN_PART_SIZE = 2 * 1024 * 1024; // 2MB
     public static final int DEFAULT_PART_SIZE = 4 * 1024 * 1024; // 4MB
@@ -79,7 +82,7 @@ public class LargeFileDownloader implements Runnable {
             throw new IllegalArgumentException("cannot write to file: " + file.getPath());
 
         if (partSize < MIN_PART_SIZE) {
-            l4j.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
+            log.warn(String.format("%,dk is below the minimum part size (%,dk). the minimum will be used instead",
                     partSize / 1024, MIN_PART_SIZE / 1024));
             partSize = MIN_PART_SIZE;
         }

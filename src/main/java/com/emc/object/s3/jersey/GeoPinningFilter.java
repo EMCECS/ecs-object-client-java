@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -35,8 +35,8 @@ import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -47,7 +47,8 @@ import java.util.List;
  * the path to extract the object key)
  */
 public class GeoPinningFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(GeoPinningFilter.class);
+
+    private static final Logger log = LoggerFactory.getLogger(GeoPinningFilter.class);
 
     /**
      * If this is a bucket request, the bucket is the ID.
@@ -84,7 +85,7 @@ public class GeoPinningFilter extends ClientFilter {
             }
 
             if (healthyVdcs.isEmpty()) {
-                l4j.debug("there are no healthy VDCs; geo-pinning will include all VDCs");
+                log.debug("there are no healthy VDCs; geo-pinning will include all VDCs");
                 healthyVdcs.addAll(objectConfig.getVdcs());
             }
 
@@ -95,8 +96,8 @@ public class GeoPinningFilter extends ClientFilter {
                 Integer retries = (Integer) request.getProperties().get(RetryFilter.PROP_RETRY_COUNT);
                 if (retries != null) {
                     int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
-                    LogMF.info(l4j, "geo-pin read retry #{0}: failing over from primary VDC {1} to VDC {2}",
-                            retries, geoPinIndex, newIndex);
+                    log.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",
+                            new Object[] { retries, geoPinIndex, newIndex });
                     geoPinIndex = newIndex;
                 }
             }

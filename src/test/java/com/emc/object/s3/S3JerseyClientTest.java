@@ -38,6 +38,7 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
+import com.emc.util.RandomInputStream;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
@@ -211,11 +212,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteBucket() throws Exception {
+        Thread.sleep(1000); // discover all hosts
+
         String bucketName = getTestBucket() + "-x";
         Assert.assertFalse("bucket should not exist " + bucketName, client.bucketExists(bucketName));
 
         client.createBucket(bucketName);
         Assert.assertTrue("failed to create bucket " + bucketName, client.bucketExists(bucketName));
+
+        // write and delete an object
+        client.putObject(bucketName, "foo", "bar", null);
+        client.deleteObject(bucketName, "foo");
 
         client.deleteBucket(bucketName);
         Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
@@ -563,12 +570,159 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testGetObjectPreconditions() throws Exception {
+        String key = "testGetPreconditions";
+        String content = "hello GET preconditions!";
+
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MINUTE, -5); // 5 minutes ago
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        String etag = client.getObjectMetadata(getTestBucket(), key).getETag();
+
+        // test if-modified pass
+        GetObjectRequest request = new GetObjectRequest(getTestBucket(), key);
+        request.withIfModifiedSince(cal.getTime());
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-unmodified fail
+        request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
+        Assert.assertNull(client.getObject(request, String.class));
+
+        // test if-modified fail
+        cal.add(Calendar.MINUTE, 10); // 5 minutes from now
+        request.withIfUnmodifiedSince(null).withIfModifiedSince(cal.getTime());
+        Assert.assertNull(client.getObject(request, String.class));
+
+        // test if-unmodified pass
+        request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-match pass
+        request.withIfUnmodifiedSince(null).withIfMatch(etag);
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-none-match fail
+        request.withIfMatch(null).withIfNoneMatch(etag);
+        Assert.assertNull(client.getObject(request, String.class));
+
+        etag = "d41d8cd98f00b204e9800998ecf8427e";
+
+        // test if-none-match pass
+        request.withIfNoneMatch(etag);
+        Assert.assertNotNull(client.getObject(request, String.class));
+
+        // test if-match fail
+        request.withIfNoneMatch(null).withIfMatch(etag);
+        Assert.assertNull(client.getObject(request, String.class));
+    }
+
+    // REQUIRES: ECS >= 2.2.1 HF1
+    @Test
+    public void testPutObjectPreconditions() {
+        String key = "testGetPreconditions";
+        String content = "hello GET preconditions!";
+
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MINUTE, -5); // 5 minutes ago
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        String etag = client.getObjectMetadata(getTestBucket(), key).getETag();
+
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
+
+        // test if-unmodified fail
+        request.withIfUnmodifiedSince(cal.getTime());
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-modified pass
+        request.withIfUnmodifiedSince(null).withIfModifiedSince(cal.getTime());
+        client.putObject(request);
+
+        // test if-modified fail
+        cal.add(Calendar.MINUTE, 10); // 5 minutes from now
+        request.withIfModifiedSince(cal.getTime());
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-unmodified pass
+        request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
+        client.putObject(request);
+
+        // test if-match pass
+        request.withIfUnmodifiedSince(null).withIfMatch(etag);
+        client.putObject(request);
+
+        // test if-none-match fail
+        request.withIfMatch(null).withIfNoneMatch(etag);
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        etag = "d41d8cd98f00b204e9800998ecf8427e";
+
+        // test if-none-match pass
+        request.withIfNoneMatch(etag);
+        client.putObject(request);
+
+        // test if-match fail
+        request.withIfNoneMatch(null).withIfMatch(etag);
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-match * (if key exists, i.e. update only) pass
+        request.withIfNoneMatch(null).withIfMatch("*");
+        client.putObject(request);
+
+        // test if-none-match * (if key is new, i.e. create only) fail
+        request.withIfMatch(null).withIfNoneMatch("*");
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        request.setKey("bogus-key");
+
+        // test if-match * fail
+        request.withIfNoneMatch(null).withIfMatch("*");
+        try {
+            client.putObject(request);
+            Assert.fail("expected 304");
+        } catch (S3Exception e) {
+            Assert.assertEquals(304, e.getHttpCode());
+        }
+
+        // test if-none-match * pass
+        request.withIfMatch(null).withIfNoneMatch("*");
+        client.putObject(request);
+    }
+
+    @Test
     public void testCreateObjectByteArray() throws Exception {
         byte[] data;
         Random random = new Random();
 
         data = new byte[15];
         random.nextBytes(data);
+        // FYI, this will set a content-length
         client.putObject(getTestBucket(), "hello-bytes-small", data, null);
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-small", byte[].class));
 
@@ -581,6 +735,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         random.nextBytes(data);
         client.putObject(getTestBucket(), "hello-bytes-more", data, null);
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-more", byte[].class));
+    }
+
+    @Test
+    public void testCreateObjectWithStream() throws Exception {
+        byte[] data = new byte[100];
+        Random random = new Random();
+        random.nextBytes(data);
+
+        // FYI, this will set a content-length
+        client.putObject(getTestBucket(), "byte-array-test", new ByteArrayInputStream(data), null);
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "byte-array-test", byte[].class));
+
+        // ... and this will use chunked-encoding
+        client.putObject(getTestBucket(), "random-array-test", new RandomInputStream(100), null);
+        Assert.assertEquals(new Long(100), client.getObjectMetadata(getTestBucket(), "random-array-test").getContentLength());
     }
 
     @Test
@@ -605,11 +774,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         new Random().nextBytes(data);
         String dataStr = new String(data);
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", dataStr);
+
         //request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.CHUNKED);
-
         //request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, -1);
+        //request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
 
-        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
@@ -637,6 +806,38 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(ce, objectMetadata.getContentEncoding());
         Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
+    }
+
+    @Test
+    public void testCreateObjectWithRetentionPeriod() throws Exception {
+        String key = "object-in-retention";
+        String content = "Hello Retention!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setRetentionPeriod(2L);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals((Long) 2L, objectMetadata.getRetentionPeriod());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        try {
+            client.putObject(getTestBucket(), key, "evil update!", null);
+            Assert.fail("object in retention allowed update");
+        } catch (S3Exception e) {
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
+        }
+
+        Thread.sleep(5000); // allow retention to expire
+        client.putObject(getTestBucket(), key, "good update!", null);
+    }
+
+    @Test
+    public void testCreateObjectWithRetentionPolicy() throws Exception {
+        String key = "object-in-retention-policy";
+        String content = "Hello Retention Policy!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setRetentionPolicy("bad-policy");
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+
+        // no way to verify, so if no error is returned, assume success
     }
 
     @Test

@@ -72,4 +72,25 @@ public class QueryObject {
         this.queryMds = queryMds;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        QueryObject object = (QueryObject) o;
+
+        if (objectName != null ? !objectName.equals(object.objectName) : object.objectName != null) return false;
+        if (objectId != null ? !objectId.equals(object.objectId) : object.objectId != null) return false;
+        if (versionId != null ? !versionId.equals(object.versionId) : object.versionId != null) return false;
+        return queryMds != null ? queryMds.equals(object.queryMds) : object.queryMds == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = objectName != null ? objectName.hashCode() : 0;
+        result = 31 * result + (objectId != null ? objectId.hashCode() : 0);
+        result = 31 * result + (versionId != null ? versionId.hashCode() : 0);
+        result = 31 * result + (queryMds != null ? queryMds.hashCode() : 0);
+        return result;
+    }
 }

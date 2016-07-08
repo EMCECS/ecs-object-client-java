@@ -44,6 +44,8 @@ public class S3ObjectMetadata {
     private String contentMd5;
     private String contentType;
     private String eTag;
+    private Long retentionPeriod;
+    private String retentionPolicy;
     private Date expirationDate;
     private String expirationRuleId;
     private Date httpExpires;
@@ -71,6 +73,10 @@ public class S3ObjectMetadata {
             objectMetadata.lastModified = RestUtil.headerParse(RestUtil.getFirstAsString(headers, RestUtil.HEADER_LAST_MODIFIED));
 
         objectMetadata.versionId = RestUtil.getFirstAsString(headers, S3Constants.AMZ_VERSION_ID);
+        if (RestUtil.getFirstAsString(headers, RestUtil.EMC_RETENTION_PERIOD) != null) {
+            objectMetadata.retentionPeriod = Long.parseLong(RestUtil.getFirstAsString(headers, RestUtil.EMC_RETENTION_PERIOD));
+        }
+        objectMetadata.retentionPolicy = RestUtil.getFirstAsString(headers, RestUtil.EMC_RETENTION_POLICY);
         objectMetadata.expirationDate = getExpirationDate(headers);
         objectMetadata.expirationRuleId = getExpirationRuleId(headers);
         objectMetadata.userMetadata = getUserMetadata(headers);
@@ -129,6 +135,14 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_MD5, contentMd5);
         RestUtil.putSingle(headers, RestUtil.HEADER_CONTENT_TYPE, contentType);
         RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
+        RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
+        RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_POLICY, retentionPolicy);
+        headers.putAll(getUmdHeaders(userMetadata));
+        return headers;
+    }
+
+    public static Map<String, List<Object>> getUmdHeaders(Map<String, String> userMetadata) {
+        Map<String, List<Object>> headers = new HashMap<String, List<Object>>();
         for (String name : userMetadata.keySet()) {
             RestUtil.putSingle(headers, getHeaderName(name), userMetadata.get(name));
         }
@@ -193,6 +207,22 @@ public class S3ObjectMetadata {
 
     public void setETag(String eTag) {
         this.eTag = eTag;
+    }
+
+    public Long getRetentionPeriod() {
+        return retentionPeriod;
+    }
+
+    public void setRetentionPeriod(Long retentionPeriod) {
+        this.retentionPeriod = retentionPeriod;
+    }
+
+    public String getRetentionPolicy() {
+        return retentionPolicy;
+    }
+
+    public void setRetentionPolicy(String retentionPolicy) {
+        this.retentionPolicy = retentionPolicy;
     }
 
     public Date getExpirationDate() {

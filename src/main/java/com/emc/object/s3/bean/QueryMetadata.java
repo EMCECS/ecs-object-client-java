@@ -28,13 +28,14 @@ package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
-import java.util.HashMap;
-import java.util.Map;
+import javax.xml.bind.annotation.adapters.XmlAdapter;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import java.util.*;
 
-@XmlType(namespace = "")
+@XmlType(propOrder = {"type", "mdMap"}, namespace = "")
 public class QueryMetadata {
     private QueryMetadataType type;
-    private Map<String, String> mdMap = new HashMap<String, String>();
+    private Map<String, String> mdMap = new TreeMap<String, String>();
 
     @XmlElement(name = "type")
     public QueryMetadataType getType() {
@@ -45,6 +46,7 @@ public class QueryMetadata {
         this.type = type;
     }
 
+    @XmlJavaTypeAdapter(MapAdapter.class)
     @XmlElement(name = "mdMap")
     public Map<String, String> getMdMap() {
         return mdMap;
@@ -52,5 +54,62 @@ public class QueryMetadata {
 
     public void setMdMap(Map<String, String> mdMap) {
         this.mdMap = mdMap;
+    }
+
+    public static class MapAdapter extends XmlAdapter<FlatMap, Map<String, String>> {
+        @Override
+        public Map<String, String> unmarshal(FlatMap v) throws Exception {
+            Map<String, String> map = new TreeMap<String, String>();
+            for (Entry entry : v.entry) {
+                map.put(entry.key, entry.value);
+            }
+            return map;
+        }
+
+        @Override
+        public FlatMap marshal(Map<String, String> v) throws Exception {
+            FlatMap flatMap = new FlatMap();
+            for (String key : v.keySet()) {
+                flatMap.entry.add(new Entry(key, v.get(key)));
+            }
+            return flatMap;
+        }
+    }
+
+    @XmlType(namespace = "")
+    public static class FlatMap {
+        public List<Entry> entry = new ArrayList<Entry>();
+    }
+
+    @XmlType(namespace = "")
+    public static class Entry {
+        public String key;
+        public String value;
+
+        public Entry() {
+        }
+
+        public Entry(String key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        QueryMetadata metadata = (QueryMetadata) o;
+
+        if (type != metadata.type) return false;
+        return mdMap != null ? mdMap.equals(metadata.mdMap) : metadata.mdMap == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type != null ? type.hashCode() : 0;
+        result = 31 * result + (mdMap != null ? mdMap.hashCode() : 0);
+        return result;
     }
 }

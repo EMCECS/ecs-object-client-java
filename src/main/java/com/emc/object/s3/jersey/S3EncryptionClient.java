@@ -65,7 +65,7 @@ import java.util.Map;
  *   -keysize 2048 -dname "CN=My Name, OU=My Division, O=My Company, L=My Location, ST=MA, C=US"
  * Enter keystore password: changeit
  * Re-enter new password: changeit
- * Enter key password for <masterkey>
+ * Enter key password for &lt;masterkey&gt;
  *   (RETURN if same as keystore password):
  * </pre>
  * Inside your application, you can then construct and load a Keystore object,
@@ -123,7 +123,7 @@ public class S3EncryptionClient extends S3JerseyClient {
                 : new CodecChain(encryptionConfig.getEncryptionSpec());
         encodeChain.setProperties(encryptionConfig.getCodecProperties());
 
-        // insert codec filter into chain before the checksum filter
+        // insert codec filter into chain before the authorization filter
         // as usual, Jersey makes this quite hard
 
         // first, make a list of the filters
@@ -131,7 +131,7 @@ public class S3EncryptionClient extends S3JerseyClient {
         ClientHandler handler = client.getHeadHandler();
         while (handler instanceof ClientFilter) {
             ClientFilter filter = (ClientFilter) handler;
-            if (filter instanceof ChecksumFilter) {
+            if (filter instanceof AuthorizationFilter) {
                 // insert codec filter before checksum filter
                 filters.add(new CodecFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
             }
@@ -197,13 +197,14 @@ public class S3EncryptionClient extends S3JerseyClient {
         request.property(RestUtil.PROPERTY_ENCODE_ENTITY, Boolean.TRUE);
 
         // write data
-        super.putObject(request);
+        PutObjectResult result = super.putObject(request);
 
         // encryption filter will modify userMeta with encryption metadata *after* the object is transferred
         // we must send a separate metadata update or the object will be unreadable
         // TODO: should this be atomic?  how do we handle rollback?
         CopyObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), request.getKey(),
-                request.getBucketName(), request.getKey()).withAcl(request.getAcl()).withObjectMetadata(request.getObjectMetadata());
+                request.getBucketName(), request.getKey()).withAcl(request.getAcl())
+                .withObjectMetadata(request.getObjectMetadata()).withIfMatch(result.getETag());
         return super.copyObject(metadataUpdate);
     }
 

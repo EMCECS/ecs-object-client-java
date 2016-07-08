@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -32,14 +32,16 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class RetryFilter extends ClientFilter {
-    private static final Logger l4j = Logger.getLogger(RetryFilter.class);
+
+    private static final Logger log = LoggerFactory.getLogger(RetryFilter.class);
 
     public static final String PROP_RETRY_COUNT = "com.emc.object.retryCount";
 
@@ -85,7 +87,7 @@ public class RetryFilter extends ClientFilter {
                         if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
                         entityStream.reset();
                     } catch (IOException e) {
-                        l4j.warn("could not reset entity stream for retry: " + e);
+                        log.warn("could not reset entity stream for retry: " + e);
                         throw orig;
                     }
                 }
@@ -94,14 +96,14 @@ public class RetryFilter extends ClientFilter {
                 if (s3Config.getInitialRetryDelay() > 0) {
                     int retryDelay = s3Config.getInitialRetryDelay() * (int) Math.pow(2, retryCount - 1);
                     try {
-                        LogMF.debug(l4j, "waiting {0}ms before retry", retryDelay);
+                        log.debug("waiting {}ms before retry", retryDelay);
                         Thread.sleep(retryDelay);
                     } catch (InterruptedException e) {
-                        l4j.warn("interrupted while waiting to retry: " + e.getMessage());
+                        log.warn("interrupted while waiting to retry: " + e.getMessage());
                     }
                 }
 
-                LogMF.info(l4j, "error received in response [{0}], retrying ({1} of {2})...", t, retryCount, s3Config.getRetryLimit());
+                log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
                 clientRequest.getProperties().put(PROP_RETRY_COUNT, retryCount);
             }
         }
