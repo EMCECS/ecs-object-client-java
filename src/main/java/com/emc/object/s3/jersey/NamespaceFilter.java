@@ -49,7 +49,7 @@ public class NamespaceFilter extends ClientFilter {
     public static URI insertNamespace(URI uri, String namespace) {
         try {
             String hostname = namespace + "." + uri.getHost();
-            log.debug(String.format("hostname including namespace: %s", hostname));
+            log.debug("hostname including namespace: {}", hostname);
             return RestUtil.replaceHost(uri, hostname);
         } catch (URISyntaxException e) {
             throw new RuntimeException(String.format("namespace \"%s\" generated an invalid URI", namespace), e);
