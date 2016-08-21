@@ -49,8 +49,7 @@ public class ProgressOutputStream extends FilterOutputStream {
 
     @Override
     public void write(byte[] b) throws IOException {
-        out.write(b);
-        listener.transferred(b.length);
+        write(b, 0, b.length);
     }
 
     @Override

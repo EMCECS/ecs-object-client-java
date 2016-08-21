@@ -34,7 +34,6 @@ import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
-import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
@@ -378,6 +377,34 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
+    @Ignore // TODO: blocked by STORAGE-6791
+    @Test
+    public void testListObjectsPagingWithEncodedDelim() throws Exception {
+        String prefix = "test\u001dDelim/", delim = "/", key = "foo\u001dbar", content = "Hello List Delim!";
+        client.putObject(getTestBucket(), prefix + key + 1, content, null);
+        client.putObject(getTestBucket(), prefix + key + 2, content, null);
+        client.putObject(getTestBucket(), prefix + key + 3, content, null);
+        client.putObject(getTestBucket(), prefix + key + 4, content, null);
+        client.putObject(getTestBucket(), prefix + key + 5, content, null);
+
+        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withPrefix(prefix)
+                .withDelimiter(delim).withMaxKeys(3).withEncodingType(EncodingType.url));
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals("The correct number of objects were NOT returned", 3, result.getObjects().size());
+        Assert.assertTrue(result.isTruncated());
+        Assert.assertEquals("/", result.getDelimiter());
+        Assert.assertEquals(prefix, result.getPrefix());
+        Assert.assertEquals(prefix + key + 1, result.getObjects().get(0).getKey());
+
+        // get next page
+        result = client.listMoreObjects(result);
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals("The correct number of objects were NOT returned", 2, result.getObjects().size());
+        Assert.assertFalse(result.isTruncated());
+        Assert.assertEquals("/", result.getDelimiter());
+        Assert.assertEquals(prefix, result.getPrefix());
+        Assert.assertEquals(prefix + key + 4, result.getObjects().get(0).getKey());
+    }
 
     @Test
     public void testListObjectsPaging() throws Exception {
@@ -390,6 +417,27 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         int requestCount = 0;
         do {
             if (result == null) result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMaxKeys(3));
+            else result = client.listMoreObjects(result);
+            objects.addAll(result.getObjects());
+            requestCount++;
+        } while (result.isTruncated());
+
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, objects.size());
+        Assert.assertEquals("should be 4 pages", 4, requestCount);
+    }
+
+    @Test
+    public void testListObjectsPagingDelim() throws Exception {
+        int numObjects = 10;
+
+        this.createTestObjects("foo/", numObjects);
+
+        List<S3Object> objects = new ArrayList<S3Object>();
+        ListObjectsResult result = null;
+        int requestCount = 0;
+        do {
+            if (result == null)
+                result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMaxKeys(3).withPrefix("foo/").withDelimiter("/"));
             else result = client.listMoreObjects(result);
             objects.addAll(result.getObjects());
             requestCount++;
@@ -436,7 +484,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(1, resultObjects.size());
 
             S3Object object = resultObjects.get(0);
-            Assert.assertEquals(RestUtil.urlEncode(key), object.getKey());
+            Assert.assertEquals(key, object.getKey());
 
         } finally {
             client.deleteObject(getTestBucket(), key);
@@ -2106,7 +2154,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String marker = "foo/bar/blah%blah&blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
-        Assert.assertEquals(RestUtil.urlEncode(marker), result.getMarker());
+        Assert.assertEquals(marker, result.getMarker());
         Assert.assertEquals(EncodingType.url, result.getEncodingType());
     }
 
@@ -2144,7 +2192,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String marker = "foo/bar/blah\u001dblah\u0008blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
-        Assert.assertEquals(RestUtil.urlEncode(marker), result.getMarker());
+        Assert.assertEquals(marker, result.getMarker());
     }
 
     @Test

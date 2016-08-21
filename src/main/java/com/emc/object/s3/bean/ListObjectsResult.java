@@ -26,8 +26,9 @@
  */
 package com.emc.object.s3.bean;
 
-import com.emc.object.s3.request.EncodingType;
+import com.emc.object.util.RestUtil;
 
+import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -35,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "ListBucketResult")
-public class ListObjectsResult {
+public class ListObjectsResult implements UrlEncodable {
     private String bucketName;
     private String prefix;
     private String delimiter;
@@ -46,6 +47,19 @@ public class ListObjectsResult {
     private boolean truncated;
     private List<S3Object> objects = new ArrayList<S3Object>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
+
+    //This method is called after all the properties (except IDREF) are unmarshalled for this object,
+    //but before this object is set to the parent object.
+    void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+        if (encodingType == EncodingType.url) {
+            // url-decode applicable values (bucketName, prefix, delimiter, marker, nextMarker)
+            bucketName = RestUtil.urlDecode(bucketName, false);
+            prefix = RestUtil.urlDecode(prefix, false);
+            delimiter = RestUtil.urlDecode(delimiter, false);
+            marker = RestUtil.urlDecode(marker, false);
+            nextMarker = RestUtil.urlDecode(nextMarker, false);
+        }
+    }
 
     @XmlElement(name = "Name")
     public String getBucketName() {
@@ -83,7 +97,7 @@ public class ListObjectsResult {
         this.maxKeys = maxKeys;
     }
 
-    @XmlElement(name = "Encoding-Type")
+    @XmlElement(name = "EncodingType")
     public EncodingType getEncodingType() {
         return encodingType;
     }

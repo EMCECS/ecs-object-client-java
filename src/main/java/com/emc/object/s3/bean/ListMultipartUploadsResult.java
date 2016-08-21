@@ -26,8 +26,9 @@
  */
 package com.emc.object.s3.bean;
 
-import com.emc.object.s3.request.EncodingType;
+import com.emc.object.util.RestUtil;
 
+import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -48,6 +49,19 @@ public class ListMultipartUploadsResult {
     private boolean truncated;
     private List<Upload> uploads = new ArrayList<Upload>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
+
+    //This method is called after all the properties (except IDREF) are unmarshalled for this object,
+    //but before this object is set to the parent object.
+    void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+        if (encodingType == EncodingType.url) {
+            // url-decode applicable values (bucketName, prefix, delimiter, keyMarker, nextKeyMarker)
+            bucketName = RestUtil.urlDecode(bucketName, false);
+            prefix = RestUtil.urlDecode(prefix, false);
+            delimiter = RestUtil.urlDecode(delimiter, false);
+            keyMarker = RestUtil.urlDecode(keyMarker, false);
+            nextKeyMarker = RestUtil.urlDecode(nextKeyMarker, false);
+        }
+    }
 
     @XmlElement(name = "Bucket")
     public String getBucketName() {
@@ -85,7 +99,7 @@ public class ListMultipartUploadsResult {
         this.maxUploads = maxUploads;
     }
 
-    @XmlElement(name = "Encoding-Type")
+    @XmlElement(name = "EncodingType")
     public EncodingType getEncodingType() {
         return encodingType;
     }

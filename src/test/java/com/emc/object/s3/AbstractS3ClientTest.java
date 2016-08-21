@@ -30,8 +30,11 @@ import com.emc.object.AbstractClientTest;
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.s3.bean.AbstractVersion;
+import com.emc.object.s3.bean.EncodingType;
 import com.emc.object.s3.bean.S3Object;
 import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.s3.request.ListObjectsRequest;
+import com.emc.object.s3.request.ListVersionsRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
@@ -76,11 +79,11 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     protected void cleanUpBucket(String bucketName) throws Exception {
         if (client != null && client.bucketExists(bucketName)) {
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
-                for (AbstractVersion version : client.listVersions(bucketName, null).getVersions()) {
+                for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
                     client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
                 }
             } else {
-                for (S3Object object : client.listObjects(bucketName).getObjects()) {
+                for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url)).getObjects()) {
                     client.deleteObject(bucketName, object.getKey());
                 }
             }

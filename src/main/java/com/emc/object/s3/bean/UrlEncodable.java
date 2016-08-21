@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,36 +26,6 @@
  */
 package com.emc.object.s3.bean;
 
-import com.emc.object.util.RestUtil;
-
-import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlElement;
-
-public class CommonPrefix {
-    private String prefix;
-
-    public CommonPrefix() {
-    }
-
-    public CommonPrefix(String prefix) {
-        this.prefix = prefix;
-    }
-
-    //This method is called after all the properties (except IDREF) are unmarshalled for this object,
-    //but before this object is set to the parent object.
-    void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
-        if (parent instanceof UrlEncodable && ((UrlEncodable) parent).getEncodingType() == EncodingType.url) {
-            // url-decode applicable values (prefix)
-            prefix = RestUtil.urlDecode(prefix, false);
-        }
-    }
-
-    @XmlElement(name = "Prefix")
-    public String getPrefix() {
-        return prefix;
-    }
-
-    public void setPrefix(String prefix) {
-        this.prefix = prefix;
-    }
+public interface UrlEncodable {
+    EncodingType getEncodingType();
 }
