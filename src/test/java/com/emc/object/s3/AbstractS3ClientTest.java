@@ -89,6 +89,10 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     }
 
     protected S3Config createS3Config() throws Exception {
+        return s3ConfigFromProperties();
+    }
+
+    protected static S3Config s3ConfigFromProperties() throws Exception {
         Properties props = TestConfig.getProperties();
 
         String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
