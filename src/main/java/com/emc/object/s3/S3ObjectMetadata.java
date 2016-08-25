@@ -333,4 +333,14 @@ public class S3ObjectMetadata {
         setHttpExpires(httpExpires);
         return this;
     }
+
+    public S3ObjectMetadata withRetentionPeriod(Long retentionPeriod) {
+        setRetentionPeriod(retentionPeriod);
+        return this;
+    }
+
+    public S3ObjectMetadata withRetentionPolicy(String retentionPolicy) {
+        setRetentionPolicy(retentionPolicy);
+        return this;
+    }
 }

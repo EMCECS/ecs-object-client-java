@@ -224,10 +224,15 @@ public final class RestUtil {
     }
 
     public static String urlDecode(String value) {
+        return urlDecode(value, true);
+    }
+
+    public static String urlDecode(String value, boolean preservePlus) {
         if (value == null) return null;
         try {
             // don't want '+' decoded to a space
-            return URLDecoder.decode(value.replace("+", "%2B"), "UTF-8");
+            if (preservePlus) value = value.replace("+", "%2B");
+            return URLDecoder.decode(value, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 encoding isn't supported on this system", e); // unrecoverable
         }

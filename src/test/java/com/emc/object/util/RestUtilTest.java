@@ -143,7 +143,7 @@ public class RestUtilTest {
     }
 
     // Unicode "OHM SYMBOL"
-    public static final byte[] OHM_UTF8 = new byte[] { (byte)0xe2, (byte)0x84, (byte)0xa6 };
+    private static final byte[] OHM_UTF8 = new byte[]{(byte) 0xe2, (byte) 0x84, (byte) 0xa6};
 
     /**
      * Tests URI building to make sure that it doesn't modify UTF-8 sequences.  The default URI.toAsciiString runs the
@@ -160,10 +160,6 @@ public class RestUtilTest {
 
         URI u = RestUtil.buildUri("http", "www.foo.com", -1, "/100 " + ohm + " Differential impedance 2.rar", query, null);
         Assert.assertEquals("http://www.foo.com/100%20%E2%84%A6%20Differential%20impedance%202.rar?" + query, u.toString());
-    }
-
-    private String encodePath(String path) {
-        return RestUtil.urlEncode(path).replace("%2F", "/");
     }
 
     @Test

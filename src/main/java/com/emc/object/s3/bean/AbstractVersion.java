@@ -26,6 +26,9 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.RestUtil;
+
+import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlElement;
 import java.util.Date;
 
@@ -35,6 +38,15 @@ public abstract class AbstractVersion {
     private boolean latest;
     private Date lastModified;
     private CanonicalUser owner;
+
+    //This method is called after all the properties (except IDREF) are unmarshalled for this object,
+    //but before this object is set to the parent object.
+    void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+        if (parent instanceof UrlEncodable && ((UrlEncodable) parent).getEncodingType() == EncodingType.url) {
+            // url-decode applicable values (key)
+            key = RestUtil.urlDecode(key, false);
+        }
+    }
 
     @XmlElement(name = "Key")
     public String getKey() {

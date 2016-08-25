@@ -33,12 +33,11 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class BucketFilter extends ClientFilter {
 
@@ -51,7 +50,8 @@ public class BucketFilter extends ClientFilter {
                 uri = RestUtil.replaceHost(uri, hostname);
 
             } else { // prepend to resource path (i.e. s3.company.com/bucket)
-                String resource = "/" + bucketName + uri.getPath();
+                String resource = "/" + bucketName;
+                if (!uri.getPath().isEmpty() && !"/".equals(uri.getPath())) resource += uri.getPath();
                 uri = RestUtil.replacePath(uri, resource);
             }
 

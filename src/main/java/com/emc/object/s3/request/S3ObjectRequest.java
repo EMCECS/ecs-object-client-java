@@ -33,7 +33,7 @@ public class S3ObjectRequest extends AbstractBucketRequest {
     private String key;
 
     public S3ObjectRequest(Method method, String bucketName, String key, String subresource) {
-        super(method, bucketName, key, subresource);
+        super(method, bucketName, "/" + key, subresource);
         setKey(key);
     }
 
@@ -48,7 +48,7 @@ public class S3ObjectRequest extends AbstractBucketRequest {
 
     public void setKey(String key) {
         this.key = key;
-        setPath(key);
+        setPath("/" + key);
         property(S3Constants.PROPERTY_OBJECT_KEY, key);
     }
 }
