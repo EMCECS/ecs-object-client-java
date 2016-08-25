@@ -466,4 +466,9 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Override
     public void testCreateObjectWithRetentionPolicy() throws Exception {
     }
+
+    @Ignore
+    @Override
+    public void testPutObjectPreconditions() {
+    }
 }

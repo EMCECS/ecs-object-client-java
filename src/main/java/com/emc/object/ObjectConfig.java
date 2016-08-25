@@ -125,7 +125,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
     /**
      * Resolves a path relative to the API context. The returned URI will be of the format
-     * scheme://host[:port]/[rootContext/]relativePath?query. The scheme and port are pulled from the first endpoint in
+     * scheme://host[:port][/rootContext]/subPath?query. The scheme and port are pulled from the first endpoint in
      * the endpoints list. The host to use may be virtual (to be resolved by a load balancer) or calculated in
      * implementations as round-robin or single-host. Note this is not to be confused with the client-side load
      * balancing provided by the smart client, which overrides any host set here.
@@ -133,14 +133,15 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
      * Note that the query string must already be encoded. This is the only way too allow ampersands (&amp;) as part
      * of a paremeter value
      */
-    public URI resolvePath(String relativePath, String rawQuery) {
-        String path = "/";
+    public URI resolvePath(String subPath, String rawQuery) {
+        String path = "";
 
         // rootContext should be cleaned by setter
-        if (rootContext != null && rootContext.length() > 0) path += rootContext + "/";
+        if (rootContext != null && rootContext.length() > 0) path += rootContext;
 
         // add relative path to context
-        path += relativePath;
+        path += subPath;
+        if (path.isEmpty()) path = "/";
 
         try {
             URI uri = RestUtil.buildUri(protocol.toString().toLowerCase(), resolveHost().getName(), port, path, rawQuery, null);
