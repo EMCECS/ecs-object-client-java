@@ -262,4 +262,13 @@ public class S3Config extends ObjectConfig<S3Config> {
                 ", signNamespace=" + signNamespace +
                 "} " + super.toString();
     }
+
+    public static S3Config fromConfigUri(String uriString) throws Exception {
+        return new ConfigURIHandler(uriString).getConfig();
+    }
+
+    public static String toConfigUri(S3Config s3Config) throws Exception {
+        return new ConfigURIHandler(s3Config).getUriString();
+    }
+
 }

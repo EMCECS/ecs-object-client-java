@@ -118,6 +118,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.userAgent = other.userAgent;
         this.geoPinningEnabled = other.geoPinningEnabled;
         this.geoReadRetryFailover = other.geoReadRetryFailover;
+        this.chunkedEncodingSize = other.chunkedEncodingSize;
         this.properties = new HashMap<String, Object>(other.properties);
     }
 
