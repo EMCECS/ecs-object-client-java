@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -262,4 +262,17 @@ public class S3Config extends ObjectConfig<S3Config> {
                 ", signNamespace=" + signNamespace +
                 "} " + super.toString();
     }
+
+    public String toConfigUri() throws Exception {
+        return toConfigUri(this);
+    }
+
+    public static S3Config fromConfigUri(String uriString) throws Exception {
+        return new ConfigUriHandler(uriString).getConfig();
+    }
+
+    public static String toConfigUri(S3Config s3Config) throws Exception {
+        return new ConfigUriHandler(s3Config).getUriString();
+    }
+
 }
