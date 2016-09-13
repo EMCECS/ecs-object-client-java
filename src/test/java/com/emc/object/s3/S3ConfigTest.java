@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.emc.object.Protocol;
+import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.ecs.Vdc;
 
 /**
@@ -116,7 +117,21 @@ public class S3ConfigTest extends Assert {
         s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank", "junk"), new Vdc("whatever"), new Vdc("dummy"));
         s3Config.setPort(S3Config.DEFAULT_HTTPS_PORT);
         runTests(s3Config);
-    }
+
+        s3Config.setUserAgent("agent" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
+        runTests(s3Config);
+
+        s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank" + RestUtilTest.OHM_UTF8, "junk"), new Vdc("whatever"), new Vdc("dummy"));
+        s3Config.setPort(S3Config.DEFAULT_HTTPS_PORT);
+        runTests(s3Config);
+
+        s3Config.setProperty("prop1", "value");
+        prop2 = new ArrayList<String>(2);
+        prop2.add("string" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
+        prop2.add("strung");
+        s3Config.setProperty("prop2", prop2);
+        runTests(s3Config);
+}
 
     /**
      * @param s3Config
@@ -124,6 +139,7 @@ public class S3ConfigTest extends Assert {
      */
     private void runTests(S3Config s3Config) throws Exception {
         String configUri = S3Config.toConfigUri(s3Config);
+        System.out.println(configUri);
         S3Config s3Config2 = S3Config.fromConfigUri(configUri);
         assertEquals(configUri, S3Config.toConfigUri(s3Config2));
         compare(s3Config, s3Config2);
