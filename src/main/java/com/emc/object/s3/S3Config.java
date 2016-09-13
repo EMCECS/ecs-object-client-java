@@ -263,12 +263,16 @@ public class S3Config extends ObjectConfig<S3Config> {
                 "} " + super.toString();
     }
 
+    public String toConfigUri() throws Exception {
+        return toConfigUri(this);
+    }
+
     public static S3Config fromConfigUri(String uriString) throws Exception {
-        return new ConfigURIHandler(uriString).getConfig();
+        return new ConfigUriHandler(uriString).getConfig();
     }
 
     public static String toConfigUri(S3Config s3Config) throws Exception {
-        return new ConfigURIHandler(s3Config).getUriString();
+        return new ConfigUriHandler(s3Config).getUriString();
     }
 
 }

@@ -124,7 +124,6 @@ public class S3ConfigTest extends Assert {
      */
     private void runTests(S3Config s3Config) throws Exception {
         String configUri = S3Config.toConfigUri(s3Config);
-        System.out.println(configUri);
         S3Config s3Config2 = S3Config.fromConfigUri(configUri);
         assertEquals(configUri, S3Config.toConfigUri(s3Config2));
         compare(s3Config, s3Config2);

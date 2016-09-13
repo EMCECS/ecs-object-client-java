@@ -42,7 +42,7 @@ import com.emc.rest.smart.ecs.Vdc;
  * @author seibed
  *
  */
-class ConfigURIHandler {
+class ConfigUriHandler {
 
     /**
      * Parameter name for the ECS S3 access key.
@@ -196,7 +196,7 @@ class ConfigURIHandler {
      * @param uriString A String representation of this ConfigUtil's URI object.
      * @throws Exception
      */
-    ConfigURIHandler(String uriString) throws Exception {
+    ConfigUriHandler(String uriString) throws Exception {
         uri = new URI(uriString);
         loadQueryMap(uri.getQuery());
         s3Config = makeConfig();
@@ -227,7 +227,7 @@ class ConfigURIHandler {
     /**
      * @param s3Config
      */
-    ConfigURIHandler(S3Config config) {
+    ConfigUriHandler(S3Config config) {
         s3Config = new S3Config(config);
         loadQueryMap();
         uri = makeURI();
