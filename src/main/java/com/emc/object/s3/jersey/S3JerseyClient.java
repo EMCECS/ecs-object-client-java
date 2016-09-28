@@ -122,6 +122,9 @@ import java.util.Map;
  * </pre>
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
+    public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
+    public static final int DEFAULT_READ_TIMEOUT = 60000; // 60 seconds
+
     protected S3Config s3Config;
     protected Client client;
     protected LoadBalancer loadBalancer;
@@ -133,8 +136,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     /**
      * Provide a specific Jersey ClientHandler implementation (default is ApacheHttpClient4Handler). If you experience
      * performance problems, you might try using URLConnectionClientHandler, but note that it will not support the
-     * Expect: 100-Continue header. Also note that when using that handler, you should set the "http.maxConnections"
-     * system property to match your thread count (default is only 5).
+     * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that handler, you should
+     * set the "http.maxConnections" system property to match your thread count (default is only 5).
      */
     public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
@@ -142,6 +145,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
+
+        // make sure timeouts are reasonable (not infinite)
+        if (smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT) == null)
+            smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT);
+        if (smartConfig.getProperty(ClientConfig.PROPERTY_READ_TIMEOUT) == null)
+            smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, DEFAULT_READ_TIMEOUT);
 
         // creates a standard (non-load-balancing) jersey client
         if (clientHandler == null) {
