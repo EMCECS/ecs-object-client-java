@@ -26,23 +26,21 @@
  */
 package com.emc.object.s3;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
-
-import org.junit.Assert;
-import org.junit.Test;
-
 import com.emc.object.Protocol;
 import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.ecs.Vdc;
+import org.junit.Test;
 
-/**
- * @author seibed
- *
- */
-public class S3ConfigTest extends Assert {
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map.Entry;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class S3ConfigTest {
 
     @Test
     public void testToUriConfig() throws Exception {
@@ -107,6 +105,9 @@ public class S3ConfigTest extends Assert {
         s3Config.setUseVHost(false);
         runTests(s3Config);
 
+        s3Config.setSignMetadataSearch(!s3Config.isSignMetadataSearch());
+        runTests(s3Config);
+
         s3Config.setProperty("prop1", "value");
         ArrayList<String> prop2 = new ArrayList<String>(2);
         prop2.add("string");
@@ -121,7 +122,7 @@ public class S3ConfigTest extends Assert {
         s3Config.setUserAgent("agent" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
         runTests(s3Config);
 
-        s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank" + RestUtilTest.OHM_UTF8, "junk"), new Vdc("whatever"), new Vdc("dummy"));
+        s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank" + Arrays.toString(RestUtilTest.OHM_UTF8), "junk"), new Vdc("whatever"), new Vdc("dummy"));
         s3Config.setPort(S3Config.DEFAULT_HTTPS_PORT);
         runTests(s3Config);
 
@@ -131,12 +132,8 @@ public class S3ConfigTest extends Assert {
         prop2.add("strung");
         s3Config.setProperty("prop2", prop2);
         runTests(s3Config);
-}
+    }
 
-    /**
-     * @param s3Config
-     * @throws Exception 
-     */
     private void runTests(S3Config s3Config) throws Exception {
         String configUri = S3Config.toConfigUri(s3Config);
         System.out.println(configUri);
@@ -145,10 +142,6 @@ public class S3ConfigTest extends Assert {
         compare(s3Config, s3Config2);
     }
 
-    /**
-     * @param s3Config
-     * @param s3Config2
-     */
     private void compare(S3Config s3Config, S3Config s3Config2) {
         assertEquals(s3Config.getChunkedEncodingSize(), s3Config2.getChunkedEncodingSize());
         assertEquals(s3Config.getFaultInjectionRate(), s3Config2.getFaultInjectionRate(), 0.0001);
@@ -170,12 +163,13 @@ public class S3ConfigTest extends Assert {
         assertEquals(s3Config.isSignNamespace(), s3Config2.isSignNamespace());
         assertEquals(s3Config.isSmartClient(), s3Config2.isSmartClient());
         assertEquals(s3Config.isUseVHost(), s3Config2.isUseVHost());
+        assertEquals(s3Config.isSignMetadataSearch(), s3Config2.isSignMetadataSearch());
         for (Entry<String, Object> entry : s3Config.getProperties().entrySet()) {
             if (entry.getValue() instanceof String) {
                 assertEquals(entry.getValue(), s3Config2.getProperty(entry.getKey()));
-            } else if (entry.getValue() instanceof List){
-                List list = (List)entry.getValue();
-                List list2 = (List)s3Config2.getProperty(entry.getKey());
+            } else if (entry.getValue() instanceof List<?>) {
+                List<?> list = (List<?>) entry.getValue();
+                List<?> list2 = (List<?>) s3Config2.getProperty(entry.getKey());
                 assertTrue(list.containsAll(list2) && list2.containsAll(list));
             }
         }

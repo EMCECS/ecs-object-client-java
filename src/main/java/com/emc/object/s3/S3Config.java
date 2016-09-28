@@ -80,6 +80,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected int retryLimit = DEFAULT_RETRY_LIMIT;
     protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
     protected float faultInjectionRate = 0.0f;
+    protected boolean signMetadataSearch = false; // TODO: make this true for 3.0
 
     /**
      * External load balancer constructor (no smart-client).
@@ -118,6 +119,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryLimit = other.retryLimit;
         this.retryBufferSize = other.retryBufferSize;
         this.faultInjectionRate = other.faultInjectionRate;
+        this.signMetadataSearch = other.signMetadataSearch;
     }
 
     @Override
@@ -171,7 +173,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     }
 
     /**
-     * Set to false to disable automatic retry of (retriable) requests
+     * Set to false to disable automatic retry of (retriable) requests (default is true)
      */
     public void setRetryEnabled(boolean retryEnabled) {
         this.retryEnabled = retryEnabled;
@@ -181,6 +183,10 @@ public class S3Config extends ObjectConfig<S3Config> {
         return initialRetryDelay;
     }
 
+    /**
+     * number of milliseconds to delay before the first retry attempt after a failed request. The delay time
+     * increases by a factor of 2 after each failed request
+     */
     public void setInitialRetryDelay(int initialRetryDelay) {
         this.initialRetryDelay = initialRetryDelay;
     }
@@ -189,6 +195,10 @@ public class S3Config extends ObjectConfig<S3Config> {
         return retryLimit;
     }
 
+    /**
+     * Sets the maximum number of automatic retries of failed (retriable) requests. Default is 3 retries
+     * (maximum 4 total requests)
+     */
     public void setRetryLimit(int retryLimit) {
         this.retryLimit = retryLimit;
     }
@@ -197,6 +207,10 @@ public class S3Config extends ObjectConfig<S3Config> {
         return retryBufferSize;
     }
 
+    /**
+     * Allocates a stream buffer to use for retries. Requests that fail before sending this much data will be
+     * retried using data from the buffer. Default buffer is 2MB
+     */
     public void setRetryBufferSize(int retryBufferSize) {
         this.retryBufferSize = retryBufferSize;
     }
@@ -213,6 +227,19 @@ public class S3Config extends ObjectConfig<S3Config> {
      */
     public void setFaultInjectionRate(float faultInjectionRate) {
         this.faultInjectionRate = faultInjectionRate;
+    }
+
+    public boolean isSignMetadataSearch() {
+        return signMetadataSearch;
+    }
+
+    /**
+     * Instructs the client whether to sign the metadata search parameters. Prior to ECS 3.0, these were not signed,
+     * but as of 3.0 they are now signed. Be sure to set this appropriately based on your ECS software version.
+     * <p>Note: as of object-client 3.0, this defaults to true (MD search params will be signed)</p>
+     */
+    public void setSignMetadataSearch(boolean signMetadataSearch) {
+        this.signMetadataSearch = signMetadataSearch;
     }
 
     public S3Config withUseVHost(boolean useVHost) {
@@ -255,11 +282,23 @@ public class S3Config extends ObjectConfig<S3Config> {
         return this;
     }
 
+    public S3Config withSignMetadataSearch(boolean signMetadataSearch) {
+        setSignMetadataSearch(signMetadataSearch);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "S3Config{" +
                 "useVHost=" + useVHost +
                 ", signNamespace=" + signNamespace +
+                ", checksumEnabled=" + checksumEnabled +
+                ", retryEnabled=" + retryEnabled +
+                ", initialRetryDelay=" + initialRetryDelay +
+                ", retryLimit=" + retryLimit +
+                ", retryBufferSize=" + retryBufferSize +
+                ", faultInjectionRate=" + faultInjectionRate +
+                ", signMetadataSearch=" + signMetadataSearch +
                 "} " + super.toString();
     }
 

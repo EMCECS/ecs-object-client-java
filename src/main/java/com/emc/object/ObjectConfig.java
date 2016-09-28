@@ -30,13 +30,12 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
@@ -212,6 +211,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return port;
     }
 
+    /**
+     * The data port to use for requests, if different from the default
+     */
     public void setPort(int port) {
         this.port = port;
     }
@@ -220,6 +222,14 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return smartClient;
     }
 
+    /**
+     * Set to false to disable the smart-client (client-side node discovery and load balancing). Enabled by default for
+     * some constructors
+     *
+     * @see #ObjectConfig(Protocol, int, String...)
+     * @see #ObjectConfig(Protocol, int, Vdc...)
+     * @see #ObjectConfig(URI)
+     */
     public void setSmartClient(boolean smartClient) {
         this.smartClient = smartClient;
     }
@@ -228,6 +238,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return rootContext;
     }
 
+    /**
+     * The root context of the object API service, if different from the default
+     */
     public void setRootContext(String rootContext) {
         if (rootContext != null) {
 
@@ -241,6 +254,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return namespace;
     }
 
+    /**
+     * The ECS namespace to use for the request
+     */
     public void setNamespace(String namespace) {
         this.namespace = namespace;
     }
@@ -249,6 +265,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return identity;
     }
 
+    /**
+     * The ECS object user
+     */
     public void setIdentity(String identity) {
         this.identity = identity;
     }
@@ -257,6 +276,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return secretKey;
     }
 
+    /**
+     * The object user's secret key
+     */
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
     }
@@ -265,6 +287,10 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return serverClockSkew;
     }
 
+    /**
+     * Set to adjust for client-server clock skew in milliseconds. A positive value means the client is *behind* the
+     * server; a negative value indicates it is *ahead of* the server
+     */
     public void setServerClockSkew(long serverClockSkew) {
         this.serverClockSkew = serverClockSkew;
     }
@@ -273,6 +299,10 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return userAgent;
     }
 
+    /**
+     * Sets a custom User-Agent string. Useful to track different applications through a load balancer or traffic
+     * manager
+     */
     public void setUserAgent(String userAgent) {
         this.userAgent = userAgent;
     }
@@ -295,6 +325,11 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return geoPinningEnabled;
     }
 
+    /**
+     * Set to true to enable geo-pinning (hashes the object key and pins it to a specific VDC). Geo-pinning is used to
+     * balance requests across 3 or more VDCs while keeping read efficiency by reading from the primary copy.
+     * Disabled by default
+     */
     public void setGeoPinningEnabled(boolean geoPinningEnabled) {
         this.geoPinningEnabled = geoPinningEnabled;
     }
@@ -303,6 +338,11 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return geoReadRetryFailover;
     }
 
+    /**
+     * Controls geo-pinning read retry fail-over. When enabled, if a read fails and is retried, it is sent to a
+     * different VDC than the last failed request (the next VDC in the list). Only applicable when geo-pinning is
+     * enabled. Disabled by default
+     */
     public void setGeoReadRetryFailover(boolean geoReadRetryFailover) {
         this.geoReadRetryFailover = geoReadRetryFailover;
     }
@@ -311,6 +351,12 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return chunkedEncodingSize;
     }
 
+    /**
+     * If the parameter is not specified (0) then chunked encoding will not be used.
+     * A value &lt; 0 declares that chunked encoding will be used with the
+     * default chunk size. A value &gt; 0 declares that chunked encoding will be
+     * used with the value as the declared chunk size.
+     */
     public void setChunkedEncodingSize(int chunkedEncodingSize) {
         this.chunkedEncodingSize = chunkedEncodingSize;
     }

@@ -94,6 +94,17 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testObjectName() throws Exception {
+        String bucket = "name-test";
+
+        QueryObjectsRequest request = new QueryObjectsRequest(bucket)
+                .withQuery("ObjectName>''");
+        QueryObjectsResult result = client.queryObjects(request);
+
+        Assert.assertEquals(bucket, result.getBucketName());
+    }
+
+    @Test
     public void testQueryObjects() throws Exception {
         String bucketName = getTestBucket();
 
