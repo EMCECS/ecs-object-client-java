@@ -28,6 +28,7 @@ package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
+import com.emc.object.util.ConfigUriProperty;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 
@@ -83,6 +84,12 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected boolean signMetadataSearch = false; // TODO: make this true for 3.0
 
     /**
+     * Empty constructor for internal use only!
+     */
+    public S3Config() {
+    }
+
+    /**
      * External load balancer constructor (no smart-client).
      * <p>
      * <em>NOTE:</em> To use virtual-host-style requests where
@@ -127,6 +134,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         return getVdcs().get(0).getHosts().get(0);
     }
 
+    @ConfigUriProperty
     public boolean isUseVHost() {
         return useVHost;
     }
@@ -143,6 +151,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.useVHost = useVHost;
     }
 
+    @ConfigUriProperty
     public boolean isSignNamespace() {
         return signNamespace;
     }
@@ -156,6 +165,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.signNamespace = signNamespace;
     }
 
+    @ConfigUriProperty
     public boolean isChecksumEnabled() {
         return checksumEnabled;
     }
@@ -168,6 +178,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.checksumEnabled = checksumEnabled;
     }
 
+    @ConfigUriProperty
     public boolean isRetryEnabled() {
         return retryEnabled;
     }
@@ -179,6 +190,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryEnabled = retryEnabled;
     }
 
+    @ConfigUriProperty
     public int getInitialRetryDelay() {
         return initialRetryDelay;
     }
@@ -191,6 +203,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.initialRetryDelay = initialRetryDelay;
     }
 
+    @ConfigUriProperty
     public int getRetryLimit() {
         return retryLimit;
     }
@@ -203,6 +216,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryLimit = retryLimit;
     }
 
+    @ConfigUriProperty
     public int getRetryBufferSize() {
         return retryBufferSize;
     }
@@ -215,6 +229,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryBufferSize = retryBufferSize;
     }
 
+    @ConfigUriProperty
     public float getFaultInjectionRate() {
         return faultInjectionRate;
     }
@@ -229,6 +244,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.faultInjectionRate = faultInjectionRate;
     }
 
+    @ConfigUriProperty
     public boolean isSignMetadataSearch() {
         return signMetadataSearch;
     }
@@ -301,17 +317,4 @@ public class S3Config extends ObjectConfig<S3Config> {
                 ", signMetadataSearch=" + signMetadataSearch +
                 "} " + super.toString();
     }
-
-    public String toConfigUri() throws Exception {
-        return toConfigUri(this);
-    }
-
-    public static S3Config fromConfigUri(String uriString) throws Exception {
-        return new ConfigUriHandler(uriString).getConfig();
-    }
-
-    public static String toConfigUri(S3Config s3Config) throws Exception {
-        return new ConfigUriHandler(s3Config).getUriString();
-    }
-
 }

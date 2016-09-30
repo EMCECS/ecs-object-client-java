@@ -26,6 +26,8 @@
  */
 package com.emc.object;
 
+import com.emc.object.util.ConfigUri;
+import com.emc.object.util.ConfigUriProperty;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
@@ -74,10 +76,17 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private Map<String, Object> properties = new HashMap<String, Object>();
 
     /**
+     * Empty constructor for internal use only!
+     */
+    public ObjectConfig() {
+    }
+
+    /**
      * Single endpoint constructor (disables smart-client).
      */
     public ObjectConfig(URI endpoint) {
         this(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
+        setRootContext(endpoint.getPath());
         setSmartClient(false);
     }
 
@@ -199,14 +208,41 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return value == null ? null : value.toString();
     }
 
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Protocol, converter = ProtocolConverter.class)
     public Protocol getProtocol() {
         return protocol;
     }
 
+    public void setProtocol(Protocol protocol) {
+        this.protocol = protocol;
+    }
+
+    @ConfigUriProperty(converter = VdcConverter.class)
     public List<Vdc> getVdcs() {
         return vdcs;
     }
 
+    /**
+     * Sets the VDC/host list
+     */
+    public void setVdcs(List<Vdc> vdcs) {
+        this.vdcs = vdcs;
+    }
+
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Host)
+    public String getHost() {
+        if (getVdcs() == null || getVdcs().isEmpty()) return null;
+        return getVdcs().get(0).getHosts().get(0).getName();
+    }
+
+    /**
+     * Sets a single server host
+     */
+    public void setHost(String host) {
+        setVdcs(Collections.singletonList(new Vdc(host)));
+    }
+
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Port)
     public int getPort() {
         return port;
     }
@@ -218,6 +254,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.port = port;
     }
 
+    @ConfigUriProperty
     public boolean isSmartClient() {
         return smartClient;
     }
@@ -234,6 +271,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.smartClient = smartClient;
     }
 
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Path)
     public String getRootContext() {
         return rootContext;
     }
@@ -246,10 +284,13 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
             // remove first & last slash
             rootContext = rootContext.trim().replaceAll("^/", "").replaceAll("/$", "");
+            // if there is anything left, prepend a slash
+            if (rootContext.length() > 0) rootContext = "/" + rootContext;
         }
         this.rootContext = rootContext;
     }
 
+    @ConfigUriProperty
     public String getNamespace() {
         return namespace;
     }
@@ -261,6 +302,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.namespace = namespace;
     }
 
+    @ConfigUriProperty
     public String getIdentity() {
         return identity;
     }
@@ -272,6 +314,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.identity = identity;
     }
 
+    @ConfigUriProperty
     public String getSecretKey() {
         return secretKey;
     }
@@ -283,6 +326,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.secretKey = secretKey;
     }
 
+    @ConfigUriProperty
     public long getServerClockSkew() {
         return serverClockSkew;
     }
@@ -295,6 +339,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.serverClockSkew = serverClockSkew;
     }
 
+    @ConfigUriProperty
     public String getUserAgent() {
         return userAgent;
     }
@@ -321,6 +366,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
     }
 
+    @ConfigUriProperty
     public boolean isGeoPinningEnabled() {
         return geoPinningEnabled;
     }
@@ -334,6 +380,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.geoPinningEnabled = geoPinningEnabled;
     }
 
+    @ConfigUriProperty
     public boolean isGeoReadRetryFailover() {
         return geoReadRetryFailover;
     }
@@ -347,6 +394,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.geoReadRetryFailover = geoReadRetryFailover;
     }
 
+    @ConfigUriProperty
     public int getChunkedEncodingSize() {
         return chunkedEncodingSize;
     }
@@ -361,6 +409,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.chunkedEncodingSize = chunkedEncodingSize;
     }
 
+    @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -468,5 +517,40 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", geoReadRetryFailover=" + geoReadRetryFailover +
                 ", properties=" + properties +
                 '}';
+    }
+
+    public static class ProtocolConverter implements ConfigUri.PropertyConverter {
+        @Override
+        public Object valueFromString(String param) {
+            if (param == null) return null;
+            return Protocol.valueOf(param.toUpperCase());
+        }
+
+        @Override
+        public String stringFromValue(Object value) {
+            if (value == null) return null;
+            return value.toString().toLowerCase();
+        }
+    }
+
+    public static class VdcConverter implements ConfigUri.PropertyConverter {
+        @Override
+        public Object valueFromString(String param) {
+            if (param == null) return null;
+            return new Vdc(param.split(","));
+        }
+
+        @Override
+        public String stringFromValue(Object value) {
+            if (value == null) return null;
+            Vdc vdc = (Vdc) value;
+            StringBuilder stringBuilder = new StringBuilder();
+            String separator = "";
+            for (Host host : vdc.getHosts()) {
+                stringBuilder.append(separator).append(host.getName());
+                separator = ",";
+            }
+            return stringBuilder.toString();
+        }
     }
 }

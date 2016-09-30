@@ -27,20 +27,20 @@
 package com.emc.object.s3;
 
 import com.emc.object.Protocol;
+import com.emc.object.util.ConfigUri;
 import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.ecs.Vdc;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class S3ConfigTest {
+public class ConfigUriS3Test {
+    private ConfigUri<S3Config> s3Uri = new ConfigUri<S3Config>(S3Config.class);
 
     @Test
     public void testToUriConfig() throws Exception {
@@ -109,10 +109,7 @@ public class S3ConfigTest {
         runTests(s3Config);
 
         s3Config.setProperty("prop1", "value");
-        ArrayList<String> prop2 = new ArrayList<String>(2);
-        prop2.add("string");
-        prop2.add("strung");
-        s3Config.setProperty("prop2", prop2);
+        s3Config.setProperty("prop2", "strung");
         runTests(s3Config);
 
         s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank", "junk"), new Vdc("whatever"), new Vdc("dummy"));
@@ -122,23 +119,19 @@ public class S3ConfigTest {
         s3Config.setUserAgent("agent" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
         runTests(s3Config);
 
-        s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank" + Arrays.toString(RestUtilTest.OHM_UTF8), "junk"), new Vdc("whatever"), new Vdc("dummy"));
+        s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank" + new String(RestUtilTest.OHM_UTF8, "UTF-8"), "junk"), new Vdc("whatever"), new Vdc("dummy"));
         s3Config.setPort(S3Config.DEFAULT_HTTPS_PORT);
         runTests(s3Config);
 
         s3Config.setProperty("prop1", "value");
-        prop2 = new ArrayList<String>(2);
-        prop2.add("string" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
-        prop2.add("strung");
-        s3Config.setProperty("prop2", prop2);
+        s3Config.setProperty("prop2", "string" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
         runTests(s3Config);
     }
 
     private void runTests(S3Config s3Config) throws Exception {
-        String configUri = S3Config.toConfigUri(s3Config);
-        System.out.println(configUri);
-        S3Config s3Config2 = S3Config.fromConfigUri(configUri);
-        assertEquals(configUri, S3Config.toConfigUri(s3Config2));
+        String configUri = s3Uri.generateUri(s3Config);
+        S3Config s3Config2 = s3Uri.parseUri(configUri);
+        assertEquals(configUri, s3Uri.generateUri(s3Config2));
         compare(s3Config, s3Config2);
     }
 
@@ -152,6 +145,8 @@ public class S3ConfigTest {
         assertEquals(s3Config.getProtocol().toString(), s3Config2.getProtocol().toString());
         assertEquals(s3Config.getRetryBufferSize(), s3Config2.getRetryBufferSize());
         assertEquals(s3Config.getRetryLimit(), s3Config2.getRetryLimit());
+        if (s3Config.getRootContext() == null) s3Config.setRootContext(""); // null or empty string is ok
+        if (s3Config2.getRootContext() == null) s3Config2.setRootContext("");
         assertEquals(s3Config.getRootContext(), s3Config2.getRootContext());
         assertEquals(s3Config.getSecretKey(), s3Config2.getSecretKey());
         assertEquals(s3Config.getServerClockSkew(), s3Config2.getServerClockSkew());
