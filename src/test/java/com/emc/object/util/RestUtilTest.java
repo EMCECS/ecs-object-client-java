@@ -143,7 +143,7 @@ public class RestUtilTest {
     }
 
     // Unicode "OHM SYMBOL"
-    private static final byte[] OHM_UTF8 = new byte[]{(byte) 0xe2, (byte) 0x84, (byte) 0xa6};
+    public static final byte[] OHM_UTF8 = new byte[]{(byte) 0xe2, (byte) 0x84, (byte) 0xa6};
 
     /**
      * Tests URI building to make sure that it doesn't modify UTF-8 sequences.  The default URI.toAsciiString runs the

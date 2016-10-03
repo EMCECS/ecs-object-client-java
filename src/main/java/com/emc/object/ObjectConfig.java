@@ -26,17 +26,18 @@
  */
 package com.emc.object;
 
+import com.emc.object.util.ConfigUri;
+import com.emc.object.util.ConfigUriProperty;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
@@ -75,10 +76,17 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private Map<String, Object> properties = new HashMap<String, Object>();
 
     /**
+     * Empty constructor for internal use only!
+     */
+    public ObjectConfig() {
+    }
+
+    /**
      * Single endpoint constructor (disables smart-client).
      */
     public ObjectConfig(URI endpoint) {
         this(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getPort(), endpoint.getHost());
+        setRootContext(endpoint.getPath());
         setSmartClient(false);
     }
 
@@ -118,6 +126,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.userAgent = other.userAgent;
         this.geoPinningEnabled = other.geoPinningEnabled;
         this.geoReadRetryFailover = other.geoReadRetryFailover;
+        this.chunkedEncodingSize = other.chunkedEncodingSize;
         this.properties = new HashMap<String, Object>(other.properties);
     }
 
@@ -199,79 +208,146 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return value == null ? null : value.toString();
     }
 
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Protocol, converter = ProtocolConverter.class)
     public Protocol getProtocol() {
         return protocol;
     }
 
+    public void setProtocol(Protocol protocol) {
+        this.protocol = protocol;
+    }
+
+    @ConfigUriProperty(converter = VdcConverter.class)
     public List<Vdc> getVdcs() {
         return vdcs;
     }
 
+    /**
+     * Sets the VDC/host list
+     */
+    public void setVdcs(List<Vdc> vdcs) {
+        this.vdcs = vdcs;
+    }
+
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Host)
+    public String getHost() {
+        if (getVdcs() == null || getVdcs().isEmpty()) return null;
+        return getVdcs().get(0).getHosts().get(0).getName();
+    }
+
+    /**
+     * Sets a single server host
+     */
+    public void setHost(String host) {
+        setVdcs(Collections.singletonList(new Vdc(host)));
+    }
+
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Port)
     public int getPort() {
         return port;
     }
 
+    /**
+     * The data port to use for requests, if different from the default
+     */
     public void setPort(int port) {
         this.port = port;
     }
 
+    @ConfigUriProperty
     public boolean isSmartClient() {
         return smartClient;
     }
 
+    /**
+     * Set to false to disable the smart-client (client-side node discovery and load balancing). Enabled by default for
+     * some constructors
+     *
+     * @see #ObjectConfig(Protocol, int, String...)
+     * @see #ObjectConfig(Protocol, int, Vdc...)
+     * @see #ObjectConfig(URI)
+     */
     public void setSmartClient(boolean smartClient) {
         this.smartClient = smartClient;
     }
 
+    @ConfigUriProperty(type = ConfigUriProperty.Type.Path)
     public String getRootContext() {
         return rootContext;
     }
 
+    /**
+     * The root context of the object API service, if different from the default
+     */
     public void setRootContext(String rootContext) {
         if (rootContext != null) {
 
             // remove first & last slash
             rootContext = rootContext.trim().replaceAll("^/", "").replaceAll("/$", "");
+            // if there is anything left, prepend a slash
+            if (rootContext.length() > 0) rootContext = "/" + rootContext;
         }
         this.rootContext = rootContext;
     }
 
+    @ConfigUriProperty
     public String getNamespace() {
         return namespace;
     }
 
+    /**
+     * The ECS namespace to use for the request
+     */
     public void setNamespace(String namespace) {
         this.namespace = namespace;
     }
 
+    @ConfigUriProperty
     public String getIdentity() {
         return identity;
     }
 
+    /**
+     * The ECS object user
+     */
     public void setIdentity(String identity) {
         this.identity = identity;
     }
 
+    @ConfigUriProperty
     public String getSecretKey() {
         return secretKey;
     }
 
+    /**
+     * The object user's secret key
+     */
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
     }
 
+    @ConfigUriProperty
     public long getServerClockSkew() {
         return serverClockSkew;
     }
 
+    /**
+     * Set to adjust for client-server clock skew in milliseconds. A positive value means the client is *behind* the
+     * server; a negative value indicates it is *ahead of* the server
+     */
     public void setServerClockSkew(long serverClockSkew) {
         this.serverClockSkew = serverClockSkew;
     }
 
+    @ConfigUriProperty
     public String getUserAgent() {
         return userAgent;
     }
 
+    /**
+     * Sets a custom User-Agent string. Useful to track different applications through a load balancer or traffic
+     * manager
+     */
     public void setUserAgent(String userAgent) {
         this.userAgent = userAgent;
     }
@@ -290,30 +366,50 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
     }
 
+    @ConfigUriProperty
     public boolean isGeoPinningEnabled() {
         return geoPinningEnabled;
     }
 
+    /**
+     * Set to true to enable geo-pinning (hashes the object key and pins it to a specific VDC). Geo-pinning is used to
+     * balance requests across 3 or more VDCs while keeping read efficiency by reading from the primary copy.
+     * Disabled by default
+     */
     public void setGeoPinningEnabled(boolean geoPinningEnabled) {
         this.geoPinningEnabled = geoPinningEnabled;
     }
 
+    @ConfigUriProperty
     public boolean isGeoReadRetryFailover() {
         return geoReadRetryFailover;
     }
 
+    /**
+     * Controls geo-pinning read retry fail-over. When enabled, if a read fails and is retried, it is sent to a
+     * different VDC than the last failed request (the next VDC in the list). Only applicable when geo-pinning is
+     * enabled. Disabled by default
+     */
     public void setGeoReadRetryFailover(boolean geoReadRetryFailover) {
         this.geoReadRetryFailover = geoReadRetryFailover;
     }
 
+    @ConfigUriProperty
     public int getChunkedEncodingSize() {
         return chunkedEncodingSize;
     }
 
+    /**
+     * If the parameter is not specified (0) then chunked encoding will not be used.
+     * A value &lt; 0 declares that chunked encoding will be used with the
+     * default chunk size. A value &gt; 0 declares that chunked encoding will be
+     * used with the value as the declared chunk size.
+     */
     public void setChunkedEncodingSize(int chunkedEncodingSize) {
         this.chunkedEncodingSize = chunkedEncodingSize;
     }
 
+    @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -421,5 +517,40 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", geoReadRetryFailover=" + geoReadRetryFailover +
                 ", properties=" + properties +
                 '}';
+    }
+
+    public static class ProtocolConverter implements ConfigUri.PropertyConverter {
+        @Override
+        public Object valueFromString(String param) {
+            if (param == null) return null;
+            return Protocol.valueOf(param.toUpperCase());
+        }
+
+        @Override
+        public String stringFromValue(Object value) {
+            if (value == null) return null;
+            return value.toString().toLowerCase();
+        }
+    }
+
+    public static class VdcConverter implements ConfigUri.PropertyConverter {
+        @Override
+        public Object valueFromString(String param) {
+            if (param == null) return null;
+            return new Vdc(param.split(","));
+        }
+
+        @Override
+        public String stringFromValue(Object value) {
+            if (value == null) return null;
+            Vdc vdc = (Vdc) value;
+            StringBuilder stringBuilder = new StringBuilder();
+            String separator = "";
+            for (Host host : vdc.getHosts()) {
+                stringBuilder.append(separator).append(host.getName());
+                separator = ",";
+            }
+            return stringBuilder.toString();
+        }
     }
 }

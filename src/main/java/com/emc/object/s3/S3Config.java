@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -28,6 +28,7 @@ package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
+import com.emc.object.util.ConfigUriProperty;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 
@@ -80,6 +81,13 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected int retryLimit = DEFAULT_RETRY_LIMIT;
     protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
     protected float faultInjectionRate = 0.0f;
+    protected boolean signMetadataSearch = false; // TODO: make this true for 3.0
+
+    /**
+     * Empty constructor for internal use only!
+     */
+    public S3Config() {
+    }
 
     /**
      * External load balancer constructor (no smart-client).
@@ -118,6 +126,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryLimit = other.retryLimit;
         this.retryBufferSize = other.retryBufferSize;
         this.faultInjectionRate = other.faultInjectionRate;
+        this.signMetadataSearch = other.signMetadataSearch;
     }
 
     @Override
@@ -125,6 +134,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         return getVdcs().get(0).getHosts().get(0);
     }
 
+    @ConfigUriProperty
     public boolean isUseVHost() {
         return useVHost;
     }
@@ -141,6 +151,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.useVHost = useVHost;
     }
 
+    @ConfigUriProperty
     public boolean isSignNamespace() {
         return signNamespace;
     }
@@ -154,6 +165,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.signNamespace = signNamespace;
     }
 
+    @ConfigUriProperty
     public boolean isChecksumEnabled() {
         return checksumEnabled;
     }
@@ -166,41 +178,58 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.checksumEnabled = checksumEnabled;
     }
 
+    @ConfigUriProperty
     public boolean isRetryEnabled() {
         return retryEnabled;
     }
 
     /**
-     * Set to false to disable automatic retry of (retriable) requests
+     * Set to false to disable automatic retry of (retriable) requests (default is true)
      */
     public void setRetryEnabled(boolean retryEnabled) {
         this.retryEnabled = retryEnabled;
     }
 
+    @ConfigUriProperty
     public int getInitialRetryDelay() {
         return initialRetryDelay;
     }
 
+    /**
+     * number of milliseconds to delay before the first retry attempt after a failed request. The delay time
+     * increases by a factor of 2 after each failed request
+     */
     public void setInitialRetryDelay(int initialRetryDelay) {
         this.initialRetryDelay = initialRetryDelay;
     }
 
+    @ConfigUriProperty
     public int getRetryLimit() {
         return retryLimit;
     }
 
+    /**
+     * Sets the maximum number of automatic retries of failed (retriable) requests. Default is 3 retries
+     * (maximum 4 total requests)
+     */
     public void setRetryLimit(int retryLimit) {
         this.retryLimit = retryLimit;
     }
 
+    @ConfigUriProperty
     public int getRetryBufferSize() {
         return retryBufferSize;
     }
 
+    /**
+     * Allocates a stream buffer to use for retries. Requests that fail before sending this much data will be
+     * retried using data from the buffer. Default buffer is 2MB
+     */
     public void setRetryBufferSize(int retryBufferSize) {
         this.retryBufferSize = retryBufferSize;
     }
 
+    @ConfigUriProperty
     public float getFaultInjectionRate() {
         return faultInjectionRate;
     }
@@ -213,6 +242,20 @@ public class S3Config extends ObjectConfig<S3Config> {
      */
     public void setFaultInjectionRate(float faultInjectionRate) {
         this.faultInjectionRate = faultInjectionRate;
+    }
+
+    @ConfigUriProperty
+    public boolean isSignMetadataSearch() {
+        return signMetadataSearch;
+    }
+
+    /**
+     * Instructs the client whether to sign the metadata search parameters. Prior to ECS 3.0, these were not signed,
+     * but as of 3.0 they are now signed. Be sure to set this appropriately based on your ECS software version.
+     * <p>Note: as of object-client 3.0, this defaults to true (MD search params will be signed)</p>
+     */
+    public void setSignMetadataSearch(boolean signMetadataSearch) {
+        this.signMetadataSearch = signMetadataSearch;
     }
 
     public S3Config withUseVHost(boolean useVHost) {
@@ -255,11 +298,23 @@ public class S3Config extends ObjectConfig<S3Config> {
         return this;
     }
 
+    public S3Config withSignMetadataSearch(boolean signMetadataSearch) {
+        setSignMetadataSearch(signMetadataSearch);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "S3Config{" +
                 "useVHost=" + useVHost +
                 ", signNamespace=" + signNamespace +
+                ", checksumEnabled=" + checksumEnabled +
+                ", retryEnabled=" + retryEnabled +
+                ", initialRetryDelay=" + initialRetryDelay +
+                ", retryLimit=" + retryLimit +
+                ", retryBufferSize=" + retryBufferSize +
+                ", faultInjectionRate=" + faultInjectionRate +
+                ", signMetadataSearch=" + signMetadataSearch +
                 "} " + super.toString();
     }
 }

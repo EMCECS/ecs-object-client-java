@@ -97,7 +97,7 @@ public class GeoPinningFilter extends ClientFilter {
                 if (retries != null) {
                     int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
                     log.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",
-                            new Object[] { retries, geoPinIndex, newIndex });
+                            retries, geoPinIndex, newIndex);
                     geoPinIndex = newIndex;
                 }
             }
