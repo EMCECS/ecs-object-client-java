@@ -74,6 +74,7 @@ public final class S3Constants {
     public static final String PARAM_RESPONSE_HEADER_CONTENT_LANGUAGE = "response-content-language";
     public static final String PARAM_RESPONSE_HEADER_CONTENT_TYPE = "response-content-type";
     public static final String PARAM_RESPONSE_HEADER_EXPIRES = "response-expires";
+    public static final String PARAM_SEARCH_METADATA = "searchmetadata";
     public static final String PARAM_SIGNATURE = "Signature";
     public static final String PARAM_SORTED = "sorted";
     public static final String PARAM_UPLOAD_ID = "uploadId";

@@ -81,7 +81,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected int retryLimit = DEFAULT_RETRY_LIMIT;
     protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
     protected float faultInjectionRate = 0.0f;
-    protected boolean signMetadataSearch = false; // TODO: make this true for 3.0
+    protected boolean signMetadataSearch = true;
 
     /**
      * Empty constructor for internal use only!

@@ -471,4 +471,9 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Override
     public void testPutObjectPreconditions() {
     }
+
+    @Ignore
+    @Override
+    public void testCopyObjectSelf() throws Exception {
+    }
 }

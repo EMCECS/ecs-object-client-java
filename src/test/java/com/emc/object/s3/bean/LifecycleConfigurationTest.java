@@ -57,7 +57,7 @@ public class LifecycleConfigurationTest {
                 "<Prefix>foo/</Prefix>" +
                 "<Status>Disabled</Status>" +
                 "<Expiration>" +
-                "<Date>2050-01-01T00:00:00Z</Date>" +
+                "<Date>2050-01-01</Date>" +
                 "</Expiration>" +
                 "</Rule>" +
                 "</LifecycleConfiguration>";

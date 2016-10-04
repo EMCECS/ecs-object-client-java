@@ -44,14 +44,15 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
-public final class S3AuthUtil {
+public final class S3SignerV2 {
+    private static final Logger log = LoggerFactory.getLogger(S3SignerV2.class);
 
-    private static final Logger log = LoggerFactory.getLogger(S3AuthUtil.class);
+    private S3Config s3Config;
+    private SortedSet<String> signedParameters;
 
-    public static SortedSet<String> SIGNED_PARAMETERS;
-
-    static {
-        SIGNED_PARAMETERS = new TreeSet<String>(Arrays.asList(
+    public S3SignerV2(S3Config s3Config) {
+        this.s3Config = s3Config;
+        signedParameters = new TreeSet<String>(Arrays.asList(
                 "acl", "torrent", "logging", "location", "policy", "requestPayment", "versioning",
                 "versions", "versionId", "notification", "uploadId", "uploads", "partNumber", "website",
                 "delete", "lifecycle", "tagging", "cors", "restore",
@@ -63,16 +64,19 @@ public final class S3AuthUtil {
                 S3Constants.PARAM_RESPONSE_HEADER_EXPIRES,
                 S3Constants.PARAM_ENDPOINT,
                 S3Constants.PARAM_IS_STALE_ALLOWED));
+        if (s3Config.isSignMetadataSearch()) {
+            signedParameters.add(S3Constants.PARAM_QUERY);
+            signedParameters.add(S3Constants.PARAM_SEARCH_METADATA);
+        }
     }
 
-    public static void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers,
-                            String accessKey, String secretKey, long clockSkew) {
-        String stringToSign = getStringToSign(method, resource, parameters, headers, clockSkew);
-        String signature = getSignature(stringToSign, secretKey);
-        RestUtil.putSingle(headers, "Authorization", "AWS " + accessKey + ":" + signature);
+    public void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        String stringToSign = getStringToSign(method, resource, parameters, headers);
+        String signature = getSignature(stringToSign);
+        RestUtil.putSingle(headers, "Authorization", "AWS " + s3Config.getIdentity() + ":" + signature);
     }
 
-    public static URL generatePresignedUrl(PresignedUrlRequest request, S3Config s3Config) {
+    public URL generatePresignedUrl(PresignedUrlRequest request) {
         String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
 
         URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
@@ -100,9 +104,8 @@ public final class S3AuthUtil {
         queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
 
         // sign the request
-        String stringToSign = S3AuthUtil.getStringToSign(request.getMethod().toString(), resource,
-                queryParams, request.getHeaders(), s3Config.getServerClockSkew());
-        String signature = S3AuthUtil.getSignature(stringToSign, s3Config.getSecretKey());
+        String stringToSign = getStringToSign(request.getMethod().toString(), resource, queryParams, request.getHeaders());
+        String signature = getSignature(stringToSign);
 
         // add signature to query string
         queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
@@ -118,8 +121,8 @@ public final class S3AuthUtil {
         }
     }
 
-    public static String getStringToSign(String method, String resource, Map<String, String> parameters,
-                                         Map<String, List<Object>> headers, long clockSkew) {
+    public String getStringToSign(String method, String resource, Map<String, String> parameters,
+                                  Map<String, List<Object>> headers) {
         StringBuilder stringToSign = new StringBuilder();
 
         // method line
@@ -140,7 +143,7 @@ public final class S3AuthUtil {
         String date = RestUtil.getFirstAsString(headers, RestUtil.HEADER_DATE);
         if (date == null) {
             // must have a date in the headers
-            date = RestUtil.getRequestDate(clockSkew);
+            date = RestUtil.getRequestDate(s3Config.getServerClockSkew());
             RestUtil.putSingle(headers, RestUtil.HEADER_DATE, date);
         }
         // if x-amz-date is specified, date line should be blank
@@ -162,7 +165,7 @@ public final class S3AuthUtil {
         // resource path (includes signed parameters)
         stringToSign.append(resource);
         boolean firstParameter = true;
-        for (String parameter : SIGNED_PARAMETERS) {
+        for (String parameter : signedParameters) {
             if (parameters.containsKey(parameter)) {
                 stringToSign.append(firstParameter ? "?" : "&").append(parameter);
                 String value = parameters.get(parameter);
@@ -176,7 +179,7 @@ public final class S3AuthUtil {
         return stringToSignStr;
     }
 
-    public static SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers, Map<String, String> parameters) {
+    private SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers, Map<String, String> parameters) {
         SortedMap<String, String> canonicalizedHeaders = new TreeMap<String, String>();
 
         // add x-emc- and x-amz- headers
@@ -198,7 +201,7 @@ public final class S3AuthUtil {
         return canonicalizedHeaders;
     }
 
-    public static String trimAndJoin(List<Object> values, String delimiter) {
+    private String trimAndJoin(List<Object> values, String delimiter) {
         if (values == null || values.isEmpty()) return null;
         StringBuilder delimited = new StringBuilder();
         Iterator<Object> valuesI = values.iterator();
@@ -209,10 +212,10 @@ public final class S3AuthUtil {
         return delimited.toString();
     }
 
-    public static String getSignature(String stringToSign, String secretKey) {
+    public String getSignature(String stringToSign) {
         try {
             Mac mac = Mac.getInstance("HmacSHA1");
-            mac.init(new SecretKeySpec(secretKey.getBytes("UTF-8"), "HmacSHA1")); // AWS does not B64-decode the secret key!
+            mac.init(new SecretKeySpec(s3Config.getSecretKey().getBytes("UTF-8"), "HmacSHA1")); // AWS does not B64-decode the secret key!
             String signature = new String(Base64.encodeBase64(mac.doFinal(stringToSign.getBytes("UTF-8"))));
             log.debug("signature:\n" + signature);
             return signature;
@@ -221,10 +224,7 @@ public final class S3AuthUtil {
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("UTF-8 encoding is not supported on this platform", e);
         } catch (InvalidKeyException e) {
-            throw new RuntimeException("The secret key \"" + secretKey + "\" is not valid", e);
+            throw new RuntimeException("The secret key \"" + s3Config.getSecretKey() + "\" is not valid", e);
         }
-    }
-
-    private S3AuthUtil() {
     }
 }

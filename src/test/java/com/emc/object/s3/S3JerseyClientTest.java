@@ -1322,6 +1322,23 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
+    @Test
+    public void testEmptyObject() throws Exception {
+        String key = "empty-object";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, new byte[0]);
+        client.putObject(request);
+
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
+    public void testEmptyObjectChunked() throws Exception {
+        String key = "empty-object";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "");
+        client.putObject(request);
+
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+    }
 
     @Test
     public void testPutObjectWithSpace() throws Exception {
@@ -1637,7 +1654,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // wait a tick so mtime is different
         Thread.sleep(2000);
 
-        client.copyObject(getTestBucket(), key, getTestBucket(), key);
+        CopyObjectRequest request = new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key);
+        client.copyObject(request.withObjectMetadata(new S3ObjectMetadata()));
         result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
         Assert.assertEquals(content, result.getObject());
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
@@ -2250,23 +2268,40 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3Config s3ConfigF = new S3Config(((S3JerseyClient) client).getS3Config());
         s3ConfigF.setRetryLimit(0); // no retries (that will throw off the test)
         s3ConfigF.setFaultInjectionRate(faultRate);
-        S3Client clientF = new S3JerseyClient(s3ConfigF);
+        final S3Client clientF = new S3JerseyClient(s3ConfigF);
+
+        ExecutorService executor = Executors.newFixedThreadPool(16);
 
         // make 100 requests
-        int requests = 100, failures = 0;
-        for (int i = 0; i < requests; i++) {
-            List<VdcHost> hosts = s3ConfigF.getVdcs().get(0).getHosts();
+        final List<VdcHost> hosts = s3ConfigF.getVdcs().get(0).getHosts();
+        int requests = 200;
+        final AtomicInteger failures = new AtomicInteger();
+        List<Future<?>> futures = new ArrayList<Future<?>>();
+        for (final AtomicInteger i = new AtomicInteger(); i.get() < requests; i.incrementAndGet()) {
+            futures.add(executor.submit(new Runnable() {
+                @Override
+                public void run() {
+
             try {
-                clientF.pingNode(hosts.get(i % hosts.size()).getName());
+                clientF.pingNode(hosts.get(i.get() % hosts.size()).getName());
             } catch (S3Exception e) {
                 if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
-                    failures++;
+                    failures.incrementAndGet();
                 else throw e;
             }
+                }
+            }));
+        }
+
+        executor.shutdown();
+
+        for (Future<?> future : futures) {
+            future.get();
         }
 
         // roughly half should fail
-        Assert.assertTrue(Math.abs((faultRate * requests) - failures) <= 5);
+        l4j.info("requests: " + requests + ", failures: " + failures.get());
+        Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

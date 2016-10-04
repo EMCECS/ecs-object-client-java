@@ -128,6 +128,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Config s3Config;
     protected Client client;
     protected LoadBalancer loadBalancer;
+    protected S3SignerV2 signer;
 
     public S3JerseyClient(S3Config s3Config) {
         this(s3Config, null);
@@ -142,6 +143,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
+        this.signer = new S3SignerV2(s3Config);
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
@@ -424,12 +426,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public MetadataSearchList listSystemMetadataSearchKeys() {
-        return executeRequest(client, new ObjectRequest(Method.GET, "", "searchmetadata"), MetadataSearchList.class);
+        ObjectRequest request = new ObjectRequest(Method.GET, "", S3Constants.PARAM_SEARCH_METADATA);
+        return executeRequest(client, request, MetadataSearchList.class);
     }
 
     @Override
     public MetadataSearchList listBucketMetadataSearchKeys(String bucketName) {
-        ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "searchmetadata");
+        ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, S3Constants.PARAM_SEARCH_METADATA);
         return executeRequest(client, request, MetadataSearchList.class);
     }
 
@@ -595,7 +598,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public URL getPresignedUrl(PresignedUrlRequest request) {
-        return S3AuthUtil.generatePresignedUrl(request, s3Config);
+        return signer.generatePresignedUrl(request);
     }
 
     @Override

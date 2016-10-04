@@ -26,9 +26,9 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.S3AuthUtil;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.S3SignerV2;
 import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -39,9 +39,11 @@ import java.util.Map;
 
 public class AuthorizationFilter extends ClientFilter {
     private S3Config s3Config;
+    private S3SignerV2 signer;
 
     public AuthorizationFilter(S3Config s3Config) {
         this.s3Config = s3Config;
+        this.signer = new S3SignerV2(s3Config);
     }
 
     @Override
@@ -68,13 +70,10 @@ public class AuthorizationFilter extends ClientFilter {
                 if (namespace != null) resource = "/" + namespace + resource;
             }
 
-            S3AuthUtil.sign(request.getMethod(),
+            signer.sign(request.getMethod(),
                     resource,
                     parameters,
-                    request.getHeaders(),
-                    s3Config.getIdentity(),
-                    s3Config.getSecretKey(),
-                    s3Config.getServerClockSkew());
+                    request.getHeaders());
         }
 
         return getNext().handle(request);
