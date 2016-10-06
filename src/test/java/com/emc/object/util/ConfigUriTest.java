@@ -65,7 +65,11 @@ public class ConfigUriTest {
         fooMap.put("baz", Foo.boozle);
         Assert.assertEquals(fooMap, dummyConfig.getFooMap());
 
-        // make sure generated URI is the same as the original (parameter order may be an issue here)
+        // make sure generated URI is the same as the original
+        // parameter order may be an issue here, so we'll regenerate
+        // this is to test round-trip
+        uri = dummyUri.generateUri(dummyConfig) + "&blah=blah";
+        dummyConfig = dummyUri.parseUri(uri);
         Assert.assertEquals(uri, dummyUri.generateUri(dummyConfig) + "&blah=blah");
 
         try {
@@ -92,7 +96,11 @@ public class ConfigUriTest {
         Assert.assertEquals("foo Ω bar", dummyConfig.getStringParam());
         Assert.assertEquals(Arrays.asList("fooΩbar", "foo bar", "foo服务器bar"), dummyConfig.getStringList());
 
-        // make sure generated URI is the same as the original (parameter order may be an issue here)
+        // make sure generated URI is the same as the original
+        // parameter order may be an issue here, so we'll regenerate
+        // this is to test round-trip
+        uri = dummyUri.generateUri(dummyConfig);
+        dummyConfig = dummyUri.parseUri(uri);
         Assert.assertEquals(uri, dummyUri.generateUri(dummyConfig));
     }
 
