@@ -2268,23 +2268,40 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3Config s3ConfigF = new S3Config(((S3JerseyClient) client).getS3Config());
         s3ConfigF.setRetryLimit(0); // no retries (that will throw off the test)
         s3ConfigF.setFaultInjectionRate(faultRate);
-        S3Client clientF = new S3JerseyClient(s3ConfigF);
+        final S3Client clientF = new S3JerseyClient(s3ConfigF);
+
+        ExecutorService executor = Executors.newFixedThreadPool(16);
 
         // make 100 requests
-        int requests = 100, failures = 0;
-        for (int i = 0; i < requests; i++) {
-            List<VdcHost> hosts = s3ConfigF.getVdcs().get(0).getHosts();
+        final List<VdcHost> hosts = s3ConfigF.getVdcs().get(0).getHosts();
+        int requests = 200;
+        final AtomicInteger failures = new AtomicInteger();
+        List<Future<?>> futures = new ArrayList<Future<?>>();
+        for (final AtomicInteger i = new AtomicInteger(); i.get() < requests; i.incrementAndGet()) {
+            futures.add(executor.submit(new Runnable() {
+                @Override
+                public void run() {
+
             try {
-                clientF.pingNode(hosts.get(i % hosts.size()).getName());
+                clientF.pingNode(hosts.get(i.get() % hosts.size()).getName());
             } catch (S3Exception e) {
                 if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
-                    failures++;
+                    failures.incrementAndGet();
                 else throw e;
             }
+                }
+            }));
+        }
+
+        executor.shutdown();
+
+        for (Future<?> future : futures) {
+            future.get();
         }
 
         // roughly half should fail
-        Assert.assertTrue(Math.abs((faultRate * requests) - failures) <= 5);
+        l4j.info("requests: " + requests + ", failures: " + failures.get());
+        Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= 10);
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

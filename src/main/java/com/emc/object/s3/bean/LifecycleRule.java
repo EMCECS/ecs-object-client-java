@@ -26,7 +26,10 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.util.Iso8601DateAdapter;
+
 import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.Date;
 
 @XmlType(propOrder = {"id", "prefix", "status", "expiration"})
@@ -150,6 +153,7 @@ public class LifecycleRule {
         @XmlElement(name = "Days")
         public Integer days;
         @XmlElement(name = "Date")
+        @XmlJavaTypeAdapter(value = Iso8601DateAdapter.class)
         public Date date;
     }
 
