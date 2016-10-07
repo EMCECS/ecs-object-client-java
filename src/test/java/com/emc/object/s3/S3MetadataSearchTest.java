@@ -117,7 +117,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
         objectMetadata.setUserMetadata(userMeta);
-        client.putObject(new PutObjectRequest(getTestBucket(), key1, "").withObjectMetadata(objectMetadata));
+        client.putObject(new PutObjectRequest(getTestBucket(), key1, new byte[0]).withObjectMetadata(objectMetadata));
 
         QueryObjectsRequest request = new QueryObjectsRequest(bucketName)
                 .withAttribute("ContentType")

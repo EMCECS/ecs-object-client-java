@@ -1322,6 +1322,23 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
+    @Test
+    public void testEmptyObject() throws Exception {
+        String key = "empty-object";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, new byte[0]);
+        client.putObject(request);
+
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
+    public void testEmptyObjectChunked() throws Exception {
+        String key = "empty-object";
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "");
+        client.putObject(request);
+
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+    }
 
     @Test
     public void testPutObjectWithSpace() throws Exception {
@@ -1637,7 +1654,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // wait a tick so mtime is different
         Thread.sleep(2000);
 
-        client.copyObject(getTestBucket(), key, getTestBucket(), key);
+        CopyObjectRequest request = new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key);
+        client.copyObject(request.withObjectMetadata(new S3ObjectMetadata()));
         result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
         Assert.assertEquals(content, result.getObject());
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));

@@ -117,54 +117,64 @@ public class S3AuthUtilTest {
     }
 
     @Test
-    public void testSign() {
+    public void testSign() throws Exception {
+        S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
+        S3SignerV2 signer = new S3SignerV2(s3Config);
+
         MultivaluedMap<String, Object> headers = new OutBoundHeaders(HEADERS_1);
-        S3AuthUtil.sign(METHOD_1, RESOURCE_1, PARAMETERS_1, headers, ACCESS_KEY, SECRET_KEY, 0);
+        signer.sign(METHOD_1, RESOURCE_1, PARAMETERS_1, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_1, headers.getFirst("Authorization"));
 
         headers = new OutBoundHeaders(HEADERS_2);
-        S3AuthUtil.sign(METHOD_2, RESOURCE_2, PARAMETERS_2, headers, ACCESS_KEY, SECRET_KEY, 0);
+        signer.sign(METHOD_2, RESOURCE_2, PARAMETERS_2, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_2, headers.getFirst("Authorization"));
 
         headers = new OutBoundHeaders(HEADERS_3);
-        S3AuthUtil.sign(METHOD_3, RESOURCE_3, PARAMETERS_3, headers, ACCESS_KEY, SECRET_KEY, 0);
+        signer.sign(METHOD_3, RESOURCE_3, PARAMETERS_3, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_3, headers.getFirst("Authorization"));
 
         headers = new OutBoundHeaders(HEADERS_4);
-        S3AuthUtil.sign(METHOD_4, RESOURCE_4, PARAMETERS_4, headers, ACCESS_KEY, SECRET_KEY, 0);
+        signer.sign(METHOD_4, RESOURCE_4, PARAMETERS_4, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_4, headers.getFirst("Authorization"));
     }
 
     @Test
-    public void testStringToSign() {
-        String stringToSign = S3AuthUtil.getStringToSign(METHOD_1, RESOURCE_1, PARAMETERS_1, HEADERS_1, 0);
+    public void testStringToSign() throws Exception {
+        S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
+        S3SignerV2 signer = new S3SignerV2(s3Config);
+
+        String stringToSign = signer.getStringToSign(METHOD_1, RESOURCE_1, PARAMETERS_1, HEADERS_1);
         Assert.assertEquals(SIGN_STRING_1, stringToSign);
 
-        stringToSign = S3AuthUtil.getStringToSign(METHOD_2, RESOURCE_2, PARAMETERS_2, HEADERS_2, 0);
+        stringToSign = signer.getStringToSign(METHOD_2, RESOURCE_2, PARAMETERS_2, HEADERS_2);
         Assert.assertEquals(SIGN_STRING_2, stringToSign);
 
-        stringToSign = S3AuthUtil.getStringToSign(METHOD_3, RESOURCE_3, PARAMETERS_3, HEADERS_3, 0);
+        stringToSign = signer.getStringToSign(METHOD_3, RESOURCE_3, PARAMETERS_3, HEADERS_3);
         Assert.assertEquals(SIGN_STRING_3, stringToSign);
 
-        stringToSign = S3AuthUtil.getStringToSign(METHOD_4, RESOURCE_4, PARAMETERS_4, HEADERS_4, 0);
+        stringToSign = signer.getStringToSign(METHOD_4, RESOURCE_4, PARAMETERS_4, HEADERS_4);
         Assert.assertEquals(SIGN_STRING_4, stringToSign);
     }
 
     @Test
-    public void testSignature() {
-        Assert.assertEquals(SIGNATURE_1, S3AuthUtil.getSignature(SIGN_STRING_1, SECRET_KEY));
+    public void testSignature() throws Exception {
+        S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
+        S3SignerV2 signer = new S3SignerV2(s3Config);
 
-        Assert.assertEquals(SIGNATURE_2, S3AuthUtil.getSignature(SIGN_STRING_2, SECRET_KEY));
+        Assert.assertEquals(SIGNATURE_1, signer.getSignature(SIGN_STRING_1));
 
-        Assert.assertEquals(SIGNATURE_3, S3AuthUtil.getSignature(SIGN_STRING_3, SECRET_KEY));
+        Assert.assertEquals(SIGNATURE_2, signer.getSignature(SIGN_STRING_2));
 
-        Assert.assertEquals(SIGNATURE_4, S3AuthUtil.getSignature(SIGN_STRING_4, SECRET_KEY));
+        Assert.assertEquals(SIGNATURE_3, signer.getSignature(SIGN_STRING_3));
+
+        Assert.assertEquals(SIGNATURE_4, signer.getSignature(SIGN_STRING_4));
     }
 
     @Test
     public void testPresignedUrl() throws Exception {
         S3Config s3Config = new S3Config(new URI("http://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+        S3SignerV2 signer = new S3SignerV2(s3Config);
 
         PresignedUrlRequest request = new PresignedUrlRequest(Method.GET, "johnsmith", "photos/puppy.jpg",
                 new Date(1175139620000L));
@@ -173,7 +183,7 @@ public class S3AuthUtilTest {
                 "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE" +
                 "&Expires=1175139620" +
                 "&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D";
-        String actualUrl = S3AuthUtil.generatePresignedUrl(request, s3Config).toString();
+        String actualUrl = signer.generatePresignedUrl(request).toString();
 
         Assert.assertEquals(expectedUrl, actualUrl);
     }
