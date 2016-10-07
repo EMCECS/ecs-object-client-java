@@ -2301,7 +2301,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // roughly half should fail
         l4j.info("requests: " + requests + ", failures: " + failures.get());
-        Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= 10);
+        Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
