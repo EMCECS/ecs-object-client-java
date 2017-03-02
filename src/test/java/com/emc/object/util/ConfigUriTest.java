@@ -73,7 +73,7 @@ public class ConfigUriTest {
         Assert.assertEquals(uri, dummyUri.generateUri(dummyConfig) + "&blah=blah");
 
         try {
-            dummyUri.parseUri(uri, true);
+            dummyUri.parseUri(uri, null, true);
             Assert.fail("invalid parameter should fail with strict parsing");
         } catch (IllegalArgumentException e) {
             // expected

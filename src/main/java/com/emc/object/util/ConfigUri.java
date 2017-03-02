@@ -131,13 +131,31 @@ public class ConfigUri<C> {
     }
 
     public C parseUri(String configUri) {
-        return parseUri(configUri, false);
+        return parseUri(configUri, null);
     }
 
-    public C parseUri(String configUri, boolean strict) {
+    public C parseUri(String configUri, C defaults) {
+        return parseUri(configUri, defaults, false);
+    }
+
+    public C parseUri(String configUri, C defaultObject, boolean strict) {
         try {
             URI uriObj = new URI(configUri);
             C object = targetClass.newInstance();
+
+            // set defaults
+            if (defaultObject != null) {
+                // standard properties
+                for (PropertyDescriptor descriptor : paramPropertyMap.values()) {
+                    Object defaultValue = descriptor.getReadMethod().invoke(defaultObject);
+                    descriptor.getWriteMethod().invoke(object, defaultValue);
+                }
+                // map properties
+                for (PropertyDescriptor descriptor : mapPropertyMap.values()) {
+                    Object defaultValue = descriptor.getReadMethod().invoke(defaultObject);
+                    descriptor.getWriteMethod().invoke(object, defaultValue);
+                }
+            }
 
             if (protocolProperty != null && uriObj.getScheme() != null)
                 setPropertyValues(object, protocolProperty, Collections.singletonList(uriObj.getScheme()));
@@ -186,8 +204,12 @@ public class ConfigUri<C> {
     }
 
     public String generateUri(C object) {
+        return generateUri(object, null);
+    }
+
+    public String generateUri(C object, C defaultObject) {
         try {
-            C defaultObject = targetClass.newInstance();
+            if (defaultObject == null) defaultObject = targetClass.newInstance();
 
             // collect parameters
             MultivaluedMap<String, String> params = new MultivaluedMapImpl();

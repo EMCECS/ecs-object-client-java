@@ -42,10 +42,13 @@ public class CopyObjectRequest extends S3ObjectRequest {
     private String sourceKey;
     private String sourceVersionId;
 
-    private Date ifModifiedSince;
-    private Date ifUnmodifiedSince;
-    private String ifMatch;
-    private String ifNoneMatch;
+    private Date ifSourceModifiedSince;
+    private Date ifSourceUnmodifiedSince;
+    private String ifSourceMatch;
+    private String ifSourceNoneMatch;
+
+    private String ifTargetMatch;
+    private String ifTargetNoneMatch;
 
     private S3ObjectMetadata objectMetadata;
     private AccessControlList acl;
@@ -65,12 +68,15 @@ public class CopyObjectRequest extends S3ObjectRequest {
         if (sourceVersionId != null) source += "?versionId=" + sourceVersionId;
         RestUtil.putSingle(headers, S3Constants.AMZ_COPY_SOURCE, source);
 
-        if (ifModifiedSince != null)
-            RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_MODIFIED_SINCE, ifModifiedSince);
-        if (ifUnmodifiedSince != null)
-            RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_UNMODIFIED_SINCE, ifUnmodifiedSince);
-        if (ifMatch != null) RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_MATCH, ifMatch);
-        if (ifNoneMatch != null) RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_NONE_MATCH, ifNoneMatch);
+        if (ifSourceModifiedSince != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_MODIFIED_SINCE, ifSourceModifiedSince);
+        if (ifSourceUnmodifiedSince != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_UNMODIFIED_SINCE, ifSourceUnmodifiedSince);
+        if (ifSourceMatch != null) RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_MATCH, ifSourceMatch);
+        if (ifSourceNoneMatch != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_SOURCE_NONE_MATCH, ifSourceNoneMatch);
+        if (ifTargetMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_MATCH, ifTargetMatch);
+        if (ifTargetNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifTargetNoneMatch);
         if (objectMetadata != null) {
             RestUtil.putSingle(headers, S3Constants.AMZ_METADATA_DIRECTIVE, "REPLACE");
             headers.putAll(objectMetadata.toHeaders());
@@ -96,36 +102,52 @@ public class CopyObjectRequest extends S3ObjectRequest {
         this.sourceVersionId = sourceVersionId;
     }
 
-    public Date getIfModifiedSince() {
-        return ifModifiedSince;
+    public Date getIfSourceModifiedSince() {
+        return ifSourceModifiedSince;
     }
 
-    public void setIfModifiedSince(Date ifModifiedSince) {
-        this.ifModifiedSince = ifModifiedSince;
+    public void setIfSourceModifiedSince(Date ifSourceModifiedSince) {
+        this.ifSourceModifiedSince = ifSourceModifiedSince;
     }
 
-    public Date getIfUnmodifiedSince() {
-        return ifUnmodifiedSince;
+    public Date getIfSourceUnmodifiedSince() {
+        return ifSourceUnmodifiedSince;
     }
 
-    public void setIfUnmodifiedSince(Date ifUnmodifiedSince) {
-        this.ifUnmodifiedSince = ifUnmodifiedSince;
+    public void setIfSourceUnmodifiedSince(Date ifSourceUnmodifiedSince) {
+        this.ifSourceUnmodifiedSince = ifSourceUnmodifiedSince;
     }
 
-    public String getIfMatch() {
-        return ifMatch;
+    public String getIfSourceMatch() {
+        return ifSourceMatch;
     }
 
-    public void setIfMatch(String ifMatch) {
-        this.ifMatch = ifMatch;
+    public void setIfSourceMatch(String ifSourceMatch) {
+        this.ifSourceMatch = ifSourceMatch;
     }
 
-    public String getIfNoneMatch() {
-        return ifNoneMatch;
+    public String getIfSourceNoneMatch() {
+        return ifSourceNoneMatch;
     }
 
-    public void setIfNoneMatch(String ifNoneMatch) {
-        this.ifNoneMatch = ifNoneMatch;
+    public void setIfSourceNoneMatch(String ifSourceNoneMatch) {
+        this.ifSourceNoneMatch = ifSourceNoneMatch;
+    }
+
+    public String getIfTargetMatch() {
+        return ifTargetMatch;
+    }
+
+    public void setIfTargetMatch(String ifTargetMatch) {
+        this.ifTargetMatch = ifTargetMatch;
+    }
+
+    public String getIfTargetNoneMatch() {
+        return ifTargetNoneMatch;
+    }
+
+    public void setIfTargetNoneMatch(String ifTargetNoneMatch) {
+        this.ifTargetNoneMatch = ifTargetNoneMatch;
     }
 
     public S3ObjectMetadata getObjectMetadata() {
@@ -158,22 +180,22 @@ public class CopyObjectRequest extends S3ObjectRequest {
     }
 
     public CopyObjectRequest withIfModifiedSince(Date ifModifiedSince) {
-        setIfModifiedSince(ifModifiedSince);
+        setIfSourceModifiedSince(ifModifiedSince);
         return this;
     }
 
     public CopyObjectRequest withIfUnmodifiedSince(Date ifUnmodifiedSince) {
-        setIfUnmodifiedSince(ifUnmodifiedSince);
+        setIfSourceUnmodifiedSince(ifUnmodifiedSince);
         return this;
     }
 
     public CopyObjectRequest withIfMatch(String ifMatch) {
-        setIfMatch(ifMatch);
+        setIfSourceMatch(ifMatch);
         return this;
     }
 
     public CopyObjectRequest withIfNoneMatch(String ifNoneMatch) {
-        setIfNoneMatch(ifNoneMatch);
+        setIfSourceNoneMatch(ifNoneMatch);
         return this;
     }
 
