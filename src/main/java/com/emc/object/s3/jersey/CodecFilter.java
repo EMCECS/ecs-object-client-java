@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -60,6 +61,7 @@ public class CodecFilter extends ClientFilter {
     @Override
     public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
         Map<String, String> userMeta = (Map<String, String>) request.getProperties().get(RestUtil.PROPERTY_USER_METADATA);
+        Map<String, String> metaBackup = null;
 
         Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
         if (encode != null && encode) {
@@ -75,6 +77,9 @@ public class CodecFilter extends ClientFilter {
                 SizeOverrideWriter.setEntitySize(-1L);
             }
 
+            // backup original metadata in case of an error
+            metaBackup = new HashMap<String, String>(userMeta);
+
             // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
             // a "dangling" output stream and connect it in the adapter
             // NOTE: we can't alter the headers in the adapt() method because they've already been a) signed and b) sent
@@ -89,7 +94,17 @@ public class CodecFilter extends ClientFilter {
         }
 
         // execute request
-        ClientResponse response = getNext().handle(request);
+        ClientResponse response;
+        try {
+            response = getNext().handle(request);
+        } catch (RuntimeException e) {
+            if (encode != null && encode) {
+                // restore metadata from backup
+                userMeta.clear();
+                userMeta.putAll(metaBackup);
+            }
+            throw e;
+        }
 
         // get user metadata from response headers
         MultivaluedMap<String, String> headers = response.getHeaders();
