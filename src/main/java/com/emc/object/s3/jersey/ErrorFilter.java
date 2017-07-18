@@ -70,6 +70,11 @@ public class ErrorFilter extends ClientFilter {
                 throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
             } else {
                 // No response entity.  Don't try to parse it.
+                try {
+                    response.close();
+                } catch (Throwable t) {
+                    log.warn("could not close response after error", t);
+                }
                 Response.StatusType st = response.getStatusInfo();
                 throw new S3Exception(st.getReasonPhrase(), st.getStatusCode(), guessStatus(st.getStatusCode()),
                         response.getHeaders().getFirst("x-amz-request-id"));

@@ -25,10 +25,11 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     }
 
     private final MetadataSearchKey[] bucketMetadataSearchKeys = new MetadataSearchKey[] {
+            new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
             new MetadataSearchKey("x-amz-meta-datetime1", MetadataSearchDatatype.datetime),
             new MetadataSearchKey("x-amz-meta-decimal1", MetadataSearchDatatype.decimal),
             new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
-            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string)
     };
 
     @Override
@@ -95,13 +96,11 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
     @Test
     public void testObjectName() throws Exception {
-        String bucket = "name-test";
-
-        QueryObjectsRequest request = new QueryObjectsRequest(bucket)
+        QueryObjectsRequest request = new QueryObjectsRequest(getTestBucket())
                 .withQuery("ObjectName>''");
         QueryObjectsResult result = client.queryObjects(request);
 
-        Assert.assertEquals(bucket, result.getBucketName());
+        Assert.assertEquals(getTestBucket(), result.getBucketName());
     }
 
     @Test
