@@ -54,7 +54,7 @@ public final class RestUtil {
     public static final String HEADER_IF_MATCH = "If-Match";
     public static final String HEADER_IF_MODIFIED_SINCE = "If-Modified-Since";
     public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
-    public static final String HEADER_IF_UNMODIFIED_SINE = "If-Unmodified-Since";
+    public static final String HEADER_IF_UNMODIFIED_SINCE = "If-Unmodified-Since";
     public static final String HEADER_LAST_MODIFIED = "Last-Modified";
     public static final String HEADER_RANGE = "Range";
     public static final String HEADER_USER_AGENT = "User-Agent";
