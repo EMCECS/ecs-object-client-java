@@ -2115,6 +2115,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testPreSignedUrlWithChinese() throws Exception {
+        S3Client tempClient = new S3JerseyClient(new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
+                .withIdentity("stu").withSecretKey("/QcPo5pEvQh7EOHKs2XjzCARrt7HokZhlpdGKbHs"));
+        URL url = tempClient.getPresignedUrl("test-bucket", "解析依頼C1B068.txt", new Date(1500998758000L));
+        Assert.assertEquals("https://test-bucket.s3.amazonaws.com/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt" +
+                        "?AWSAccessKeyId=stu&Expires=1500998758&Signature=AjZv1TlZgGqlbNsLiYKFkV6gaqg%3D",
+                url.toString());
+    }
+
+    @Test
     public void testStaleReadsAllowed() throws Exception {
         // there's no way to test the result, so if no error is returned, assume success
         client.setBucketStaleReadAllowed(getTestBucket(), true);
@@ -2302,6 +2312,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // roughly half should fail
         l4j.info("requests: " + requests + ", failures: " + failures.get());
         Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
+    }
+
+    @Test
+    public void testCifsEcs() {
+        String key = "_$folder$";
+
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, new byte[0]);
+        // for some stupid reason, Jersey always uses chunked transfer with "identity" content-encoding
+        request.withObjectMetadata(new S3ObjectMetadata().withContentEncoding("identity"));
+        client.putObject(request);
+        Assert.assertNotNull(client.getObjectMetadata(getTestBucket(), key));
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
