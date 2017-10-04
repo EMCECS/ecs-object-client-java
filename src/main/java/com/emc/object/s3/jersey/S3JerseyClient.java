@@ -393,6 +393,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void setBucketPolicy(String bucketName, BucketPolicy policy) {
+        ObjectRequest request = new GenericBucketEntityRequest<BucketPolicy>(
+                Method.PUT, bucketName, "policy", policy).withContentType(RestUtil.TYPE_APPLICATION_XML);
+        executeAndClose(client, request);
+    }
+
+    @Override
     public LocationConstraint getBucketLocation(String bucketName) {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "location");
         return executeRequest(client, request, LocationConstraint.class);

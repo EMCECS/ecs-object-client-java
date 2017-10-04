@@ -338,6 +338,43 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testBucketPolicy() throws Exception {
+        BucketPolicyStatement statement = new BucketPolicyStatement()
+                .withSid("new-statement-1")
+                .withActions(BucketPolicyAction.ListBucket, BucketPolicyAction.GetObject)
+                .withPrincipals("user1,user2,user3")
+                .withResource(String.format("%/*", getTestBucket()))
+                .withEffect(BucketPolicyStatement.Effect.Allow);
+        BucketPolicy bp = new BucketPolicy("2012-10-17", "new-policy-1")
+                .withStatements(statement);
+
+        client.setBucketPolicy(getTestBucket(), bp);
+
+        //LifecycleConfiguration lc2 = client.getBucketLifecycle(getTestBucket());
+        //Assert.assertNotNull(lc2);
+        //Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
+
+        //for (LifecycleRule rule : lc.getRules()) {
+        //    Assert.assertTrue(lc2.getRules().contains(rule));
+        //}
+
+        //lc.withRules(new LifecycleRule("armageddon", "", LifecycleRule.Status.Enabled, end.getTime()));
+
+        //client.setBucketLifecycle(getTestBucket(), lc);
+
+        //lc2 = client.getBucketLifecycle(getTestBucket());
+        //Assert.assertNotNull(lc2);
+        //Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
+
+        //for (LifecycleRule rule : lc.getRules()) {
+        //    Assert.assertTrue(lc2.getRules().contains(rule));
+        //}
+
+        //client.deleteBucketLifecycle(getTestBucket());
+        //Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
+    }
+
+    @Test
     public void testListObjects() throws Exception {
         String key = "foo", content = "Hello List!";
         client.putObject(getTestBucket(), key, content, null);
