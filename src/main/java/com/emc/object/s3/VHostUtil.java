@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2017, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,15 +26,23 @@
  */
 package com.emc.object.s3;
 
-import java.net.URI;
+public final class VHostUtil {
+    public static String getResourceString(S3Config s3Config, String namespace, String bucket, String path) {
+        String resource = path;
 
-/**
- * @deprecated (2.0.2) use {@link S3Config#S3Config(URI)} and {@link S3Config#setUseVHost(boolean)} to true.
- */
-public class S3VHostConfig extends S3Config {
-    public S3VHostConfig(URI endpoint) {
-        super(endpoint);
+        // check if bucket is in hostname
+        if (s3Config.isUseVHost()) {
+            if (bucket != null) resource = "/" + bucket + resource;
+        }
 
-        setUseVHost(true);
+        // check if namespace is in hostname and must be signed
+        if (s3Config.isUseVHost() && s3Config.isSignNamespace()) {
+            if (namespace != null) resource = "/" + namespace + resource;
+        }
+
+        return resource;
+    }
+
+    private VHostUtil() {
     }
 }

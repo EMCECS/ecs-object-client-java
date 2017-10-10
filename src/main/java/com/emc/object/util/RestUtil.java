@@ -82,7 +82,7 @@ public final class RestUtil {
     public static final String PROPERTY_KEEP_ENCODE_HEADERS = "com.emc.object.codec.keepEncodeHeaders";
     public static final String PROPERTY_VERIFY_READ_CHECKSUM = "com.emc.object.verifyReadChecksum";
     public static final String PROPERTY_VERIFY_WRITE_CHECKSUM = "com.emc.object.verifyWriteChecksum";
-
+    public static final String PROPERTY_GENERATE_CONTENT_MD5 = "com.emc.object.generateContentMd5";
 
     public static final int STATUS_REDIRECT = 301;
     public static final int STATUS_UNAUTHORIZED = 403;

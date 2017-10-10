@@ -151,7 +151,7 @@ public class S3EncryptionWithCompressionTest extends S3EncryptionClientBasicTest
         S3ObjectMetadata objectMetadata = rclient.getObjectMetadata(getTestBucket(), key);
 
         // Make sure the checksum matches
-        String sha1hex = cis.getChecksum().getValue();
+        String sha1hex = cis.getChecksum().getHexValue();
 
         assertNotNull("Missing SHA1 meta", objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1));
         assertEquals("SHA1 incorrect", sha1hex,
