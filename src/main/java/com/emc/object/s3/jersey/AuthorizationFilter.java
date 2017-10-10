@@ -29,6 +29,7 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3SignerV2;
+import com.emc.object.s3.VHostUtil;
 import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -56,19 +57,11 @@ public class AuthorizationFilter extends ClientFilter {
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
             Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
-            String resource = RestUtil.getEncodedPath(request.getURI());
 
-            // check if bucket is in hostname
-            if (s3Config.isUseVHost()) {
-                String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
-                if (bucketName != null) resource = "/" + bucketName + resource;
-            }
-
-            // check if namespace is in hostname and must be signed
-            if (s3Config.isUseVHost() && s3Config.isSignNamespace()) {
-                String namespace = (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE);
-                if (namespace != null) resource = "/" + namespace + resource;
-            }
+            String resource = VHostUtil.getResourceString(s3Config,
+                    (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE),
+                    (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
+                    RestUtil.getEncodedPath(request.getURI()));
 
             signer.sign(request.getMethod(),
                     resource,

@@ -128,8 +128,8 @@ public class ChecksummedInputStream extends InputStream {
 
     private void finish() {
         if (verifyChecksum != null) {
-            String referenceValue = verifyChecksum.getValue();
-            String calculatedValue = checksum.getValue();
+            String referenceValue = verifyChecksum.getHexValue();
+            String calculatedValue = checksum.getHexValue();
             if (!referenceValue.equals(calculatedValue))
                 throw new ChecksumError("Checksum failure while reading stream", referenceValue, calculatedValue);
         }

@@ -50,7 +50,7 @@ public class ChecksumFilterTest {
         MockClientHandler mockHandler = new MockClientHandler();
 
         Client client = new Client(mockHandler);
-        client.addFilter(new ChecksumFilter());
+        client.addFilter(new ChecksumFilter(new S3Config()));
 
         // positive test
         mockHandler.setBadMd5(false);

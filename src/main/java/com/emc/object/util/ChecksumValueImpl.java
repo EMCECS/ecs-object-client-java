@@ -32,12 +32,22 @@ package com.emc.object.util;
 public class ChecksumValueImpl extends ChecksumValue {
     private ChecksumAlgorithm algorithm;
     private long offset;
-    private String value;
+    private byte[] byteValue;
+    private String hexValue;
 
-    public ChecksumValueImpl(ChecksumAlgorithm algorithm, long offset, String value) {
+    public ChecksumValueImpl(ChecksumAlgorithm algorithm, long offset, byte[] byteValue) {
+        this(algorithm, offset, byteValue, null);
+    }
+
+    public ChecksumValueImpl(ChecksumAlgorithm algorithm, long offset, String hexValue) {
+        this(algorithm, offset, null, hexValue);
+    }
+
+    public ChecksumValueImpl(ChecksumAlgorithm algorithm, long offset, byte[] byteValue, String hexValue) {
         this.algorithm = algorithm;
         this.offset = offset;
-        this.value = value.replaceAll("\"", "").trim();
+        this.byteValue = byteValue;
+        if (hexValue != null) this.hexValue = hexValue.replaceAll("\"", "").trim();
     }
 
     /**
@@ -49,9 +59,9 @@ public class ChecksumValueImpl extends ChecksumValue {
         this.algorithm = ChecksumAlgorithm.valueOf(parts[0]);
         if (parts.length > 2) {
             this.offset = Long.parseLong(parts[1]);
-            this.value = parts[2];
+            this.hexValue = parts[2];
         } else {
-            this.value = parts[1];
+            this.hexValue = parts[1];
         }
     }
 
@@ -63,7 +73,12 @@ public class ChecksumValueImpl extends ChecksumValue {
         return offset;
     }
 
-    public String getValue() {
-        return value;
+    @Override
+    public byte[] getByteValue() {
+        return byteValue;
+    }
+
+    public String getHexValue() {
+        return hexValue;
     }
 }
