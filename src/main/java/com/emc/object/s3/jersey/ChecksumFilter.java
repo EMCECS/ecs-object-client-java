@@ -26,15 +26,31 @@
  */
 package com.emc.object.s3.jersey;
 
+import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.S3SignerV2;
+import com.emc.object.s3.VHostUtil;
 import com.emc.object.util.*;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
 
+import javax.xml.bind.DatatypeConverter;
+import java.io.ByteArrayOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
 public class ChecksumFilter extends ClientFilter {
+    private S3Config s3Config;
+    private S3SignerV2 signer;
+
+    public ChecksumFilter(S3Config s3Config) {
+        this.s3Config = s3Config;
+        this.signer = new S3SignerV2(s3Config);
+    }
+
     @Override
     public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
         try {
@@ -44,6 +60,13 @@ public class ChecksumFilter extends ClientFilter {
             if (verifyWrite != null && verifyWrite) {
                 // wrap stream to calculate write checksum
                 request.setAdapter(adapter);
+            }
+
+            Boolean generateMd5 = (Boolean) request.getProperties().get(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
+            if (generateMd5 != null && generateMd5) {
+                // wrap stream to generate Content-MD5 header
+                ContentMd5Adapter md5Adapter = new ContentMd5Adapter(request.getAdapter());
+                request.setAdapter(md5Adapter);
             }
 
             // execute request
@@ -61,8 +84,8 @@ public class ChecksumFilter extends ClientFilter {
 
             if (verifyWrite != null && verifyWrite && md5Header != null) {
                 // verify write checksum
-                if (!adapter.getChecksum().getValue().equals(md5Header))
-                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getValue(), md5Header);
+                if (!adapter.getChecksum().getHexValue().equals(md5Header))
+                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getHexValue(), md5Header);
             }
 
             Boolean verifyRead = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
@@ -99,5 +122,87 @@ public class ChecksumFilter extends ClientFilter {
         public RunningChecksum getChecksum() {
             return checksum;
         }
+    }
+
+    private class ContentMd5Adapter extends AbstractClientRequestAdapter implements CloseEventListener {
+        ClientRequest request;
+        OutputStream finalStream;
+        RunningChecksum checksum;
+        ByteArrayOutputStream buffer;
+
+        ContentMd5Adapter(ClientRequestAdapter parent) {
+            super(parent);
+        }
+
+        @Override
+        public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
+            this.request = request;
+            finalStream = out;
+            try {
+                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                buffer = new ByteArrayOutputStream();
+                out = new CloseNotifyOutputStream(buffer, this);
+                out = new ChecksummedOutputStream(out, checksum);
+                return getAdapter().adapt(request, out); // don't break the chain
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("fatal: MD5 algorithm not found");
+            }
+        }
+
+        @Override
+        public void streamClosed(CloseNotifyOutputStream stream) throws IOException {
+            // add Content-MD5 header (before anything is written to the final stream)
+            request.getHeaders().putSingle(RestUtil.HEADER_CONTENT_MD5,
+                    DatatypeConverter.printBase64Binary(checksum.getByteValue()));
+
+            // need to re-sign request because Content-MD5 is included in the signature!
+            if (s3Config.getIdentity() != null) {
+                Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
+
+                String resource = VHostUtil.getResourceString(s3Config,
+                        (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE),
+                        (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
+                        RestUtil.getEncodedPath(request.getURI()));
+
+                signer.sign(request.getMethod(),
+                        resource,
+                        parameters,
+                        request.getHeaders());
+            }
+
+            // write the complete buffered data
+            finalStream.write(buffer.toByteArray());
+        }
+    }
+
+    private class CloseNotifyOutputStream extends FilterOutputStream {
+        private List<CloseEventListener> listeners = new ArrayList<CloseEventListener>();
+
+        CloseNotifyOutputStream(OutputStream out, CloseEventListener... listeners) {
+            super(out);
+            if (listeners != null) this.listeners.addAll(Arrays.asList(listeners));
+        }
+
+        @Override
+        public void write(byte[] b) throws IOException {
+            write(b, 0, b.length);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            out.write(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            super.close();
+            for (CloseEventListener listener : listeners) {
+                listener.streamClosed(this);
+            }
+        }
+    }
+
+    private interface CloseEventListener extends EventListener {
+        void streamClosed(CloseNotifyOutputStream stream) throws IOException;
     }
 }

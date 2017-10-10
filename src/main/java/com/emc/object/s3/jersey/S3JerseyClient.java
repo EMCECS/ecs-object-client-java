@@ -214,7 +214,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             client.addFilter(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
         if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
         if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
-        if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter());
+        if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter(s3Config));
         client.addFilter(new AuthorizationFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
@@ -373,6 +373,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration) {
         ObjectRequest request = new GenericBucketEntityRequest<LifecycleConfiguration>(
                 Method.PUT, bucketName, "lifecycle", lifecycleConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
+        request.property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE);
         executeAndClose(client, request);
     }
 
@@ -613,6 +614,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public DeleteObjectsResult deleteObjects(DeleteObjectsRequest request) {
+        request.property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE);
         return executeRequest(client, request, DeleteObjectsResult.class);
     }
 

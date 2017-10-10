@@ -252,7 +252,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
 
-    @Ignore // TODO: blocked by some combination of ACL-related ECS bugs (too complex to sort through prior to 2.2 release)
     @Test
     public void testSetBucketAclCanned() throws Exception {
         String identity = createS3Config().getIdentity();
@@ -1719,7 +1718,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
-    @Ignore // TODO: blocked by STORAGE-9447
+    @Ignore // TODO: blocked by STORAGE-12050
     @Test
     public void testUpdateMetadata() throws Exception {
         String key = "update-metadata";
@@ -2239,7 +2238,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testTimeouts() throws Exception {
-        S3Config s3Config = new S3Config(Protocol.HTTP, "10.10.10.10").withIdentity("foo").withSecretKey("bar");
+        S3Config s3Config = new S3Config(Protocol.HTTP, "8.8.4.4").withIdentity("foo").withSecretKey("bar");
         s3Config.setRetryLimit(0); // no retries
 
         // set timeouts
@@ -2257,7 +2256,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
             @Override
             public void run() {
-                s3Client.pingNode("10.4.4.180");
+                s3Client.pingNode("8.8.4.4");
                 Assert.fail("response was not expected; choose an IP that is not in use");
             }
         });

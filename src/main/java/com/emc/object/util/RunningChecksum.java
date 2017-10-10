@@ -67,7 +67,7 @@ public class RunningChecksum extends ChecksumValue {
     }
 
     @Override
-    public String getValue() {
+    public byte[] getByteValue() {
 
         // Clone the digest so we can pad current value for output
         MessageDigest tmpDigest;
@@ -77,7 +77,12 @@ public class RunningChecksum extends ChecksumValue {
             throw new RuntimeException("Clone failed", e);
         }
 
-        byte[] currDigest = tmpDigest.digest();
+        return tmpDigest.digest();
+    }
+
+    @Override
+    public String getHexValue() {
+        byte[] currDigest = getByteValue();
 
         // convert to hex string
         BigInteger bigInt = new BigInteger(1, currDigest);

@@ -34,7 +34,17 @@ public abstract class ChecksumValue {
 
     public abstract long getOffset();
 
-    public abstract String getValue();
+    public abstract byte[] getByteValue();
+
+    public abstract String getHexValue();
+
+    /**
+     * @deprecated Please use {@link #getHexValue()} instead
+     */
+    @Deprecated
+    public String getValue() {
+        return getHexValue();
+    }
 
     @Override
     public String toString() {
@@ -48,7 +58,7 @@ public abstract class ChecksumValue {
     public String toString(boolean includeByteCount) {
         String out = this.getAlgorithm().toString();
         if (includeByteCount) out += "/" + this.getOffset();
-        out += "/" + getValue();
+        out += "/" + getHexValue();
         return out;
     }
 
@@ -61,7 +71,7 @@ public abstract class ChecksumValue {
 
         if (getOffset() != that.getOffset()) return false;
         if (getAlgorithm() != that.getAlgorithm()) return false;
-        if (!getValue().equals(that.getValue())) return false;
+        if (!getHexValue().equals(that.getHexValue())) return false;
 
         return true;
     }
@@ -70,7 +80,7 @@ public abstract class ChecksumValue {
     public int hashCode() {
         int result = getAlgorithm().hashCode();
         result = 31 * result + (int) (getOffset() ^ (getOffset() >>> 32));
-        result = 31 * result + getValue().hashCode();
+        result = 31 * result + getHexValue().hashCode();
         return result;
     }
 }
