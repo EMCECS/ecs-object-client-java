@@ -82,7 +82,7 @@ public final class S3SignerV2 {
         URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
 
         // must construct both the final URL and the resource for signing
-        String resource = "/" + request.getBucketName() + uri.getPath();
+        String resource = "/" + request.getBucketName() + RestUtil.getEncodedPath(uri);
 
         // insert namespace in host
         if (namespace != null) {

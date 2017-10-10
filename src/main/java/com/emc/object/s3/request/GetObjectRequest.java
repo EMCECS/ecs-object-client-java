@@ -69,7 +69,7 @@ public class GetObjectRequest<T extends GetObjectRequest<T>> extends S3ObjectReq
         if (ifModifiedSince != null)
             RestUtil.putSingle(headers, RestUtil.HEADER_IF_MODIFIED_SINCE, RestUtil.headerFormat(ifModifiedSince));
         if (ifUnmodifiedSince != null)
-            RestUtil.putSingle(headers, RestUtil.HEADER_IF_UNMODIFIED_SINE, RestUtil.headerFormat(ifUnmodifiedSince));
+            RestUtil.putSingle(headers, RestUtil.HEADER_IF_UNMODIFIED_SINCE, RestUtil.headerFormat(ifUnmodifiedSince));
         if (ifMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_MATCH, ifMatch);
         if (ifNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifNoneMatch);
         return headers;

@@ -72,7 +72,7 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         if (ifModifiedSince != null)
             RestUtil.putSingle(headers, RestUtil.HEADER_IF_MODIFIED_SINCE, RestUtil.headerFormat(ifModifiedSince));
         if (ifUnmodifiedSince != null)
-            RestUtil.putSingle(headers, RestUtil.HEADER_IF_UNMODIFIED_SINE, RestUtil.headerFormat(ifUnmodifiedSince));
+            RestUtil.putSingle(headers, RestUtil.HEADER_IF_UNMODIFIED_SINCE, RestUtil.headerFormat(ifUnmodifiedSince));
         if (ifMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_MATCH, ifMatch);
         if (ifNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifNoneMatch);
         if (acl != null) headers.putAll(acl.toHeaders());
