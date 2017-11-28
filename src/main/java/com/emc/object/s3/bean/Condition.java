@@ -26,54 +26,26 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-public class BucketPolicyStatement {
-    private String sId;
-    private List<Condition> conditions = new ArrayList<Condition>();
-    //private Map<ConditionOperator, Condition> conditions = new HashMap<ConditionOperator, Condition>();
-    private Effect effect;
-    private String principal;
-    private List<BucketPolicyAction> action = new ArrayList<BucketPolicyAction>();
+public class Condition {
+    private ConditionOperator conditionOperator;
+    private Map<ConditionKey, String> conditionExpression
+            = new HashMap<ConditionKey, String>();
 
-    public BucketPolicyStatement() {}
+    public Condition() {}
 
-    public BucketPolicyStatement withSid(String sId) {
-        setSid(sId);
-        return this;
-    }
+    @XmlElement(name = "Operator", namespace = "")
+    public ConditionOperator getConditionOperator() { return conditionOperator; }
 
-    @XmlElement(name = "Sid", namespace = "")
-    public String getSid() { return sId; }
+    public void setConditionOperator(ConditionOperator conditionOperator) { this.conditionOperator = conditionOperator; }
 
-    public void setSid(String sId) { this.sId = sId; }
+    @XmlElementWrapper(name = "Expression", namespace = "")
+    public Map<ConditionKey, String> getConditionExpression() { return conditionExpression; }
 
-    @XmlElement(name = "Effect", namespace = "")
-    public Effect getEffect() { return effect; }
+    public void setConditionExpression(Map<ConditionKey, String> conditionExpression) { this.conditionExpression = conditionExpression; }
 
-    public void setEffect(Effect effect) { this.effect = effect; }
-
-    @XmlElement(name = "Principal", namespace = "")
-    public String getPrincipal() { return principal; }
-
-    public void setPrincipal(String principal) { this.principal= principal; }
-
-    @XmlElement(name = "Condition", namespace = "")
-    public List<Condition> getConditions() { return conditions; }
-
-    public void setConditions(List<Condition> conditions) { this.conditions = conditions; }
-
-    @XmlElement(name = "Action", namespace = "")
-    public List<BucketPolicyAction> getAction() { return action; }
-
-    public void setAction(List<BucketPolicyAction> action) { this.action = action; }
-
-    @XmlEnum
-    public static enum Effect {
-        Allow, Deny
-    }
 }

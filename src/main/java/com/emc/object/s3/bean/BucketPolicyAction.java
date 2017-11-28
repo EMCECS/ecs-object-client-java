@@ -26,44 +26,70 @@
  */
 package com.emc.object.s3.bean;
 
-import com.emc.object.s3.S3Constants;
-
 import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlEnumValue;
+import javax.xml.bind.annotation.XmlTransient;
 
 @XmlEnum
 public enum BucketPolicyAction {
+    @XmlEnumValue("s3:GetObject")
     GetObject("s3:GetObject"),
+    @XmlEnumValue ("s3:GetObjectVersion")
     GetObjectVersion("s3:GetObjectVersion"),
+    @XmlEnumValue("s3:PutObject")
     PutObject("s3:PutObject"),
+    @XmlEnumValue("s3:GetObjectAcl")
     GetObjectAcl("s3:GetObjectAcl"),
+    @XmlEnumValue("s3:GetObjectVersionAcl")
     GetObjectVersionAcl("s3:GetObjectVersionAcl"),
+    @XmlEnumValue("s3:PutObjectAcl")
     PutObjectAcl("s3:PutObjectAcl"),
+    @XmlEnumValue("s3:PutObjectVersionAcl")
     PutObjectVersionAcl("s3:PutObjectVersionAcl"),
+    @XmlEnumValue("s3:DeleteObject")
     DeleteObject("s3:DeleteObject"),
+    @XmlEnumValue("s3:DeleteObjectVersion")
     DeleteObjectVersion("s3:DeleteObjectVersion"),
+    @XmlEnumValue("s3:ListMultipartUploadParts")
     ListMultipartUploadParts("s3:ListMultipartUploadParts"),
+    @XmlEnumValue("s3:AbortMultipartUpload")
     AbortMultipartUpload("s3:AbortMultipartUpload"),
+    @XmlEnumValue("s3:DeleteBucket")
     DeleteBucket("s3:DeleteBucket"),
+    @XmlEnumValue("s3:ListBucket")
     ListBucket("s3:ListBucket"),
+    @XmlEnumValue("s3:ListBucketVersions")
     ListBucketVersions("s3:ListBucketVersions"),
+    @XmlEnumValue("s3:GetLifecycleConfiguration")
     GetLifecycleConfiguration("s3:GetLifecycleConfiguration"),
+    @XmlEnumValue("s3:PutLifecycleConfiguration")
     PutLifecycleConfiguration("s3:PutLifecycleConfiguration"),
+    @XmlEnumValue("s3:GetBucketAcl")
     GetBucketAcl("s3:GetBucketAcl"),
+    @XmlEnumValue("s3:PutBucketAcl")
     PutBucketAcl("s3:PutBucketAcl"),
+    @XmlEnumValue("s3:GetBucketCORS")
     GetBucketCORS("s3:GetBucketCORS"),
+    @XmlEnumValue("s3:PutBucketCORS")
     PutBucketCORS("s3:PutBucketCORS"),
+    @XmlEnumValue("s3:GetBucketVersioning")
     GetBucketVersioning("s3:GetBucketVersioning"),
+    @XmlEnumValue("s3:PutBucketVersioning")
     PutBucketVersioning("s3:PutBucketVersioning"),
+    @XmlEnumValue("s3:GetBucketPolicy")
     GetBucketPolicy("s3:GetBucketPolicy"),
+    @XmlEnumValue("s3:DeleteBucketPolicy")
     DeleteBucketPolicy("s3:DeleteBucketPolicy"),
+    @XmlEnumValue("s3:PutBucketPolicy")
     PutBucketPolicy("s3:PutBucketPolicy");
 
     private String actionName;
 
-    private BucketPolicyAction(String actionName) {
+    BucketPolicyAction(String actionName) {
         this.actionName = actionName;
     }
 
+    //@XmlTransient
     public String getActionName() {
         return actionName;
     }

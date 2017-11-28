@@ -24,29 +24,61 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3.bean;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import javax.xml.bind.annotation.XmlEnum;
 
-buildscript {
-    ext.commonBuildVersion = '1.6'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
-
-allprojects {
-    apply from: "$commonBuildDir/ecs-publish.gradle"
-}
-
-
-
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.1.1',
-            'com.emc.ecs:object-transform:1.1.0',
-            'commons-codec:commons-codec:1.10',
-            'com.sun.jersey:jersey-json:1.19.3',
-            'org.jdom:jdom2:2.0.6',
-            'org.slf4j:slf4j-api:1.7.5'
-    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
-    testCompile 'junit:junit:4.12'
+//http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html
+@XmlEnum
+public enum ConditionOperator {
+    StringEquals,
+    StringNotEquals,
+    StringEqualsIgnoreCase,
+    StringNotEqualsIgnoreCase,
+    StringLike,
+    StringNotLike,
+    NumericEquals,
+    NumericNotEquals,
+    NumericLessThan,
+    NumericLessThanEquals,
+    NumericGreaterThan,
+    NumericGreaterThanEquals,
+    DateEquals,
+    DateNotEquals,
+    DateLessThan,
+    DateLessThanEquals,
+    DateGreaterThan,
+    DateGreaterThanEquals,
+    Bool,
+    IpAddress,
+    NotIpAddress,
+    ArnEquals,
+    ArnNotEquals,
+    ArnLike,
+    ArnNotLike,
+    StringEqualsIfExists,
+    StringNotEqualsIfExists,
+    StringEqualsIgnoreCaseIfExists,
+    StringNotEqualsIgnoreCaseIfExists,
+    StringLikeIfExists,
+    StringNotLikeIfExists,
+    NumericEqualsIfExists,
+    NumericNotEqualsIfExists,
+    NumericLessThanIfExists,
+    NumericLessThanEqualsIfExists,
+    NumericGreaterThanIfExists,
+    NumericGreaterThanEqualsIfExists,
+    DateEqualsIfExists,
+    DateNotEqualsIfExists,
+    DateLessThanIfExists,
+    DateLessThanEqualsIfExists,
+    DateGreaterThanIfExists,
+    DateGreaterThanEqualsIfExists,
+    BoolIfExists,
+    IpAddressIfExists,
+    NotIpAddressIfExists,
+    ArnEqualsIfExists,
+    ArnNotEqualsIfExists,
+    ArnLikeIfExists,
+    ArnNotLikeIfExists,
 }

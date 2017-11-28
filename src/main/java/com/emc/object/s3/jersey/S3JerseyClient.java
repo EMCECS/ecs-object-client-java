@@ -31,13 +31,18 @@ import com.emc.object.s3.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.LoadBalancer;
-import com.emc.rest.smart.SmartClientFactory;
-import com.emc.rest.smart.SmartConfig;
-import com.emc.rest.smart.SmartFilter;
+import com.emc.rest.smart.*;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.client.apache4.ApacheHttpClient4;
+import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
+import com.sun.jersey.core.impl.provider.entity.FileProvider;
+import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -397,6 +402,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public void setBucketPolicy(String bucketName, BucketPolicy policy) {
         ObjectRequest request = new GenericBucketEntityRequest<BucketPolicy>(
                 Method.PUT, bucketName, "policy", policy).withContentType(RestUtil.TYPE_APPLICATION_XML);
+        request.property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE);
         executeAndClose(client, request);
     }
 

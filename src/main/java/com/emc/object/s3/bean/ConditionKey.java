@@ -24,29 +24,48 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3.bean;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlEnumValue;
 
-buildscript {
-    ext.commonBuildVersion = '1.6'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
+@XmlEnum
+public enum ConditionKey {
+    @XmlEnumValue("aws:CurrentTime")
+    CurrentTime("aws:CurrentTime"),
+    @XmlEnumValue("aws:EpochTime")
+    EpochTime("aws:EpochTime"),
+    @XmlEnumValue("aws:principalType")
+    PrincipalType("aws:principalType"),
+    @XmlEnumValue("aws:SourceIp")
+    SourceIp("aws:SourceIp"),
+    @XmlEnumValue("aws:UserAgent")
+    UserAgent("aws:UserAgent"),
+    @XmlEnumValue("aws:username")
+    UserName("aws:username"),
+    @XmlEnumValue("s3:x-amz-acl")
+    Acl("s3:x-amz-acl"),
+    @XmlEnumValue("s3:x-amz-server-side-encryption")
+    ServerSideEncryption("s3:x-amz-server-side-encryption"),
+    @XmlEnumValue("s3:VersionId")
+    VersionId("s3:VersionId"),
+    @XmlEnumValue("s3:x-amz-grant-permission")
+    GrantPermission("s3:x-amz-grant-permission"),
+    @XmlEnumValue("s3:prefix")
+    Prefix("s3:prefix"),
+    @XmlEnumValue("s3:delimiter")
+    Delimiter("s3:delimiter"),
+    @XmlEnumValue("s3:max-keys")
+    MaxKeys("s3:max-keys");
 
-allprojects {
-    apply from: "$commonBuildDir/ecs-publish.gradle"
-}
+    private String conditionKey;
 
+    ConditionKey(String actionName) {
+        this.conditionKey = conditionKey;
+    }
 
-
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.1.1',
-            'com.emc.ecs:object-transform:1.1.0',
-            'commons-codec:commons-codec:1.10',
-            'com.sun.jersey:jersey-json:1.19.3',
-            'org.jdom:jdom2:2.0.6',
-            'org.slf4j:slf4j-api:1.7.5'
-    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
-    testCompile 'junit:junit:4.12'
+    //@XmlTransient
+    public String getConditionKey() {
+        return conditionKey;
+    }
 }

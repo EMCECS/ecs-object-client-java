@@ -27,16 +27,21 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@XmlRootElement(name = "set_bucket_policy")
+@XmlRootElement(name = "BucketPolicy", namespace = "")
+@XmlType(propOrder = {"version", "id", "statements"})
 public class BucketPolicy {
-    private List<BucketPolicyStatement> statements = new ArrayList<BucketPolicyStatement>();
     private String version;
     private String id;
+    private List<BucketPolicyStatement> statements = new ArrayList<BucketPolicyStatement>();
+
+    public BucketPolicy() {}
 
     public BucketPolicy(String version, String id) {
         this.version = version;
@@ -53,22 +58,18 @@ public class BucketPolicy {
         return this;
     }
 
-    @XmlElement(name="Version")
+    @XmlElement(name = "Version", namespace = "")
     public String getVersion(){ return version; }
 
     public void setVersion(String version) { this.version = version; }
 
-    @XmlElement(name="Id")
+    @XmlElement(name = "Id", namespace = "")
     public String getId() { return id; }
 
     public void setId(String id) { this.id = id; }
 
-    @XmlElement(name = "Statement")
-    public List<BucketPolicyStatement> getStatements() {
-        return statements;
-    }
+    @XmlElement(name = "Statement", namespace = "")
+    public List<BucketPolicyStatement> getStatements() { return statements; }
 
-    public void setStatements(List<BucketPolicyStatement> statements) {
-        this.statements = statements;
-    }
+    public void setStatements(List<BucketPolicyStatement> statements) { this.statements = statements; }
 }
