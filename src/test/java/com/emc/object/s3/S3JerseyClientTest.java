@@ -546,28 +546,19 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), key, content, null);
 
         // create key in sub-prefix
-        client.putObject(getTestBucket(), "prefix/prefix2/bar", content, null);
+        key = "prefix/prefix2/bar";
+        client.putObject(getTestBucket(), key, content, null);
         client.deleteObject(getTestBucket(), key);
-        client.putObject(getTestBucket(), "prefix/prefix2/bar", content, null);
+        client.putObject(getTestBucket(), key, content, null);
 
         ListVersionsRequest request = new ListVersionsRequest(getTestBucket()).withPrefix("prefix/")
-                .withDelimiter("/").withMaxKeys(2);
+                .withDelimiter("/").withMaxKeys(4);
         ListVersionsResult result = client.listVersions(request);
 
-        Assert.assertEquals(2, result.getVersions().size());
+        Assert.assertEquals(3, result.getVersions().size());
         Assert.assertEquals(1, result.getCommonPrefixes().size());
         Assert.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
-
-        List<AbstractVersion> versions = result.getVersions();
-        int callCount = 1;
-        while (result.isTruncated()) {
-            result = client.listMoreVersions(result);
-            versions.addAll(result.getVersions());
-            callCount++;
-        }
-
-        Assert.assertEquals(3, callCount);
-        Assert.assertEquals(6, versions.size());
+        Assert.assertFalse(result.isTruncated());
     }
 
     protected void createTestObjects(String prefix, int numObjects) throws Exception {
