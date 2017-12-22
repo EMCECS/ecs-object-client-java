@@ -153,4 +153,62 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
     }
 
+    // TODO: blocked by STORAGE-18866
+    //@Test
+    public void testCaseSensitivity() throws Exception {
+        String bucketName = getTestBucket();
+
+        String key1 = "object1";
+        Map<String, String> userMeta = new HashMap<String, String>();
+        userMeta.put("dAtetIme1", "2015-01-01T00:00:00Z");
+        userMeta.put("decImal1", "3.14159");
+        userMeta.put("intEger1", "42");
+        userMeta.put("strIng1", "test");
+
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setUserMetadata(userMeta);
+        client.putObject(new PutObjectRequest(getTestBucket(), key1, new byte[0]).withObjectMetadata(objectMetadata));
+
+        // verify all UMD is stored lowercase
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key1);
+        Assert.assertNotNull(objectMetadata.getUserMetadata("datetime1"));
+        Assert.assertNotNull(objectMetadata.getUserMetadata("decimal1"));
+        Assert.assertNotNull(objectMetadata.getUserMetadata("integer1"));
+        Assert.assertNotNull(objectMetadata.getUserMetadata("string1"));
+
+        // test case-insensitive search
+        QueryObjectsRequest request = new QueryObjectsRequest(bucketName)
+                .withAttribute("ContentType")
+                .withAttribute("Size")
+                .withQuery("(x-amz-meta-STRING1<='') or (x-amz-meta-STRING1>='')");
+        QueryObjectsResult result = client.queryObjects(request);
+        Assert.assertFalse(result.isTruncated());
+        Assert.assertEquals(bucketName, result.getBucketName());
+        Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        Assert.assertNotNull(result.getObjects());
+        Assert.assertEquals(1, result.getObjects().size());
+
+        QueryObject obj = result.getObjects().get(0);
+        Assert.assertEquals(key1, obj.getObjectName());
+
+        Assert.assertEquals(2, obj.getQueryMds().size());
+        QueryMetadata sysmd = null;
+        QueryMetadata usermd = null;
+        for(QueryMetadata m : obj.getQueryMds()) {
+            switch(m.getType()) {
+                case SYSMD: sysmd = m; break;
+                case USERMD: usermd = m; break;
+            }
+        }
+        Assert.assertNotNull(sysmd);
+        Assert.assertNotNull(usermd);
+
+        Assert.assertEquals("0", sysmd.getMdMap().get("size"));
+        Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
+
+        Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
+        Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
+        Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
+        Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
+    }
 }
