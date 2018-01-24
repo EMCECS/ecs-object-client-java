@@ -66,8 +66,11 @@ public class LifecycleConfigurationTest {
                 "</LifecycleConfiguration>";
 
         List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
-        rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/", LifecycleRule.Status.Enabled, 3650, null, null));
-        rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled, null, new Date(2524608000000L), 6));
+        rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/",
+                LifecycleRule.Status.Enabled).withExpirationDays(3650));
+        rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled)
+                .withExpirationDate(new Date(2524608000000L))
+                .withNoncurrentVersionExpirationDays(6));
 
         LifecycleConfiguration object = new LifecycleConfiguration();
         object.setRules(rules);

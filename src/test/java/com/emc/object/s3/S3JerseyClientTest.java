@@ -308,7 +308,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Calendar end = Calendar.getInstance();
         end.add(Calendar.YEAR, 300);
         LifecycleConfiguration lc = new LifecycleConfiguration();
-        lc.withRules(new LifecycleRule("archive-expires-180", "archive/", LifecycleRule.Status.Enabled, 180));
+        lc.withRules(new LifecycleRule("archive-expires-180", "archive/", LifecycleRule.Status.Enabled)
+                .withExpirationDays(180)
+                .withNoncurrentVersionExpirationDays(50));
 
         client.setBucketLifecycle(getTestBucket(), lc);
 
@@ -320,7 +322,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertTrue(lc2.getRules().contains(rule));
         }
 
-        lc.withRules(new LifecycleRule("armageddon", "", LifecycleRule.Status.Enabled, end.getTime()));
+        lc.withRules(new LifecycleRule("armageddon", "", LifecycleRule.Status.Enabled).withExpirationDate(end.getTime()));
 
         client.setBucketLifecycle(getTestBucket(), lc);
 

@@ -40,32 +40,42 @@ public class LifecycleRule {
     private Expiration expiration;
     private NoncurrentVersionExpiration noncurrentVersionExpiration;
 
-    public LifecycleRule() {
-        this(null, null, null, null, null, null);
-    }
+    public LifecycleRule() { }
 
     public LifecycleRule(String id, String prefix, Status status) {
-        this(id, prefix, status, null, null, null);
-    }
-
-    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays) {
-        this(id, prefix, status, expirationDays, null, null);
-    }
-
-    public LifecycleRule(String id, String prefix, Status status, Date expirationDate) {
-        this(id, prefix, status, null, expirationDate, null);
-    }
-
-    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays, Date expirationDate,
-                          Integer noncurrentDays) {
         this.id = id;
         this.prefix = prefix;
         this.status = status;
-        this.expiration = new Expiration();
-        this.expiration.days = expirationDays;
-        this.expiration.date = expirationDate;
-        this.noncurrentVersionExpiration = new NoncurrentVersionExpiration();
-        this.noncurrentVersionExpiration.noncurrentDays = noncurrentDays;
+    }
+
+    public LifecycleRule withId(String id) {
+        setId(id);
+        return this;
+    }
+
+    public LifecycleRule withPrefix(String prefix) {
+        setPrefix(prefix);
+        return this;
+    }
+
+    public LifecycleRule withStatus(Status status) {
+        setStatus(status);
+        return this;
+    }
+
+    public LifecycleRule withExpirationDays(Integer expirationDays) {
+        setExpirationDays(expirationDays);
+        return this;
+    }
+
+    public LifecycleRule withExpirationDate(Date expirationDate) {
+        setExpirationDate(expirationDate);
+        return this;
+    }
+
+    public LifecycleRule withNoncurrentVersionExpirationDays(Integer days) {
+        setNoncurrentVersionExpirationDays(days);
+        return this;
     }
 
     @XmlElement(name = "ID")
@@ -97,11 +107,7 @@ public class LifecycleRule {
 
     @XmlElement(name = "Expiration")
     protected Expiration getExpiration() {
-        if (expiration.date == null && expiration.days == null) {
-            return null;
-        } else {
-            return expiration;
-        }
+        return expiration;
     }
 
     protected void setExpiration(Expiration expiration) {
@@ -110,29 +116,27 @@ public class LifecycleRule {
 
     @XmlTransient
     public Integer getExpirationDays() {
-        return expiration.days;
+        return (expiration == null) ? null : expiration.days;
     }
 
     public void setExpirationDays(Integer expirationDays) {
+        this.expiration = new Expiration();
         this.expiration.days = expirationDays;
     }
 
     @XmlTransient
     public Date getExpirationDate() {
-        return expiration.date;
+        return (expiration == null) ? null : expiration.date;
     }
 
     public void setExpirationDate(Date expirationDate) {
+        this.expiration = new Expiration();
         this.expiration.date = expirationDate;
     }
 
     @XmlElement(name = "NoncurrentVersionExpiration")
     protected NoncurrentVersionExpiration getNoncurrentVersionExpiration() {
-        if (noncurrentVersionExpiration.noncurrentDays == null) {
-            return null;
-        } else {
-            return noncurrentVersionExpiration;
-        }
+        return noncurrentVersionExpiration;
     }
 
     protected void setNoncurrentVersionExpiration(NoncurrentVersionExpiration noncurrentVersionExpiration) {
@@ -140,12 +144,13 @@ public class LifecycleRule {
     }
 
     @XmlTransient
-    public Integer getNoncurrentDays() {
-        return noncurrentVersionExpiration.noncurrentDays;
+    public Integer getNoncurrentVersionExpirationDays() {
+        return (noncurrentVersionExpiration == null) ? null : noncurrentVersionExpiration.days;
     }
 
-    public void setNoncurrentDays(Integer noncurrentDays) {
-        this.noncurrentVersionExpiration.noncurrentDays = noncurrentDays;
+    public void setNoncurrentVersionExpirationDays(Integer noncurrentDays) {
+        this.noncurrentVersionExpiration = new NoncurrentVersionExpiration();
+        this.noncurrentVersionExpiration.days = noncurrentDays;
     }
 
     @Override
@@ -159,11 +164,11 @@ public class LifecycleRule {
         if (id != null) return id.equals(that.id);
 
         // otherwise use everything else
-        if (expiration.date != null ? !expiration.date.equals(that.expiration.date) : that.expiration.date != null)
+        if (getExpirationDate() != null ? !getExpirationDate().equals(that.getExpirationDate()) : that.getExpirationDate() != null)
             return false;
-        if (expiration.days != null ? !expiration.days.equals(that.expiration.days) : that.expiration.days != null)
+        if (getExpirationDays() != null ? !getExpirationDays().equals(that.getExpirationDays()) : that.getExpirationDays() != null)
             return false;
-        if (noncurrentVersionExpiration.noncurrentDays != null ? !noncurrentVersionExpiration.noncurrentDays.equals(that.noncurrentVersionExpiration.noncurrentDays) : that.noncurrentVersionExpiration.noncurrentDays != null)
+        if (getNoncurrentVersionExpirationDays() != null ? !getNoncurrentVersionExpirationDays().equals(that.getNoncurrentVersionExpirationDays()) : that.getNoncurrentVersionExpirationDays() != null)
             return false;
         if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) return false;
         if (status != that.status) return false;
@@ -179,9 +184,9 @@ public class LifecycleRule {
         // otherwise use everything else
         int result = prefix != null ? prefix.hashCode() : 0;
         result = 31 * result + (status != null ? status.hashCode() : 0);
-        result = 31 * result + (expiration.days != null ? expiration.days.hashCode() : 0);
-        result = 31 * result + (expiration.date != null ? expiration.date.hashCode() : 0);
-        result = 31 * result + (noncurrentVersionExpiration.noncurrentDays != null ? noncurrentVersionExpiration.noncurrentDays.hashCode() : 0);
+        result = 31 * result + (getExpirationDays() != null ? getExpirationDays().hashCode() : 0);
+        result = 31 * result + (getExpirationDate() != null ? getExpirationDate().hashCode() : 0);
+        result = 31 * result + (getNoncurrentVersionExpirationDays() != null ? getNoncurrentVersionExpirationDays().hashCode() : 0);
         return result;
     }
 
@@ -197,7 +202,7 @@ public class LifecycleRule {
     @XmlAccessorType(XmlAccessType.FIELD)
     protected static class NoncurrentVersionExpiration {
         @XmlElement(name = "NoncurrentDays")
-        public Integer noncurrentDays;
+        public Integer days;
     }
 
     @XmlEnum
