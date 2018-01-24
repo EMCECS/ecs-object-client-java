@@ -44,23 +44,19 @@ public class LifecycleRule {
         this(null, null, null, null, null, null);
     }
 
-    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays) {
-        this(id, prefix, status, expirationDays, null, null);
+    public LifecycleRule(String id, String prefix, Status status) {
+        this(id, prefix, status, null, null, null);
     }
 
-    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays, Integer expirationNoncurrentDays) {
-        this(id, prefix, status, expirationDays, null, expirationNoncurrentDays);
+    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays) {
+        this(id, prefix, status, expirationDays, null, null);
     }
 
     public LifecycleRule(String id, String prefix, Status status, Date expirationDate) {
         this(id, prefix, status, null, expirationDate, null);
     }
 
-    public LifecycleRule(String id, String prefix, Status status, Date expirationDate, Integer expirationNoncurrentDays) {
-        this(id, prefix, status, null, expirationDate, expirationNoncurrentDays);
-    }
-
-    private LifecycleRule(String id, String prefix, Status status, Integer expirationDays, Date expirationDate,
+    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays, Date expirationDate,
                           Integer noncurrentDays) {
         this.id = id;
         this.prefix = prefix;
@@ -101,7 +97,11 @@ public class LifecycleRule {
 
     @XmlElement(name = "Expiration")
     protected Expiration getExpiration() {
-        return expiration;
+        if (expiration.date == null && expiration.days == null) {
+            return null;
+        } else {
+            return expiration;
+        }
     }
 
     protected void setExpiration(Expiration expiration) {
@@ -128,7 +128,11 @@ public class LifecycleRule {
 
     @XmlElement(name = "NoncurrentVersionExpiration")
     protected NoncurrentVersionExpiration getNoncurrentVersionExpiration() {
-        return noncurrentVersionExpiration;
+        if (noncurrentVersionExpiration.noncurrentDays == null) {
+            return null;
+        } else {
+            return noncurrentVersionExpiration;
+        }
     }
 
     protected void setNoncurrentVersionExpiration(NoncurrentVersionExpiration noncurrentVersionExpiration) {
