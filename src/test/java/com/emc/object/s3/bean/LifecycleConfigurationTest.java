@@ -59,8 +59,23 @@ public class LifecycleConfigurationTest {
                 "<Expiration>" +
                 "<Date>2050-01-01</Date>" +
                 "</Expiration>" +
+                "</Rule>" +
+                "<Rule>" +
+                "<Prefix>bar/</Prefix>" +
+                "<Status>Enabled</Status>" +
                 "<NoncurrentVersionExpiration>" +
-                "<NoncurrentDays>6</NoncurrentDays>" +
+                "<NoncurrentDays>19</NoncurrentDays>" +
+                "</NoncurrentVersionExpiration>" +
+                "</Rule>" +
+                "<Rule>" +
+                "<ID>1 year expiration</ID>" +
+                "<Prefix>year/</Prefix>" +
+                "<Status>Enabled</Status>" +
+                "<Expiration>" +
+                "<Days>365</Days>" +
+                "</Expiration>" +
+                "<NoncurrentVersionExpiration>" +
+                "<NoncurrentDays>180</NoncurrentDays>" +
                 "</NoncurrentVersionExpiration>" +
                 "</Rule>" +
                 "</LifecycleConfiguration>";
@@ -69,8 +84,12 @@ public class LifecycleConfigurationTest {
         rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/",
                 LifecycleRule.Status.Enabled).withExpirationDays(3650));
         rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled)
-                .withExpirationDate(new Date(2524608000000L))
-                .withNoncurrentVersionExpirationDays(6));
+                .withExpirationDate(new Date(2524608000000L)));
+        rules.add(new LifecycleRule(null, "bar/", LifecycleRule.Status.Enabled)
+                .withNoncurrentVersionExpirationDays(19));
+        rules.add(new LifecycleRule("1 year expiration", "year/", LifecycleRule.Status.Enabled)
+                .withExpirationDays(365)
+                .withNoncurrentVersionExpirationDays(180));
 
         LifecycleConfiguration object = new LifecycleConfiguration();
         object.setRules(rules);
