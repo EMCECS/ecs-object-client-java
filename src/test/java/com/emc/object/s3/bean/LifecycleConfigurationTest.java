@@ -78,6 +78,12 @@ public class LifecycleConfigurationTest {
                 "<NoncurrentDays>180</NoncurrentDays>" +
                 "</NoncurrentVersionExpiration>" +
                 "</Rule>" +
+                "<Rule>" +
+                "<ID>not valid rule</ID>" +
+                "<Prefix>notvalid/</Prefix>" +
+                "<Status>Disabled</Status>" +
+                "</Rule>" +
+                "<Rule/>" +
                 "</LifecycleConfiguration>";
 
         List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
@@ -90,6 +96,8 @@ public class LifecycleConfigurationTest {
         rules.add(new LifecycleRule("1 year expiration", "year/", LifecycleRule.Status.Enabled)
                 .withExpirationDays(365)
                 .withNoncurrentVersionExpirationDays(180));
+        rules.add(new LifecycleRule("not valid rule", "notvalid/", LifecycleRule.Status.Disabled));
+        rules.add(new LifecycleRule());
 
         LifecycleConfiguration object = new LifecycleConfiguration();
         object.setRules(rules);
