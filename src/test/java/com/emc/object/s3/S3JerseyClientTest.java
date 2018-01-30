@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.Method;
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.Range;
@@ -2113,6 +2114,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         URL url = tempClient.getPresignedUrl("test-bucket", "解析依頼C1B068.txt", new Date(1500998758000L));
         Assert.assertEquals("https://test-bucket.s3.amazonaws.com/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt" +
                         "?AWSAccessKeyId=stu&Expires=1500998758&Signature=AjZv1TlZgGqlbNsLiYKFkV6gaqg%3D",
+                url.toString());
+    }
+
+    @Test
+    public void testPreSignedUrlWithHeaders() throws Exception {
+        S3Client tempClient = new S3JerseyClient(new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
+                .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"));
+        URL url = tempClient.getPresignedUrl(
+                new PresignedUrlRequest(
+                        Method.PUT, "johnsmith", "photos/puppy.jpg", new Date(1175139620000L))
+                        .withObjectMetadata(
+                                new S3ObjectMetadata().withContentType("image/jpeg")
+                                        .withContentMd5("4gJE4saaMU4BqNR0kLY+lw==")));
+        Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
+                        "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=FhNeBaxibG7JkmvMbJD7J11zAMU%3D",
                 url.toString());
     }
 
