@@ -28,14 +28,17 @@ package com.emc.object.s3.request;
 
 import com.emc.object.Method;
 import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.S3ObjectMetadata;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PresignedUrlRequest extends S3ObjectRequest {
     private Date expirationTime;
     private String versionId;
+    private S3ObjectMetadata objectMetadata;
     private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<ResponseHeaderOverride, String>();
 
     public PresignedUrlRequest(Method method, String bucketName, String key, Date expirationTime) {
@@ -54,6 +57,13 @@ public class PresignedUrlRequest extends S3ObjectRequest {
         return queryParams;
     }
 
+    @Override
+    public Map<String, List<Object>> getHeaders() {
+        Map<String, List<Object>> headers = super.getHeaders();
+        if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
+        return headers;
+    }
+
     public Date getExpirationTime() {
         return expirationTime;
     }
@@ -66,6 +76,14 @@ public class PresignedUrlRequest extends S3ObjectRequest {
         this.versionId = versionId;
     }
 
+    public S3ObjectMetadata getObjectMetadata() {
+        return objectMetadata;
+    }
+
+    public void setObjectMetadata(S3ObjectMetadata objectMetadata) {
+        this.objectMetadata = objectMetadata;
+    }
+
     public Map<ResponseHeaderOverride, String> getHeaderOverrides() {
         return headerOverrides;
     }
@@ -76,6 +94,11 @@ public class PresignedUrlRequest extends S3ObjectRequest {
 
     public PresignedUrlRequest withVersionId(String versionId) {
         setVersionId(versionId);
+        return this;
+    }
+
+    public PresignedUrlRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
+        setObjectMetadata(objectMetadata);
         return this;
     }
 
