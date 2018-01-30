@@ -161,40 +161,42 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCreateBucketRequest() throws Exception {
         String bucketName = getTestBucket() + "-x";
-        CreateBucketRequest request = new CreateBucketRequest(bucketName);
-        client.createBucket(request);
+        client.createBucket(new CreateBucketRequest(bucketName));
 
         Assert.assertTrue(client.bucketExists(bucketName));
-        this.cleanUpBucket(bucketName);
+        client.deleteBucket(bucketName);
     }
 
     @Test
     public void testCreateFilesystemBucket() {
-        String bucketName = getTestBucket() + "-x";
+        String bucketName = getTestBucket() + "-y";
 
-        CreateBucketRequest request = new CreateBucketRequest(bucketName);
-        request.withFileSystemEnabled(true);
-        client.createBucket(request);
+        client.createBucket(new CreateBucketRequest(bucketName).withFileSystemEnabled(true));
 
-        // there's no way to confirm this, so if no error is returned, assume success
         client.deleteBucket(bucketName);
     }
 
     @Test
     public void testCreateStaleReadAllowedBucket() {
-        String bucketName = getTestBucket() + "-x";
+        String bucketName = getTestBucket() + "-z";
 
-        CreateBucketRequest request = new CreateBucketRequest(bucketName);
-        request.withStaleReadAllowed(true);
-        client.createBucket(request);
+        client.createBucket(new CreateBucketRequest(bucketName).withStaleReadAllowed(true));
 
-        // there's no way to confirm this, so if no error is returned, assume success
+        client.deleteBucket(bucketName);
+    }
+
+    @Test
+    public void testCreateEncryptedBucket() {
+        String bucketName = getTestBucket() + "-enc";
+
+        client.createBucket(new CreateBucketRequest(bucketName).withEncryptionEnabled(true));
+
         client.deleteBucket(bucketName);
     }
 
     @Test // also tests create-with-retention-period
     public void testGetBucketInfo() {
-        String bucketName = getTestBucket() + "-x";
+        String bucketName = getTestBucket() + "-u";
         long retentionPeriod = 3600; // 1 hour
 
         CreateBucketRequest request = new CreateBucketRequest(bucketName);

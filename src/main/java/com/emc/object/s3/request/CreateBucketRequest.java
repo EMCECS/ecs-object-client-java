@@ -45,6 +45,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     private String vPoolId;
     private Boolean fileSystemEnabled;
     private Boolean staleReadAllowed;
+    private Boolean encryptionEnabled;
     private Long retentionPeriod;
     private String metadataSearchKeys;
 
@@ -61,6 +62,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         if (vPoolId != null) RestUtil.putSingle(headers, RestUtil.EMC_VPOOL, vPoolId);
         if (fileSystemEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabled);
         if (staleReadAllowed != null) RestUtil.putSingle(headers, RestUtil.EMC_STALE_READ_ALLOWED, staleReadAllowed);
+        if (encryptionEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_ENCRYPTION_ENABLED, encryptionEnabled);
         if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
         if (metadataSearchKeys != null) RestUtil.putSingle(headers, RestUtil.EMC_METADATA_SEARCH, metadataSearchKeys);
 
@@ -117,6 +119,17 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         this.staleReadAllowed = staleReadAllowed;
     }
 
+    public Boolean getEncryptionEnabled() {
+        return encryptionEnabled;
+    }
+
+    /**
+     * Enables transparent server-side encryption (D@RE) on the bucket. This can only be enabled at create time
+     */
+    public void setEncryptionEnabled(Boolean encryptionEnabled) {
+        this.encryptionEnabled = encryptionEnabled;
+    }
+
     public Long getRetentionPeriod() {
         return retentionPeriod;
     }
@@ -167,6 +180,11 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
     public CreateBucketRequest withStaleReadAllowed(boolean staleReadAllowed) {
         setStaleReadAllowed(staleReadAllowed);
+        return this;
+    }
+
+    public CreateBucketRequest withEncryptionEnabled(Boolean encryptionEnabled) {
+        setEncryptionEnabled(encryptionEnabled);
         return this;
     }
 
