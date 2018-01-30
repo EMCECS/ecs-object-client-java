@@ -75,7 +75,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListDataNodes() throws Exception {
+    public void testListDataNodes() {
         ListDataNode listDataNode = client.listDataNodes();
         Assert.assertNotNull(listDataNode.getVersionInfo());
         Assert.assertNotNull(listDataNode.getDataNodes());
@@ -169,7 +169,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateFilesystemBucket() throws Exception {
+    public void testCreateFilesystemBucket() {
         String bucketName = getTestBucket() + "-x";
 
         CreateBucketRequest request = new CreateBucketRequest(bucketName);
@@ -181,7 +181,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateStaleReadAllowedBucket() throws Exception {
+    public void testCreateStaleReadAllowedBucket() {
         String bucketName = getTestBucket() + "-x";
 
         CreateBucketRequest request = new CreateBucketRequest(bucketName);
@@ -193,7 +193,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test // also tests create-with-retention-period
-    public void testGetBucketInfo() throws Exception {
+    public void testGetBucketInfo() {
         String bucketName = getTestBucket() + "-x";
         long retentionPeriod = 3600; // 1 hour
 
@@ -381,7 +381,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Ignore // TODO: blocked by STORAGE-6791
     @Test
-    public void testListObjectsPagingWithEncodedDelim() throws Exception {
+    public void testListObjectsPagingWithEncodedDelim() {
         String prefix = "test\u001dDelim/", delim = "/", key = "foo\u001dbar", content = "Hello List Delim!";
         client.putObject(getTestBucket(), prefix + key + 1, content, null);
         client.putObject(getTestBucket(), prefix + key + 2, content, null);
@@ -409,7 +409,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListObjectsPaging() throws Exception {
+    public void testListObjectsPaging() {
         int numObjects = 10;
 
         this.createTestObjects(null, numObjects);
@@ -429,7 +429,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListObjectsPagingDelim() throws Exception {
+    public void testListObjectsPagingDelim() {
         int numObjects = 10;
 
         this.createTestObjects("foo/", numObjects);
@@ -450,7 +450,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListObjectsPagingWithPrefix() throws Exception {
+    public void testListObjectsPagingWithPrefix() {
         String myPrefix = "testPrefix/";
         int numObjects = 10;
 
@@ -472,7 +472,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListObjectsWithEncoding() throws Exception {
+    public void testListObjectsWithEncoding() {
         String key = "foo\u001do", content = "Hello List!";
         client.putObject(getTestBucket(), key, content, null);
 
@@ -564,7 +564,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertFalse(result.isTruncated());
     }
 
-    protected void createTestObjects(String prefix, int numObjects) throws Exception {
+    protected void createTestObjects(String prefix, int numObjects) {
         if (prefix == null) prefix = "";
 
         byte[] content = new byte[5 * 1024];
@@ -576,7 +576,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testReadObject() throws Exception {
+    public void testReadObject() {
         String key1 = "/objectPrefix/testObject1";
         String key2 = "/objectPrefix/testObject2";
         String content1 = "Hello Object!", content2 = "Hello Object 2!!";
@@ -611,7 +611,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testGetObjectPreconditions() throws Exception {
+    public void testGetObjectPreconditions() {
         String key = "testGetPreconditions";
         String content = "hello GET preconditions!";
 
@@ -745,8 +745,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // test if-match * fail
         request.withIfNoneMatch(null).withIfMatch("*");
         try {
-            // client.putObject(request); TODO: blocked by STORAGE-14736
-            // Assert.fail("expected 412"); TODO: blocked by STORAGE-14736
+            client.putObject(request);
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
             Assert.assertEquals(412, e.getHttpCode());
         }
@@ -757,7 +757,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateObjectByteArray() throws Exception {
+    public void testCreateObjectByteArray() {
         byte[] data;
         Random random = new Random();
 
@@ -794,7 +794,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateObjectString() throws Exception {
+    public void testCreateObjectString() {
         String key = "string-test";
         String content = "Hello Strings!";
         client.putObject(getTestBucket(), key, content, "text/plain");
@@ -802,14 +802,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateObjectWithRequest() throws Exception {
+    public void testCreateObjectWithRequest() {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", "object content");
         PutObjectResult result = client.putObject(request);
         Assert.assertNotNull(result);
     }
 
     @Test
-    public void testCreateObjectChunkedWithRequest() throws Exception {
+    public void testCreateObjectChunkedWithRequest() {
         int size = 50000;
         byte[] data =  new byte[size];
         new Random().nextBytes(data);
@@ -825,7 +825,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCreateObjectWithMetadata() throws Exception {
+    public void testCreateObjectWithMetadata() {
         String key = "meta-test", content = "Hello Metadata!";
         String cc = "none", cd = "none", ce = "none", ct = "text/plain";
         Calendar expires = Calendar.getInstance();
@@ -1149,7 +1149,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 partRequest.withFile(file).withOffset(offset).withLength(length);
                 futures.add(executor.submit(new Callable<MultipartPartETag>() {
                     @Override
-                    public MultipartPartETag call() throws Exception {
+                    public MultipartPartETag call() {
                         return client.uploadPart(partRequest);
                     }
                 }));
@@ -1296,14 +1296,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 new UploadPartRequest(getTestBucket(), key, uploadId, 3, is3)
                         .withContentLength((long) content.length - (2 * fiveMB)));
 
-        TreeSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
-        parts.addAll(Arrays.asList(mp1, mp2, mp3));
+        TreeSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>(Arrays.asList(mp1, mp2, mp3));
 
         client.completeMultipartUpload(new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId).withParts(parts));
     }
 
     @Test
-    public void testPutObject() throws Exception {
+    public void testPutObject() {
         String key = "objectKey";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1316,7 +1315,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testEmptyObject() throws Exception {
+    public void testEmptyObject() {
         String key = "empty-object";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, new byte[0]);
         client.putObject(request);
@@ -1325,7 +1324,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testEmptyObjectChunked() throws Exception {
+    public void testEmptyObjectChunked() {
         String key = "empty-object";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "");
         client.putObject(request);
@@ -1334,7 +1333,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testPutObjectWithSpace() throws Exception {
+    public void testPutObjectWithSpace() {
         String key = "This Has a Space.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1347,7 +1346,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testPutObjectWithPlus() throws Exception {
+    public void testPutObjectWithPlus() {
         String key = "This+Has+a+Plus.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1360,7 +1359,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testPutObjectWithPercent() throws Exception {
+    public void testPutObjectWithPercent() {
         String key = "This is 100% or something.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1373,7 +1372,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testPutObjectWithChinese() throws Exception {
+    public void testPutObjectWithChinese() {
         String key = "解析依頼C1B068.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1387,7 +1386,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
 
     @Test
-    public void testPutObjectWithSmartQuote() throws Exception {
+    public void testPutObjectWithSmartQuote() {
         String key = "This is an ‘object’.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1403,7 +1402,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
      * Tests all the items in the java.net.URI "punct" character class.
      */
     @Test
-    public void testPutObjectWithUriPunct() throws Exception {
+    public void testPutObjectWithUriPunct() {
         String key = "URI punct characters ,;:$&+=.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1419,7 +1418,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
      * Tests all the items in the java.net.URI "reserved" character class.
      */
     @Test
-    public void testPutObjectWithUriReserved() throws Exception {
+    public void testPutObjectWithUriReserved() {
         String key = "URI reserved characters ?/[]@.txt";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "Object Content");
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
@@ -1469,7 +1468,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testPutObjectWithRetentionPolicy() throws Exception {
+    public void testPutObjectWithRetentionPolicy() {
         String key = "object-in-retention-policy";
         String content = "Hello Retention Policy!";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
@@ -1494,7 +1493,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObject() throws Exception {
+    public void testCopyObject() {
         String key1 = "source-object";
         String key2 = "copied-object";
         String content = "Hello Copy!";
@@ -1508,7 +1507,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectPlusSource() throws Exception {
+    public void testCopyObjectPlusSource() {
         String key1 = "source+object+plus";
         String key2 = "copied-object-plus";
         String content = "Hello Copy!";
@@ -1522,7 +1521,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectPlusDest() throws Exception {
+    public void testCopyObjectPlusDest() {
         String key1 = "source-object-plus-dest";
         String key2 = "copied+object+plus+dest";
         String content = "Hello Copy!";
@@ -1537,7 +1536,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
 
     @Test
-    public void testCopyObjectPlusBoth() throws Exception {
+    public void testCopyObjectPlusBoth() {
         String key1 = "source+object+plus+both";
         String key2 = "copied+object+plus+both";
         String content = "Hello Copy!";
@@ -1551,7 +1550,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectSpaceSrc() throws Exception {
+    public void testCopyObjectSpaceSrc() {
         String key1 = "source object space src";
         String key2 = "copied-object-space-src";
         String content = "Hello Copy!";
@@ -1565,7 +1564,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectSpaceDest() throws Exception {
+    public void testCopyObjectSpaceDest() {
         String key1 = "source-object-space-dest";
         String key2 = "copied object space dest";
         String content = "Hello Copy!";
@@ -1579,7 +1578,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectSpaceBoth() throws Exception {
+    public void testCopyObjectSpaceBoth() {
         String key1 = "source object space both";
         String key2 = "copied object space both";
         String content = "Hello Copy!";
@@ -1593,7 +1592,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectChineseSrc() throws Exception {
+    public void testCopyObjectChineseSrc() {
         String key1 = "prefix/source-object-服务器-src";
         String key2 = "prefix/copied object chinese src";
         String content = "Hello Copy!";
@@ -1607,7 +1606,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectChineseDest() throws Exception {
+    public void testCopyObjectChineseDest() {
         String key1 = "prefix/source-object-chinese-dest";
         String key2 = "prefix/copied object 服务器 dest";
         String content = "Hello Copy!";
@@ -1621,7 +1620,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyObjectChineseBoth() throws Exception {
+    public void testCopyObjectChineseBoth() {
         String key1 = "source-object-服务器-both";
         String key2 = "copied object 服务器 both";
         String content = "Hello Copy!";
@@ -1714,7 +1713,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Ignore // TODO: blocked by STORAGE-12050
     @Test
-    public void testUpdateMetadata() throws Exception {
+    public void testUpdateMetadata() {
         String key = "update-metadata";
         String content = "Hello update meta!";
         String ct = "text/plain", cc, cd, ce;
@@ -1761,7 +1760,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testVerifyRead() throws Exception {
+    public void testVerifyRead() {
         String key = "objectKey";
         String content = "Hello Object!";
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
@@ -1839,7 +1838,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     //<T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
     @Test
-    public void testGetObjectResultTemplate() throws Exception {
+    public void testGetObjectResultTemplate() {
         //creates objects named TestObject_ + zero based index
         this.createTestObjects("", 1);
         GetObjectRequest request = new GetObjectRequest(getTestBucket(),"TestObject_0");
@@ -1926,7 +1925,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
     
     @Test
-    public void testDeleteObjectsRequest() throws Exception {
+    public void testDeleteObjectsRequest() {
         String content = "Object Content";
         String testObject1 = "/objectPrefix/testObject1";
         String testObject2 = "/objectPrefix/testObject2";
@@ -1955,7 +1954,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testGetObjectMetadata() throws Exception {
+    public void testGetObjectMetadata() {
         String testObject = "/objectPrefix/testObject1";
         String content = "Object Content";
         client.putObject(getTestBucket(), testObject, content, "text/plain");
@@ -1964,7 +1963,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testGetObjectVersionMetadata() throws Exception {
+    public void testGetObjectVersionMetadata() {
         String key = "foo", content1 = "Hello World!", content2 = "Goodbye World!";
         String mKey = "bar", mValue = "baz";
         S3ObjectMetadata meta = new S3ObjectMetadata().addUserMetadata(mKey, mValue).withContentType("text/plain");
@@ -1979,7 +1978,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testGetObjectMetadataNoExist() throws Exception {
+    public void testGetObjectMetadataNoExist() {
         String testObject = "/objectPrefix/noExist.txt";
 
         try {
@@ -1994,7 +1993,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
     
     @Test
-    public void testGetObjectMetadataRequest() throws Exception {
+    public void testGetObjectMetadataRequest() {
         String testObject = "/objectPrefix/testObject1";
         String content = "Object Content";
         client.putObject(getTestBucket(), testObject, content, "text/plain");
@@ -2002,13 +2001,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(request);
         this.validateMetadataValues(objectMetadata);
     }
-    
-    protected void validateMetadataValues(S3ObjectMetadata objectMetadata) throws Exception {
+
+    protected void validateMetadataValues(S3ObjectMetadata objectMetadata) {
         Assert.assertNotNull(objectMetadata);
     }
 
     @Test
-    public void testGetObjectAcl() throws Exception {
+    public void testGetObjectAcl() {
         String key = "getAclTest";
         client.putObject(getTestBucket(), key, "Hello ACLs!", "text/plain");
 
@@ -2023,7 +2022,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testGetObjectVersionAcl() throws Exception {
+    public void testGetObjectVersionAcl() {
         // enable versioning on the bucket
         client.setBucketVersioning(getTestBucket(), new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
 
@@ -2058,7 +2057,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
     
     @Test
-    public void testSetObjectCannedAcl() throws Exception {
+    public void testSetObjectCannedAcl() {
         String testObject = "/objectPrefix/testObject1";
         String content = "Object Content";
         client.putObject(getTestBucket(), testObject, content, "text/plain");
@@ -2087,7 +2086,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testSetObjectAclRequestCanned() throws Exception {
+    public void testSetObjectAclRequestCanned() {
         String testObject = "/objectPrefix/testObject1";
         String content = "Object Content";
         client.putObject(getTestBucket(), testObject, content, "text/plain");
@@ -2133,7 +2132,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testStaleReadsAllowed() throws Exception {
+    public void testStaleReadsAllowed() {
         // there's no way to test the result, so if no error is returned, assume success
         client.setBucketStaleReadAllowed(getTestBucket(), true);
     }
@@ -2186,7 +2185,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListMarkerWithSpecialChars() throws Exception {
+    public void testListMarkerWithSpecialChars() {
         String marker = "foo/bar/blah%blah&blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
@@ -2195,7 +2194,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListPagesNoDelimiter() throws Exception {
+    public void testListPagesNoDelimiter() {
         int total = 10, page = 3;
         for (int i = 0; i < total; i++) {
             client.putObject(getTestBucket(), "key-" + i, "key-" + i, "text/plain");
@@ -2224,7 +2223,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListMarkerWithIllegalChars() throws Exception {
+    public void testListMarkerWithIllegalChars() {
         String marker = "foo/bar/blah\u001dblah\u0008blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
@@ -2232,7 +2231,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testPing() throws Exception {
+    public void testPing() {
         S3Config s3Config = ((S3JerseyClient) client).getS3Config();
         String host = s3Config.getVdcs().get(0).getHosts().get(0).getName();
 
