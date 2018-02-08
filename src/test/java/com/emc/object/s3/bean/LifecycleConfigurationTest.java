@@ -60,11 +60,44 @@ public class LifecycleConfigurationTest {
                 "<Date>2050-01-01</Date>" +
                 "</Expiration>" +
                 "</Rule>" +
+                "<Rule>" +
+                "<Prefix>bar/</Prefix>" +
+                "<Status>Enabled</Status>" +
+                "<NoncurrentVersionExpiration>" +
+                "<NoncurrentDays>19</NoncurrentDays>" +
+                "</NoncurrentVersionExpiration>" +
+                "</Rule>" +
+                "<Rule>" +
+                "<ID>1 year expiration</ID>" +
+                "<Prefix>year/</Prefix>" +
+                "<Status>Enabled</Status>" +
+                "<Expiration>" +
+                "<Days>365</Days>" +
+                "</Expiration>" +
+                "<NoncurrentVersionExpiration>" +
+                "<NoncurrentDays>180</NoncurrentDays>" +
+                "</NoncurrentVersionExpiration>" +
+                "</Rule>" +
+                "<Rule>" +
+                "<ID>not valid rule</ID>" +
+                "<Prefix>notvalid/</Prefix>" +
+                "<Status>Disabled</Status>" +
+                "</Rule>" +
+                "<Rule/>" +
                 "</LifecycleConfiguration>";
 
         List<LifecycleRule> rules = new ArrayList<LifecycleRule>();
-        rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/", LifecycleRule.Status.Enabled, 3650));
-        rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled, new Date(2524608000000L)));
+        rules.add(new LifecycleRule("Archive and then delete rule", "projectdocs/",
+                LifecycleRule.Status.Enabled).withExpirationDays(3650));
+        rules.add(new LifecycleRule(null, "foo/", LifecycleRule.Status.Disabled)
+                .withExpirationDate(new Date(2524608000000L)));
+        rules.add(new LifecycleRule(null, "bar/", LifecycleRule.Status.Enabled)
+                .withNoncurrentVersionExpirationDays(19));
+        rules.add(new LifecycleRule("1 year expiration", "year/", LifecycleRule.Status.Enabled)
+                .withExpirationDays(365)
+                .withNoncurrentVersionExpirationDays(180));
+        rules.add(new LifecycleRule("not valid rule", "notvalid/", LifecycleRule.Status.Disabled));
+        rules.add(new LifecycleRule());
 
         LifecycleConfiguration object = new LifecycleConfiguration();
         object.setRules(rules);
