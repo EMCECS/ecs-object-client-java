@@ -40,12 +40,34 @@ public class LifecycleRule {
     private Expiration expiration;
     private NoncurrentVersionExpiration noncurrentVersionExpiration;
 
-    public LifecycleRule() { }
+    public LifecycleRule() {
+        this(null, null, null);
+    }
 
     public LifecycleRule(String id, String prefix, Status status) {
         this.id = id;
         this.prefix = prefix;
         this.status = status;
+    }
+
+    /**
+     * @see {@link #withExpirationDays(Integer)}
+     * @deprecated please use builder methods instead
+     */
+    @Deprecated
+    public LifecycleRule(String id, String prefix, Status status, Integer expirationDays) {
+        this(id, prefix, status);
+        setExpirationDays(expirationDays);
+    }
+
+    /**
+     * @see {@link #withExpirationDate(Date)}
+     * @deprecated please use builder methods instead
+     */
+    @Deprecated
+    public LifecycleRule(String id, String prefix, Status status, Date expirationDate) {
+        this(id, prefix, status);
+        setExpirationDate(expirationDate);
     }
 
     public LifecycleRule withId(String id) {
