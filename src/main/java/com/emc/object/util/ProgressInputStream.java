@@ -55,7 +55,7 @@ public class ProgressInputStream extends FilterInputStream {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
         int count =  in.read(b, off, len);
-        if(listener != null) listener.transferred(count);
+        if (listener != null && count != -1) listener.transferred(count);
         return count;
     }
 }
