@@ -186,6 +186,13 @@ public interface S3Client {
     void setBucketPolicy(String bucketName, BucketPolicy policy);
 
     /**
+     * Gets the bucket policy for <code>bucketName</code>
+     *
+     * @see BucketPolicy
+     */
+    BucketPolicy getBucketPolicy(String bucketName);
+
+    /**
      * Gets the location of <code>bucketName</code>. This call will return the name of the primary VDC of the bucket
      */
     LocationConstraint getBucketLocation(String bucketName);

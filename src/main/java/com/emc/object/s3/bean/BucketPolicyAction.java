@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2018, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,15 +26,19 @@
  */
 package com.emc.object.s3.bean;
 
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonValue;
+
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
-import javax.xml.bind.annotation.XmlTransient;
 
 @XmlEnum
 public enum BucketPolicyAction {
+    @XmlEnumValue("s3:*")
+    All("s3:*"),
     @XmlEnumValue("s3:GetObject")
     GetObject("s3:GetObject"),
-    @XmlEnumValue ("s3:GetObjectVersion")
+    @XmlEnumValue("s3:GetObjectVersion")
     GetObjectVersion("s3:GetObjectVersion"),
     @XmlEnumValue("s3:PutObject")
     PutObject("s3:PutObject"),
@@ -83,14 +87,27 @@ public enum BucketPolicyAction {
     @XmlEnumValue("s3:PutBucketPolicy")
     PutBucketPolicy("s3:PutBucketPolicy");
 
+    @JsonCreator
+    public static BucketPolicyAction fromValue(String value) {
+        for (BucketPolicyAction instance : values()) {
+            if (value.equals(instance.getActionName())) return instance;
+        }
+        return null;
+    }
+
     private String actionName;
 
     BucketPolicyAction(String actionName) {
         this.actionName = actionName;
     }
 
-    //@XmlTransient
+    @JsonValue
     public String getActionName() {
         return actionName;
+    }
+
+    @Override
+    public String toString() {
+        return getActionName();
     }
 }

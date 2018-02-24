@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2018, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,26 +26,61 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import java.util.HashMap;
-import java.util.Map;
+import javax.xml.bind.annotation.XmlEnum;
 
-public class Condition {
-    private ConditionOperator conditionOperator;
-    private Map<ConditionKey, String> conditionExpression
-            = new HashMap<ConditionKey, String>();
-
-    public Condition() {}
-
-    @XmlElement(name = "Operator", namespace = "")
-    public ConditionOperator getConditionOperator() { return conditionOperator; }
-
-    public void setConditionOperator(ConditionOperator conditionOperator) { this.conditionOperator = conditionOperator; }
-
-    @XmlElementWrapper(name = "Expression", namespace = "")
-    public Map<ConditionKey, String> getConditionExpression() { return conditionExpression; }
-
-    public void setConditionExpression(Map<ConditionKey, String> conditionExpression) { this.conditionExpression = conditionExpression; }
-
+/**
+ * http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html
+ */
+@XmlEnum
+public enum PolicyConditionOperator {
+    StringEquals,
+    StringNotEquals,
+    StringEqualsIgnoreCase,
+    StringNotEqualsIgnoreCase,
+    StringLike,
+    StringNotLike,
+    NumericEquals,
+    NumericNotEquals,
+    NumericLessThan,
+    NumericLessThanEquals,
+    NumericGreaterThan,
+    NumericGreaterThanEquals,
+    DateEquals,
+    DateNotEquals,
+    DateLessThan,
+    DateLessThanEquals,
+    DateGreaterThan,
+    DateGreaterThanEquals,
+    Bool,
+    IpAddress,
+    NotIpAddress,
+    ArnEquals,
+    ArnNotEquals,
+    ArnLike,
+    ArnNotLike,
+    StringEqualsIfExists,
+    StringNotEqualsIfExists,
+    StringEqualsIgnoreCaseIfExists,
+    StringNotEqualsIgnoreCaseIfExists,
+    StringLikeIfExists,
+    StringNotLikeIfExists,
+    NumericEqualsIfExists,
+    NumericNotEqualsIfExists,
+    NumericLessThanIfExists,
+    NumericLessThanEqualsIfExists,
+    NumericGreaterThanIfExists,
+    NumericGreaterThanEqualsIfExists,
+    DateEqualsIfExists,
+    DateNotEqualsIfExists,
+    DateLessThanIfExists,
+    DateLessThanEqualsIfExists,
+    DateGreaterThanIfExists,
+    DateGreaterThanEqualsIfExists,
+    BoolIfExists,
+    IpAddressIfExists,
+    NotIpAddressIfExists,
+    ArnEqualsIfExists,
+    ArnNotEqualsIfExists,
+    ArnLikeIfExists,
+    ArnNotLikeIfExists,
 }

@@ -26,11 +26,14 @@
  */
 package com.emc.object.s3.bean;
 
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonValue;
+
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
 
 @XmlEnum
-public enum ConditionKey {
+public enum PolicyConditionKey {
     @XmlEnumValue("aws:CurrentTime")
     CurrentTime("aws:CurrentTime"),
     @XmlEnumValue("aws:EpochTime")
@@ -58,14 +61,27 @@ public enum ConditionKey {
     @XmlEnumValue("s3:max-keys")
     MaxKeys("s3:max-keys");
 
+    @JsonCreator
+    public static PolicyConditionKey fromValue(String value) {
+        for (PolicyConditionKey instance : values()) {
+            if (value.equals(instance.getConditionKey())) return instance;
+        }
+        return null;
+    }
+
     private String conditionKey;
 
-    ConditionKey(String actionName) {
+    PolicyConditionKey(String conditionKey) {
         this.conditionKey = conditionKey;
     }
 
-    //@XmlTransient
+    @JsonValue
     public String getConditionKey() {
         return conditionKey;
+    }
+
+    @Override
+    public String toString() {
+        return getConditionKey();
     }
 }

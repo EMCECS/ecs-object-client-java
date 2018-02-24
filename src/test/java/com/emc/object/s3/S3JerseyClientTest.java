@@ -30,10 +30,10 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
+import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.emc.object.s3.bean.BucketPolicyStatement.*;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
@@ -338,40 +338,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testBucketPolicy() throws Exception {
+    public void testBucketPolicy() {
+        BucketPolicy bucketPolicy = new BucketPolicy().withVersion("2012-10-17").withId("new-policy-1")
+                .withStatements(
+                        new BucketPolicyStatement()
+                                .withSid("statement-1")
+                                .withEffect(Effect.Allow)
+                                .withPrincipal("*")
+                                .withResource("arn:aws:s3:::"+getTestBucket()+"/*")
+                                .withActions(BucketPolicyAction.DeleteObjectVersion, BucketPolicyAction.DeleteObject)
+                                .withCondition(PolicyConditionOperator.StringEquals, new PolicyConditionCriteria()
+                                        .withCondition(PolicyConditionKey.UserAgent, "foo-client"))
+                );
 
-        BucketPolicyStatement statement = new BucketPolicyStatement()
-                .withSid("statement-1");
+        client.setBucketPolicy(getTestBucket(), bucketPolicy);
 
-        List<BucketPolicyStatement> statements = new ArrayList<>();
-        List<BucketPolicyAction> actions = new ArrayList<>();
-
-        List<Condition> conditions = new ArrayList<>();
-
-        Condition condition = new Condition();
-        condition.setConditionOperator(ConditionOperator.StringEquals);
-        Map<ConditionKey, String> conditionExpression = new HashMap<>();
-        conditionExpression.put(ConditionKey.Prefix, "/pictures/january");
-        condition.setConditionExpression(conditionExpression);
-
-        conditions.add(condition);
-
-        statement.setConditions(conditions);
-
-        actions.add(BucketPolicyAction.DeleteBucket);
-        actions.add(BucketPolicyAction.DeleteObject);
-
-        statement.setEffect(Effect.Allow);
-        statement.setPrincipal("*");
-        statement.setAction(actions);
-
-        statements.add(statement);
-
-        BucketPolicy bp = new BucketPolicy("2012-10-17", "new-policy-1")
-                .withStatements(statement);
-
-        client.setBucketPolicy(getTestBucket(), bp);
-
+        Assert.assertEquals(bucketPolicy, client.getBucketPolicy(getTestBucket()));
     }
 
     @Test

@@ -26,54 +26,137 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlType;
+import java.util.*;
 
+@XmlType(propOrder = {"sid", "effect", "principal", "actions", "resource", "conditions"})
 public class BucketPolicyStatement {
-    private String sId;
-    private List<Condition> conditions = new ArrayList<Condition>();
-    //private Map<ConditionOperator, Condition> conditions = new HashMap<ConditionOperator, Condition>();
+    private String sid;
     private Effect effect;
     private String principal;
-    private List<BucketPolicyAction> action = new ArrayList<BucketPolicyAction>();
+    private List<BucketPolicyAction> actions = new ArrayList<BucketPolicyAction>();
+    private String resource;
+    private Map<PolicyConditionOperator, PolicyConditionCriteria> conditions = new HashMap<PolicyConditionOperator, PolicyConditionCriteria>();
 
     public BucketPolicyStatement() {}
 
-    public BucketPolicyStatement withSid(String sId) {
-        setSid(sId);
-        return this;
+    @XmlElement(name = "Sid")
+    public String getSid() {
+        return sid;
     }
 
-    @XmlElement(name = "Sid", namespace = "")
-    public String getSid() { return sId; }
+    public void setSid(String sid) {
+        this.sid = sid;
+    }
 
-    public void setSid(String sId) { this.sId = sId; }
-
-    @XmlElement(name = "Effect", namespace = "")
+    @XmlElement(name = "Effect")
     public Effect getEffect() { return effect; }
 
     public void setEffect(Effect effect) { this.effect = effect; }
 
-    @XmlElement(name = "Principal", namespace = "")
+    @XmlElement(name = "Principal")
     public String getPrincipal() { return principal; }
 
     public void setPrincipal(String principal) { this.principal= principal; }
 
-    @XmlElement(name = "Condition", namespace = "")
-    public List<Condition> getConditions() { return conditions; }
+    @XmlElement(name = "Action")
+    public List<BucketPolicyAction> getActions() {
+        return actions;
+    }
 
-    public void setConditions(List<Condition> conditions) { this.conditions = conditions; }
+    public void setActions(List<BucketPolicyAction> actions) {
+        this.actions = actions;
+    }
 
-    @XmlElement(name = "Action", namespace = "")
-    public List<BucketPolicyAction> getAction() { return action; }
+    @XmlElement(name = "Resource")
+    public String getResource() {
+        return resource;
+    }
 
-    public void setAction(List<BucketPolicyAction> action) { this.action = action; }
+    public void setResource(String resource) {
+        this.resource = resource;
+    }
+
+    @XmlElementWrapper(name = "Condition")
+    public Map<PolicyConditionOperator, PolicyConditionCriteria> getConditions() {
+        return conditions;
+    }
+
+    public void setConditions(Map<PolicyConditionOperator, PolicyConditionCriteria> conditions) {
+        this.conditions = conditions;
+    }
+
+    public BucketPolicyStatement withSid(String sid) {
+        setSid(sid);
+        return this;
+    }
+
+    public BucketPolicyStatement withEffect(Effect effect) {
+        setEffect(effect);
+        return this;
+    }
+
+    public BucketPolicyStatement withPrincipal(String principal) {
+        setPrincipal(principal);
+        return this;
+    }
+
+    public BucketPolicyStatement withActions(List<BucketPolicyAction> actions) {
+        setActions(actions);
+        return this;
+    }
+
+    public BucketPolicyStatement withActions(BucketPolicyAction... actions) {
+        setActions(Arrays.asList(actions));
+        return this;
+    }
+
+    public BucketPolicyStatement withResource(String resource) {
+        setResource(resource);
+        return this;
+    }
+
+    public BucketPolicyStatement withConditions(Map<PolicyConditionOperator, PolicyConditionCriteria> conditions) {
+        setConditions(conditions);
+        return this;
+    }
+
+    public BucketPolicyStatement withCondition(PolicyConditionOperator operator, PolicyConditionCriteria criteria) {
+        conditions.put(operator, criteria);
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BucketPolicyStatement that = (BucketPolicyStatement) o;
+
+        if (sid != null ? !sid.equals(that.sid) : that.sid != null) return false;
+        if (effect != that.effect) return false;
+        if (principal != null ? !principal.equals(that.principal) : that.principal != null) return false;
+        if (actions != null ? !actions.equals(that.actions) : that.actions != null) return false;
+        if (resource != null ? !resource.equals(that.resource) : that.resource != null) return false;
+        return conditions != null ? conditions.equals(that.conditions) : that.conditions == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = sid != null ? sid.hashCode() : 0;
+        result = 31 * result + (effect != null ? effect.hashCode() : 0);
+        result = 31 * result + (principal != null ? principal.hashCode() : 0);
+        result = 31 * result + (actions != null ? actions.hashCode() : 0);
+        result = 31 * result + (resource != null ? resource.hashCode() : 0);
+        result = 31 * result + (conditions != null ? conditions.hashCode() : 0);
+        return result;
+    }
 
     @XmlEnum
-    public static enum Effect {
+    public enum Effect {
         Allow, Deny
     }
 }

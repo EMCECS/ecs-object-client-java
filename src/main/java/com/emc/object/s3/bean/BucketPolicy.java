@@ -27,49 +27,83 @@
 package com.emc.object.s3.bean;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@XmlRootElement(name = "BucketPolicy", namespace = "")
-@XmlType(propOrder = {"version", "id", "statements"})
+@XmlRootElement
+@XmlType(propOrder = {"id", "version", "statements"})
 public class BucketPolicy {
-    private String version;
     private String id;
+    private String version;
     private List<BucketPolicyStatement> statements = new ArrayList<BucketPolicyStatement>();
 
-    public BucketPolicy() {}
+    @XmlElement(name = "Id")
+    public String getId() {
+        return id;
+    }
 
-    public BucketPolicy(String version, String id) {
-        this.version = version;
+    public void setId(String id) {
         this.id = id;
     }
 
-    public BucketPolicy withStatements(List<BucketPolicyStatement> statement){
+    @XmlElement(name = "Version")
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    @XmlElement(name = "Statement")
+    public List<BucketPolicyStatement> getStatements() {
+        return statements;
+    }
+
+    public void setStatements(List<BucketPolicyStatement> statements) {
+        this.statements = statements;
+    }
+
+    public BucketPolicy withId(String id) {
+        setId(id);
+        return this;
+    }
+
+    public BucketPolicy withVersion(String version) {
+        setVersion(version);
+        return this;
+    }
+
+    public BucketPolicy withStatements(List<BucketPolicyStatement> statement) {
         setStatements(statement);
         return this;
     }
 
-    public BucketPolicy withStatements(BucketPolicyStatement... statements){
+    public BucketPolicy withStatements(BucketPolicyStatement... statements) {
         setStatements(Arrays.asList(statements));
         return this;
     }
 
-    @XmlElement(name = "Version", namespace = "")
-    public String getVersion(){ return version; }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-    public void setVersion(String version) { this.version = version; }
+        BucketPolicy that = (BucketPolicy) o;
 
-    @XmlElement(name = "Id", namespace = "")
-    public String getId() { return id; }
+        if (id != null ? !id.equals(that.id) : that.id != null) return false;
+        if (version != null ? !version.equals(that.version) : that.version != null) return false;
+        return statements != null ? statements.equals(that.statements) : that.statements == null;
+    }
 
-    public void setId(String id) { this.id = id; }
-
-    @XmlElement(name = "Statement", namespace = "")
-    public List<BucketPolicyStatement> getStatements() { return statements; }
-
-    public void setStatements(List<BucketPolicyStatement> statements) { this.statements = statements; }
+    @Override
+    public int hashCode() {
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (version != null ? version.hashCode() : 0);
+        result = 31 * result + (statements != null ? statements.hashCode() : 0);
+        return result;
+    }
 }

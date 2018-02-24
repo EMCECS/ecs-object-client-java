@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2018, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,59 +26,13 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.XmlEnum;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
-//http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html
-@XmlEnum
-public enum ConditionOperator {
-    StringEquals,
-    StringNotEquals,
-    StringEqualsIgnoreCase,
-    StringNotEqualsIgnoreCase,
-    StringLike,
-    StringNotLike,
-    NumericEquals,
-    NumericNotEquals,
-    NumericLessThan,
-    NumericLessThanEquals,
-    NumericGreaterThan,
-    NumericGreaterThanEquals,
-    DateEquals,
-    DateNotEquals,
-    DateLessThan,
-    DateLessThanEquals,
-    DateGreaterThan,
-    DateGreaterThanEquals,
-    Bool,
-    IpAddress,
-    NotIpAddress,
-    ArnEquals,
-    ArnNotEquals,
-    ArnLike,
-    ArnNotLike,
-    StringEqualsIfExists,
-    StringNotEqualsIfExists,
-    StringEqualsIgnoreCaseIfExists,
-    StringNotEqualsIgnoreCaseIfExists,
-    StringLikeIfExists,
-    StringNotLikeIfExists,
-    NumericEqualsIfExists,
-    NumericNotEqualsIfExists,
-    NumericLessThanIfExists,
-    NumericLessThanEqualsIfExists,
-    NumericGreaterThanIfExists,
-    NumericGreaterThanEqualsIfExists,
-    DateEqualsIfExists,
-    DateNotEqualsIfExists,
-    DateLessThanIfExists,
-    DateLessThanEqualsIfExists,
-    DateGreaterThanIfExists,
-    DateGreaterThanEqualsIfExists,
-    BoolIfExists,
-    IpAddressIfExists,
-    NotIpAddressIfExists,
-    ArnEqualsIfExists,
-    ArnNotEqualsIfExists,
-    ArnLikeIfExists,
-    ArnNotLikeIfExists,
+public class PolicyConditionCriteria extends HashMap<PolicyConditionKey, List<String>> {
+    public PolicyConditionCriteria withCondition(PolicyConditionKey key, String... values) {
+        put(key, Arrays.asList(values));
+        return this;
+    }
 }
