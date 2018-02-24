@@ -38,13 +38,10 @@ allprojects {
     apply from: "$commonBuildDir/ecs-publish.gradle"
 }
 
-
-
 dependencies {
-    compile 'com.emc.ecs:smart-client:2.1.1',
+    compile 'com.emc.ecs:smart-client:2.2.0',
             'com.emc.ecs:object-transform:1.1.0',
             'commons-codec:commons-codec:1.10',
-            'com.sun.jersey:jersey-json:1.19.3',
             'org.jdom:jdom2:2.0.6',
             'org.slf4j:slf4j-api:1.7.5'
     runtime 'org.slf4j:slf4j-log4j12:1.7.5'
