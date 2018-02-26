@@ -48,12 +48,28 @@ public enum PolicyConditionKey {
     UserName("aws:username"),
     @XmlEnumValue("s3:x-amz-acl")
     Acl("s3:x-amz-acl"),
+    @XmlEnumValue("s3:x-amz-copy-source")
+    CopySource("s3:x-amz-copy-source"),
     @XmlEnumValue("s3:x-amz-server-side-encryption")
     ServerSideEncryption("s3:x-amz-server-side-encryption"),
+    @XmlEnumValue("s3:x-amz-server-side-encryption-aws-kms-key-id")
+    ServerSideEncryptionAwsKmsKeyId("s3:x-amz-server-side-encryption-aws-kms-key-id"),
+    @XmlEnumValue("s3:x-amz-metadata-directive")
+    MetadataDirective("s3:x-amz-metadata-directive"),
+    @XmlEnumValue("s3:x-amz-storage-class")
+    StorageClass("s3:x-amz-storage-class"),
     @XmlEnumValue("s3:VersionId")
     VersionId("s3:VersionId"),
-    @XmlEnumValue("s3:x-amz-grant-permission")
-    GrantPermission("s3:x-amz-grant-permission"),
+    @XmlEnumValue("s3:x-amz-grant-read")
+    GrantReadPermission("s3:x-amz-grant-read"),
+    @XmlEnumValue("s3:x-amz-grant-write")
+    GrantWritePermission("s3:x-amz-grant-write"),
+    @XmlEnumValue("s3:x-amz-grant-read-acp")
+    GrantReadAcpPermission("s3:x-amz-grant-read-acp"),
+    @XmlEnumValue("s3:x-amz-grant-write-acp")
+    GrantWriteAcpPermission("s3:x-amz-grant-write-acp"),
+    @XmlEnumValue("s3:x-amz-grant-full-control")
+    GrantFullControlPermission("s3:x-amz-grant-full-control"),
     @XmlEnumValue("s3:prefix")
     Prefix("s3:prefix"),
     @XmlEnumValue("s3:delimiter")
