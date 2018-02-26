@@ -31,6 +31,7 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
+import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
@@ -339,6 +340,25 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         client.deleteBucketLifecycle(getTestBucket());
         Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
+    }
+
+    @Test
+    public void testBucketPolicy() {
+        BucketPolicy bucketPolicy = new BucketPolicy().withVersion("2012-10-17").withId("new-policy-1")
+                .withStatements(
+                        new BucketPolicyStatement()
+                                .withSid("statement-1")
+                                .withEffect(Effect.Allow)
+                                .withPrincipal("*")
+                                .withResource("arn:aws:s3:::"+getTestBucket()+"/*")
+                                .withActions(BucketPolicyAction.DeleteObjectVersion, BucketPolicyAction.DeleteObject)
+                                .withCondition(PolicyConditionOperator.StringEquals, new PolicyConditionCriteria()
+                                        .withCondition(PolicyConditionKey.UserAgent, "foo-client"))
+                );
+
+        client.setBucketPolicy(getTestBucket(), bucketPolicy);
+
+        Assert.assertEquals(bucketPolicy, client.getBucketPolicy(getTestBucket()));
     }
 
     @Test
