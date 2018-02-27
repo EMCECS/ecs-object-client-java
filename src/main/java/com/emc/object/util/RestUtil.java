@@ -75,6 +75,7 @@ public final class RestUtil {
 
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
     public static final String TYPE_APPLICATION_XML = "application/xml";
+    public static final String TYPE_APPLICATION_JSON = "application/json";
 
     public static final String PROPERTY_NAMESPACE = "com.emc.object.namespace";
     public static final String PROPERTY_USER_METADATA = "com.emc.object.userMetadata";

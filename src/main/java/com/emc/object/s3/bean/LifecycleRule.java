@@ -51,7 +51,7 @@ public class LifecycleRule {
     }
 
     /**
-     * @see {@link #withExpirationDays(Integer)}
+     * @see #withExpirationDays(Integer)
      * @deprecated please use builder methods instead
      */
     @Deprecated
@@ -61,7 +61,7 @@ public class LifecycleRule {
     }
 
     /**
-     * @see {@link #withExpirationDate(Date)}
+     * @see #withExpirationDate(Date)
      * @deprecated please use builder methods instead
      */
     @Deprecated

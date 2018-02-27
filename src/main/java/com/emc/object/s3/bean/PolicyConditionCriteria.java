@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2018, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -24,26 +24,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
+package com.emc.object.s3.bean;
 
-ext.githubProjectName = 'ecs-object-client-java'
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
-buildscript {
-    ext.commonBuildVersion = '1.6'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
-
-allprojects {
-    apply from: "$commonBuildDir/ecs-publish.gradle"
-}
-
-dependencies {
-    compile 'com.emc.ecs:smart-client:2.2.0',
-            'com.emc.ecs:object-transform:1.1.0',
-            'commons-codec:commons-codec:1.10',
-            'org.jdom:jdom2:2.0.6',
-            'org.slf4j:slf4j-api:1.7.5'
-    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
-    testCompile 'junit:junit:4.12'
+public class PolicyConditionCriteria extends HashMap<PolicyConditionKey, List<String>> {
+    public PolicyConditionCriteria withCondition(PolicyConditionKey key, String... values) {
+        put(key, Arrays.asList(values));
+        return this;
+    }
 }
