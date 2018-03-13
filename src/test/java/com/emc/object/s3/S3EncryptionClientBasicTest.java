@@ -143,7 +143,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     }
 
     @Test
-    public void testWithUserMeta() throws Exception {
+    public void testWithUserMeta() {
         String key = "metadata-test";
         String content = "Hello Metadata!!";
         String m1 = "meta1", v1 = "value1", m2 = "meta2", v2 = "value2";
@@ -337,75 +337,74 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testReadObjectStreamRange() throws Exception {
+    public void testReadObjectStreamRange() {
     }
 
     @Ignore
     @Override
-    public void testUpdateObjectWithRange() throws Exception {
+    public void testUpdateObjectWithRange() {
     }
 
     @Ignore
     @Override
-    public void testSingleMultipartUploadMostSimpleOnePart() throws Exception {
+    public void testSingleMultipartUploadMostSimpleOnePart() {
     }
 
     @Ignore
     @Override
-    public void testSingleMultipartUploadMostSimple() throws Exception {
+    public void testSingleMultipartUploadMostSimple() {
     }
 
     @Ignore
     @Override
-    public void testSingleMultipartUploadSimple() throws Exception {
+    public void testSingleMultipartUploadSimple() {
     }
 
     @Ignore
     @Override
-    public void testMultiThreadMultipartUploadMostSimple() throws Exception {
+    public void testMultiThreadMultipartUploadMostSimple() {
     }
 
     @Ignore
     @Override
-    public void testLargeObjectContentLength() throws Exception {
+    public void testLargeObjectContentLength() {
     }
 
     @Ignore
     @Override
-    public void testSingleMultipartUploadListParts() throws Exception {
+    public void testSingleMultipartUploadListParts() {
     }
 
     @Ignore
     @Override
-    public void testLargeFileUploader() throws Exception {
+    public void testLargeFileUploader() {
     }
 
     @Ignore
     @Override
-    public void testMultiThreadMultipartUploadListPartsPagination() throws Exception {
+    public void testMultiThreadMultipartUploadListPartsPagination() {
     }
 
     @Ignore
     @Override
-    public void testLargeFileDownloader() throws Exception {
+    public void testLargeFileDownloader() {
     }
 
     @Ignore
     @Override
-    public void testAppendObject() throws Exception {
+    public void testAppendObject() {
     }
 
     // the following methods are unnecessary and/or do not test anything related to encryption
 
-
     @Ignore
     @Override
-    public void testCreateExistingBucket() throws Exception {
+    public void testCreateExistingBucket() {
     }
 
     @Ignore
     @Override
-    public void testListBuckets() throws Exception {
+    public void testListBuckets() {
     }
 
     @Ignore
@@ -415,27 +414,27 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testBucketExists() throws Exception {
+    public void testBucketExists() {
     }
 
     @Ignore
     @Override
-    public void testCreateBucketRequest() throws Exception {
+    public void testCreateBucketRequest() {
     }
 
     @Ignore
     @Override
-    public void testDeleteBucket() throws Exception {
+    public void testDeleteBucket() {
     }
 
     @Ignore
     @Override
-    public void testDeleteBucketWithObjects() throws Exception {
+    public void testDeleteBucketWithObjects() {
     }
 
     @Ignore
     @Override
-    public void testSetGetBucketAcl() throws Exception {
+    public void testSetGetBucketAcl() {
     }
 
     @Ignore
@@ -445,97 +444,97 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testSetGetBucketCors() throws Exception {
+    public void testSetGetBucketCors() {
     }
 
     @Ignore
     @Override
-    public void testDeleteBucketCors() throws Exception {
+    public void testDeleteBucketCors() {
     }
 
     @Ignore
     @Override
-    public void testBucketLifecycle() throws Exception {
+    public void testBucketLifecycle() {
     }
 
     @Ignore
     @Override
-    public void testBucketLocation() throws Exception {
+    public void testBucketLocation() {
     }
 
     @Ignore
     @Override
-    public void testSetBucketVersioning() throws Exception {
+    public void testSetBucketVersioning() {
     }
 
     @Ignore
     @Override
-    public void testBucketVersions() throws Exception {
+    public void testBucketVersions() {
     }
 
     @Ignore
     @Override
-    public void testListObjects() throws Exception {
+    public void testListObjects() {
     }
 
     @Ignore
     @Override
-    public void testListAndReadVersions() throws Exception {
+    public void testListAndReadVersions() {
     }
 
     @Ignore
     @Override
-    public void testListObjectsWithPrefix() throws Exception {
+    public void testListObjectsWithPrefix() {
     }
 
     @Ignore
     @Override
-    public void testListVersionsPagingPrefixDelim() throws Exception {
+    public void testListVersionsPagingPrefixDelim() {
     }
 
     @Ignore
     @Override
-    public void testPutObjectWithMd5() throws Exception {
+    public void testPutObjectWithMd5() {
     }
 
     @Ignore
     @Override
-    public void testPutObjectWithRetentionPeriod() throws Exception {
+    public void testPutObjectWithRetentionPeriod() {
     }
 
     @Ignore
     @Override
-    public void testMpuAbortInMiddle() throws Exception {
+    public void testMpuAbortInMiddle() {
     }
 
     @Ignore
     @Override
-    public void testLargeFileUploaderStream() throws Exception {
+    public void testLargeFileUploaderStream() {
     }
 
     @Ignore
     @Override
-    public void testLargeFileUploaderProgressListener() throws Exception {
+    public void testLargeFileUploaderProgressListener() {
     }
 
     @Ignore
     @Override
-    public void testCopyObjectWithMeta() throws Exception {
+    public void testCopyObjectWithMeta() {
     }
 
     @Ignore
     @Override
-    public void testCreateObjectWithStream() throws Exception {
+    public void testCreateObjectWithStream() {
     }
 
     @Ignore
     @Override
-    public void testCreateObjectWithRetentionPeriod() throws Exception {
+    public void testCreateObjectWithRetentionPeriod() {
     }
 
     @Ignore
     @Override
-    public void testCreateObjectWithRetentionPolicy() throws Exception {
+    public void testCreateObjectWithRetentionPolicy() {
     }
 
     @Ignore
@@ -545,13 +544,23 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testCopyObjectSelf() throws Exception {
+    public void testCopyObjectSelf() {
+    }
+
+    @Ignore
+    @Override
+    public void testPreSignedPutUrl() {
+    }
+
+    @Ignore
+    @Override
+    public void testPreSignedPutNoContentType() {
     }
 
     private class ErrorStream extends FilterInputStream {
         private int callCount = 0;
 
-        public ErrorStream(InputStream inputStream) {
+        ErrorStream(InputStream inputStream) {
             super(inputStream);
         }
 
