@@ -27,10 +27,10 @@
 package com.emc.object.s3.bean;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
+import java.util.TreeMap;
 
-public class PolicyConditionCriteria extends HashMap<PolicyConditionKey, List<String>> {
+public class PolicyConditionCriteria extends TreeMap<PolicyConditionKey, List<String>> {
     public PolicyConditionCriteria withCondition(PolicyConditionKey key, String... values) {
         put(key, Arrays.asList(values));
         return this;
