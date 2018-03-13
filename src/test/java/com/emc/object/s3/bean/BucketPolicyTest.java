@@ -52,11 +52,11 @@ public class BucketPolicyTest {
             "    \"Action\" : [ \"s3:*\" ],\n" +
             "    \"Resource\" : \"arn:aws:s3:::examplebucket/*\",\n" +
             "    \"Condition\" : {\n" +
-            "      \"NotIpAddress\" : {\n" +
-            "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]\n" +
-            "      },\n" +
             "      \"IpAddress\" : {\n" +
             "        \"aws:SourceIp\" : [ \"54.240.143.0/24\", \"2001:DB8:1234:5678::/64\" ]\n" +
+            "      },\n" +
+            "      \"NotIpAddress\" : {\n" +
+            "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]\n" +
             "      }\n" +
             "    }\n" +
             "  } ]\n" +
