@@ -43,6 +43,7 @@ public class SetObjectAclRequest extends S3ObjectRequest implements EntityReques
 
     public SetObjectAclRequest(String bucketName, String key) {
         super(Method.PUT, bucketName, key, "acl");
+        property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
     }
 
     @Override

@@ -373,7 +373,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public void setBucketLifecycle(String bucketName, LifecycleConfiguration lifecycleConfiguration) {
         ObjectRequest request = new GenericBucketEntityRequest<LifecycleConfiguration>(
                 Method.PUT, bucketName, "lifecycle", lifecycleConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
-        request.property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE);
         executeAndClose(client, request);
     }
 
@@ -397,7 +396,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public void setBucketPolicy(String bucketName, BucketPolicy policy) {
         ObjectRequest request = new GenericBucketEntityRequest<BucketPolicy>(
                 Method.PUT, bucketName, "policy", policy).withContentType(RestUtil.TYPE_APPLICATION_JSON);
-        request.property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE);
         executeAndClose(client, request);
     }
 
@@ -628,7 +626,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public DeleteObjectsResult deleteObjects(DeleteObjectsRequest request) {
-        request.property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE);
         return executeRequest(client, request, DeleteObjectsResult.class);
     }
 
