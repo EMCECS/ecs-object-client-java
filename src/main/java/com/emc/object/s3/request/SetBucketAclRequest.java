@@ -42,6 +42,7 @@ public class SetBucketAclRequest extends AbstractBucketRequest implements Entity
 
     public SetBucketAclRequest(String bucketName) {
         super(Method.PUT, bucketName, "", "acl");
+        property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
     }
 
     @Override

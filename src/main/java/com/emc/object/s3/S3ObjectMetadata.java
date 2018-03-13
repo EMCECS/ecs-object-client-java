@@ -28,10 +28,7 @@ package com.emc.object.s3;
 
 import com.emc.object.util.RestUtil;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class S3ObjectMetadata {
     public static final String EXPIRY_DATE = "expiry-date=";
@@ -51,7 +48,7 @@ public class S3ObjectMetadata {
     private Date httpExpires;
     private Date lastModified;
     private String versionId;
-    private Map<String, String> userMetadata = new HashMap<String, String>();
+    private Map<String, String> userMetadata = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
 
     public static <T> S3ObjectMetadata fromHeaders(Map<String, List<T>> headers) {
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
@@ -110,7 +107,7 @@ public class S3ObjectMetadata {
     }
 
     public static <T> Map<String, String> getUserMetadata(Map<String, List<T>> headers) {
-        Map<String, String> userMetadata = new HashMap<String, String>();
+        Map<String, String> userMetadata = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
         for (String name : headers.keySet()) {
             String key = getUserMetadataKey(name);
             if (key != null) {
@@ -274,7 +271,10 @@ public class S3ObjectMetadata {
      */
     public void setUserMetadata(Map<String, String> userMetadata) {
         if (userMetadata == null) this.userMetadata = null;
-        else this.userMetadata = new HashMap<String, String>(userMetadata);
+        else {
+            this.userMetadata = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+            this.userMetadata.putAll(userMetadata);
+        }
     }
 
     public String getUserMetadata(String name) {

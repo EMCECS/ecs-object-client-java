@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2018, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -24,48 +24,30 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.request;
+package com.emc.object.s3;
 
-import com.emc.object.EntityRequest;
-import com.emc.object.Method;
-import com.emc.object.util.RestUtil;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class GenericBucketEntityRequest<T> extends GenericBucketRequest implements EntityRequest {
-    private T entity;
-    private String contentType;
+public class S3ObjectMetadataTest {
+    @Test
+    public void testCaseInsensitivity() {
+        S3ObjectMetadata metadata = new S3ObjectMetadata()
+                .addUserMetadata("One", "Two")
+                .addUserMetadata("one", "three")
+                .addUserMetadata("ONE", "FOUR")
 
-    public GenericBucketEntityRequest(Method method, String bucketName, String subresource, T entity) {
-        super(method, bucketName, subresource);
-        this.entity = entity;
-        property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
-    }
+                .addUserMetadata("Five", "Six")
+                .addUserMetadata("five", "seven")
+                .addUserMetadata("FIVE", "EIGHT");
 
-    @Override
-    public T getEntity() {
-        return entity;
-    }
-
-    @Override
-    public String getContentType() {
-        return contentType;
-    }
-
-    @Override
-    public Long getContentLength() {
-        return null; // assume buffering
-    }
-
-    @Override
-    public boolean isChunkable() {
-        return false;
-    }
-
-    public void setContentType(String contentType) {
-        this.contentType = contentType;
-    }
-
-    public GenericBucketEntityRequest withContentType(String contentType) {
-        setContentType(contentType);
-        return this;
+        // TreeMap will sort the keys and the first insertion case is preserved
+        Assert.assertArrayEquals(new String[]{"Five", "One"}, metadata.getUserMetadata().keySet().toArray());
+        Assert.assertEquals("FOUR", metadata.getUserMetadata("one"));
+        Assert.assertEquals("FOUR", metadata.getUserMetadata("One"));
+        Assert.assertEquals("FOUR", metadata.getUserMetadata("oNe"));
+        Assert.assertEquals("EIGHT", metadata.getUserMetadata("five"));
+        Assert.assertEquals("EIGHT", metadata.getUserMetadata("Five"));
+        Assert.assertEquals("EIGHT", metadata.getUserMetadata("fIve"));
     }
 }

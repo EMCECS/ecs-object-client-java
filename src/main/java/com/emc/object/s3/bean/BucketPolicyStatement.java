@@ -39,7 +39,7 @@ public class BucketPolicyStatement {
     private String principal;
     private List<BucketPolicyAction> actions = new ArrayList<BucketPolicyAction>();
     private String resource;
-    private Map<PolicyConditionOperator, PolicyConditionCriteria> conditions = new HashMap<PolicyConditionOperator, PolicyConditionCriteria>();
+    private Map<PolicyConditionOperator, PolicyConditionCriteria> conditions = new TreeMap<PolicyConditionOperator, PolicyConditionCriteria>();
 
     public BucketPolicyStatement() {}
 

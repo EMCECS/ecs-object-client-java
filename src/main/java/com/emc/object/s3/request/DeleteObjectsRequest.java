@@ -40,6 +40,7 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
 
     public DeleteObjectsRequest(String bucketName) {
         super(Method.POST, bucketName, "", "delete");
+        property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
     }
 
     @Override
