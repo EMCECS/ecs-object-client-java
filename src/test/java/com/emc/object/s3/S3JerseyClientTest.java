@@ -40,6 +40,7 @@ import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
+import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
@@ -2126,6 +2127,59 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
                 url.toString());
+    }
+
+    @Test
+    public void testPreSignedPutUrl() throws Exception {
+        S3Client tempClient = new S3JerseyClient(new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
+                .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"));
+        URL url = tempClient.getPresignedUrl(
+                new PresignedUrlRequest(Method.PUT, "static.johnsmith.net", "db-backup.dat.gz", new Date(1175139620000L))
+                        .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
+                                .withContentMd5("4gJE4saaMU4BqNR0kLY+lw==")
+                                .addUserMetadata("checksumalgorithm", "crc32")
+                                .addUserMetadata("filechecksum", "0x02661779")
+                                .addUserMetadata("reviewedby", "joe@johnsmith.net,jane@johnsmith.net"))
+        );
+        Assert.assertEquals("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz" +
+                        "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=kPVlidlScN00QlwJMeLd9YWmpOw%3D",
+                url.toString());
+
+        // test real PUT
+        String key = "pre-signed-put-test", content = "This is my test object content";
+        url = client.getPresignedUrl(
+                new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
+                        .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
+                                .addUserMetadata("foo", "bar"))
+        );
+        Client.create().resource(url.toURI())
+                .type("application/x-download").header("x-amz-meta-foo", "bar")
+                .put(content);
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+    }
+
+    @Test
+    public void testPreSignedPutNoContentType() throws Exception {
+        S3Client tempClient = new S3JerseyClient(new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
+                .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"));
+        URL url = tempClient.getPresignedUrl(
+                new PresignedUrlRequest(Method.PUT, "static.johnsmith.net", "db-backup.dat.gz", new Date(1175139620000L)));
+        Assert.assertEquals("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz" +
+                        "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NnodSmujyUFr7%2Bryb8r42yY1UmM%3D",
+                url.toString());
+
+        // test real PUT
+        // only way to have jersey client send *no* content-type is to send a null object
+        String key = "pre-signed-put-test-2";
+        url = client.getPresignedUrl(
+                new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
+                        .withObjectMetadata(new S3ObjectMetadata().addUserMetadata("foo", "bar")));
+        Client.create().resource(url.toURI()).header("x-amz-meta-foo", "bar").put((Object) null);
+        Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+        S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Test
