@@ -36,12 +36,14 @@ import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
+import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
@@ -309,17 +311,31 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
     
     @Test
-    public void testBucketLifecycle() throws Exception {
+    public void testBucketLifecycle() {
         Calendar end = Calendar.getInstance();
         end.add(Calendar.YEAR, 300);
+
         LifecycleConfiguration lc = new LifecycleConfiguration();
+        lc.withRules(new LifecycleRule("expires-7-years", "", LifecycleRule.Status.Enabled)
+                .withExpirationDays(7 * 365));
+
+        client.setBucketLifecycle(getTestBucket(), lc);
+
+        LifecycleConfiguration lc2 = client.getBucketLifecycle(getTestBucket());
+        Assert.assertNotNull(lc2);
+        Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
+
+        for (LifecycleRule rule : lc.getRules()) {
+            Assert.assertTrue(lc2.getRules().contains(rule));
+        }
+
         lc.withRules(new LifecycleRule("archive-expires-180", "archive/", LifecycleRule.Status.Enabled)
                 .withExpirationDays(180)
                 .withNoncurrentVersionExpirationDays(50));
 
         client.setBucketLifecycle(getTestBucket(), lc);
 
-        LifecycleConfiguration lc2 = client.getBucketLifecycle(getTestBucket());
+        lc2 = client.getBucketLifecycle(getTestBucket());
         Assert.assertNotNull(lc2);
         Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
 
@@ -402,8 +418,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
-    @Ignore // TODO: blocked by STORAGE-6791
-    @Test
+    @Test // TODO: blocked by STORAGE-6791
     public void testListObjectsPagingWithEncodedDelim() {
         String prefix = "test\u001dDelim/", delim = "/", key = "foo\u001dbar", content = "Hello List Delim!";
         client.putObject(getTestBucket(), prefix + key + 1, content, null);
@@ -557,6 +572,38 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
             }
         }
+    }
+
+    @Test // TODO: blocked by STORAGE-21799
+    public void testListVersionsPaging() {
+        // turn on versioning first
+        client.setBucketVersioning(getTestBucket(),
+                new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
+        // create a few versions of the same key
+        String key = "prefix/foo", content = "Hello Version Paging!";
+        client.putObject(getTestBucket(), key, content, null);
+        client.deleteObject(getTestBucket(), key);
+        client.putObject(getTestBucket(), key, content, null);
+
+        // create key in sub-prefix
+        key = "prefix/prefix2/bar";
+        client.putObject(getTestBucket(), key, content, null);
+        client.deleteObject(getTestBucket(), key);
+        client.putObject(getTestBucket(), key, content, null);
+
+        List<AbstractVersion> versions = new ArrayList<AbstractVersion>();
+        ListVersionsResult result = null;
+        int requestCount = 0;
+        do {
+            if (result == null) result = client.listVersions(new ListVersionsRequest(getTestBucket()).withMaxKeys(2));
+            else result = client.listMoreVersions(result);
+            versions.addAll(result.getVersions());
+            requestCount++;
+        } while (result.isTruncated());
+
+        Assert.assertEquals("The correct number of versions were NOT returned", 6, versions.size());
+        Assert.assertEquals("should be 3 pages", 3, requestCount);
     }
 
     @Test
@@ -814,6 +861,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // ... and this will use chunked-encoding
         client.putObject(getTestBucket(), "random-array-test", new RandomInputStream(100), null);
         Assert.assertEquals(new Long(100), client.getObjectMetadata(getTestBucket(), "random-array-test").getContentLength());
+    }
+
+    @Test
+    public void testCreateJsonObjectWithStream() {
+        String key = "json-stream-test";
+        long size = 100;
+        InputStream stream = new RandomInputStream(size);
+
+        client.putObject(getTestBucket(), "json-stream-test", stream, "application/json");
+        Assert.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
     }
 
     @Test
@@ -1676,8 +1733,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
-    @Ignore // TODO: blocked by STORAGE-12050
-    @Test
+    @Test // TODO: blocked by STORAGE-12050
     public void testCopyObjectWithMeta() throws Exception {
         String key1 = "object1", key2 = "object2", key3 = "object3";
         String content = "Hello copy with meta!";
@@ -1734,8 +1790,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
-    @Ignore // TODO: blocked by STORAGE-12050
-    @Test
+    @Test // TODO: blocked by STORAGE-12050
     public void testUpdateMetadata() {
         String key = "update-metadata";
         String content = "Hello update meta!";
@@ -2205,6 +2260,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=FhNeBaxibG7JkmvMbJD7J11zAMU%3D",
                 url.toString());
+    }
+
+    @Test
+    public void testPreSignedUrlHeaderOverrides() throws Exception {
+        String key = "pre-signed-header-override";
+        String contentDisposition = "attachment;filename=foo.txt;";
+
+        client.putObject(getTestBucket(), key, "", null);
+
+        Calendar expiration = Calendar.getInstance();
+        expiration.add(Calendar.YEAR, 1);
+        URL url = client.getPresignedUrl(new PresignedUrlRequest(Method.GET, getTestBucket(), key, expiration.getTime())
+                .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
+
+        ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
+        Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 
     @Test
