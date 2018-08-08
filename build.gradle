@@ -39,7 +39,7 @@ allprojects {
 }
 
 dependencies {
-    compile 'com.emc.ecs:smart-client:2.2.0',
+    compile 'com.emc.ecs:smart-client:2.2.1',
             'com.emc.ecs:object-transform:1.1.0',
             'commons-codec:commons-codec:1.10',
             'org.jdom:jdom2:2.0.6',
