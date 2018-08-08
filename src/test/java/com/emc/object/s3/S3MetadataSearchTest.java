@@ -29,7 +29,11 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
             new MetadataSearchKey("x-amz-meta-datetime1", MetadataSearchDatatype.datetime),
             new MetadataSearchKey("x-amz-meta-decimal1", MetadataSearchDatatype.decimal),
             new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
-            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string)
+            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string),
+
+            new MetadataSearchKey("x-amz-meta-index-field", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-field-valid", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-key-valid", MetadataSearchDatatype.string)
     };
 
     @Override
@@ -153,8 +157,79 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
     }
 
-    // TODO: blocked by STORAGE-18866
-    //@Test
+    @Test
+    public void testListObjectsWithEncoding() {
+        String bucketName = getTestBucket();
+
+        String badKey = "bad\u001dkey";
+        client.putObject(new PutObjectRequest(getTestBucket(), badKey, new byte[0]).withObjectMetadata(
+                new S3ObjectMetadata().addUserMetadata("index-field", "bad-key")
+                        .addUserMetadata("field-valid", "true")
+                        .addUserMetadata("key-valid", "false")
+        ));
+
+        String goodKey = "good-key-and-field";
+        client.putObject(new PutObjectRequest(getTestBucket(), goodKey, new byte[0]).withObjectMetadata(
+                new S3ObjectMetadata().addUserMetadata("index-field", "good-key")
+                        .addUserMetadata("field-valid", "true")
+                        .addUserMetadata("key-valid", "true")
+        ));
+
+        String badField = "bad-field";
+        client.putObject(new PutObjectRequest(getTestBucket(), badField, new byte[0]).withObjectMetadata(
+                new S3ObjectMetadata().addUserMetadata("index-field", "bad\u001dfield")
+                        .addUserMetadata("field-valid", "false")
+                        .addUserMetadata("key-valid", "true")
+        ));
+
+        try {
+            // list the bad key
+            QueryObjectsRequest request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("x-amz-meta-field-valid='true'");
+            QueryObjectsResult result = client.queryObjects(request);
+
+            Assert.assertEquals(2, result.getObjects().size());
+            Assert.assertEquals(badKey, result.getObjects().get(0).getObjectName());
+            Assert.assertEquals(goodKey, result.getObjects().get(1).getObjectName());
+
+            // list a good field, with bad field results
+            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("x-amz-meta-field-valid='false'");
+            result = client.queryObjects(request);
+
+            Assert.assertEquals(1, result.getObjects().size());
+            Assert.assertEquals(badField, result.getObjects().get(0).getObjectName());
+
+            // list a bad field
+            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("x-amz-meta-index-field='bad\u001dfield'");
+            result = client.queryObjects(request);
+
+            Assert.assertEquals(1, result.getObjects().size());
+            Assert.assertEquals(badField, result.getObjects().get(0).getObjectName());
+
+            List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
+
+            Assert.assertEquals(1, queryMds.size());
+            QueryMetadata usermd = null;
+            for (QueryMetadata m : queryMds) {
+                switch (m.getType()) {
+                    case USERMD:
+                        usermd = m;
+                        break;
+                }
+            }
+            Assert.assertNotNull(usermd);
+
+            Assert.assertEquals("bad\u001dfield", usermd.getMdMap().get("x-amz-meta-index-field"));
+            Assert.assertEquals("false", usermd.getMdMap().get("x-amz-meta-field-valid"));
+            Assert.assertEquals("true", usermd.getMdMap().get("x-amz-meta-key-valid"));
+        } finally {
+            client.deleteObject(getTestBucket(), badKey);
+        }
+    }
+
+    @Test // TODO: blocked by STORAGE-18866
     public void testCaseSensitivity() throws Exception {
         String bucketName = getTestBucket();
 

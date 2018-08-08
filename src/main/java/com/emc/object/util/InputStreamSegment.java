@@ -31,9 +31,17 @@ import com.emc.rest.util.SizedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Takes a specific segment of a provided {@link InputStream} by seeking to the <code>offset</code> and providing only
+ * <code>length</code> bytes.
+ */
 public class InputStreamSegment extends SizedInputStream {
     private long offset;
 
+    /**
+     * NOTE: This will seek into the provided stream by <code>offset</code> bytes using repeated calls to
+     * {@link InputStream#skip(long)}. Be sure this is what you want.
+     */
     public InputStreamSegment(InputStream inputStream, long offset, long length) throws IOException {
         super(inputStream, length);
         this.offset = offset;
