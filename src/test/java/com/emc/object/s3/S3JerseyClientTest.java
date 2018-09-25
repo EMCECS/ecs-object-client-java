@@ -26,10 +26,7 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.Method;
-import com.emc.object.ObjectConfig;
-import com.emc.object.Protocol;
-import com.emc.object.Range;
+import com.emc.object.*;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
@@ -2276,6 +2273,23 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
         Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
+    }
+
+    @Test
+    public void testVPoolHeader() {
+        CreateBucketRequest createBucketRequest = new CreateBucketRequest("looney-bucket")
+                .withVPoolId("plylab-sp1");
+        client.createBucket(createBucketRequest);
+    }
+
+    @Test
+    public void testCustomHeader() {
+        PutObjectRequest putObjectRequest = new PutObjectRequest(
+                "testy-test", "new-new", "A Test Object");
+
+        putObjectRequest.addCustomHeader("x-emc-retention-period", "60");
+        client.putObject(putObjectRequest);
+
     }
 
     @Test
