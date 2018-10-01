@@ -34,10 +34,12 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
 import com.emc.object.util.RestUtil;
+import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
+import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -153,7 +155,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         bucket.setName(getTestBucket());
         Assert.assertTrue(result.getBuckets().contains(bucket));
     }
-    
+
     @Test
     public void testBucketExists() throws Exception {
         Assert.assertTrue("Bucket " + getTestBucket() + " should exist but does NOT", client.bucketExists(getTestBucket()));
@@ -306,7 +308,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         Assert.assertNull(client.getBucketCors(getTestBucket()));
     }
-    
+
     @Test
     public void testBucketLifecycle() {
         Calendar end = Calendar.getInstance();
@@ -391,7 +393,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(key, object.getKey());
         Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
-    
+
     @Test
     public void testListObjectsWithPrefix() throws Exception {
         String prefix = "testPrefix/", key = "foo", content = "Hello List Prefix!";
@@ -1890,7 +1892,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             cleanUpBucket(bucket3);
         }
     }
-  
+
     @Test
     public void testReadObjectStreamRange() throws Exception {
         String key = "objectKey";
@@ -1998,7 +2000,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(2, client.listVersions(getTestBucket(), null).getVersions().size());
         Assert.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
     }
-    
+
     @Test
     public void testDeleteObjectsRequest() {
         String content = "Object Content";
@@ -2006,9 +2008,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String testObject2 = "/objectPrefix/testObject2";
         client.putObject(getTestBucket(), testObject1, content, "text/plain");
         client.putObject(getTestBucket(), testObject2, content, "text/plain");
-  
+
         DeleteObjectsRequest request = new DeleteObjectsRequest(getTestBucket())
-            .withKeys(testObject1, testObject2);      
+            .withKeys(testObject1, testObject2);
         DeleteObjectsResult results = client.deleteObjects(request);
         List<AbstractDeleteResult> resultList = results.getResults();
         Assert.assertEquals(2, resultList.size());
@@ -2020,7 +2022,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 this.inspectDeleteSuccess((DeleteSuccess)result);
             }
         }
-    } 
+    }
     protected void inspectDeleteError(DeleteError deleteResult) {
         Assert.assertNotNull(deleteResult);
     }
@@ -2066,7 +2068,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertNull("Should not be chained exception", e.getCause());
         }
     }
-    
+
     @Test
     public void testGetObjectMetadataRequest() {
         String testObject = "/objectPrefix/testObject1";
@@ -2130,7 +2132,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setObjectAcl(getTestBucket(), testObject, acl);
         assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
-    
+
     @Test
     public void testSetObjectCannedAcl() {
         String testObject = "/objectPrefix/testObject1";
@@ -2139,7 +2141,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setObjectAcl(getTestBucket(), testObject, CannedAcl.BucketOwnerFullControl);
         //TODO - need to validate this against a real acl
     }
-    
+
     @Test
     public void testSetObjectAclRequestAcl() throws Exception {
         String testObject = "/objectPrefix/testObject1";
@@ -2276,20 +2278,33 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testVPoolHeader() {
-        CreateBucketRequest createBucketRequest = new CreateBucketRequest("looney-bucket")
-                .withVPoolId("plylab-sp1");
+    public void testVPoolHeader() throws Exception {
+        String nonDefaultVpoolID = TestConfig.getProperties().getProperty(TestProperties.NON_DEFAULT_VPOOL);
+        Assume.assumeNotNull(nonDefaultVpoolID);
+
+        String bucketName = "looney-bucket-rg";
+
+        CreateBucketRequest createBucketRequest = new CreateBucketRequest(bucketName).withVPoolId(nonDefaultVpoolID);
         client.createBucket(createBucketRequest);
+        // Must pause test to confirm RG has been set
+        // S3 API does not allow for checking RG
+        client.deleteBucket(bucketName);
     }
 
+    /**
+     * A debugging proxy (Fiddler, Charles), is required to verify that the proper header is being sent.
+     * Optionally a jersey filter could be used to sniff for it
+     */
     @Test
     public void testCustomHeader() {
-        PutObjectRequest putObjectRequest = new PutObjectRequest(
-                "testy-test", "new-new", "A Test Object");
+        String customHeaderKey = "x-emc-retention-period";
+        String customHeaderValue = "60";
 
-        putObjectRequest.addCustomHeader("x-emc-retention-period", "60");
-        client.putObject(putObjectRequest);
+        ListObjectsRequest request = new ListObjectsRequest(getTestBucket());
 
+        request.addCustomHeader(customHeaderKey, customHeaderValue);
+
+        client.listObjects(request);
     }
 
     @Test

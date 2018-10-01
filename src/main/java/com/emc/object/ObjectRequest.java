@@ -85,10 +85,6 @@ public class ObjectRequest {
         return new HashMap<String, List<Object>>(customHeaders);
     }
 
-    /**
-     * @param key
-     * @param value
-     */
     public void addCustomHeader(String key, Object value) {
         RestUtil.putSingle(customHeaders, key, value);
     }
