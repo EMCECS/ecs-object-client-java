@@ -58,6 +58,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
 import java.util.*;
@@ -2226,13 +2228,25 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 url.toString());
 
         // test real PUT
-        // only way to have jersey client send *no* content-type is to send a null object
+        // only way is to use HttpURLConnection directly
         String key = "pre-signed-put-test-2";
         url = client.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
                         .withObjectMetadata(new S3ObjectMetadata().addUserMetadata("foo", "bar")));
-        Client.create().resource(url.toURI()).header("x-amz-meta-foo", "bar").put((Object) null);
+        // uncomment to see the next call in a proxy
+//        System.setProperty("http.proxyHost", "127.0.0.1");
+//        System.setProperty("http.proxyPort", "8888");
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setFixedLengthStreamingMode(0);
+        con.setRequestProperty("x-amz-meta-foo", "bar");
+        con.setRequestMethod("PUT");
+        con.setDoOutput(true);
+        con.setDoInput(true);
+        con.connect();
+        Assert.assertEquals(200, con.getResponseCode());
+
         Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
@@ -2319,8 +2333,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (Future future : futures) {
             try {
                 future.get();
-            } catch (ExecutionException e) {
-                if (!(e.getCause() instanceof S3Exception)) throw e;
+            } catch (Throwable e) {
+                while (e.getCause() != null && e.getCause() != e) e = e.getCause();
+                if (e instanceof SocketException && e.getMessage().startsWith("Broken pipe")) continue;
+                if (!(e instanceof S3Exception)) throw new RuntimeException(e);
                 S3Exception se = (S3Exception) e.getCause();
                 if (!"NoSuchUpload".equals(se.getErrorCode()) && !"NoSuchKey".equals(se.getErrorCode()))
                     errorMessage = se.getErrorCode() + ": " + se.getMessage();
