@@ -360,7 +360,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
     }
 
-    @Test
+    @Test // Note: affected by STORAGE-22520
     public void testBucketPolicy() {
         BucketPolicy bucketPolicy = new BucketPolicy().withVersion("2012-10-17").withId("new-policy-1")
                 .withStatements(
@@ -729,8 +729,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertNull(client.getObject(request, String.class));
     }
 
-    // REQUIRES: ECS >= 2.2.1 HF1
-    @Test
+    @Test // NOTE: affected by STORAGE-22521
     public void testPutObjectPreconditions() {
         String key = "testGetPreconditions";
         String content = "hello GET preconditions!";
@@ -935,10 +934,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String key = "object-in-retention";
         String content = "Hello Retention!";
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
-        objectMetadata.setRetentionPeriod(2L);
+        objectMetadata.setRetentionPeriod(4L);
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals((Long) 2L, objectMetadata.getRetentionPeriod());
+        Assert.assertEquals((Long) 4L, objectMetadata.getRetentionPeriod());
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         try {
             client.putObject(getTestBucket(), key, "evil update!", null);
@@ -947,7 +946,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
         }
 
-        Thread.sleep(5000); // allow retention to expire
+        Thread.sleep(10000); // allow retention to expire
         client.putObject(getTestBucket(), key, "good update!", null);
     }
 
@@ -2366,7 +2365,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 while (e.getCause() != null && e.getCause() != e) e = e.getCause();
                 if (e instanceof SocketException && e.getMessage().startsWith("Broken pipe")) continue;
                 if (!(e instanceof S3Exception)) throw new RuntimeException(e);
-                S3Exception se = (S3Exception) e.getCause();
+                S3Exception se = (S3Exception) e;
                 if (!"NoSuchUpload".equals(se.getErrorCode()) && !"NoSuchKey".equals(se.getErrorCode()))
                     errorMessage = se.getErrorCode() + ": " + se.getMessage();
             }
