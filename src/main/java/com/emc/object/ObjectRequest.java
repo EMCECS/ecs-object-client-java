@@ -90,7 +90,7 @@ public class ObjectRequest {
     }
 
     public Map<String, List<Object>> getCustomHeaders() {
-        return new HashMap<String, List<Object>>(customHeaders);
+        return customHeaders;
     }
 
     /**
