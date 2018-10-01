@@ -28,12 +28,11 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
             new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
             new MetadataSearchKey("x-amz-meta-datetime1", MetadataSearchDatatype.datetime),
             new MetadataSearchKey("x-amz-meta-decimal1", MetadataSearchDatatype.decimal),
-            new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
-            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string),
-
-            new MetadataSearchKey("x-amz-meta-index-field", MetadataSearchDatatype.string),
             new MetadataSearchKey("x-amz-meta-field-valid", MetadataSearchDatatype.string),
-            new MetadataSearchKey("x-amz-meta-key-valid", MetadataSearchDatatype.string)
+            new MetadataSearchKey("x-amz-meta-index-field", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
+            new MetadataSearchKey("x-amz-meta-key-valid", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string)
     };
 
     @Override

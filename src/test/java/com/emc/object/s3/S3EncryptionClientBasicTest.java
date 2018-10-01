@@ -557,6 +557,21 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     public void testPreSignedPutNoContentType() {
     }
 
+    @Ignore
+    @Override
+    public void testCreateJsonObjectWithStream() {
+    }
+
+    @Ignore
+    @Override
+    public void testUpdateMetadata() {
+    }
+
+    @Ignore
+    @Override
+    public void testPreSignedUrlHeaderOverrides() throws Exception {
+    }
+
     private class ErrorStream extends FilterInputStream {
         private int callCount = 0;
 
