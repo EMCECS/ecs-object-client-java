@@ -38,6 +38,7 @@ public class ObjectRequest {
     private Method method;
     private String path;
     private String subresource;
+    private Map<String, List<Object>> customHeaders = new HashMap<String, List<Object>>();
     private Map<String, Object> properties = new HashMap<String, Object>();
 
     /**
@@ -81,7 +82,15 @@ public class ObjectRequest {
      * modify the result.
      */
     public Map<String, List<Object>> getHeaders() {
-        return new HashMap<String, List<Object>>();
+        return new HashMap<String, List<Object>>(customHeaders);
+    }
+
+    public void addCustomHeader(String key, Object value) {
+        RestUtil.putSingle(customHeaders, key, value);
+    }
+
+    public Map<String, List<Object>> getCustomHeaders() {
+        return customHeaders;
     }
 
     /**

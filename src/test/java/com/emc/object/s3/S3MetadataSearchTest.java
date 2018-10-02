@@ -28,12 +28,11 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
             new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
             new MetadataSearchKey("x-amz-meta-datetime1", MetadataSearchDatatype.datetime),
             new MetadataSearchKey("x-amz-meta-decimal1", MetadataSearchDatatype.decimal),
-            new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
-            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string),
-
-            new MetadataSearchKey("x-amz-meta-index-field", MetadataSearchDatatype.string),
             new MetadataSearchKey("x-amz-meta-field-valid", MetadataSearchDatatype.string),
-            new MetadataSearchKey("x-amz-meta-key-valid", MetadataSearchDatatype.string)
+            new MetadataSearchKey("x-amz-meta-index-field", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-integer1", MetadataSearchDatatype.integer),
+            new MetadataSearchKey("x-amz-meta-key-valid", MetadataSearchDatatype.string),
+            new MetadataSearchKey("x-amz-meta-string1", MetadataSearchDatatype.string)
     };
 
     @Override
@@ -157,7 +156,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
     }
 
-    @Test
+    @Test // TODO: blocked by STORAGE-21341
     public void testListObjectsWithEncoding() {
         String bucketName = getTestBucket();
 
@@ -177,7 +176,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
         String badField = "bad-field";
         client.putObject(new PutObjectRequest(getTestBucket(), badField, new byte[0]).withObjectMetadata(
-                new S3ObjectMetadata().addUserMetadata("index-field", "bad\u001dfield")
+                new S3ObjectMetadata().addEncodedUserMetadata("index-field", "bad\u001dfield")
                         .addUserMetadata("field-valid", "false")
                         .addUserMetadata("key-valid", "true")
         ));
@@ -185,7 +184,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         try {
             // list the bad key
             QueryObjectsRequest request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-field-valid='true'");
+                    .withQuery("x-amz-meta-field-valid=='true'");
             QueryObjectsResult result = client.queryObjects(request);
 
             Assert.assertEquals(2, result.getObjects().size());
@@ -194,7 +193,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
             // list a good field, with bad field results
             request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-field-valid='false'");
+                    .withQuery("x-amz-meta-field-valid=='false'");
             result = client.queryObjects(request);
 
             Assert.assertEquals(1, result.getObjects().size());
@@ -202,7 +201,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
             // list a bad field
             request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-index-field='bad\u001dfield'");
+                    .withQuery("x-amz-meta-index-field=='bad\u001dfield'");
             result = client.queryObjects(request);
 
             Assert.assertEquals(1, result.getObjects().size());
