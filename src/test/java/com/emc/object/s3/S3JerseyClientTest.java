@@ -268,7 +268,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         acl.setOwner(owner);
         acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
 
-        client.setBucketAcl(getTestBucket(), CannedAcl.BucketOwnerFullControl);
+        client.setBucketAcl(getTestBucket(), CannedAcl.Private);
 
         this.assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
     }
