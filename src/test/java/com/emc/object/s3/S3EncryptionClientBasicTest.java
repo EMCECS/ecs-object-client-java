@@ -294,11 +294,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
         S3Config _config = createS3Config();
         _config.setFaultInjectionRate(0.4f);
-        _config.setRetryLimit(4);
+        _config.setRetryLimit(6);
         S3Client _client = new S3EncryptionClient(_config, createEncryptionConfig());
 
         // make sure we hit at least one error
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             _client.putObject(getTestBucket(), key, data, null);
             S3ObjectMetadata metadata = rclient.getObjectMetadata(getTestBucket(), key);
             Assert.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
