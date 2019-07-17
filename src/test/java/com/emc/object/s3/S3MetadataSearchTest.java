@@ -128,7 +128,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObjectsResult result = client.queryObjects(request);
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
-        Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        Assert.assertEquals("null", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 
@@ -258,7 +258,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObjectsResult result = client.queryObjects(request);
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
-        Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        Assert.assertEquals("null", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 
