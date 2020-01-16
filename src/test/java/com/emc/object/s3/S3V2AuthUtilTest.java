@@ -39,7 +39,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class S3AuthUtilTest {
+public class S3V2AuthUtilTest {
     private static final String ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE";
     private static final String SECRET_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
 

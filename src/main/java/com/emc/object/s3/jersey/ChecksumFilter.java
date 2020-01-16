@@ -26,10 +26,7 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.S3Config;
-import com.emc.object.s3.S3Constants;
-import com.emc.object.s3.S3SignerV2;
-import com.emc.object.s3.VHostUtil;
+import com.emc.object.s3.*;
 import com.emc.object.util.*;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
@@ -44,7 +41,7 @@ import java.util.*;
 
 public class ChecksumFilter extends ClientFilter {
     private S3Config s3Config;
-    private S3SignerV2 signer;
+    private S3Signer signer;
 
     public ChecksumFilter(S3Config s3Config) {
         this.s3Config = s3Config;
@@ -151,7 +148,7 @@ public class ChecksumFilter extends ClientFilter {
 
         @Override
         public void streamClosed(CloseNotifyOutputStream stream) throws IOException {
-            // add Content-MD5 header (before anything is written to the final stream)
+            // add Content-MD5 (before anything is written to the final stream)
             request.getHeaders().putSingle(RestUtil.HEADER_CONTENT_MD5,
                     DatatypeConverter.printBase64Binary(checksum.getByteValue()));
 

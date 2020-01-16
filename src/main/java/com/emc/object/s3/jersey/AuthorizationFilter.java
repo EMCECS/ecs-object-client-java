@@ -26,10 +26,7 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.S3Config;
-import com.emc.object.s3.S3Constants;
-import com.emc.object.s3.S3SignerV2;
-import com.emc.object.s3.VHostUtil;
+import com.emc.object.s3.*;
 import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -40,7 +37,7 @@ import java.util.Map;
 
 public class AuthorizationFilter extends ClientFilter {
     private S3Config s3Config;
-    private S3SignerV2 signer;
+    private S3Signer signer;
 
     public AuthorizationFilter(S3Config s3Config) {
         this.s3Config = s3Config;
@@ -51,8 +48,10 @@ public class AuthorizationFilter extends ClientFilter {
     public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
 
         // tack on user-agent here
-        if (s3Config.getUserAgent() != null)
+        if (s3Config.getUserAgent() != null) {
             request.getHeaders().putSingle(RestUtil.HEADER_USER_AGENT, s3Config.getUserAgent());
+
+        }
 
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
@@ -67,6 +66,9 @@ public class AuthorizationFilter extends ClientFilter {
                     resource,
                     parameters,
                     request.getHeaders());
+
+            request.getEntity().hashCode();
+
         }
 
         return getNext().handle(request);
