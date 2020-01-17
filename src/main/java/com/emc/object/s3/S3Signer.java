@@ -61,7 +61,7 @@ public abstract class S3Signer {
             Mac mac = Mac.getInstance(algorithm);
             mac.init(new SecretKeySpec(var1.getBytes("UTF-8"), algorithm));
             String result = new String(Base64.encodeBase64(mac.doFinal(var2.getBytes("UTF-8"))));
-            log.debug("hmac of %d and %d:\n%d", var1, var2, result);
+            log.debug("hmac of {} and {}:\n{}", var1, var2, result);
             return result;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(algorithm + " algorithm is not supported on this platform", e);
@@ -72,13 +72,20 @@ public abstract class S3Signer {
         }
     }
 
+    protected String getCanonicalizedQueryString(PresignedUrlRequest request, Map<String, String> queryParams) {
+        // does the request have a sub-resource (i.e. ?acl)?
+        String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
+        // we must manually append the query string to ensure nothing is re-encoded
+        return "?" + subresource + RestUtil.generateRawQueryString(queryParams);
+    }
+
     public URL generatePresignedUrl(PresignedUrlRequest request) {
         String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
 
         URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
 
         // must construct both the final URL and the resource for signing
-        String resource = "/" + request.getBucketName() + RestUtil.getEncodedPath(uri);
+        String resource = "/" + request.getBucketName() + RestUtil.getEncodedPath(uri); // so here we have a uri encoding
 
         // insert namespace in host
         if (namespace != null) {
@@ -96,6 +103,8 @@ public abstract class S3Signer {
         uri = BucketFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
 
         // build parameters
+        // it doesn't look like this is what we need quite
+        // parameters need to be encoded in v4 -- let's see if they needed to be encoded in v2
         Map<String, String> queryParams = request.getQueryParams();
         queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
 
@@ -107,12 +116,8 @@ public abstract class S3Signer {
         // add signature to query string
         queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
 
-        // does the request have a sub-resource (i.e. ?acl)?
-        String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
-
         try {
-            // we must manually append the query string to ensure nothing is re-encoded
-            return new URL(uri + "?" + subresource + RestUtil.generateRawQueryString(queryParams));
+            return new URL(uri + getCanonicalizedQueryString(request, queryParams));
         } catch (MalformedURLException e) {
             throw new RuntimeException("generated URL is not well-formed");
         }

@@ -13,6 +13,11 @@ public class S3SignerV4 extends S3Signer{
     private static final String HEADER_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss Z";
     private static final String V4_DATE_FORMAT = "yyyyMMdd";
 
+    /*
+    * NOTES:
+    * it looks like
+     */
+
     public S3SignerV4(S3Config s3Config) {
         super(s3Config);
     }
@@ -74,6 +79,13 @@ public class S3SignerV4 extends S3Signer{
 
     protected String getDate() {
          return "date";
+    }
+
+    protected String getScope(Map<String, String> parameters, Map<String, List<Object>> headers) {
+       return getDate(parameters, headers) + "/"
+               + S3Constants.AWS_DEFAULT_REGION + "/"
+               + S3Constants.AWS_SERVICE_S3 + "/"
+               + S3Constants.AWS_V4_TERMINATOR;
     }
 
     // this is not complete and will require additional changes for v4
