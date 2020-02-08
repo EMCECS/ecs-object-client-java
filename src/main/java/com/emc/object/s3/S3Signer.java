@@ -72,6 +72,12 @@ public abstract class S3Signer {
         }
     }
 
+    // HERE: we need a SHA256 hashing function that is not HMAC like above (no key)
+    protected String hash256(Object toHash) {
+
+        return toHash.toString();
+    }
+
     protected String getCanonicalizedQueryString(PresignedUrlRequest request, Map<String, String> queryParams) {
         // does the request have a sub-resource (i.e. ?acl)?
         String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
