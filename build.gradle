@@ -29,7 +29,7 @@ description = 'EMC Object Client for Java - provides REST access to object data 
 ext.githubProjectName = 'ecs-object-client-java'
 
 buildscript {
-    ext.commonBuildVersion = '1.6'
+    ext.commonBuildVersion = '5.6.4'
     ext.commonBuildDir = "https://raw.githubusercontent.com/EMCECS/ecs-common-build/v$commonBuildVersion"
     apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
 }
