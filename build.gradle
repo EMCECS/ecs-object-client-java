@@ -38,14 +38,14 @@ ext.githubProjectName = 'ecs-object-client-java'
 allprojects {
     group 'com.emc.ecs'
 
-    if (!hasProperty('githubProjectName')) ext.githubProjectName = project.name
-    if (!hasProperty('scmUrl')) ext.scmUrl = "https://github.com/EMCECS/${githubProjectName}"
-    if (!hasProperty('scmConnection')) ext.scmConnection = "scm:git@github.com:EMCECS/${githubProjectName}.git"
-    if (!hasProperty('githubUrl')) ext.githubUrl = "https://github.com/EMCECS/${githubProjectName}.git"
+    ext.githubProjectName = project.name
+    ext.scmUrl = "https://github.com/EMCECS/${githubProjectName}"
+    ext.scmConnection = "scm:git@github.com:EMCECS/${githubProjectName}.git"
+    ext.githubUrl = "https://github.com/EMCECS/${githubProjectName}.git"
     ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
 
-    if (!hasProperty('licenseName')) ext.licenseName = 'The BSD 3-Clause License'
-    if (!hasProperty('licenseUrl')) ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
+    ext.licenseName = 'The BSD 3-Clause License'
+    ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
 
     apply plugin: 'idea'
     apply plugin: 'eclipse'
@@ -57,7 +57,6 @@ allprojects {
 
     defaultTasks 'distZip'
 
-    def isRootProject = (project == rootProject)
 
     configurations {
         jars.extendsFrom(signatures)
@@ -65,218 +64,201 @@ allprojects {
         tools // specifies tool artifacts for the root distribution (in the tools/ directory)
     }
 
-    gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(':uploadJars')) {
-            if (!rootProject.hasProperty('signingPass')) {
-                rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
-                rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
-            }
-            ext.'signing.keyId' = signingKeyId
-            ext.'signing.secretKeyRingFile' = signingSecretKeyRingFile
-            ext.'signing.password' = rootProject.ext.signingPass
-            uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
-        }
-        if (isRootProject) {
-            if (taskGraph.hasTask(':publishGhPages')) {
-                githubPages.credentials.password = new String(System.console().readPassword('\nGithub password: '))
-            }
-            if (taskGraph.hasTask(':release')) {
-                def gitPassword = new String(System.console().readPassword('\nOrigin password: '))
-                System.setProperty('org.ajoberstar.grgit.auth.username', gitUsername)
-                System.setProperty('org.ajoberstar.grgit.auth.password', gitPassword)
-            }
-        }
-    }
-
-    [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-
-    compileJava {
-        sourceCompatibility = 1.6
-        targetCompatibility = 1.6
-        if (project.hasProperty('java6Lib')) {
-            options.fork = true
-            options.bootClasspath = new File(java6Lib).listFiles(
-                    [accept:{d, f-> f ==~ /.*\.jar/ }] as FilenameFilter
-            ).join(File.pathSeparator)
-        }
-    }
-
     repositories {
         mavenCentral()
         mavenLocal()
     }
-
-    test {
-        jvmArgs '-XX:-UseSplitVerifier' // required for cobertura and Java 1.7
+}
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(':uploadJars')) {
+        if (!rootProject.hasProperty('signingPass')) {
+            rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
+            rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+        }
+        ext.'signing.keyId' = signingKeyId
+        ext.'signing.secretKeyRingFile' = signingSecretKeyRingFile
+        ext.'signing.password' = rootProject.ext.signingPass
+        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
+    }
+    if (taskGraph.hasTask(':publishGhPages')) {
+        githubPages.credentials.password = new String(System.console().readPassword('\nGithub password: '))
+    }
+    if (taskGraph.hasTask(':release')) {
+        def gitPassword = new String(System.console().readPassword('\nOrigin password: '))
+        System.setProperty('org.ajoberstar.grgit.auth.username', gitUsername)
+        System.setProperty('org.ajoberstar.grgit.auth.password', gitPassword)
     }
 
-    def projectPom = {
-        project {
-            name project.name
-            description project.description
-            url 'https://community.emc.com/community/products/vipr#developer'
+}
 
-            scm {
-                url scmUrl
-                connection scmConnection
-                developerConnection scmConnection
-            }
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-            licenses {
-                license {
-                    name licenseName
-                    url licenseUrl
-                    distribution 'repo'
-                }
-            }
+compileJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+    if (project.hasProperty('java8Lib')) {
+        options.fork = true
+        options.bootClasspath = new File(java6Lib).listFiles(
+                [accept: { d, f -> f ==~ /.*\.jar/ }] as FilenameFilter
+        ).join(File.pathSeparator)
+    }
+}
 
-            developers {
-                developer {
-                    id 'EMCECS'
-                    name 'EMC ViPR'
-                }
+
+def projectPom = {
+    project {
+        name project.name
+        description project.description
+        url 'https://community.emc.com/community/products/vipr#developer'
+
+        scm {
+            url scmUrl
+            connection scmConnection
+            developerConnection scmConnection
+        }
+
+        licenses {
+            license {
+                name licenseName
+                url licenseUrl
+                distribution 'repo'
             }
         }
-    }
 
-    task writePom {
-        ext.pomFile = file("$buildDir/pom.xml")
-        outputs.file pomFile
-        doLast {
-            pom(projectPom).writeTo pomFile
-        }
-    }
-
-    jar {
-        doFirst {
-            manifest {
-                attributes 'Implementation-Version': project.version,
-                        'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
-            }
-        }
-        into("META-INF/maven/$project.group/$project.name") {
-            from writePom
-        }
-    }
-
-    javadoc {
-        if (JavaVersion.current() >= JavaVersion.VERSION_1_8) options.addStringOption('Xdoclint:none', '-quiet')
-        else options.quiet()
-    }
-
-    task javadocJar(type: Jar) {
-        classifier = 'javadoc'
-        from "${docsDir}/javadoc"
-    }
-    javadocJar.dependsOn javadoc
-
-    task sourcesJar(type: Jar) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    artifacts {
-        jars jar
-        jars javadocJar
-        jars sourcesJar
-    }
-
-    distributions {
-        main {
-            contents {
-                from configurations.jars.artifacts.files
-                from configurations.export.artifacts.files
-                from { subprojects.configurations.export.artifacts.files }
-                into('tools') {
-                    from configurations.tools.artifacts.files
-                    from { subprojects.configurations.tools.artifacts.files }
-                }
-                from('.') {
-                    include '*.txt'
-                }
-                into('3rd-party-licenses') {
-                    from '3rd-party-licenses'
-                }
-                into('lib') {
-                    from configurations.runtime
-                }
+        developers {
+            developer {
+                id 'EMCECS'
+                name 'Dell EMC ECS'
             }
         }
     }
+}
 
-    signing {
-        required { gradle.taskGraph.hasTask(':uploadJars') }
-        sign configurations.jars
+task writePom {
+    ext.pomFile = file("$buildDir/pom.xml")
+    outputs.file pomFile
+    doLast {
+        pom(projectPom).writeTo pomFile
     }
+}
 
-    uploadJars {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { deployment -> signing.signPom(deployment) }
+jar {
+    doFirst {
+        manifest {
+            attributes 'Implementation-Version': project.version,
+                    'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
+        }
+    }
+    into("META-INF/maven/$project.group/$project.name") {
+        from writePom
+    }
+}
 
-                repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                    authentication(userName: sonatypeUsername, password: '')
-                }
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
 
-                pom projectPom
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from "${docsDir}/javadoc"
+}
+javadocJar.dependsOn javadoc
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    jars jar
+    jars javadocJar
+    jars sourcesJar
+}
+
+distributions {
+    main {
+        contents {
+            from configurations.jars.artifacts.files
+            from configurations.export.artifacts.files
+            from { subprojects.configurations.export.artifacts.files }
+            into('tools') {
+                from configurations.tools.artifacts.files
+                from { subprojects.configurations.tools.artifacts.files }
+            }
+            from('.') {
+                include '*.txt'
+            }
+            into('3rd-party-licenses') {
+                from '3rd-party-licenses'
+            }
+            into('lib') {
+                from configurations.runtime
             }
         }
     }
+}
+
+signing {
+    required { gradle.taskGraph.hasTask(':uploadJars') }
+    sign configurations.jars
+}
+
+uploadJars {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { deployment -> signing.signPom(deployment) }
+
+            repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
+                authentication(userName: sonatypeUsername, password: '')
+            }
+
+            pom projectPom
+        }
+    }
+}
 
 // "<<" was deprecated in gradle 5.X
-    task aggregateDocs {
-        doLast {
-            def docSubDir = isRootProject ? '' : "/${project.name}"
-            if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
-                copy {
-                    from docsDir
-                    into "${rootProject.aggregatedDocsDir}/latest${docSubDir}"
-                }
-            }
+task aggregateDocs {
+    doLast {
+        def docSubDir = ''
+        if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
             copy {
                 from docsDir
-                into "${rootProject.aggregatedDocsDir}/${project.version}${docSubDir}"
+                into "${rootProject.aggregatedDocsDir}/latest${docSubDir}"
             }
         }
-    }
-    aggregateDocs.dependsOn javadoc
-    aggregateDocs.dependsOn { subprojects.collect { it.tasks['aggregateDocs'] } }
-
-// we can't release or publish sub-projects
-    if (isRootProject) {
-        apply plugin: 'base'
-        // org.ajoberstar.github-pages => git-publish
-        apply plugin: 'org.ajoberstar.git-publish'
-        // org.ajoberstar.release-opinion => nebula.release
-        apply plugin: 'nebula.release'
-
-        //migrating from org.ajoberstar.github-pages to org.ajoberstar.release-opinion
-        //https://github.com/ajoberstar/gradle-git-publish#migrating-from-orgajoberstargithub-pages
-        gitPublish {
-            repoUri = githubUrl
-            branch = 'gh-pages'
-            contents {
-                from aggregatedDocsDir
-            }
-            preserve { include '**/*' }
+        copy {
+            from docsDir
+            into "${rootProject.aggregatedDocsDir}/${project.version}${docSubDir}"
         }
-        gitPublishPush.dependsOn aggregateDocs, test
-
-        tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
-    } else {
-        // "<<" was deprecated in gradle 5.X
-        task gitPublishPush {
-            doLast {}
-        }
-        task release {
-            doLast {}
-        }
-        tasks.release.dependsOn test
     }
+}
+aggregateDocs.dependsOn javadoc
+aggregateDocs.dependsOn { subprojects.collect { it.tasks['aggregateDocs'] } }
 
-    clean {
-        delete aggregatedDocsDir
+
+apply plugin: 'base'
+// org.ajoberstar.github-pages => git-publish
+apply plugin: 'org.ajoberstar.git-publish'
+// org.ajoberstar.release-opinion => nebula.release
+apply plugin: 'nebula.release'
+
+//migrating from org.ajoberstar.github-pages to org.ajoberstar.release-opinion
+//https://github.com/ajoberstar/gradle-git-publish#migrating-from-orgajoberstargithub-pages
+gitPublish {
+    repoUri = githubUrl
+    branch = 'gh-pages'
+    contents {
+        from aggregatedDocsDir
     }
+    preserve { include '**/*' }
+}
+gitPublishPush.dependsOn aggregateDocs, test
+
+tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
+
+clean {
+    delete aggregatedDocsDir
 }
 
 dependencies {
