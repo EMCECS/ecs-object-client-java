@@ -29,16 +29,15 @@ package com.emc.object.s3.jersey;
 import com.emc.object.Method;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.S3Constants;
+import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,23 +49,7 @@ public class GeoPinningFilter extends ClientFilter {
 
     private static final Logger log = LoggerFactory.getLogger(GeoPinningFilter.class);
 
-    /**
-     * If this is a bucket request, the bucket is the ID.
-     * If this is an object request, the key is the ID.
-     */
-    public static String getGeoId(String bucketName, String objectKey) {
-        if (objectKey == null || objectKey.length() == 0) return bucketName;
-
-        return objectKey;
-    }
-
-    public static int getGeoPinIndex(String guid, int vdcCount) {
-        // first 3 bytes of SHA1 hash modulus the number of VDCs
-        byte[] sha1 = DigestUtils.sha1(guid);
-        return ByteBuffer.wrap(new byte[]{0, sha1[0], sha1[1], sha1[2]}).getInt() % vdcCount;
-    }
-
-    private ObjectConfig<?> objectConfig;
+    private final ObjectConfig<?> objectConfig;
 
     public GeoPinningFilter(ObjectConfig<?> objectConfig) {
         this.objectConfig = objectConfig;
@@ -78,7 +61,7 @@ public class GeoPinningFilter extends ClientFilter {
         String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
         String objectKey = (String) request.getProperties().get(S3Constants.PROPERTY_OBJECT_KEY);
         if (bucketName != null) {
-            List<Vdc> healthyVdcs = new ArrayList<Vdc>();
+            List<Vdc> healthyVdcs = new ArrayList<>();
 
             for (Vdc vdc : objectConfig.getVdcs()) {
                 if (vdc.isHealthy()) healthyVdcs.add(vdc);
@@ -89,7 +72,7 @@ public class GeoPinningFilter extends ClientFilter {
                 healthyVdcs.addAll(objectConfig.getVdcs());
             }
 
-            int geoPinIndex = getGeoPinIndex(getGeoId(bucketName, objectKey), healthyVdcs.size());
+            int geoPinIndex = GeoPinningUtil.getGeoPinIndex(GeoPinningUtil.getGeoId(bucketName, objectKey), healthyVdcs.size());
 
             // if this is a read and failover for retries is requested, round-robin the VDCs for each retry
             if (objectConfig.isGeoReadRetryFailover() && Method.GET.name().equalsIgnoreCase(request.getMethod())) {
@@ -108,7 +91,7 @@ public class GeoPinningFilter extends ClientFilter {
         return getNext().handle(request);
     }
 
-    public ObjectConfig getObjectConfig() {
+    public ObjectConfig<?> getObjectConfig() {
         return objectConfig;
     }
 }
