@@ -26,8 +26,6 @@
  */
 package com.emc.object.util;
 
-import sun.nio.cs.ThreadLocalCoders;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -36,6 +34,8 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -93,7 +93,8 @@ public final class RestUtil {
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
+    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
+    private static final ThreadLocal<CharsetEncoder> utf8Encoder = ThreadLocal.withInitial(StandardCharsets.UTF_8::newEncoder);
 
     public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key) {
         return getFirstAsString(multiValueMap, key, false);
@@ -132,7 +133,7 @@ public final class RestUtil {
             }
             List<Object> values = multiValueMap.get(key);
             if (values == null) {
-                values = new ArrayList<Object>();
+                values = new ArrayList<>();
                 multiValueMap.put(key, values);
             } else if (single)
                 values.clear();
@@ -144,7 +145,7 @@ public final class RestUtil {
      * URL-decodes names and values
      */
     public static Map<String, String> getQueryParameterMap(String queryString) {
-        Map<String, String> parameters = new HashMap<String, String>();
+        Map<String, String> parameters = new HashMap<>();
         if (queryString != null && queryString.trim().length() > 0) {
             for (String pair : queryString.split("&")) {
                 int equals = pair.indexOf('=');
@@ -298,7 +299,7 @@ public final class RestUtil {
      */
     private static String defineString(URI u) {
 
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         if (u.getScheme() != null) {
             sb.append(u.getScheme());
             sb.append(':');
@@ -359,8 +360,7 @@ public final class RestUtil {
 
         ByteBuffer bb = null;
         try {
-            bb = ThreadLocalCoders.encoderFor("UTF-8")
-                    .encode(CharBuffer.wrap(s));
+            bb = utf8Encoder.get().encode(CharBuffer.wrap(s));
         } catch (CharacterCodingException x) {
             assert false;
         }
