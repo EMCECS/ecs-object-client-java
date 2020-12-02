@@ -26,14 +26,14 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.GeoPinningFilter;
+import com.emc.object.util.GeoPinningUtil;
 import org.apache.commons.cli.*;
 
 public class GeoPinCli {
     public static final String JAR_NAME = "geo-pin-cli-{version}.jar";
     public static final String VERSION = GeoPinCli.class.getPackage().getImplementationVersion();
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         CommandLine line = null;
         try {
             System.out.println(versionLine());
@@ -45,14 +45,14 @@ public class GeoPinCli {
             String keyName = line.getOptionValue('k');
             if (keyName == null) keyName = "";
 
-            int geoPinnedVdc = GeoPinningFilter.getGeoPinIndex(GeoPinningFilter.getGeoId(bucketName, keyName), vdcCount);
+            int geoPinnedVdc = GeoPinningUtil.getGeoPinIndex(GeoPinningUtil.getGeoId(bucketName, keyName), vdcCount);
 
             geoPinnedVdc++; // print 1-based number, not 0-based
 
-            System.out.println(String.format("VDC Count: %d", vdcCount));
-            System.out.println(String.format("Bucket Name: %s", bucketName));
-            System.out.println(String.format("Key Name: %s", keyName));
-            System.out.println(String.format("** Geo-Pinned VDC: %d", geoPinnedVdc));
+            System.out.printf("VDC Count: %d%n", vdcCount);
+            System.out.printf("Bucket Name: %s%n", bucketName);
+            System.out.printf("Key Name: %s%n", keyName);
+            System.out.printf("** Geo-Pinned VDC: %d%n", geoPinnedVdc);
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
             help();
