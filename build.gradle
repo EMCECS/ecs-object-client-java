@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2020, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -24,71 +24,59 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-//use new plugins method
 plugins {
-    id 'net.saliman.cobertura' version '3.0.0' apply false
-    id 'org.ajoberstar.git-publish' version '3.0.0' apply false
-    id 'nebula.release' version '15.2.0' apply false
+    id 'idea'
+    id 'eclipse'
+    id 'java'
+    id 'net.saliman.cobertura' version '3.0.0'
+    id 'distribution'
+    id 'signing'
+    id 'maven'
+    id 'org.ajoberstar.git-publish' version '3.0.0'
+    id 'nebula.release' version '15.2.0'
 }
 
+group 'com.emc.ecs'
 description = 'EMC Object Client for Java - provides REST access to object data on EMC platforms using the Atmos and S3 APIs.'
 
+// name of the github project repository
 ext.githubProjectName = 'ecs-object-client-java'
+// URL to github project
+ext.githubProjectUrl = "https://github.com/twincitiesguy/${githubProjectName}"
+// git remote scm address
+ext.githubScmUrl = "scm:git@github.com:twincitiesguy/${githubProjectName}.git"
+// git remote https address
+ext.githubRemoteUrl = "https://github.com/twincitiesguy/${githubProjectName}.git"
+// license info
+ext.licenseName = 'The BSD 3-Clause License'
+ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
+
+defaultTasks 'distZip'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation 'log4j:log4j:1.2.17',
+            'com.emc.ecs:smart-client:2.2.1',
+            'com.emc.ecs:object-transform:1.1.0',
+            'commons-codec:commons-codec:1.10',
+            'org.jdom:jdom2:2.0.6',
+            'org.slf4j:slf4j-api:1.7.5'
+    runtimeOnly 'org.slf4j:slf4j-log4j12:1.7.5'
+    testImplementation 'junit:junit:4.12'
+}
 
 allprojects {
-    group 'com.emc.ecs'
-
-    ext.githubProjectName = project.name
-    ext.scmUrl = "https://github.com/EMCECS/${githubProjectName}"
-    ext.scmConnection = "scm:git@github.com:EMCECS/${githubProjectName}.git"
-    ext.githubUrl = "https://github.com/EMCECS/${githubProjectName}.git"
-    ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
-
-    ext.licenseName = 'The BSD 3-Clause License'
-    ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
-
-    apply plugin: 'idea'
-    apply plugin: 'eclipse'
-    apply plugin: 'java'
-    apply plugin: 'net.saliman.cobertura'
-    apply plugin: 'distribution'
-    apply plugin: 'signing'
-    apply plugin: 'maven'
-
-    defaultTasks 'distZip'
-
-
     configurations {
-        jars.extendsFrom(signatures)
-        export // specifies additional artifacts in the root distribution
-        tools // specifies tool artifacts for the root distribution (in the tools/ directory)
-    }
-
-    repositories {
-        mavenCentral()
-        mavenLocal()
+        tools // specifies tool artifacts for the distribution (placed in the tools/ directory)
     }
 }
-gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(':uploadJars')) {
-        if (!rootProject.hasProperty('signingPass')) {
-            rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
-            rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
-        }
-        ext.'signing.keyId' = signingKeyId
-        ext.'signing.secretKeyRingFile' = signingSecretKeyRingFile
-        ext.'signing.password' = rootProject.ext.signingPass
-        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
-    }
-    if (taskGraph.hasTask(':publishGhPages')) {
-        githubPages.credentials.password = new String(System.console().readPassword('\nGithub password: '))
-    }
-    if (taskGraph.hasTask(':release')) {
-        def gitPassword = new String(System.console().readPassword('\nOrigin password: '))
-        System.setProperty('org.ajoberstar.grgit.auth.username', gitUsername)
-        System.setProperty('org.ajoberstar.grgit.auth.password', gitPassword)
-    }
 
+configurations {
+    jars.extendsFrom(signatures)
 }
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
@@ -96,25 +84,18 @@ gradle.taskGraph.whenReady { taskGraph ->
 compileJava {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
-    if (project.hasProperty('java8Lib')) {
-        options.fork = true
-        options.bootClasspath = new File(java6Lib).listFiles(
-                [accept: { d, f -> f ==~ /.*\.jar/ }] as FilenameFilter
-        ).join(File.pathSeparator)
-    }
 }
-
 
 def projectPom = {
     project {
         name project.name
         description project.description
-        url 'https://community.emc.com/community/products/vipr#developer'
+        url githubProjectUrl
 
         scm {
-            url scmUrl
-            connection scmConnection
-            developerConnection scmConnection
+            url githubProjectUrl
+            connection githubScmUrl
+            developerConnection githubScmUrl
         }
 
         licenses {
@@ -159,13 +140,13 @@ javadoc {
 }
 
 task javadocJar(type: Jar) {
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from "${docsDir}/javadoc"
 }
-javadocJar.dependsOn javadoc
+tasks.javadocJar.dependsOn javadoc
 
 task sourcesJar(type: Jar) {
-    classifier = 'sources'
+    archiveClassifier = 'sources'
     from sourceSets.main.allSource
 }
 
@@ -179,11 +160,8 @@ distributions {
     main {
         contents {
             from configurations.jars.artifacts.files
-            from configurations.export.artifacts.files
-            from { subprojects.configurations.export.artifacts.files }
             into('tools') {
-                from configurations.tools.artifacts.files
-                from { subprojects.configurations.tools.artifacts.files }
+                from { allprojects.configurations.tools.artifacts.files }
             }
             from('.') {
                 include '*.txt'
@@ -192,7 +170,7 @@ distributions {
                 from '3rd-party-licenses'
             }
             into('lib') {
-                from configurations.runtime
+                from configurations.runtimeClasspath
             }
         }
     }
@@ -209,7 +187,7 @@ uploadJars {
             beforeDeployment { deployment -> signing.signPom(deployment) }
 
             repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                authentication(userName: sonatypeUsername, password: '')
+                authentication(userName: '', password: '')
             }
 
             pom projectPom
@@ -217,43 +195,32 @@ uploadJars {
     }
 }
 
-// "<<" was deprecated in gradle 5.X
+ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
 task aggregateDocs {
     doLast {
-        def docSubDir = ''
         if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
             copy {
                 from docsDir
-                into "${rootProject.aggregatedDocsDir}/latest${docSubDir}"
+                into "${aggregatedDocsDir}/latest"
             }
         }
         copy {
             from docsDir
-            into "${rootProject.aggregatedDocsDir}/${project.version}${docSubDir}"
+            into "${aggregatedDocsDir}/${project.version}"
         }
     }
 }
-aggregateDocs.dependsOn javadoc
-aggregateDocs.dependsOn { subprojects.collect { it.tasks['aggregateDocs'] } }
+tasks.aggregateDocs.dependsOn javadoc
 
-
-apply plugin: 'base'
-// org.ajoberstar.github-pages => git-publish
-apply plugin: 'org.ajoberstar.git-publish'
-// org.ajoberstar.release-opinion => nebula.release
-apply plugin: 'nebula.release'
-
-//migrating from org.ajoberstar.github-pages to org.ajoberstar.release-opinion
-//https://github.com/ajoberstar/gradle-git-publish#migrating-from-orgajoberstargithub-pages
 gitPublish {
-    repoUri = githubUrl
+    repoUri = githubRemoteUrl
     branch = 'gh-pages'
     contents {
         from aggregatedDocsDir
     }
     preserve { include '**/*' }
 }
-gitPublishPush.dependsOn aggregateDocs, test
+tasks.gitPublishPush.dependsOn aggregateDocs
 
 tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
 
@@ -261,13 +228,32 @@ clean {
     delete aggregatedDocsDir
 }
 
-dependencies {
-    compile 'log4j:log4j:1.2.17',
-            'com.emc.ecs:smart-client:2.2.1',
-            'com.emc.ecs:object-transform:1.1.0',
-            'commons-codec:commons-codec:1.10',
-            'org.jdom:jdom2:2.0.6',
-            'org.slf4j:slf4j-api:1.7.5'
-    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
-    testCompile 'junit:junit:4.12'
+// allow typing in credentials
+// note: this only works when run without the Gradle daemon (--no-daemon)
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(':uploadJars')) {
+        if (!rootProject.hasProperty('signingSecretKeyRingFile'))
+            rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
+        if (!rootProject.hasProperty('signingKeyId'))
+            rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
+        if (!rootProject.hasProperty('signingPass'))
+            rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
+        if (!rootProject.hasProperty('sonatypeUser'))
+            rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
+        if (!rootProject.hasProperty('sonatypePass'))
+            rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+        ext.'signing.keyId' = rootProject.ext.signingKeyId
+        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
+        ext.'signing.password' = rootProject.ext.signingPass
+        uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
+        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
+    }
+    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
+        if (!rootProject.hasProperty('gitUsername'))
+            rootProject.ext.gitUsername = new String(System.console().readPassword('\nGit username: '))
+        if (!rootProject.hasProperty('gitPassword'))
+            rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
+        System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
+        System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
+    }
 }
