@@ -31,6 +31,7 @@ import com.emc.object.s3.jersey.GeoPinningFilter;
 import com.emc.object.s3.jersey.GeoPinningRule;
 import com.emc.object.s3.jersey.RetryFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.HostStats;
 import com.emc.rest.smart.HostVetoRule;
@@ -94,12 +95,12 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testGuidExtraction() throws Exception {
-        Assert.assertEquals("my/object/key", GeoPinningFilter.getGeoId(getTestBucket(), "my/object/key"));
-        Assert.assertEquals("/my/object/key", GeoPinningFilter.getGeoId(getTestBucket(), "/my/object/key"));
+        Assert.assertEquals("my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "my/object/key"));
+        Assert.assertEquals("/my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "/my/object/key"));
 
         String bucketName = getTestBucket();
-        Assert.assertEquals(bucketName, GeoPinningFilter.getGeoId(bucketName, null));
-        Assert.assertEquals(bucketName, GeoPinningFilter.getGeoId(bucketName, ""));
+        Assert.assertEquals(bucketName, GeoPinningUtil.getGeoId(bucketName, null));
+        Assert.assertEquals(bucketName, GeoPinningUtil.getGeoId(bucketName, ""));
     }
 
     @Test
@@ -107,15 +108,15 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         String guid = "Hello GeoPinning";
         int hashNum = 0xa3fce8;
 
-        Assert.assertEquals(0, GeoPinningFilter.getGeoPinIndex(guid, 1));
-        Assert.assertEquals(hashNum % 2, GeoPinningFilter.getGeoPinIndex(guid, 2));
-        Assert.assertEquals(hashNum % 3, GeoPinningFilter.getGeoPinIndex(guid, 3));
-        Assert.assertEquals(hashNum % 4, GeoPinningFilter.getGeoPinIndex(guid, 4));
-        Assert.assertEquals(hashNum % 5, GeoPinningFilter.getGeoPinIndex(guid, 5));
-        Assert.assertEquals(hashNum % 6, GeoPinningFilter.getGeoPinIndex(guid, 6));
-        Assert.assertEquals(hashNum % 7, GeoPinningFilter.getGeoPinIndex(guid, 7));
-        Assert.assertEquals(hashNum % 8, GeoPinningFilter.getGeoPinIndex(guid, 8));
-        Assert.assertEquals(hashNum % 9, GeoPinningFilter.getGeoPinIndex(guid, 9));
+        Assert.assertEquals(0, GeoPinningUtil.getGeoPinIndex(guid, 1));
+        Assert.assertEquals(hashNum % 2, GeoPinningUtil.getGeoPinIndex(guid, 2));
+        Assert.assertEquals(hashNum % 3, GeoPinningUtil.getGeoPinIndex(guid, 3));
+        Assert.assertEquals(hashNum % 4, GeoPinningUtil.getGeoPinIndex(guid, 4));
+        Assert.assertEquals(hashNum % 5, GeoPinningUtil.getGeoPinIndex(guid, 5));
+        Assert.assertEquals(hashNum % 6, GeoPinningUtil.getGeoPinIndex(guid, 6));
+        Assert.assertEquals(hashNum % 7, GeoPinningUtil.getGeoPinIndex(guid, 7));
+        Assert.assertEquals(hashNum % 8, GeoPinningUtil.getGeoPinIndex(guid, 8));
+        Assert.assertEquals(hashNum % 9, GeoPinningUtil.getGeoPinIndex(guid, 9));
     }
 
     @Test
