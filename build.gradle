@@ -250,7 +250,7 @@ gradle.taskGraph.whenReady { taskGraph ->
     }
     if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
         if (!rootProject.hasProperty('gitUsername'))
-            rootProject.ext.gitUsername = new String(System.console().readPassword('\nGit username: '))
+            rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
         if (!rootProject.hasProperty('gitPassword'))
             rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
         System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
