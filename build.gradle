@@ -42,11 +42,11 @@ description = 'EMC Object Client for Java - provides REST access to object data 
 // name of the github project repository
 ext.githubProjectName = 'ecs-object-client-java'
 // URL to github project
-ext.githubProjectUrl = "https://github.com/twincitiesguy/${githubProjectName}"
+ext.githubProjectUrl = "https://github.com/EMCECS/${githubProjectName}"
 // git remote scm address
-ext.githubScmUrl = "scm:git@github.com:twincitiesguy/${githubProjectName}.git"
+ext.githubScmUrl = "scm:git@github.com:EMCECS/${githubProjectName}.git"
 // git remote https address
-ext.githubRemoteUrl = "https://github.com/twincitiesguy/${githubProjectName}.git"
+ext.githubRemoteUrl = "https://github.com/EMCECS/${githubProjectName}.git"
 // license info
 ext.licenseName = 'The BSD 3-Clause License'
 ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
