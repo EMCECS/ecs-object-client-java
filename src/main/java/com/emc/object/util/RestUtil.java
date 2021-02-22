@@ -179,6 +179,7 @@ public final class RestUtil {
             while (paramI.hasNext()) {
                 String name = paramI.next();
                 query.append(urlEncode(name));
+                // this may be an issue in v4... amazon wants an empty string if there is no value
                 if (parameterMap.get(name) != null) {
                     query.append("=").append(urlEncode(parameterMap.get(name)));
                 }

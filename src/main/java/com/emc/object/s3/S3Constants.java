@@ -32,6 +32,11 @@ public final class S3Constants {
     public static final String AMZ_PREFIX = "x-amz-";
     public static final String AMZ_META_PREFIX = AMZ_PREFIX + "meta-";
 
+    public static final String AWS_V4 = "AWS4";
+    public static final String AWS_SERVICE_S3 = "s3";
+    public static final String AWS_DEFAULT_REGION = "us-east-1";
+    public static final String AWS_V4_TERMINATOR = "aws4_request";
+    public static final String AMZ_CONTENT_SHA256 = "x-amz-content-sha256";
     public static final String AMZ_ACL = AMZ_PREFIX + "acl";
     public static final String AMZ_COPY_SOURCE = AMZ_PREFIX + "copy-source";
     public static final String AMZ_DATE = AMZ_PREFIX + "date";
@@ -91,6 +96,9 @@ public final class S3Constants {
     public static final String ERROR_INTERNAL = "InternalError";
     public static final String ERROR_INVALID_ARGUMENT = "InvalidArgument";
     public static final String ERROR_METHOD_NOT_ALLOWED = "MethodNotAllowed";
+
+    public static final String HMAC_SHA_1 = "HmacSHA1";
+    public static final String HMAC_SHA_256 = "HmacSHA256";
 
     private S3Constants() {
     }
