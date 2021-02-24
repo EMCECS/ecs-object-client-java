@@ -123,7 +123,7 @@ import java.util.Map;
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
-    public static final int DEFAULT_READ_TIMEOUT = 60000; // 60 seconds
+    public static final int DEFAULT_READ_TIMEOUT = 0; // default is infinity
 
     protected S3Config s3Config;
     protected Client client;
@@ -198,6 +198,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CHUNKED ENCODING (match ECS buffer size)
             smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
+
+            // S.C. - CONNECT_TIMEOUT
+            smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, s3Config.getConnectTimeout());
+
+            // S.C. - READ_TIMEOUT
+            smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, s3Config.getReadTimeout());
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
