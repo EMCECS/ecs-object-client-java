@@ -11,7 +11,7 @@
 		<level value="INFO" />
 	</logger>
     <logger name="org.apache.http.headers">
-        <level value="INFO" />
+        <level value="DEBUG" />
     </logger>
 
 	<root>
