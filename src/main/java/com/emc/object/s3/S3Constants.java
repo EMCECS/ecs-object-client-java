@@ -36,7 +36,7 @@ public final class S3Constants {
     public static final String AWS_SERVICE_S3 = "s3";
     public static final String AWS_DEFAULT_REGION = "us-east-1";
     public static final String AWS_V4_TERMINATOR = "aws4_request";
-    public static final String AMZ_CONTENT_SHA256 = "x-amz-content-sha256";
+    public final static String AWS_HMAC_SHA256_ALGORITHM = "AWS4-HMAC-SHA256";
     public static final String AMZ_ACL = AMZ_PREFIX + "acl";
     public static final String AMZ_COPY_SOURCE = AMZ_PREFIX + "copy-source";
     public static final String AMZ_DATE = AMZ_PREFIX + "date";
@@ -99,6 +99,7 @@ public final class S3Constants {
 
     public static final String HMAC_SHA_1 = "HmacSHA1";
     public static final String HMAC_SHA_256 = "HmacSHA256";
+    public static final String SHA256 = "SHA-256";
 
     private S3Constants() {
     }

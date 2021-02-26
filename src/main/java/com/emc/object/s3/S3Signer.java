@@ -4,19 +4,19 @@ import com.emc.object.s3.jersey.BucketFilter;
 import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
-import com.sun.xml.bind.v2.runtime.reflect.Lister;
-import org.apache.commons.codec.binary.Base64;
+import com.sun.jersey.api.client.ClientRequest;
+import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -46,36 +46,37 @@ public abstract class S3Signer {
         }
     }
 
-    public abstract void sign(String method, String resource, Map<String, String> parameters,
+    public abstract void sign(ClientRequest request, String resource, Map<String, String> parameters,
                               Map<String, List<Object>> headers);
 
-    protected abstract String getSignature(String stringToSign);
+    protected abstract String getSignature(String stringToSign, byte[] signingKey);
 
     protected abstract String getDate(Map<String, String> parameters, Map<String, List<Object>> headers);
 
     // generalized utility function to get hmac values
-    // NOTE: I do not know if the constant value "HmacSHA256" is actually valid for this (though I suspect it is)
-    // be sure to confirm that "HmacSHA256" works before continuing too long
-    protected String hmac(String algorithm, String var1, String var2) {
+    protected byte[] hmac(String algorithm, byte[] var1, String var2) {
         try {
             Mac mac = Mac.getInstance(algorithm);
-            mac.init(new SecretKeySpec(var1.getBytes("UTF-8"), algorithm));
-            String result = new String(Base64.encodeBase64(mac.doFinal(var2.getBytes("UTF-8"))));
+            mac.init(new SecretKeySpec(var1, algorithm));
+            byte[] result = mac.doFinal(var2.getBytes(StandardCharsets.UTF_8));
             log.debug("hmac of {} and {}:\n{}", var1, var2, result);
             return result;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(algorithm + " algorithm is not supported on this platform", e);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("UTF-8 encoding is not supported on this platform", e);
         } catch (InvalidKeyException e) {
             throw new RuntimeException("The secret key \"" + s3Config.getSecretKey() + "\" is not valid", e);
         }
     }
 
-    // HERE: we need a SHA256 hashing function that is not HMAC like above (no key)
-    protected String hash256(Object toHash) {
-
-        return toHash.toString();
+    protected byte[] hash256(String stringToHash) {
+        MessageDigest digest = null;
+        try {
+            digest = MessageDigest.getInstance(S3Constants.SHA256);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        byte[] hash = digest.digest(stringToHash.getBytes(StandardCharsets.UTF_8));
+        return hash;
     }
 
     protected String getCanonicalizedQueryString(PresignedUrlRequest request, Map<String, String> queryParams) {
@@ -117,7 +118,7 @@ public abstract class S3Signer {
         // sign the request
         String stringToSign = getStringToSign(request.getMethod().toString(), resource, queryParams,
                 request.getHeaders());
-        String signature = getSignature(stringToSign);
+        String signature = getSignature(stringToSign, null);
 
         // add signature to query string
         queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
@@ -199,10 +200,10 @@ public abstract class S3Signer {
     }
 
     /* *
-     * encode String to hex - required for v4 auth
+     * encode byte string to hex - required for v4 auth
      * */
-    protected String hexEncode(String arg) {
-        return String.format("%040x", new BigInteger(1, arg.getBytes()));
+    protected String hexEncode(byte[] arg) {
+        return Hex.encodeHexString(arg);
     }
 
     protected String trimAndJoin(List<Object> values, String delimiter) {

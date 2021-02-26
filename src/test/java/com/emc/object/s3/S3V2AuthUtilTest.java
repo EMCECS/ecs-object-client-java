@@ -161,13 +161,13 @@ public class S3V2AuthUtilTest {
         S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
-        Assert.assertEquals(SIGNATURE_1, signer.getSignature(SIGN_STRING_1));
+        Assert.assertEquals(SIGNATURE_1, signer.getSignature(SIGN_STRING_1, null));
 
-        Assert.assertEquals(SIGNATURE_2, signer.getSignature(SIGN_STRING_2));
+        Assert.assertEquals(SIGNATURE_2, signer.getSignature(SIGN_STRING_2, null));
 
-        Assert.assertEquals(SIGNATURE_3, signer.getSignature(SIGN_STRING_3));
+        Assert.assertEquals(SIGNATURE_3, signer.getSignature(SIGN_STRING_3, null));
 
-        Assert.assertEquals(SIGNATURE_4, signer.getSignature(SIGN_STRING_4));
+        Assert.assertEquals(SIGNATURE_4, signer.getSignature(SIGN_STRING_4, null));
     }
 
     @Test

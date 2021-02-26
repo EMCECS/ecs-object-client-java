@@ -51,7 +51,6 @@ public class AuthorizationFilter extends ClientFilter {
         if (s3Config.getUserAgent() != null) {
             request.getHeaders().putSingle(RestUtil.HEADER_USER_AGENT, s3Config.getUserAgent());
         }
-
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
             Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
@@ -61,13 +60,10 @@ public class AuthorizationFilter extends ClientFilter {
                     (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
                     RestUtil.getEncodedPath(request.getURI()));
 
-            signer.sign(request.getMethod(),
+            signer.sign(request,
                     resource,
                     parameters,
                     request.getHeaders());
-
-            request.getEntity().hashCode();
-
         }
 
         return getNext().handle(request);

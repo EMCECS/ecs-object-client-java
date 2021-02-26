@@ -58,6 +58,7 @@ public final class RestUtil {
     public static final String HEADER_LAST_MODIFIED = "Last-Modified";
     public static final String HEADER_RANGE = "Range";
     public static final String HEADER_USER_AGENT = "User-Agent";
+    public static final String HEADER_HOST = "Host";
 
     public static final String EMC_PREFIX = "x-emc-";
 

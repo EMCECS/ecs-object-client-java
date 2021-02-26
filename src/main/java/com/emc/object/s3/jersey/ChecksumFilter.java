@@ -161,7 +161,7 @@ public class ChecksumFilter extends ClientFilter {
                         (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
                         RestUtil.getEncodedPath(request.getURI()));
 
-                signer.sign(request.getMethod(),
+                signer.sign(request,
                         resource,
                         parameters,
                         request.getHeaders());

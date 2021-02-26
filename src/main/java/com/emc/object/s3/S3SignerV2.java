@@ -26,22 +26,11 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.BucketFilter;
-import com.emc.object.s3.jersey.NamespaceFilter;
-import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
+import com.sun.jersey.api.client.ClientRequest;
 import org.apache.commons.codec.binary.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public final class S3SignerV2 extends S3Signer {
@@ -50,14 +39,24 @@ public final class S3SignerV2 extends S3Signer {
         super(s3Config);
     }
 
-    public void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
-        String stringToSign = getStringToSign(method, resource, parameters, headers);
-        String signature = getSignature(stringToSign);
+    public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers);
+        String signature = getSignature(stringToSign, null);
         RestUtil.putSingle(headers, "Authorization", "AWS " + s3Config.getIdentity() + ":" + signature);
     }
 
-    protected String getSignature(String stringToSign) {
-        return hmac(S3Constants.HMAC_SHA_1, s3Config.getSecretKey(), stringToSign);
+    // this method is for testing
+    public void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        String stringToSign = getStringToSign(method, resource, parameters, headers);
+        String signature = getSignature(stringToSign, null);
+        RestUtil.putSingle(headers, "Authorization", "AWS " + s3Config.getIdentity() + ":" + signature);
+    }
+
+    protected String getSignature(String stringToSign, byte[] signingKey) {
+        return new String(Base64.encodeBase64(
+                hmac(S3Constants.HMAC_SHA_1,
+                        s3Config.getSecretKey().getBytes(StandardCharsets.UTF_8),
+                        stringToSign)));
     }
 
     protected String getDate(Map<String, String> parameters, Map<String, List<Object>> headers) {
@@ -75,6 +74,6 @@ public final class S3SignerV2 extends S3Signer {
         // if expires parameter is set, use that instead
         if (parameters.containsKey(S3Constants.PARAM_EXPIRES))
             date = parameters.get(S3Constants.PARAM_EXPIRES);
-            return date;
+        return date;
     }
 }
