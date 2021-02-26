@@ -29,7 +29,9 @@ package com.emc.object.s3;
 import com.emc.object.Protocol;
 import com.emc.object.util.ConfigUri;
 import com.emc.object.util.RestUtilTest;
+import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import com.sun.jersey.api.client.config.ClientConfig;
 import org.junit.Test;
 
 import java.net.URI;
@@ -41,6 +43,13 @@ import static org.junit.Assert.assertTrue;
 
 public class ConfigUriS3Test {
     private ConfigUri<S3Config> s3Uri = new ConfigUri<S3Config>(S3Config.class);
+
+    public static final String PROPERTY_POLL_INTERVAL = "com.emc.object.pollInterval";
+    public static final String PROPERTY_DISABLE_HEALTH_CHECK = "com.emc.object.disableHealthCheck";
+    public static final String PROPERTY_DISABLE_HOST_UPDATE = "com.emc.object.disableHostUpdate";
+    public static final String PROPERTY_PROXY_URI = "com.emc.object.proxyUri";
+    public static final String PROPERTY_PROXY_USER = "com.emc.object.proxyUser";
+    public static final String PROPERTY_PROXY_PASS = "com.emc.object.proxyPass";
 
     @Test
     public void testToUriConfig() throws Exception {
@@ -112,6 +121,10 @@ public class ConfigUriS3Test {
         s3Config.setProperty("prop2", "strung");
         runTests(s3Config);
 
+        s3Config.setReadTimeout(10000);
+        s3Config.setConnectTimeout(10000);
+        runTests(s3Config);
+
         s3Config = new S3Config(Protocol.HTTPS, new Vdc("jink", "jank", "junk"), new Vdc("whatever"), new Vdc("dummy"));
         s3Config.setPort(S3Config.DEFAULT_HTTPS_PORT);
         runTests(s3Config);
@@ -126,6 +139,30 @@ public class ConfigUriS3Test {
         s3Config.setProperty("prop1", "value");
         s3Config.setProperty("prop2", "string" + new String(RestUtilTest.OHM_UTF8, "UTF-8"));
         runTests(s3Config);
+    }
+
+    @Test
+    public void testToSmartConfig() throws Exception {
+        String dummyString = "dummy";
+        Vdc vdc = new Vdc(dummyString);
+        int dummyInt = 10;
+        S3Config s3Config = new S3Config(Protocol.HTTPS, vdc);
+        s3Config.setSmartClient(true);
+        s3Config.setProperty(PROPERTY_DISABLE_HEALTH_CHECK, true);
+        s3Config.setProperty(PROPERTY_DISABLE_HOST_UPDATE, true);
+        s3Config.setProperty(PROPERTY_POLL_INTERVAL, dummyInt);
+        s3Config.setProperty(PROPERTY_PROXY_URI, dummyString);
+        s3Config.setProperty(PROPERTY_PROXY_USER, dummyString);
+        s3Config.setProperty(PROPERTY_PROXY_PASS, dummyString);
+        s3Config.setConnectTimeout(dummyInt);
+        SmartConfig smartConfig = s3Config.toSmartConfig();
+        assertTrue(!smartConfig.isHealthCheckEnabled());
+        assertTrue(!smartConfig.isHostUpdateEnabled());
+        assertEquals(smartConfig.getProperty(PROPERTY_POLL_INTERVAL), dummyInt);
+        assertEquals(smartConfig.getProperty(PROPERTY_PROXY_URI), dummyString);
+        assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
+        assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
+        assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT), dummyInt);
     }
 
     private void runTests(S3Config s3Config) throws Exception {
@@ -159,6 +196,8 @@ public class ConfigUriS3Test {
         assertEquals(s3Config.isSmartClient(), s3Config2.isSmartClient());
         assertEquals(s3Config.isUseVHost(), s3Config2.isUseVHost());
         assertEquals(s3Config.isSignMetadataSearch(), s3Config2.isSignMetadataSearch());
+        assertEquals(s3Config.getReadTimeout(), s3Config2.getReadTimeout());
+        assertEquals(s3Config.getConnectTimeout(), s3Config2.getConnectTimeout());
         for (Entry<String, Object> entry : s3Config.getProperties().entrySet()) {
             if (entry.getValue() instanceof String) {
                 assertEquals(entry.getValue(), s3Config2.getProperty(entry.getKey()));

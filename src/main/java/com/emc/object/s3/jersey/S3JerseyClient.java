@@ -191,9 +191,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - CHUNKED ENCODING (match ECS buffer size)
             smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
-            // S.C. - CONNECT_TIMEOUT
-            smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, s3Config.getConnectTimeout());
-
             // S.C. - READ_TIMEOUT
             smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, s3Config.getReadTimeout());
 

@@ -32,6 +32,7 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import com.sun.jersey.api.client.config.ClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -205,6 +206,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         for (String prop : properties.keySet()) {
             smartConfig.withProperty(prop, properties.get(prop));
         }
+
+        // CONNECT_TIMEOUT
+        smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, connectTimeout);
 
         return smartConfig;
     }
