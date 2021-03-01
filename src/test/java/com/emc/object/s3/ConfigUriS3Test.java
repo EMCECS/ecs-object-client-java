@@ -155,6 +155,7 @@ public class ConfigUriS3Test {
         s3Config.setProperty(PROPERTY_PROXY_USER, dummyString);
         s3Config.setProperty(PROPERTY_PROXY_PASS, dummyString);
         s3Config.setConnectTimeout(dummyInt);
+        s3Config.setReadTimeout(dummyInt);
         SmartConfig smartConfig = s3Config.toSmartConfig();
         assertTrue(!smartConfig.isHealthCheckEnabled());
         assertTrue(!smartConfig.isHostUpdateEnabled());
@@ -163,6 +164,7 @@ public class ConfigUriS3Test {
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
         assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT), dummyInt);
+        assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_READ_TIMEOUT), dummyInt);
     }
 
     private void runTests(S3Config s3Config) throws Exception {

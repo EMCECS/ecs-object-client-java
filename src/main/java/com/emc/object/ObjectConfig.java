@@ -210,6 +210,10 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         // CONNECT_TIMEOUT
         smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, connectTimeout);
 
+        // READ_TIMEOUT
+        smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, readTimeout);
+
+
         return smartConfig;
     }
 
