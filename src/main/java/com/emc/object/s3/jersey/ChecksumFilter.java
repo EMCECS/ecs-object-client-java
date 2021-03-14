@@ -45,7 +45,10 @@ public class ChecksumFilter extends ClientFilter {
 
     public ChecksumFilter(S3Config s3Config) {
         this.s3Config = s3Config;
-        this.signer = new S3SignerV2(s3Config);
+        if(!s3Config.isUseV2Signer())
+            this.signer = new S3SignerV4(s3Config);
+        else
+            this.signer = new S3SignerV2(s3Config);
     }
 
     @Override

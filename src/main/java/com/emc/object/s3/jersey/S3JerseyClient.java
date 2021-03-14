@@ -128,7 +128,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Config s3Config;
     protected Client client;
     protected LoadBalancer loadBalancer;
-    protected S3SignerV2 signer;
+    protected S3Signer signer;
 
     public S3JerseyClient(S3Config s3Config) {
         this(s3Config, null);
@@ -143,7 +143,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
-        this.signer = new S3SignerV2(s3Config);
+        if(!s3Config.isUseV2Signer())
+            this.signer = new S3SignerV4(s3Config);
+        else
+            this.signer = new S3SignerV2(s3Config);
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();

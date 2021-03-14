@@ -82,6 +82,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
     protected float faultInjectionRate = 0.0f;
     protected boolean signMetadataSearch = true;
+    protected boolean useV2Signer = false;
 
     /**
      * Empty constructor for internal use only!
@@ -127,6 +128,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.retryBufferSize = other.retryBufferSize;
         this.faultInjectionRate = other.faultInjectionRate;
         this.signMetadataSearch = other.signMetadataSearch;
+        this.useV2Signer = other.useV2Signer;
     }
 
     @Override
@@ -256,6 +258,19 @@ public class S3Config extends ObjectConfig<S3Config> {
      */
     public void setSignMetadataSearch(boolean signMetadataSearch) {
         this.signMetadataSearch = signMetadataSearch;
+    }
+
+    @ConfigUriProperty
+    public boolean isUseV2Signer() {
+        return useV2Signer;
+    }
+
+    /**
+     * Sets the AWS signature version for authentication requests, default is v4,
+     * set this to true to use v2.
+     */
+    public void setUseV2Signer(boolean useV2Signer) {
+        this.useV2Signer = useV2Signer;
     }
 
     public S3Config withUseVHost(boolean useVHost) {
