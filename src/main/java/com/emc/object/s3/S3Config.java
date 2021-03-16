@@ -330,6 +330,7 @@ public class S3Config extends ObjectConfig<S3Config> {
                 ", retryBufferSize=" + retryBufferSize +
                 ", faultInjectionRate=" + faultInjectionRate +
                 ", signMetadataSearch=" + signMetadataSearch +
+                ", useV2Signer=" + useV2Signer +
                 "} " + super.toString();
     }
 }

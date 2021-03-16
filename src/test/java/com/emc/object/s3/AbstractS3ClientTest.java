@@ -103,6 +103,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
         String proxyUri = props.getProperty(TestProperties.PROXY_URI);
+        boolean useV2Signer = Boolean.parseBoolean(props.getProperty(TestProperties.USE_V2_SIGNER));
 
         S3Config s3Config;
         if (enableVhost) {
@@ -113,6 +114,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         } else {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
+        s3Config.setUseV2Signer(useV2Signer);
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
