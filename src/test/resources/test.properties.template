@@ -18,5 +18,5 @@ s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 ## Optional -- HTTP proxy.  Useful for debugging.
 #http.proxyUri=http://localhost:8888
 
-## Whether to use v2 signer, by default it's false
-useV2Signer=false
+## Whether to use v2 signer, uncomment to use v2 signer instead of v4 signer
+#useV2Signer=false

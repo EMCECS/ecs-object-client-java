@@ -34,6 +34,7 @@ public final class S3Constants {
 
     public static final String AWS_V4 = "AWS4";
     public static final String AWS_SERVICE_S3 = "s3";
+    public static final String AWS_SERVICE_IAM = "iam";
     public static final String AWS_DEFAULT_REGION = "us-east-1";
     public static final String AWS_V4_TERMINATOR = "aws4_request";
     public final static String AWS_HMAC_SHA256_ALGORITHM = "AWS4-HMAC-SHA256";

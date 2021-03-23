@@ -23,6 +23,7 @@ public class S3SignerV4 extends S3Signer{
         // # Preparation, add x-amz-date and host headers
         String date = getDate(parameters, headers);
         String shortDate = getShortDate(date);
+        String serviceType = getServiceType();
         request.getHeaders().add(S3Constants.AMZ_DATE, date);
         request.getHeaders().add(RestUtil.HEADER_HOST, s3Config.getHost());
         RestUtil.putSingle(headers,S3Constants.AMZ_DATE, date);
@@ -42,22 +43,22 @@ public class S3SignerV4 extends S3Signer{
                 signedHeaders.append(";");
             signedHeaders.append(name);
         }
-        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date) + hashedRequest;
+        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType) + hashedRequest;
         log.debug("StringToSign: {}", stringToSign);
 
         // #3 Calculate the signature for AWS Signature Version 4
-        byte[] key = getSigningKey(shortDate);
+        byte[] key = getSigningKey(shortDate, serviceType);
         String signature = getSignature(stringToSign, key);
         log.debug("Signature: {}", signature);
 
         // #4 Adding signing information to the authorization header
         RestUtil.putSingle(headers,"Authorization",S3Constants.AWS_HMAC_SHA256_ALGORITHM +
                 " Credential=" + s3Config.getIdentity() + "/" + shortDate +
-                "/" + S3Constants.AWS_DEFAULT_REGION + "/" + S3Constants.AWS_SERVICE_S3 + "/" + S3Constants.AWS_V4_TERMINATOR +
+                "/" + S3Constants.AWS_DEFAULT_REGION + "/" + serviceType + "/" + S3Constants.AWS_V4_TERMINATOR +
                 ", SignedHeaders=" + signedHeaders.toString() + ", " + S3Constants.PARAM_SIGNATURE + "= " + signature);
     }
 
-    public String getCanonicalRequest(ClientRequest request, Map<String, String> parameters, Map<String, List<Object>> headers)
+    protected String getCanonicalRequest(ClientRequest request, Map<String, String> parameters, Map<String, List<Object>> headers)
     {
         /*
         CanonicalRequest =
@@ -117,8 +118,8 @@ public class S3SignerV4 extends S3Signer{
         return canonicalRequest.toString();
     }
 
-    String getStringToSign(String method, String resource, Map<String, String> parameters,
-                           Map<String, List<Object>> headers, String date) {
+    protected String getStringToSign(String method, String resource, Map<String, String> parameters,
+                           Map<String, List<Object>> headers, String date, String service) {
         StringBuilder stringToSign = new StringBuilder();
 
         stringToSign.append(S3Constants.AWS_HMAC_SHA256_ALGORITHM).append("\n");
@@ -132,21 +133,20 @@ public class S3SignerV4 extends S3Signer{
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
-        stringToSign.append(getScope(date)).append("\n");
+        stringToSign.append(getScope(date, service)).append("\n");
 
         String stringToSignStr = stringToSign.toString();
         return stringToSignStr;
     }
 
-    // Todo: get service
-    private byte[] getSigningKey(String date){
+    protected byte[] getSigningKey(String date, String service){
         return hmac(S3Constants.HMAC_SHA_256,
                 hmac(S3Constants.HMAC_SHA_256,
                         hmac(S3Constants.HMAC_SHA_256,
                                 hmac(S3Constants.HMAC_SHA_256,
                                         (S3Constants.AWS_V4 + s3Config.getSecretKey()).getBytes(StandardCharsets.UTF_8), date),
                                 S3Constants.AWS_DEFAULT_REGION),
-                        S3Constants.AWS_SERVICE_S3),
+                        service),
                 S3Constants.AWS_V4_TERMINATOR
         );
     }
@@ -192,10 +192,10 @@ public class S3SignerV4 extends S3Signer{
         }
     }
 
-    protected String getScope(String shortDate) {
+    protected String getScope(String shortDate, String service) {
         return shortDate + "/"
                 + S3Constants.AWS_DEFAULT_REGION + "/"
-                + S3Constants.AWS_SERVICE_S3 + "/"
+                + service + "/"
                 + S3Constants.AWS_V4_TERMINATOR;
     }
 
@@ -207,5 +207,9 @@ public class S3SignerV4 extends S3Signer{
         {
             return "";
         }
+    }
+
+    protected String getServiceType() {
+        return S3Constants.AWS_SERVICE_S3;
     }
 }

@@ -114,7 +114,9 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         } else {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
-        s3Config.setUseV2Signer(useV2Signer);
+        if (useV2Signer) {
+            s3Config.setUseV2Signer(true);
+        }
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
