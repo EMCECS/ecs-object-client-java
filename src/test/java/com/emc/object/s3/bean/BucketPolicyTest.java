@@ -26,14 +26,16 @@
  */
 package com.emc.object.s3.bean;
 
-import org.apache.commons.codec.Charsets;
-import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
-import org.codehaus.jackson.jaxrs.JacksonJsonProvider;
-import org.codehaus.jackson.map.AnnotationIntrospector;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.introspect.JacksonAnnotationIntrospector;
-import org.codehaus.jackson.xc.JaxbAnnotationIntrospector;
+
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,8 +80,9 @@ public class BucketPolicyTest {
     @Test
     public void testMarshalling() throws Exception {
         ObjectMapper mapper = new ObjectMapper()
-                .enable(SerializationConfig.Feature.INDENT_OUTPUT)
-                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JaxbAnnotationIntrospector()));
+                .configure(MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME, true)
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JaxbAnnotationIntrospector(TypeFactory.defaultInstance())));
 
         String generatedJson = mapper.writeValueAsString(OBJECT);
         Assert.assertEquals(JSON, generatedJson);
@@ -94,7 +97,11 @@ public class BucketPolicyTest {
     public void testProviderMarshalling() throws Exception {
         JacksonJsonProvider provider = new JacksonJaxbJsonProvider();
         // the only difference between this test and the client implementation, is indentation (to ease testing)
-        provider.configure(SerializationConfig.Feature.INDENT_OUTPUT, true);
+        // if MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME not used, it will be serialized to "conditions" instead of "Condition"
+        provider.setMapper(new ObjectMapper()
+                .configure(MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME, true)
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()))));
 
         // test writing
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
