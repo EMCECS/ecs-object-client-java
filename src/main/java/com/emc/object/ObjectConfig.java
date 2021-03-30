@@ -32,6 +32,7 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import com.sun.jersey.api.client.config.ClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +58,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
             (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : ""), System.getProperty("java.version"),
             System.getProperty("os.name"), System.getProperty("os.version"), System.getProperty("os.arch"));
     public static final int DEFAULT_CHUNKED_ENCODING_SIZE = 2 * 1024 * 1024; // 2MB to match ECS buffer size
+    public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
+    public static final int DEFAULT_READ_TIMEOUT = 0; // default is infinity
 
     // NOTE: if you add a property, make sure you add it to the cloning constructor!
     private Protocol protocol;
@@ -72,6 +75,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private boolean geoPinningEnabled = false;
     private boolean geoReadRetryFailover = false;
     private int chunkedEncodingSize = DEFAULT_CHUNKED_ENCODING_SIZE;
+    private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+    private int readTimeout = DEFAULT_READ_TIMEOUT;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -127,6 +132,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.geoPinningEnabled = other.geoPinningEnabled;
         this.geoReadRetryFailover = other.geoReadRetryFailover;
         this.chunkedEncodingSize = other.chunkedEncodingSize;
+        this.connectTimeout = other.connectTimeout;
+        this.readTimeout = other.readTimeout;
         this.properties = new HashMap<String, Object>(other.properties);
     }
 
@@ -199,6 +206,13 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         for (String prop : properties.keySet()) {
             smartConfig.withProperty(prop, properties.get(prop));
         }
+
+        // CONNECT_TIMEOUT
+        smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, connectTimeout);
+
+        // READ_TIMEOUT
+        smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, readTimeout);
+
 
         return smartConfig;
     }
@@ -409,6 +423,20 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.chunkedEncodingSize = chunkedEncodingSize;
     }
 
+    @ConfigUriProperty
+    public int getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    public void setConnectTimeout(int connectTimeout) {this.connectTimeout = connectTimeout; }
+
+    @ConfigUriProperty
+    public int getReadTimeout() {
+        return readTimeout;
+    }
+
+    public void setReadTimeout(int readTimeout) {this.readTimeout = readTimeout; }
+
     @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {
         return properties;
@@ -491,6 +519,18 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     @SuppressWarnings("unchecked")
     public T withChunkedEncodingSize(int chunkedEncodingSize) {
         setChunkedEncodingSize(chunkedEncodingSize);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withConnectTimeout(int connectTimeout) {
+        setConnectTimeout(connectTimeout);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withReadTimeout(int readTimeout) {
+        setReadTimeout(readTimeout);
         return (T) this;
     }
 

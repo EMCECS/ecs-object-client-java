@@ -122,8 +122,6 @@ import java.util.Map;
  * </pre>
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
-    public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
-    public static final int DEFAULT_READ_TIMEOUT = 60000; // 60 seconds
 
     protected S3Config s3Config;
     protected Client client;
@@ -147,12 +145,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
-
-        // make sure timeouts are reasonable (not infinite)
-        if (smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT) == null)
-            smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT);
-        if (smartConfig.getProperty(ClientConfig.PROPERTY_READ_TIMEOUT) == null)
-            smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, DEFAULT_READ_TIMEOUT);
 
         // creates a standard (non-load-balancing) jersey client
         if (clientHandler == null) {
