@@ -2182,10 +2182,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Long newRetentionPeriod = 5L;
 
         String version = client.listDataNodes().getVersionInfo();
-        if (version.compareTo("3.6") < 0){
-            l4j.warn("Skip the extending retention period test. ECS test bed needs to be 3.6 or later, current version: " + version);
-            return;
-        }
+        Assume.assumeFalse("ECS test bed needs to be 3.6 or later, current version: " + version , version.compareTo("3.6") < 0);
 
         String bucket = getTestBucket();
         PutObjectRequest request = new PutObjectRequest(bucket, key, content);
