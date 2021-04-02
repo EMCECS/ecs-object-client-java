@@ -26,6 +26,8 @@
  */
 package com.emc.object.util;
 
+import com.emc.object.s3.S3Constants;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -94,6 +96,7 @@ public final class RestUtil {
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
+    private static final String AMZ_DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
     private static final ThreadLocal<CharsetEncoder> utf8Encoder = ThreadLocal.withInitial(StandardCharsets.UTF_8::newEncoder);
 
@@ -202,6 +205,23 @@ public final class RestUtil {
     public static Date headerParse(String dateString) {
         if (dateString == null) return null;
         try {
+            return getHeaderFormat().parse(dateString);
+        } catch (ParseException e) {
+            throw new RuntimeException("invalid date header: " + dateString, e);
+        }
+    }
+
+    public static Date headerParse(String dateString, String headerKey) {
+        if (dateString == null) return null;
+        try {
+            if(headerKey.equals(S3Constants.AMZ_DATE)) {
+                // convert date
+                SimpleDateFormat sdf = new SimpleDateFormat(AMZ_DATE_FORMAT);
+                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                Date date = sdf.parse(dateString);
+                sdf.applyPattern(HEADER_FORMAT);
+                return date;
+            }
             return getHeaderFormat().parse(dateString);
         } catch (ParseException e) {
             throw new RuntimeException("invalid date header: " + dateString, e);

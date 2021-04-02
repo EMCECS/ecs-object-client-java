@@ -79,7 +79,6 @@ public class S3V4AuthUtilTest {
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
         Assert.assertEquals(V4_DATE, signer.getShortDate(signer.getDate(PARAMETERS_1, HEADERS_1)));
-        System.out.println(signer.getDate(PARAMETERS_1, HEADERS_1));
     }
 
     @Test

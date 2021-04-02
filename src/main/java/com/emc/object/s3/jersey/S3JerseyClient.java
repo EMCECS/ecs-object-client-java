@@ -38,13 +38,12 @@ import com.emc.rest.smart.SmartFilter;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.filter.ClientFilter;
 
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URL;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Reference implementation of S3Client.
@@ -211,6 +210,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             }
         }
 
+        ClientHandler handler = client.getHeadHandler();
+        SmartFilter smartFilter = null;
+        while (handler instanceof ClientFilter) {
+            ClientFilter filter = (ClientFilter) handler;
+            if (filter instanceof SmartFilter) {
+                smartFilter = (SmartFilter)filter;
+                client.removeFilter(smartFilter);
+            }
+            handler = filter.getNext();
+        }
         // jersey filters
         client.addFilter(new ErrorFilter());
         if (s3Config.getFaultInjectionRate() > 0.0f)
@@ -219,6 +228,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
         if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter(s3Config));
         client.addFilter(new AuthorizationFilter(s3Config));
+        if(smartFilter != null) {
+            client.addFilter(smartFilter);
+        }
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
     }

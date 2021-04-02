@@ -32,9 +32,9 @@ import com.emc.object.util.RestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class ClockSkewTest extends AbstractS3ClientTest {
     @Override
@@ -51,7 +51,14 @@ public class ClockSkewTest extends AbstractS3ClientTest {
                     Map<String, List<Object>> headers = super.getHeaders();
                     // set x-amz-date, subtracting 30 minutes from current time
                     Date oldDate = new Date(System.currentTimeMillis() - (30 * 60 * 1000));
-                    RestUtil.putSingle(headers, S3Constants.AMZ_DATE, RestUtil.headerFormat(oldDate));
+                    SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
+                    try {
+                        Date d = sdf.parse(RestUtil.headerFormat(oldDate));
+                        sdf.applyPattern("yyyyMMdd'T'HHmmss'Z'");
+                        RestUtil.putSingle(headers, S3Constants.AMZ_DATE, sdf.format(d));
+                    } catch (ParseException e) {
+                        throw new RuntimeException(e);
+                    }
                     return headers;
                 }
             };
