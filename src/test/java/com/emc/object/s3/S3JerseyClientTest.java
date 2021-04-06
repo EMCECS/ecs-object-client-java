@@ -2175,6 +2175,30 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testExtendObjectRetentionPeriod() throws Exception {
+        String key = "object-extend-retention";
+        String content = "Hello Extend Retention!";
+        Long retentionPeriod = 2L;
+        Long newRetentionPeriod = 5L;
+
+        String version = client.listDataNodes().getVersionInfo();
+        Assume.assumeFalse("ECS test bed needs to be 3.6 or later, current version: " + version , version.compareTo("3.6") < 0);
+
+        String bucket = getTestBucket();
+        PutObjectRequest request = new PutObjectRequest(bucket, key, content);
+        request.withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(retentionPeriod));
+        client.putObject(request);
+        Assert.assertEquals(content, client.readObject(bucket, key, String.class));
+        Assert.assertEquals(retentionPeriod, client.getObject(bucket, key).getObjectMetadata().getRetentionPeriod());
+
+        client.extendRetentionPeriod(bucket, key, newRetentionPeriod);
+        //Verify retention period has been extended as expected.
+        Assert.assertEquals(newRetentionPeriod, client.getObject(bucket, key).getObjectMetadata().getRetentionPeriod());
+
+        Thread.sleep(5000); // allow retention to expire
+    }
+
+    @Test
     public void testPreSignedUrl() throws Exception {
         S3Client tempClient = new S3JerseyClient(new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"));

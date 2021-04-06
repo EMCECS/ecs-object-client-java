@@ -669,6 +669,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void extendRetentionPeriod(String bucketName, String key, Long period){
+        ObjectRequest request = new S3ObjectRequest(Method.PUT, bucketName, key, S3Constants.PARAM_RETENTION_UPDATE);
+        request.addCustomHeader(RestUtil.EMC_RETENTION_PERIOD, period);
+        executeAndClose(client, request);
+    }
+
+    @Override
     public ListMultipartUploadsResult listMultipartUploads(String bucketName) {
         return listMultipartUploads(new ListMultipartUploadsRequest(bucketName));
     }
