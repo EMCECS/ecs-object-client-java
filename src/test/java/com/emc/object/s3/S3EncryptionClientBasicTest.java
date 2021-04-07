@@ -554,7 +554,17 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
+    public void testPreSignedPutUrlV4() {
+    }
+
+    @Ignore
+    @Override
     public void testPreSignedPutNoContentType() {
+    }
+
+    @Ignore
+    @Override
+    public void testPreSignedPutNoContentTypeV4() {
     }
 
     @Ignore

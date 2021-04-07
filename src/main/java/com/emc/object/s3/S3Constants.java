@@ -55,6 +55,7 @@ public final class S3Constants {
     public static final String AMZ_SOURCE_UNMODIFIED_SINCE = AMZ_PREFIX + "copy-source-if-unmodified-since";
     public static final String AMZ_SOURCE_VERSION_ID = AMZ_PREFIX + "copy-source-version-id";
     public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";
+    public static final String AMZ_UNSIGNED_PAYLOAD= "UNSIGNED-PAYLOAD";
 
     public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";
     public static final String PARAM_ATTRIBUTES = "attributes";

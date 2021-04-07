@@ -224,13 +224,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.addFilter(new ErrorFilter());
         if (s3Config.getFaultInjectionRate() > 0.0f)
             client.addFilter(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
-        if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
         if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
         if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter(s3Config));
         client.addFilter(new AuthorizationFilter(s3Config));
         if(smartFilter != null) {
             client.addFilter(smartFilter);
         }
+        if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
     }

@@ -26,21 +26,32 @@ public class S3SignerV4 extends S3Signer {
         "authorization"
     ));
 
-
     public S3SignerV4(S3Config s3Config) {
         super(s3Config);
     }
 
     public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         // # Preparation, add x-amz-date and host headers
-        String date = getDate(parameters, headers);
-        String shortDate = getShortDate(date);
-        String serviceType = getServiceType();
-        StringBuilder hostHeader = new StringBuilder(request.getURI().getHost()).append(":").append(request.getURI().getPort());
+        String date = null;
 
-        request.getHeaders().add(S3Constants.AMZ_DATE, date);
-        request.getHeaders().add(RestUtil.HEADER_HOST, hostHeader);
-        request.getHeaders().add(RestUtil.HEADER_HOST, s3Config.getHost());
+        String serviceType = getServiceType();
+        StringBuilder hostHeader = new StringBuilder(request.getURI().getHost());
+
+        // If default port is used, do not include the port in host header
+        if(!(s3Config.getProtocol().equals("https") && request.getURI().getPort() == 443) &&
+                !(s3Config.getProtocol().equals("http") && request.getURI().getPort() == 80))
+            hostHeader.append(":").append(request.getURI().getPort());
+        if (headers.containsKey(S3Constants.AMZ_DATE)) {
+            date = RestUtil.getFirstAsString(headers, S3Constants.AMZ_DATE);
+        }
+        else {
+            date = getDate(parameters, headers);
+            request.getHeaders().add(S3Constants.AMZ_DATE, date);
+            request.getHeaders().add(RestUtil.HEADER_HOST, hostHeader);
+        }
+
+        String shortDate = getShortDate(date);
+
         RestUtil.putSingle(headers, S3Constants.AMZ_DATE, date);
         RestUtil.putSingle(headers, RestUtil.HEADER_HOST, hostHeader);
         headers = request.getHeaders();
@@ -74,41 +85,25 @@ public class S3SignerV4 extends S3Signer {
                 ", SignedHeaders=" + signedHeaders.toString() + ", " + S3Constants.PARAM_SIGNATURE + "= " + signature);
     }
 
-
+    // This is to generate canonical request for presigned URLs
+    // Payload is UNSIGNED-PAYLOAD
     protected String getCanonicalRequest(String method, URI uri, Map<String, String> parameters, Map<String, List<Object>> headers) {
-                /*
+        /*
         CanonicalRequest =
             HTTPRequestMethod + '\n' +
             CanonicalURI + '\n' +
             CanonicalQueryString + '\n' +
             CanonicalHeaders + '\n' +
             SignedHeaders + '\n' +
-            HexEncode(Hash(RequestPayload))
+            UNSIGNED-PAYLOAD
          */
         StringBuilder canonicalRequest = new StringBuilder();
         canonicalRequest.append(method).append("\n");
         String resource = RestUtil.getEncodedPath(uri);
         canonicalRequest.append(resource).append("\n");
-        if (parameters != null & parameters.size() != 0) {
-            SortedMap<String, String> sortedParameters = new TreeMap<String, String>();
-
-            for (Map.Entry<String, String> parameter : parameters.entrySet()) {
-                sortedParameters.put(parameter.getKey(), RestUtil.urlEncode(parameter.getValue()));
-            }
-            StringBuilder sortedQueryString = new StringBuilder();
-            for (Map.Entry<String, String> parameter : sortedParameters.entrySet()) {
-                if (sortedQueryString != null && sortedQueryString.length() != 0)
-                    sortedQueryString.append("&");
-                sortedQueryString.append(parameter.getKey()).append("=");
-                if (parameter.getValue() != null)
-                    sortedQueryString.append(parameter.getValue());
-            }
-            canonicalRequest.append(sortedQueryString).append("\n");
-        } else
-            canonicalRequest.append("\n");
+        canonicalRequest.append(getCanonicalizedQueryString(parameters));
 
         SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
-
         StringBuilder signedHeaders = new StringBuilder();
         for (String name : canonicalizedHeaders.keySet()) {
             canonicalRequest.append(name).append(":").append(canonicalizedHeaders.get(name).trim());
@@ -122,8 +117,7 @@ public class S3SignerV4 extends S3Signer {
         signedHeaders.append("\n");
         canonicalRequest.append(signedHeaders);
 
-        String payload = "";
-        canonicalRequest.append("UNSIGNED-PAYLOAD");
+        canonicalRequest.append(S3Constants.AMZ_UNSIGNED_PAYLOAD);
         log.debug("CanonicalRequest: {}", canonicalRequest);
         return canonicalRequest.toString();
     }
@@ -143,26 +137,9 @@ public class S3SignerV4 extends S3Signer {
         URI uri = request.getURI();
         String resource = RestUtil.getEncodedPath(uri);
         canonicalRequest.append(resource).append("\n");
-        if (parameters != null & parameters.size() != 0) {
-            SortedMap<String, String> sortedParameters = new TreeMap<String, String>();
-
-            for (Map.Entry<String, String> parameter : parameters.entrySet()) {
-                sortedParameters.put(parameter.getKey(), RestUtil.urlEncode(parameter.getValue()));
-            }
-            StringBuilder sortedQueryString = new StringBuilder();
-            for (Map.Entry<String, String> parameter : sortedParameters.entrySet()) {
-                if (sortedQueryString != null && sortedQueryString.length() != 0)
-                    sortedQueryString.append("&");
-                sortedQueryString.append(parameter.getKey()).append("=");
-                if (parameter.getValue() != null)
-                    sortedQueryString.append(parameter.getValue());
-            }
-            canonicalRequest.append(sortedQueryString).append("\n");
-        } else
-            canonicalRequest.append("\n");
+        canonicalRequest.append(getCanonicalizedQueryString(parameters));
 
         SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
-
         StringBuilder signedHeaders = new StringBuilder();
         for (String name : canonicalizedHeaders.keySet()) {
             canonicalRequest.append(name).append(":");
@@ -186,6 +163,28 @@ public class S3SignerV4 extends S3Signer {
         canonicalRequest.append(hashedPayload);
         log.debug("CanonicalRequest: {}" + canonicalRequest);
         return canonicalRequest.toString();
+    }
+
+    private String getCanonicalizedQueryString(Map<String, String> parameters) {
+        StringBuilder queryString = new StringBuilder();
+        if (parameters != null & parameters.size() != 0) {
+            SortedMap<String, String> sortedParameters = new TreeMap<String, String>();
+
+            for (Map.Entry<String, String> parameter : parameters.entrySet()) {
+                sortedParameters.put(parameter.getKey(), RestUtil.urlEncode(parameter.getValue()));
+            }
+            StringBuilder sortedQueryString = new StringBuilder();
+            for (Map.Entry<String, String> parameter : sortedParameters.entrySet()) {
+                if (sortedQueryString != null && sortedQueryString.length() != 0)
+                    sortedQueryString.append("&");
+                sortedQueryString.append(parameter.getKey()).append("=");
+                if (parameter.getValue() != null)
+                    sortedQueryString.append(parameter.getValue());
+            }
+            queryString.append(sortedQueryString).append("\n");
+        } else
+            queryString.append("\n");
+        return queryString.toString();
     }
 
     protected SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers,
@@ -236,14 +235,14 @@ public class S3SignerV4 extends S3Signer {
     }
 
     protected String getDate(Map<String, String> parameters, Map<String, List<Object>> headers) {
-        // date line
-        // use Date header by default
-        String date = RestUtil.getFirstAsString(headers, RestUtil.HEADER_DATE);
+        String date = null;
         // if x-amz-date is specified, date should be the value
         if (headers.containsKey(S3Constants.AMZ_DATE)) {
             date = RestUtil.getFirstAsString(headers, S3Constants.AMZ_DATE);
             return date;
         }
+        // use Date header
+        date = RestUtil.getFirstAsString(headers, RestUtil.HEADER_DATE);
         if (date == null) {
             // must have a date in the headers
             date = RestUtil.getRequestDate(s3Config.getServerClockSkew());
@@ -320,7 +319,7 @@ public class S3SignerV4 extends S3Signer {
         }
 
         sortedParameters.put("Action", method);
-        sortedParameters.put("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
+        sortedParameters.put("X-Amz-Algorithm", S3Constants.AWS_HMAC_SHA256_ALGORITHM);
         sortedParameters.put("X-Amz-Credential", RestUtil.urlDecode(s3Config.getIdentity() + "/" +
                 shortDate + "/" + S3Constants.AWS_DEFAULT_REGION + "/" + serviceType + "/" +
                 S3Constants.AWS_V4_TERMINATOR));
