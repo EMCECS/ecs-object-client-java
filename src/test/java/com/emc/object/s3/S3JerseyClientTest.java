@@ -572,6 +572,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
                 Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
             }
+            // Delete all the versions
+            client.deleteVersion(getTestBucket(), key, version.getVersionId());
         }
     }
 
@@ -605,6 +607,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         Assert.assertEquals("The correct number of versions were NOT returned", 6, versions.size());
         Assert.assertEquals("should be 3 pages", 3, requestCount);
+
+        for (AbstractVersion version : versions) {
+            // Delete all the versions
+            client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
+        }
     }
 
     @Test
@@ -633,6 +640,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(1, result.getCommonPrefixes().size());
         Assert.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
         Assert.assertFalse(result.isTruncated());
+
+        request = new ListVersionsRequest(getTestBucket());
+        result = client.listVersions(request);
+        for (AbstractVersion version : result.getVersions()) {
+            // Delete all the versions
+            client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
+        }
     }
 
     protected void createTestObjects(String prefix, int numObjects) {
