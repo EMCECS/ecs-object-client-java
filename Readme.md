@@ -7,4 +7,9 @@ Current APIs:
 
 - S3
 
-Targeted for Java 1.6+
+Targeted for Java 8+
+
+**As of the client version 3.2, read timeout is disabled by default to avoid conflicts in updating.**
+
+for more information about timeouts, please see the following [wiki page](https://github.com/EMCECS/ecs-object-client-java/wiki/Changing-Timeouts)
+

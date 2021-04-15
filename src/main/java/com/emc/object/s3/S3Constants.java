@@ -88,6 +88,7 @@ public final class S3Constants {
     public static final String PARAM_UPLOAD_ID_MARKER = "upload-id-marker";
     public static final String PARAM_VERSION_ID = "versionId";
     public static final String PARAM_VERSION_ID_MARKER = "version-id-marker";
+    public static final String PARAM_RETENTION_UPDATE = "retentionUpdate";
 
     public static final String PROPERTY_BUCKET_NAME = "com.emc.object.s3.bucketName";
     public static final String PROPERTY_OBJECT_KEY = "com.emc.object.s3.objectKey";

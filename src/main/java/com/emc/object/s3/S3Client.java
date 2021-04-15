@@ -390,6 +390,13 @@ public interface S3Client {
 
     AccessControlList getObjectAcl(GetObjectAclRequest request);
 
+    /**
+     * Extend retention <code>period</code>(seconds) on object <code>key</code> in bucket <code>bucketName</code>. NOTE:
+     * New retention period value can only be increased. That is, it can be the same as the current or greater value.
+     * If the new retention period value is -1, infinite retention applies on that object.
+     */
+    void extendRetentionPeriod(String bucketName, String key, Long period);
+
     ListMultipartUploadsResult listMultipartUploads(String bucketName);
 
     ListMultipartUploadsResult listMultipartUploads(ListMultipartUploadsRequest request);

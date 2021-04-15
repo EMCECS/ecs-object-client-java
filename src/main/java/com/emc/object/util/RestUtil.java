@@ -95,7 +95,7 @@ public final class RestUtil {
 
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
-    private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
+    private static final String HEADER_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     private static final String AMZ_DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
     private static final ThreadLocal<CharsetEncoder> utf8Encoder = ThreadLocal.withInitial(StandardCharsets.UTF_8::newEncoder);
