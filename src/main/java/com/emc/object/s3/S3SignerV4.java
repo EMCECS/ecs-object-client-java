@@ -3,6 +3,7 @@ package com.emc.object.s3;
 import com.emc.object.s3.jersey.BucketFilter;
 import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
+import com.emc.object.s3.request.ResponseHeaderOverride;
 import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientRequest;
 
@@ -14,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
 
 public class S3SignerV4 extends S3Signer {
     private static final String HEADER_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss Z";
@@ -33,36 +33,24 @@ public class S3SignerV4 extends S3Signer {
     public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         // # Preparation, add x-amz-date and host headers
         String date = null;
-
         String serviceType = getServiceType();
-        StringBuilder hostHeader = new StringBuilder(request.getURI().getHost());
-
-        // If default port is used, do not include the port in host header
-        if(!(s3Config.getProtocol().equals("https") && request.getURI().getPort() == 443) &&
-                !(s3Config.getProtocol().equals("http") && request.getURI().getPort() == 80))
-            hostHeader.append(":").append(request.getURI().getPort());
         if (headers.containsKey(S3Constants.AMZ_DATE)) {
             date = RestUtil.getFirstAsString(headers, S3Constants.AMZ_DATE);
         }
         else {
             date = getDate(parameters, headers);
-            request.getHeaders().add(S3Constants.AMZ_DATE, date);
-            request.getHeaders().add(RestUtil.HEADER_HOST, hostHeader);
         }
-
         String shortDate = getShortDate(date);
-
-        RestUtil.putSingle(headers, S3Constants.AMZ_DATE, date);
-        RestUtil.putSingle(headers, RestUtil.HEADER_HOST, hostHeader);
-        headers = request.getHeaders();
+        addHeadersForV4(request.getURI(), date, headers);
 
         // #1 Create a canonical request for Signature Version 4
         String canonicalRequest = getCanonicalRequest(request, parameters, headers);
 
         // #2 Create a string to sign for Signature Version 4
-        // get HashedCanonicalRequest
-        byte[] hash = hash256(canonicalRequest);
-        String hashedRequest = hexEncode(hash);
+        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType, canonicalRequest);
+        log.debug("StringToSign: {}", stringToSign);
+
+        // Get signed headers
         SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
         StringBuilder signedHeaders = new StringBuilder();
         for (String name : canonicalizedHeaders.keySet()) {
@@ -70,8 +58,6 @@ public class S3SignerV4 extends S3Signer {
                 signedHeaders.append(";");
             signedHeaders.append(name);
         }
-        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType) + hashedRequest;
-        log.debug("StringToSign: {}", stringToSign);
 
         // #3 Calculate the signature for AWS Signature Version 4
         byte[] key = getSigningKey(shortDate, serviceType);
@@ -83,6 +69,18 @@ public class S3SignerV4 extends S3Signer {
                 " Credential=" + s3Config.getIdentity() + "/" + shortDate +
                 "/" + S3Constants.AWS_DEFAULT_REGION + "/" + serviceType + "/" + S3Constants.AWS_V4_TERMINATOR +
                 ", SignedHeaders=" + signedHeaders.toString() + ", " + S3Constants.PARAM_SIGNATURE + "= " + signature);
+    }
+
+    protected void addHeadersForV4(URI uri, String date, Map<String, List<Object>> headers) {
+        StringBuilder hostHeader = new StringBuilder(uri.getHost());
+        // If default port is used, do not include the port in host header
+        if (!(s3Config.getProtocol().equals("https") && uri.getPort() == 443) &&
+                !(s3Config.getProtocol().equals("http") && uri.getPort() == 80))
+            hostHeader.append(":").append(uri.getPort());
+        if (!headers.containsKey(S3Constants.AMZ_DATE)) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_DATE, date);
+        }
+        RestUtil.putSingle(headers, RestUtil.HEADER_HOST, hostHeader);
     }
 
     // This is to generate canonical request for presigned URLs
@@ -191,7 +189,6 @@ public class S3SignerV4 extends S3Signer {
                                                                 Map<String, String> parameters) {
         SortedMap<String, String> canonicalizedHeaders = new TreeMap<String, String>();
 
-        // add x-emc- and x-amz- headers
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
             if (!excludedSignedHeaders.contains(lcHeader))
@@ -202,12 +199,10 @@ public class S3SignerV4 extends S3Signer {
     }
 
     protected String getStringToSign(String method, String resource, Map<String, String> parameters,
-                                     Map<String, List<Object>> headers, String date, String service) {
+                                     Map<String, List<Object>> headers, String date, String service, String canonicalRequest) {
         StringBuilder stringToSign = new StringBuilder();
-
         stringToSign.append(S3Constants.AWS_HMAC_SHA256_ALGORITHM).append("\n");
         stringToSign.append(date).append("\n");
-
         SimpleDateFormat sdf = new SimpleDateFormat(AMZ_DATE_FORMAT, Locale.US);
         try {
             Date d = sdf.parse(date);
@@ -218,8 +213,12 @@ public class S3SignerV4 extends S3Signer {
         }
         stringToSign.append(getScope(date, service)).append("\n");
 
-        String stringToSignStr = stringToSign.toString();
-        return stringToSignStr;
+        // get hashedCanonicalRequest
+        byte[] hash = hash256(canonicalRequest);
+        String hashedRequest = hexEncode(hash);
+
+        stringToSign.append(hashedRequest);
+        return stringToSign.toString();
     }
 
     protected byte[] getSigningKey(String date, String service) {
@@ -294,16 +293,43 @@ public class S3SignerV4 extends S3Signer {
     }
 
     public URL generatePresignedUrl(PresignedUrlRequest request) {
+        String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
+        URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
+        // must construct both the final URL and the resource for signing
+        String resource = "/" + request.getBucketName() + RestUtil.getEncodedPath(uri); // so here we have a uri encoding
+
+        // insert namespace in host
+        if (namespace != null) {
+            if (s3Config.isUseVHost()) {
+                uri = NamespaceFilter.insertNamespace(uri, namespace);
+                if (s3Config.isSignNamespace())
+                    resource = "/" + namespace + resource; // prepend to resource path for signing
+            } else {
+                // issue warning if namespace is specified and vhost is disabled because we can't put the namespace in the URL
+                log.warn("vHost namespace is disabled, so there is no way to specify a namespace in a pre-signed URL");
+            }
+        }
+        // insert bucket in host or path
+        uri = BucketFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
         Map<String, String> parameters = new TreeMap();
         if (request.getVersionId() != null) parameters.put(S3Constants.PARAM_VERSION_ID, request.getVersionId());
+        Map<ResponseHeaderOverride, String> headerOverrides = request.getHeaderOverrides();
+        for (ResponseHeaderOverride override : headerOverrides.keySet()) {
+            parameters.put(override.getQueryParam(), headerOverrides.get(override));
+        }
+
         Map<String, List<Object>> headers = request.getHeaders();
         String method = request.getMethod().name();
-        String date = getDate(parameters, headers);
-        String shortDate = getShortDate(date);
+
+        String date = null;
         String serviceType = getServiceType();
-        RestUtil.putSingle(headers, S3Constants.AMZ_DATE, date);
-        RestUtil.putSingle(headers, RestUtil.HEADER_HOST, s3Config.getHost());
-        headers = request.getHeaders();
+        if (headers.containsKey(S3Constants.AMZ_DATE)) {
+            date = RestUtil.getFirstAsString(headers, S3Constants.AMZ_DATE);
+        }
+        else {
+            date = getDate(parameters, headers);
+        }
+        String shortDate = getShortDate(date);
 
         SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
         StringBuilder signedHeaders = new StringBuilder();
@@ -327,34 +353,11 @@ public class S3SignerV4 extends S3Signer {
         sortedParameters.put("X-Amz-Expires", Long.toString(generateExpiration(request.getExpirationTime())));
         sortedParameters.put("X-Amz-SignedHeaders", RestUtil.urlDecode(signedHeaders.toString()));
 
-        String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
-        URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
-        // must construct both the final URL and the resource for signing
-        String resource = "/" + request.getBucketName() + RestUtil.getEncodedPath(uri); // so here we have a uri encoding
-
-        // insert namespace in host
-        if (namespace != null) {
-            if (s3Config.isUseVHost()) {
-                uri = NamespaceFilter.insertNamespace(uri, namespace);
-                if (s3Config.isSignNamespace())
-                    resource = "/" + namespace + resource; // prepend to resource path for signing
-            } else {
-                // issue warning if namespace is specified and vhost is disabled because we can't put the namespace in the URL
-                log.warn("vHost namespace is disabled, so there is no way to specify a namespace in a pre-signed URL");
-            }
-        }
-
-        // insert bucket in host or path
-        uri = BucketFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
-
         // #1 Create a canonical request for Signature Version 4
         String canonicalRequest = getCanonicalRequest(method, uri, sortedParameters, headers);
 
         // #2 Create a string to sign for Signature Version 4
-        // get HashedCanonicalRequest
-        byte[] hash = hash256(canonicalRequest);
-        String hashedRequest = hexEncode(hash);
-        String stringToSign = getStringToSign(method, resource, parameters, headers, date, serviceType) + hashedRequest;
+        String stringToSign = getStringToSign(method, resource, parameters, headers, date, serviceType, canonicalRequest);
         log.debug("StringToSign: {}", stringToSign);
 
         // #3 Calculate the signature for AWS Signature Version 4
@@ -375,6 +378,8 @@ public class S3SignerV4 extends S3Signer {
             return new URL(newUri.toString());
         } catch (MalformedURLException e) {
             throw new RuntimeException("generated URL is not well-formed");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generated URL. ");
         }
     }
 

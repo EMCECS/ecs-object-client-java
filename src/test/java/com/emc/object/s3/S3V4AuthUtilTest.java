@@ -26,7 +26,8 @@ public class S3V4AuthUtilTest {
             "/" + REGION + "/" + SERVICE + "/" + S3Constants.AWS_V4_TERMINATOR;
     private static final String EXPECTED_STRING_TO_SIGN = "AWS4-HMAC-SHA256\n" +
             "20150830T123600Z\n" +
-            "20150830/us-east-1/iam/aws4_request\n";
+            "20150830/us-east-1/iam/aws4_request\n" +
+            "f536975d06c0309214f805bb90ccff089219ecd68b2577efef23edd43b7e1a59";
     private static final String EXPECTED_CANONICAL_REQUEST = "GET\n" +
             "/\n" +
             "Action=ListUsers&Version=2010-05-08\n" +
@@ -114,7 +115,7 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
         S3SignerV4 signer = new S3SignerV4(s3Config);
         Assert.assertEquals(EXPECTED_STRING_TO_SIGN,
-                signer.getStringToSign(null, null, null, null, AMZ_V4_DATE, SERVICE));
+                signer.getStringToSign(null, null, null, null, AMZ_V4_DATE, SERVICE, EXPECTED_CANONICAL_REQUEST));
     }
 
     @Test
@@ -134,7 +135,7 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
-        String stringToSign = EXPECTED_STRING_TO_SIGN + EXPECTED_HASHED_REQUEST;
+        String stringToSign = EXPECTED_STRING_TO_SIGN;
         byte[] signingKey = signer.getSigningKey(V4_DATE, S3Constants.AWS_SERVICE_IAM);
         Assert.assertEquals(EXPECTED_SIGNATURE, signer.getSignature(stringToSign, signingKey));
     }
