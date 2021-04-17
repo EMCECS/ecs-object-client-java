@@ -569,6 +569,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
+    public void testExtendObjectRetentionPeriod() {
+    }
+
+    @Ignore
+    @Override
     public void testPreSignedUrlHeaderOverrides() throws Exception {
     }
 
