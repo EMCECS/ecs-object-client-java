@@ -124,6 +124,41 @@ public class ConfigUriTest {
         }
     }
 
+    @Test
+    public void testDefaultBooleanValues() {
+        ConfigUri.registerConverter(Date.class, new DateConverter());
+
+        // test defaults
+        String uri = "https://server.com:1234/pathypathpath?map.foo=bar&dateParam=1475100000000&map.baz=boozle" +
+                "&intList=7&intList=8&intList=9&map.bim=bam" +
+                "&stringList=bing&stringList=bong&stringList=boozle" +
+                "&bar=baz&longParam=6&integerParam=5" +
+                "&dateList=1475200000000&dateList=1475300000000&dateList=1475400000000" +
+                "&blah=blah";
+
+        ConfigUri<DummyConfig> dummyUri = new ConfigUri<DummyConfig>(DummyConfig.class);
+
+        DummyConfig dummyConfig = dummyUri.parseUri(uri);
+
+        Assert.assertTrue(dummyConfig.isDefaultTrueBool());
+        Assert.assertFalse(dummyConfig.isDefaultFalseBool());
+
+        // test changing defaults
+        uri = "https://server.com:1234/pathypathpath?map.foo=bar&dateParam=1475100000000&map.baz=boozle" +
+                "&intList=7&intList=8&intList=9&map.bim=bam" +
+                "&stringList=bing&stringList=bong&stringList=boozle" +
+                "&bar=baz&longParam=6&integerParam=5" +
+                "&dateList=1475200000000&dateList=1475300000000&dateList=1475400000000" +
+                "&blah=blah" +
+                "&defaultTrueBool=false" +
+                "&defaultFalseBool=true";
+
+        dummyConfig = dummyUri.parseUri(uri);
+
+        Assert.assertFalse(dummyConfig.isDefaultTrueBool());
+        Assert.assertTrue(dummyConfig.isDefaultFalseBool());
+    }
+
     public static class DummyConfig {
         private String protocol;
         private String host;
@@ -137,6 +172,8 @@ public class ConfigUriTest {
         private List<Integer> intList;
         private List<String> stringList;
         private Map<String, Foo> fooMap;
+        private boolean defaultFalseBool;
+        private boolean defaultTrueBool = true;
 
         @ConfigUriProperty(type = ConfigUriProperty.Type.Protocol)
         public String getProtocol() {
@@ -244,6 +281,24 @@ public class ConfigUriTest {
 
         public void setFooMap(Map<String, Foo> fooMap) {
             this.fooMap = fooMap;
+        }
+
+        @ConfigUriProperty
+        public boolean isDefaultFalseBool() {
+            return defaultFalseBool;
+        }
+
+        public void setDefaultFalseBool(boolean defaultFalseBool) {
+            this.defaultFalseBool = defaultFalseBool;
+        }
+
+        @ConfigUriProperty
+        public boolean isDefaultTrueBool() {
+            return defaultTrueBool;
+        }
+
+        public void setDefaultTrueBool(boolean defaultTrueBool) {
+            this.defaultTrueBool = defaultTrueBool;
         }
     }
 

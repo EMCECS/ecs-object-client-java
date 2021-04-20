@@ -184,10 +184,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - GEO-PINNING
             if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
 
-            // S.C. - RETRY CONFIG
-            if (s3Config.isRetryEnabled())
-                smartConfig.setProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
-
             // S.C. - CHUNKED ENCODING (match ECS buffer size)
             smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
