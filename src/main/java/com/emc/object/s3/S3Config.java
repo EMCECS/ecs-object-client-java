@@ -30,6 +30,8 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.util.ConfigUriProperty;
 import com.emc.rest.smart.Host;
+import com.emc.rest.smart.SmartClientFactory;
+import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
 
 import java.net.URI;
@@ -132,6 +134,12 @@ public class S3Config extends ObjectConfig<S3Config> {
     @Override
     public Host resolveHost() {
         return getVdcs().get(0).getHosts().get(0);
+    }
+
+    @Override
+    public SmartConfig toSmartConfig() {
+        // disable Apache client's retry - retries will be governed by our config and RetryFilter
+        return super.toSmartConfig().withProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
     }
 
     @ConfigUriProperty
