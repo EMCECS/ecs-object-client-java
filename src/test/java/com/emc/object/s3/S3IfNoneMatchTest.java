@@ -3,6 +3,7 @@ package com.emc.object.s3;
 import com.emc.object.Range;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class S3IfNoneMatchTest extends AbstractS3ClientTest {
@@ -41,6 +42,11 @@ public class S3IfNoneMatchTest extends AbstractS3ClientTest {
         client.putObject(rangedPut);
 
         // try to overwrite with IfNoneMatch*
-        client.putObject(ifNoneMatchRequest);
+        try {
+            client.putObject(ifNoneMatchRequest);
+        } catch (S3Exception e){
+            Assert.assertEquals("error not matched","At least one of the preconditions you specified did not hold.", e.getMessage());
+            System.out.printf("error");
+        }
     }
 }
