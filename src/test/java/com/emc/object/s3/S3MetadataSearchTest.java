@@ -127,9 +127,16 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 .withAttribute("Size")
                 .withQuery("(x-amz-meta-string1<='') or (x-amz-meta-string1>='')");
         QueryObjectsResult result = client.queryObjects(request);
+
+        String version = client.listDataNodes().getVersionInfo();
+        boolean is34OrLater = version.compareTo("3.4") >= 0;
+
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
-        Assert.assertEquals("null", result.getNextMarker());
+        if (is34OrLater)
+            Assert.assertNull(result.getNextMarker());
+        else
+            Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 
@@ -259,9 +266,16 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 .withAttribute("Size")
                 .withQuery("(x-amz-meta-STRING1<='') or (x-amz-meta-STRING1>='')");
         QueryObjectsResult result = client.queryObjects(request);
+
+        String version = client.listDataNodes().getVersionInfo();
+        boolean is34OrLater = version.compareTo("3.4") >= 0;
+
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
-        Assert.assertEquals("null", result.getNextMarker());
+        if (is34OrLater)
+            Assert.assertNull(result.getNextMarker());
+        else
+            Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 

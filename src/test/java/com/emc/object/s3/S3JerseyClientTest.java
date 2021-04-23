@@ -605,13 +605,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             requestCount++;
         } while (result.isTruncated());
 
-        Assert.assertEquals("The correct number of versions were NOT returned", 6, versions.size());
-        Assert.assertEquals("should be 3 pages", 3, requestCount);
+        assertForListVersionsPaging(versions.size(), requestCount);
 
         for (AbstractVersion version : versions) {
             // Delete all the versions
             client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
         }
+    }
+
+    protected void assertForListVersionsPaging(int size, int requestCount)
+    {
+        Assert.assertEquals("The correct number of versions were NOT returned", 6, size);
+        Assert.assertEquals("should be 3 pages", 3, requestCount);
     }
 
     @Test

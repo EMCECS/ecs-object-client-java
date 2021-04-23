@@ -608,4 +608,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
             }
         }
     }
+
+    @Override
+    protected void assertForListVersionsPaging(int size, int requestCount)
+    {
+        Assert.assertEquals("The correct number of versions were NOT returned", 10, size);
+        Assert.assertEquals("should be 5 pages", 5, requestCount);
+    }
 }
