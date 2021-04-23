@@ -79,11 +79,11 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     protected void cleanUpBucket(String bucketName) throws Exception {
         if (client != null && client.bucketExists(bucketName)) {
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
-                for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
+                for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName)).getVersions()) {
                     client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
                 }
             } else {
-                for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url)).getObjects()) {
+                for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName)).getObjects()) {
                     client.deleteObject(bucketName, object.getKey());
                 }
             }

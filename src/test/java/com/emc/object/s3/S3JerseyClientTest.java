@@ -430,21 +430,31 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withPrefix(prefix)
                 .withDelimiter(delim).withMaxKeys(3).withEncodingType(EncodingType.url));
-        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
-        Assert.assertEquals("The correct number of objects were NOT returned", 3, result.getObjects().size());
-        Assert.assertTrue(result.isTruncated());
-        Assert.assertEquals("/", result.getDelimiter());
-        Assert.assertEquals(prefix, result.getPrefix());
-        Assert.assertEquals(prefix + key + 1, result.getObjects().get(0).getKey());
+        try {
+            Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+            Assert.assertEquals("The correct number of objects were NOT returned", 3, result.getObjects().size());
+            Assert.assertTrue(result.isTruncated());
+            Assert.assertEquals("/", result.getDelimiter());
+            Assert.assertEquals(prefix, result.getPrefix());
+            Assert.assertEquals(RestUtil.urlEncode(prefix + key) + 1, result.getObjects().get(0).getKey());
 
-        // get next page
-        result = client.listMoreObjects(result);
-        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
-        Assert.assertEquals("The correct number of objects were NOT returned", 2, result.getObjects().size());
-        Assert.assertFalse(result.isTruncated());
-        Assert.assertEquals("/", result.getDelimiter());
-        Assert.assertEquals(prefix, result.getPrefix());
-        Assert.assertEquals(prefix + key + 4, result.getObjects().get(0).getKey());
+            // get next page
+            result = client.listMoreObjects(result);
+            Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+            Assert.assertEquals("The correct number of objects were NOT returned", 2, result.getObjects().size());
+            Assert.assertFalse(result.isTruncated());
+            Assert.assertEquals("/", result.getDelimiter());
+            Assert.assertEquals(prefix, result.getPrefix());
+            Assert.assertEquals(RestUtil.urlEncode(prefix + key) + 4, result.getObjects().get(0).getKey());
+        }
+        finally {
+            client.deleteObject(getTestBucket(), prefix + key + 1);
+            client.deleteObject(getTestBucket(), prefix + key + 2);
+            client.deleteObject(getTestBucket(), prefix + key + 3);
+            client.deleteObject(getTestBucket(), prefix + key + 4);
+            client.deleteObject(getTestBucket(), prefix + key + 5);
+            client.deleteBucket(getTestBucket());
+        }
     }
 
     @Test
@@ -513,6 +523,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testListObjectsWithEncoding() {
         String key = "foo\u001do", content = "Hello List!";
+        String urlEncodedKey = RestUtil.urlEncode(key);
         client.putObject(getTestBucket(), key, content, null);
 
         try {
@@ -525,7 +536,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(1, resultObjects.size());
 
             S3Object object = resultObjects.get(0);
-            Assert.assertEquals(key, object.getKey());
+            Assert.assertEquals(urlEncodedKey, object.getKey());
 
         } finally {
             client.deleteObject(getTestBucket(), key);
@@ -572,8 +583,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
                 Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
             }
-            // Delete all the versions
-            client.deleteVersion(getTestBucket(), key, version.getVersionId());
         }
     }
 
@@ -606,11 +615,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         } while (result.isTruncated());
 
         assertForListVersionsPaging(versions.size(), requestCount);
-
-        for (AbstractVersion version : versions) {
-            // Delete all the versions
-            client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
-        }
     }
 
     protected void assertForListVersionsPaging(int size, int requestCount)
@@ -645,13 +649,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(1, result.getCommonPrefixes().size());
         Assert.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
         Assert.assertFalse(result.isTruncated());
-
-        request = new ListVersionsRequest(getTestBucket());
-        result = client.listVersions(request);
-        for (AbstractVersion version : result.getVersions()) {
-            // Delete all the versions
-            client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
-        }
     }
 
     protected void createTestObjects(String prefix, int numObjects) {

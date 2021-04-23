@@ -45,6 +45,7 @@ public class ListObjectsResult implements UrlEncodable {
     private String marker;
     private String nextMarker;
     private boolean truncated;
+    private boolean encoded = false;
     private List<S3Object> objects = new ArrayList<S3Object>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
 
@@ -135,6 +136,18 @@ public class ListObjectsResult implements UrlEncodable {
 
     @XmlElement(name = "Contents")
     public List<S3Object> getObjects() {
+        if (encodingType == EncodingType.url && !encoded) {
+            List<S3Object> encodedObjects = new ArrayList<S3Object>();
+            if(objects != null && objects.size() != 0) {
+                for(S3Object object: objects) {
+                    S3Object encodedObject = object;
+                    encodedObject.setKey(RestUtil.urlEncode(object.getKey()));
+                    encodedObjects.add(encodedObject);
+                }
+                encoded = true;
+                return encodedObjects;
+            }
+        }
         return objects;
     }
 
