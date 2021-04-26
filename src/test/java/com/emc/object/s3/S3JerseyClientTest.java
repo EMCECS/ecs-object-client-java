@@ -1809,7 +1809,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
-    @Test // TODO: blocked by STORAGE-12050
+    @Test // TODO: blocked by STORAGE-29721
     public void testUpdateMetadata() {
         String key = "update-metadata";
         String content = "Hello update meta!";
@@ -1849,10 +1849,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.copyObject(new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals(ct, objectMetadata.getContentType());
-        Assert.assertEquals(cc, objectMetadata.getCacheControl());
-        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
-        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
-        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        // TODO: below assertions are blocked by STORAGE-29721,
+        //  uncomment them if STORAGE-29721 is fixed
+        //Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        //Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        //Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        //Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
