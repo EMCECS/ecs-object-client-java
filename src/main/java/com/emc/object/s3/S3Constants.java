@@ -54,6 +54,7 @@ public final class S3Constants {
     public static final String AMZ_OBJECT_LOCK_MODE = AMZ_PREFIX + "object-lock-mode";
     public static final String AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE = AMZ_PREFIX + "object-lock-retain-until-date";
     public static final String AMZ_OBJECT_LOCK_BYPASS_GOVERNANCE_RETENTION = AMZ_PREFIX + "bypass-governance-retention";
+    public static final String AMZ_SECURITY_TOKEN = AMZ_PREFIX + "Security-Token";
 
     public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";
     public static final String PARAM_ATTRIBUTES = "attributes";
