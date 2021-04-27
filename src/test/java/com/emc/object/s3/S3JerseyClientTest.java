@@ -533,6 +533,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    // Todo: Blocked by SDK-555.
     public void testListAndReadVersions() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -572,12 +573,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
                 Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
             }
+            // Todo: Blocked by SDK-555. Could be removed after SDK-555 is fixed.
             // Delete all the versions
             client.deleteVersion(getTestBucket(), key, version.getVersionId());
         }
     }
 
-    @Test // TODO: blocked by STORAGE-21799
+    @Test // TODO: blocked by SDK-555
     public void testListVersionsPaging() {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -607,6 +609,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         assertForListVersionsPaging(versions.size(), requestCount);
 
+        // Todo: Blocked by SDK-555. Could be removed after SDK-555 is fixed.
         for (AbstractVersion version : versions) {
             // Delete all the versions
             client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
@@ -620,6 +623,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    // Todo: Blocked by SDK-555.
     public void testListVersionsPagingPrefixDelim() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -648,6 +652,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         request = new ListVersionsRequest(getTestBucket());
         result = client.listVersions(request);
+
+        // Todo: Blocked by SDK-555. Could be removed after SDK-555 is fixed.
         for (AbstractVersion version : result.getVersions()) {
             // Delete all the versions
             client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());

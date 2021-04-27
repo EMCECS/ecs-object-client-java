@@ -28,6 +28,7 @@ package com.emc.object.util;
 
 public class TestProperties {
     public static final String ENABLE_VHOST = "enableVhost";
+    public static final String IS_SMART_CLIENT = "isSmartClient";
 
     public static final String S3_ENDPOINT = "s3.endpoint";
     public static final String S3_ACCESS_KEY = "s3.access_key";
