@@ -77,6 +77,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private int chunkedEncodingSize = DEFAULT_CHUNKED_ENCODING_SIZE;
     private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     private int readTimeout = DEFAULT_READ_TIMEOUT;
+    private String sessionToken;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -134,6 +135,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.chunkedEncodingSize = other.chunkedEncodingSize;
         this.connectTimeout = other.connectTimeout;
         this.readTimeout = other.readTimeout;
+        this.sessionToken = other.sessionToken;
         this.properties = new HashMap<String, Object>(other.properties);
     }
 
@@ -437,6 +439,13 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
     public void setReadTimeout(int readTimeout) {this.readTimeout = readTimeout; }
 
+    @ConfigUriProperty
+    public String getSessionToken() {
+        return sessionToken;
+    }
+
+    public void setSessionToken(String sessionToken) {this.sessionToken = sessionToken; }
+
     @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {
         return properties;
@@ -491,6 +500,12 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     @SuppressWarnings("unchecked")
     public T withSecretKey(String secretKey) {
         setSecretKey(secretKey);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withSessionToken(String sessionToken) {
+        setSessionToken(sessionToken);
         return (T) this;
     }
 
@@ -551,6 +566,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
                 ", namespace='" + namespace + '\'' +
                 ", identity='" + identity + '\'' +
                 ", secretKey='" + secretKey + '\'' +
+                ", sessionToken='" + sessionToken + '\'' +
                 ", serverClockSkew=" + serverClockSkew +
                 ", userAgent='" + userAgent + '\'' +
                 ", geoPinningEnabled=" + geoPinningEnabled +
