@@ -67,6 +67,11 @@ public class AuthorizationFilter extends ClientFilter {
                     resource,
                     parameters,
                     request.getHeaders());
+
+            // for sts session token, add to header after the sign
+            if (s3Config.getSessionToken() != null) {
+                request.getHeaders().putSingle(S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
+            }
         }
 
         return getNext().handle(request);
