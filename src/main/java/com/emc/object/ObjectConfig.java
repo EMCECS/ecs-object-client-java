@@ -501,6 +501,12 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return (T) this;
     }
 
+    /***
+     * Session token:
+     * You can use temporary security credentials provided by the STS to sign a request.
+     * @param sessionToken <SessionToken> field from the STS response
+     * @return
+     */
     @SuppressWarnings("unchecked")
     public T withSessionToken(String sessionToken) {
         setSessionToken(sessionToken);
