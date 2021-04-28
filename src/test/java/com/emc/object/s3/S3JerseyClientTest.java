@@ -2489,6 +2489,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testTimeouts() throws Exception {
         S3Config s3Config = new S3Config(Protocol.HTTP, "8.8.4.4").withIdentity("foo").withSecretKey("bar");
+        s3Config.setSmartClient(((S3JerseyClient) client).getS3Config().isSmartClient());
+
         s3Config.setRetryLimit(0); // no retries
 
         // set timeouts
