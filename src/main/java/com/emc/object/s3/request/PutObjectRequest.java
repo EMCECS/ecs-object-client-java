@@ -112,6 +112,10 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         return object;
     }
 
+    public void setObject(Object object) {
+        this.object = object;
+    }
+
     public Range getRange() {
         return range;
     }

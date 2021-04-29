@@ -527,7 +527,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
         // enable checksum of the object
         request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-
+        Object object = request.getObject();
+        if (object instanceof String) {
+            if (object.equals(""))
+                request.setObject(new byte[0]);
+        }
         PutObjectResult result = new PutObjectResult();
         fillResponseEntity(result, executeAndClose(client, request));
         return result;
