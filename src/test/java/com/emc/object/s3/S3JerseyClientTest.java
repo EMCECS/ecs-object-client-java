@@ -1440,9 +1440,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testEmptyObjectFile() throws IOException {
         String key = "empty-object";
-        int size = 0;
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
         File file = File.createTempFile("empty-object-file-test", null);
         file.deleteOnExit();
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, file);

@@ -59,16 +59,12 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client:2.3.0',
+    implementation 'com.emc.ecs:smart-client:2.3.1',
             'com.emc.ecs:object-transform:1.1.0',
             'commons-codec:commons-codec:1.10',
             'org.jdom:jdom2:2.0.6',
             'org.slf4j:slf4j-api:1.7.5',
-            'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.2',
-            'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.2',
-            'com.sun.jersey.contribs:jersey-apache-client4:1.19.4',
-            'com.sun.jersey:jersey-client:1.19.4',
-            'org.apache.httpcomponents:httpclient:4.2.6'
+            'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.2'
     runtimeOnly 'org.slf4j:slf4j-log4j12:1.7.5'
     testImplementation 'junit:junit:4.12',
             'log4j:log4j:1.2.17'
