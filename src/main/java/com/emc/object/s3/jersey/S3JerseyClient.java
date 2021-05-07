@@ -146,6 +146,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
 
+        // S.C. - CHUNKED ENCODING (match ECS buffer size)
+        smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
+
         // creates a standard (non-load-balancing) jersey client
         if (clientHandler == null) {
             client = SmartClientFactory.createStandardClient(smartConfig);
@@ -183,9 +186,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - GEO-PINNING
             if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
-
-            // S.C. - CHUNKED ENCODING (match ECS buffer size)
-            smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
@@ -524,10 +524,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
-
         // enable checksum of the object
         request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-
         PutObjectResult result = new PutObjectResult();
         fillResponseEntity(result, executeAndClose(client, request));
         return result;
