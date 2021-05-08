@@ -569,6 +569,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
+    public void testExtendObjectRetentionPeriod() {
+    }
+
+    @Ignore
+    @Override
     public void testPreSignedUrlHeaderOverrides() throws Exception {
     }
 
@@ -602,5 +607,12 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
                     throw new S3Exception("foo", 500);
             }
         }
+    }
+
+    @Override
+    protected void assertForListVersionsPaging(int size, int requestCount)
+    {
+        Assert.assertEquals("The correct number of versions were NOT returned", 10, size);
+        Assert.assertEquals("should be 5 pages", 5, requestCount);
     }
 }

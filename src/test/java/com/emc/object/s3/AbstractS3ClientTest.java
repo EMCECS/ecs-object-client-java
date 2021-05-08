@@ -102,6 +102,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
         URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
+        boolean disableSmartClient = Boolean.parseBoolean(props.getProperty(TestProperties.DISABLE_SMART_CLIENT));
         String proxyUri = props.getProperty(TestProperties.PROXY_URI);
 
         S3Config s3Config;
@@ -117,6 +118,8 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
+        if(disableSmartClient)
+            s3Config.setSmartClient(false);
         // uncomment to hit a single node
         //s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
 

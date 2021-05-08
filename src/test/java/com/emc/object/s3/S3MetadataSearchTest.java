@@ -5,6 +5,7 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.QueryObjectsRequest;
+import com.emc.object.util.RestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -126,9 +127,16 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 .withAttribute("Size")
                 .withQuery("(x-amz-meta-string1<='') or (x-amz-meta-string1>='')");
         QueryObjectsResult result = client.queryObjects(request);
+
+        String version = client.listDataNodes().getVersionInfo();
+        boolean is34OrLater = version.compareTo("3.4") >= 0;
+
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
-        Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        if (is34OrLater)
+            Assert.assertNull(result.getNextMarker());
+        else
+            Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 
@@ -175,8 +183,9 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         ));
 
         String badField = "bad-field";
+        String badFieldValue = "bad\u001dfield";
         client.putObject(new PutObjectRequest(getTestBucket(), badField, new byte[0]).withObjectMetadata(
-                new S3ObjectMetadata().addEncodedUserMetadata("index-field", "bad\u001dfield")
+                new S3ObjectMetadata().addEncodedUserMetadata("index-field", badFieldValue)
                         .addUserMetadata("field-valid", "false")
                         .addUserMetadata("key-valid", "true")
         ));
@@ -184,12 +193,12 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         try {
             // list the bad key
             QueryObjectsRequest request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-field-valid=='true'");
+                    .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')").withSorted("x-amz-meta-index-field");
             QueryObjectsResult result = client.queryObjects(request);
 
             Assert.assertEquals(2, result.getObjects().size());
-            Assert.assertEquals(badKey, result.getObjects().get(0).getObjectName());
-            Assert.assertEquals(goodKey, result.getObjects().get(1).getObjectName());
+            Assert.assertEquals(badKey, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+            Assert.assertEquals(goodKey, RestUtil.urlDecode(result.getObjects().get(1).getObjectName()));
 
             // list a good field, with bad field results
             request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
@@ -197,19 +206,20 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
             result = client.queryObjects(request);
 
             Assert.assertEquals(1, result.getObjects().size());
-            Assert.assertEquals(badField, result.getObjects().get(0).getObjectName());
+            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
 
             // list a bad field
             request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-index-field=='bad\u001dfield'");
+                    .withQuery("x-amz-meta-index-field=='" + RestUtil.urlEncode(badFieldValue) + "'");
             result = client.queryObjects(request);
 
             Assert.assertEquals(1, result.getObjects().size());
-            Assert.assertEquals(badField, result.getObjects().get(0).getObjectName());
+            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
 
             List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
 
-            Assert.assertEquals(1, queryMds.size());
+            //SYSMD and USERMD
+            Assert.assertEquals(2, queryMds.size());
             QueryMetadata usermd = null;
             for (QueryMetadata m : queryMds) {
                 switch (m.getType()) {
@@ -219,10 +229,10 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 }
             }
             Assert.assertNotNull(usermd);
-
-            Assert.assertEquals("bad\u001dfield", usermd.getMdMap().get("x-amz-meta-index-field"));
-            Assert.assertEquals("false", usermd.getMdMap().get("x-amz-meta-field-valid"));
-            Assert.assertEquals("true", usermd.getMdMap().get("x-amz-meta-key-valid"));
+            //badFieldValue has to be stored in url encoded format. Limit by SDK-553, user application needs to record encoded or not.
+            Assert.assertEquals(RestUtil.urlEncode(badFieldValue), RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-index-field")));
+            Assert.assertEquals("false", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-field-valid")));
+            Assert.assertEquals("true", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-key-valid")));
         } finally {
             client.deleteObject(getTestBucket(), badKey);
         }
@@ -256,9 +266,16 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 .withAttribute("Size")
                 .withQuery("(x-amz-meta-STRING1<='') or (x-amz-meta-STRING1>='')");
         QueryObjectsResult result = client.queryObjects(request);
+
+        String version = client.listDataNodes().getVersionInfo();
+        boolean is34OrLater = version.compareTo("3.4") >= 0;
+
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
-        Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        if (is34OrLater)
+            Assert.assertNull(result.getNextMarker());
+        else
+            Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
         Assert.assertNotNull(result.getObjects());
         Assert.assertEquals(1, result.getObjects().size());
 
