@@ -12,6 +12,9 @@ s3.secret_key=<secretkey>
 ## Endpoint to the S3 Access Point
 s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 
+## Uncomment this to add your sts token
+#s3.security_token=<securityToken>
+
 ## Uncomment to enable vhost-style requests (including the namespace)
 #enableVhost=true
 
