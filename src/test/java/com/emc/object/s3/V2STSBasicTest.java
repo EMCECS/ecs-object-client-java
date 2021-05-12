@@ -1,8 +1,13 @@
 package com.emc.object.s3;
 
 import com.emc.object.Method;
+import com.emc.object.ObjectConfig;
+import com.emc.object.Protocol;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
+import com.emc.object.util.TestProperties;
+import com.emc.rest.smart.ecs.Vdc;
+import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -15,480 +20,46 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Date;
+import java.util.Properties;
 
 public class V2STSBasicTest extends S3JerseyClientTest{
     private static final Logger l4j = Logger.getLogger(V2STSBasicTest.class);
     private static final String SESSION_TOKEN = "Cghuc190ZXN0MRIIaWFtX3VzZXIaFEFST0EzQjFGMDc0OUJFQkIzRDlFIiB1cm46ZWNzOmlhbTo6bnNfdGVzdDE6cm9sZS9yb2xlMSoUQVNJQUI1MTEzMzYwN0FBNzg1QjUyUE1hc3RlcktleVJlY29yZC0zZGE0ZTJlNmMyMGNiMzg2NDVlZTJlYjlkNWUxYzUxODJiYTBhYjQ3NWIxMDg4YWE5NDBmMzIyZTAyNWEzY2Q1OKXTrK2VL1IMZWNzLXN0cy10ZW1waL_l44QG";
 
-    @Override
-    protected S3Config createS3Config() throws Exception {
-        S3Config s3Config = s3ConfigFromProperties();
-        Assume.assumeTrue("skip this test run STS instead", s3Config.getSessionToken() != null);
+    protected S3Config s3ConfigFromProperties() throws Exception {
+        Properties props = TestConfig.getProperties();
+
+        String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_ACCESS_KEY);
+        String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_SECRET_KEY);
+        String securityToken = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECURITY_TOKEN);
+        URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
+        boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
+        String proxyUri = props.getProperty(TestProperties.PROXY_URI);
+
+        S3Config s3Config;
+        if (enableVhost) {
+            s3Config = new S3Config(endpoint).withUseVHost(true);
+        } else if (endpoint.getPort() > 0) {
+            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), new Vdc(endpoint.getHost()));
+            s3Config.setPort(endpoint.getPort());
+        } else {
+            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
+        }
+        s3Config.withIdentity(accessKey).withSecretKey(secretKey).withSessionToken(securityToken);
+
+        if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
+
+        // uncomment to hit a single node
+        //s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
+
         return s3Config;
     }
-
-    @Test
-    public void testListDataNodes() {
-        super.testListDataNodes();
-    }
-
-    @Test
-    public void testListBucketsReq() {
-        super.testListBucketsReq();
-    }
-
-    @Test
-    public void testBucketExists() throws Exception {
-        super.testBucketExists();
-    }
-
-    @Test
-    public void testCreateBucketRequest() throws Exception {
-        super.testCreateBucketRequest();
-    }
-
-    @Test
-    public void testCreateStaleReadAllowedBucket() {
-        super.testCreateStaleReadAllowedBucket();
-    }
-
-    @Test
-    public void testCreateEncryptedBucket() {
-        super.testCreateEncryptedBucket();
-    }
-
-    @Test
-    public void testGetBucketInfo() {
-        super.testGetBucketInfo();
-    }
-
-    @Test
-    public void testDeleteBucket() throws Exception {
-        super.testDeleteBucket();
-    }
-
-    @Test
-    public void testDeleteBucketWithObjects() throws Exception {
-        super.testDeleteBucketWithObjects();
-    }
-
-
-    @Test
-    public void testSetGetBucketCors() throws Exception {
-        super.testSetGetBucketCors();
-    }
-
-    @Test
-    public void testDeleteBucketCors() throws Exception {
-        super.testDeleteBucketCors();
-    }
-
-    @Test
-    public void testBucketLifecycle() {
-        super.testBucketLifecycle();
-    }
-
-    @Test
-    public void testBucketPolicy() {
-        super.testBucketPolicy();
-    }
-
-    @Test
-    public void testListObjects() throws Exception {
-        super.testListObjects();
-    }
-
-    @Test
-    public void testListObjectsWithPrefix() throws Exception {
-        super.testListObjectsWithPrefix();
-    }
-
-    @Test
-    public void testListObjectsPagingWithEncodedDelim() {
-        super.testListObjectsPagingWithEncodedDelim();
-    }
-
-    @Test
-    public void testListObjectsPaging() {
-        super.testListObjectsPaging();
-    }
-
-    @Test
-    public void testListObjectsPagingDelim() {
-        super.testListObjectsPagingDelim();
-    }
-
-    @Test
-    public void testListObjectsPagingWithPrefix() {
-        super.testListObjectsPagingWithPrefix();
-    }
-
-    @Test
-    public void testListObjectsWithEncoding() {
-        super.testListObjectsWithEncoding();
-    }
-
-    @Test
-    public void testListAndReadVersions() throws Exception {
-        super.testListAndReadVersions();
-    }
-
-    @Test
-    public void testListVersionsPaging() {
-        super.testListVersionsPaging();
-    }
-
-    @Test
-    public void testListVersionsPagingPrefixDelim() throws Exception {
-        super.testListVersionsPagingPrefixDelim();
-    }
-
-    @Test
-    public void testReadObject() {
-        super.testReadObject();
-    }
-
-    @Test
-    public void testUpdateObjectWithRange() throws Exception {
-        super.testUpdateObjectWithRange();
-    }
-
-    @Test
-    public void testGetObjectPreconditions() {
-        super.testGetObjectPreconditions();
-    }
-
-    @Test
-    public void testPutObjectPreconditions() {
-        super.testPutObjectPreconditions();
-    }
-
-    @Test
-    public void testCreateObjectByteArray() {
-        super.testCreateObjectByteArray();
-    }
-
-    @Test
-    public void testCreateObjectWithStream() throws Exception {
-        super.testCreateObjectWithStream();
-    }
-
-    @Test
-    public void testCreateJsonObjectWithStream() {
-        super.testCreateJsonObjectWithStream();
-    }
-
-    @Test
-    public void testCreateObjectString() {
-        super.testCreateObjectString();
-    }
-
-    @Test
-    public void testCreateObjectWithRequest() {
-        super.testCreateObjectWithRequest();
-    }
-
-    @Test
-    public void testCreateObjectChunkedWithRequest() {
-        super.testCreateObjectChunkedWithRequest();
-    }
-
-    @Test
-    public void testCreateObjectWithMetadata() {
-        super.testCreateObjectWithMetadata();
-    }
-
-    @Test
-    public void testCreateObjectWithRetentionPeriod() throws Exception {
-        super.testCreateObjectWithRetentionPeriod();
-    }
-
-    @Test
-    public void testCreateObjectWithRetentionPolicy() throws Exception {
-        super.testCreateObjectWithRetentionPolicy();
-    }
-
-    @Test
-    public void testLargeObjectContentLength() throws Exception {
-        super.testLargeObjectContentLength();
-    }
-
-    @Test
-    public void testLargeFileUploader() throws Exception {
-        super.testLargeFileUploader();
-    }
-
-    @Test
-    public void testLargeFileUploaderProgressListener() throws Exception {
-        super.testLargeFileUploaderProgressListener();
-    }
-
-    @Test
-    public void testLargeFileUploaderStream() throws Exception {
-        super.testLargeFileUploaderStream();
-    }
-
-    @Test
-    public void testLargeFileDownloader() throws Exception {
-        super.testLargeFileDownloader();
-    }
-
-    @Test
-    public void testBucketLocation() throws Exception {
-        super.testBucketLocation();
-    }
-
-    @Test
-    public void testSetBucketVersioning() throws Exception {
-        super.testSetBucketVersioning();
-    }
-
-    @Test
-    public void testSingleMultipartUploadMostSimpleOnePart() throws Exception {
-        super.testSingleMultipartUploadMostSimpleOnePart();
-    }
-
-    @Test
-    public void testSingleMultipartUploadListParts() throws Exception {
-        super.testSingleMultipartUploadListParts();
-    }
-
-    @Test
-    public void testMultiThreadMultipartUploadListPartsPagination() throws Exception {
-        super.testMultiThreadMultipartUploadListPartsPagination();
-    }
-
-    @Test
-    public void testMultiThreadMultipartUploadMostSimple() throws Exception {
-        super.testMultiThreadMultipartUploadMostSimple();
-    }
-
-    @Test
-    public void testSingleMultipartUploadMostSimple() throws Exception {
-        super.testSingleMultipartUploadMostSimple();
-    }
-
-    @Test
-    public void testSingleMultipartUploadSimple() throws Exception {
-        super.testSingleMultipartUploadSimple();
-    }
-
-    @Test
-    public void testPutObject() {
-        super.testPutObject();
-    }
-
-    @Test
-    public void testEmptyObject() {
-        super.testEmptyObject();
-    }
-
-    @Test
-    public void testEmptyObjectChunked() {
-        super.testEmptyObjectChunked();
-    }
-
-    @Test
-    public void testPutObjectWithSpace() {
-        super.testPutObjectWithSpace();
-    }
-
-    @Test
-    public void testPutObjectWithPlus() {
-        super.testPutObjectWithPlus();
-    }
-
-    @Test
-    public void testPutObjectWithPercent() {
-        super.testPutObjectWithPercent();
-    }
-
-    @Test
-    public void testPutObjectWithChinese() {
-        super.testPutObjectWithChinese();
-    }
-
-    @Test
-    public void testPutObjectWithSmartQuote() {
-        super.testPutObjectWithSmartQuote();
-    }
-
-    /**
-     * Tests all the items in the java.net.URI "punct" character class.
-     */
-    @Test
-    public void testPutObjectWithUriPunct() {
-        super.testPutObjectWithUriPunct();
-    }
-
-    /**
-     * Tests all the items in the java.net.URI "reserved" character class.
-     */
-    @Test
-    public void testPutObjectWithUriReserved() {
-        super.testPutObjectWithUriReserved();
-    }
-
-    @Test
-    public void testPutObjectWithMd5() throws Exception {
-        super.testPutObjectWithMd5();
-    }
-
-    @Test
-    public void testPutObjectWithRetentionPeriod() throws Exception {
-        super.testPutObjectWithRetentionPeriod();
-    }
-
-    @Test
-    public void testPutObjectWithRetentionPolicy() {
-        super.testPutObjectWithRetentionPolicy();
-    }
-
-    @Test
-    public void testAppendObject() throws Exception {
-        super.testAppendObject();
-    }
-
-    @Test
-    public void testCopyObject() {
-        super.testCopyObject();
-    }
-
-    @Test
-    public void testCopyObjectPlusSource() {
-        super.testCopyObjectPlusSource();
-    }
-
-    @Test
-    public void testCopyObjectPlusDest() {
-        super.testCopyObjectPlusDest();
-    }
-
-    @Test
-    public void testCopyObjectPlusBoth() {
-        super.testCopyObjectPlusBoth();
-    }
-
-    @Test
-    public void testCopyObjectSpaceSrc() {
-        super.testCopyObjectSpaceSrc();
-    }
-
-    @Test
-    public void testCopyObjectSpaceDest() {
-        super.testCopyObjectSpaceDest();
-    }
-
-    @Test
-    public void testCopyObjectSpaceBoth() {
-        super.testCopyObjectSpaceBoth();
-    }
-
-    @Test
-    public void testCopyObjectChineseSrc() {
-        super.testCopyObjectChineseSrc();
-    }
-
-    @Test
-    public void testCopyObjectChineseDest() {
-        super.testCopyObjectChineseDest();
-    }
-
-    @Test
-    public void testCopyObjectChineseBoth() {
-        super.testCopyObjectChineseBoth();
-    }
-
-    @Test
-    public void testCopyObjectSelf() throws Exception {
-        super.testCopyObjectSelf();
-    }
-
-    @Test
-    public void testCopyObjectWithMeta() throws Exception {
-        super.testCopyObjectWithMeta();
-    }
-
-    @Test
-    public void testUpdateMetadata() {
-        super.testUpdateMetadata();
-    }
-
-    @Test
-    public void testVerifyRead() {
-        super.testVerifyRead();
-    }
-
-    @Test
-    public void testStreamObjectBetweenBuckets() throws Exception {
-        super.testStreamObjectBetweenBuckets();
-    }
-
-    @Test
-    public void testReadObjectStreamRange() throws Exception {
-        super.testReadObjectStreamRange();
-    }
-
-    @Test
-    public void testGetObjectResultTemplate() {
-        super.testGetObjectResultTemplate();
-    }
-
-    @Test
-    public void testBucketVersions() throws Exception {
-        super.testBucketVersions();
-    }
-
-    @Test
-    public void testDeleteObjectsRequest() {
-        super.testDeleteObjectsRequest();
-    }
-
-    @Test
-    public void testGetObjectMetadata() {
-        super.testGetObjectMetadata();
-    }
-
-    @Test
-    public void testGetObjectVersionMetadata() {
-        super.testGetObjectVersionMetadata();
-    }
-
-    @Test
-    public void testGetObjectMetadataNoExist() {
-        super.testGetObjectMetadataNoExist();
-    }
-
-    @Test
-    public void testGetObjectMetadataRequest() {
-        super.testGetObjectMetadataRequest();
-    }
-
-    @Test
-    public void testGetObjectAcl() {
-        super.testGetObjectAcl();
-    }
-
-    @Test
-    public void testGetObjectVersionAcl() {
-        super.testGetObjectVersionAcl();
-    }
-
-    @Test
-    public void testSetObjectCannedAcl() {
-        super.testSetObjectCannedAcl();
-    }
-
-
-    @Test
-    public void testSetObjectAclRequestCanned() {
-        super.testSetObjectAclRequestCanned();
-    }
-
-    @Test
-    public void testExtendObjectRetentionPeriod() throws Exception {
-        super.testExtendObjectRetentionPeriod();
-    }
+//    @Override
+//    protected S3Config createS3Config() throws Exception {
+//        S3Config s3Config = s3ConfigFromProperties();
+//        Assume.assumeTrue("skip this test run STS instead", s3Config.getSessionToken() != null);
+//        return s3Config;
+//    }
 
     @Test
     public void testPreSignedUrl() throws Exception {
@@ -596,78 +167,9 @@ public class V2STSBasicTest extends S3JerseyClientTest{
                 url.toString());
     }
 
-    @Test
-    public void testPreSignedUrlHeaderOverrides() throws Exception {
-        super.testPreSignedUrlHeaderOverrides();
-    }
-
-    @Test
-    public void testVPoolHeader() throws Exception {
-        super.testVPoolHeader();
-    }
-
-    /**
-     * A debugging proxy (Fiddler, Charles), is required to verify that the proper header is being sent.
-     * Optionally a jersey filter could be used to sniff for it
-     */
-    @Test
-    public void testCustomHeader() {
-        super.testCustomHeader();
-    }
-
-    @Test
-    public void testStaleReadsAllowed() {
-        super.testStaleReadsAllowed();
-    }
-
-    @Test
-    public void testListMarkerWithSpecialChars() {
-        super.testListMarkerWithSpecialChars();
-    }
-
-    @Test
-    public void testListPagesNoDelimiter() {
-        super.testListPagesNoDelimiter();
-    }
-
-    @Test
-    public void testListMarkerWithIllegalChars() {
-        super.testListMarkerWithIllegalChars();
-    }
-
-    @Test
-    public void testPing() {
-        super.testPing();
-    }
-
-    @Test
-    public void testTimeouts() throws Exception {
-        super.testTimeouts();
-    }
-
-    @Test
-    public void testFaultInjection() throws Exception {
-        super.testFaultInjection();
-    }
-
-    @Test
-    public void testCifsEcs() {
-        super.testCifsEcs();
-    }
-
-    @Test
-    public void testListBuckets() throws Exception {
-        super.testListBuckets();
-    }
-
     @Ignore
     @Test
     public void testMultipleVdcs() throws Exception {
-    }
-
-    @Ignore
-    @Test
-    public void testCreateExistingBucket() throws Exception {
     }
 
     @Ignore

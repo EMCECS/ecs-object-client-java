@@ -93,17 +93,14 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     }
 
     protected S3Config createS3Config() throws Exception {
-        S3Config s3Config = s3ConfigFromProperties();
-        Assume.assumeTrue("skip this test run STS instead", s3Config.getSessionToken() == null);
-        return s3Config;
+        return s3ConfigFromProperties();
     }
 
-    protected static S3Config s3ConfigFromProperties() throws Exception {
+    protected S3Config s3ConfigFromProperties() throws Exception {
         Properties props = TestConfig.getProperties();
 
         String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
         String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
-        String securityToken = props.getProperty(TestProperties.S3_SECURITY_TOKEN);
         URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
         boolean disableSmartClient = Boolean.parseBoolean(props.getProperty(TestProperties.DISABLE_SMART_CLIENT));
@@ -119,8 +116,6 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
         s3Config.withIdentity(accessKey).withSecretKey(secretKey);
-
-        if (securityToken != null) s3Config.withSessionToken(securityToken);
 
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
