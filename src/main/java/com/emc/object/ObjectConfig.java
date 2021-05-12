@@ -438,6 +438,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     }
 
     public void setReadTimeout(int readTimeout) {this.readTimeout = readTimeout; }
+
+    @ConfigUriProperty
     public String getSessionToken() {
         return sessionToken;
     }

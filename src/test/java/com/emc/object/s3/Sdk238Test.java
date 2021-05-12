@@ -43,7 +43,7 @@ import java.util.List;
 public class Sdk238Test {
     @Test
     public void testTrailingSlash() throws Exception {
-        TestClient client = new TestClient(AbstractS3ClientTest.s3ConfigFromProperties());
+        TestClient client = new TestClient(new S3JerseyClientTest().s3ConfigFromProperties());
 
         String bucket = "test-trailing-slash";
         client.createBucket(bucket);
