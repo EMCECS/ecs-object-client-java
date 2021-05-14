@@ -1,17 +1,13 @@
 package com.emc.object.s3;
 
 import com.emc.object.Method;
-import com.emc.object.ObjectConfig;
-import com.emc.object.Protocol;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.TestProperties;
-import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -22,7 +18,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.Properties;
 
-public class V2STSBasicTest extends S3JerseyClientTest{
+public class V2STSBasicTest extends S3JerseyClientTest {
     private static final Logger l4j = Logger.getLogger(V2STSBasicTest.class);
     private static final String SESSION_TOKEN = "Cghuc190ZXN0MRIIaWFtX3VzZXIaFEFST0EzQjFGMDc0OUJFQkIzRDlFIiB1cm46ZWNzOmlhbTo6bnNfdGVzdDE6cm9sZS9yb2xlMSoUQVNJQUI1MTEzMzYwN0FBNzg1QjUyUE1hc3RlcktleVJlY29yZC0zZGE0ZTJlNmMyMGNiMzg2NDVlZTJlYjlkNWUxYzUxODJiYTBhYjQ3NWIxMDg4YWE5NDBmMzIyZTAyNWEzY2Q1OKXTrK2VL1IMZWNzLXN0cy10ZW1waL_l44QG";
 
@@ -32,34 +28,12 @@ public class V2STSBasicTest extends S3JerseyClientTest{
         String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_ACCESS_KEY);
         String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_SECRET_KEY);
         String securityToken = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECURITY_TOKEN);
-        URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
-        boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
-        String proxyUri = props.getProperty(TestProperties.PROXY_URI);
 
-        S3Config s3Config;
-        if (enableVhost) {
-            s3Config = new S3Config(endpoint).withUseVHost(true);
-        } else if (endpoint.getPort() > 0) {
-            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), new Vdc(endpoint.getHost()));
-            s3Config.setPort(endpoint.getPort());
-        } else {
-            s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
-        }
+        S3Config s3Config = s3ConfigNetWorkSetting(props);
         s3Config.withIdentity(accessKey).withSecretKey(secretKey).withSessionToken(securityToken);
-
-        if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
-
-        // uncomment to hit a single node
-        //s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
 
         return s3Config;
     }
-//    @Override
-//    protected S3Config createS3Config() throws Exception {
-//        S3Config s3Config = s3ConfigFromProperties();
-//        Assume.assumeTrue("skip this test run STS instead", s3Config.getSessionToken() != null);
-//        return s3Config;
-//    }
 
     @Test
     public void testPreSignedUrl() throws Exception {

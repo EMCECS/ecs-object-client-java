@@ -41,7 +41,6 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
 import org.apache.log4j.Logger;
 import org.junit.After;
-import org.junit.Assume;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -101,6 +100,14 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
         String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
         String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
+
+        S3Config s3Config = s3ConfigNetWorkSetting(props);
+        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
+
+        return s3Config;
+    }
+
+    protected S3Config s3ConfigNetWorkSetting(Properties props) throws Exception {
         URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
         boolean disableSmartClient = Boolean.parseBoolean(props.getProperty(TestProperties.DISABLE_SMART_CLIENT));
@@ -115,7 +122,6 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         } else {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
-        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
