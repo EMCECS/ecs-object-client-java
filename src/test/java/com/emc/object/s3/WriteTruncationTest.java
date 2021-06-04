@@ -7,15 +7,18 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.util.FaultInjectionStream;
-import com.emc.util.RandomInputStream;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 import org.junit.*;
 
+import javax.xml.bind.DatatypeConverter;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Random;
 
 public class WriteTruncationTest {
     public static final Logger log = Logger.getLogger(WriteTruncationTest.class);
@@ -26,6 +29,7 @@ public class WriteTruncationTest {
 
     S3Client s3Client;
     S3Client s3JvmClient;
+    final Random random = new Random();
 
     @Before
     public void setup() throws Exception {
@@ -54,22 +58,22 @@ public class WriteTruncationTest {
 
     @Test
     public void testIOExceptionDuringReadApache() {
-        testTruncatedWrite(true, true, ExceptionType.IOException, 0);
+        testTruncatedWrite(true, true, ExceptionType.IOException, 0, false);
     }
 
     @Test
     public void testIOExceptionDuringReadJvm() {
-        testTruncatedWrite(false, true, ExceptionType.IOException, 0);
+        testTruncatedWrite(false, true, ExceptionType.IOException, 0, false);
     }
 
     @Test
     public void testRuntimeExceptionDuringReadApache() {
-        testTruncatedWrite(true, true, ExceptionType.RuntimeException, 0);
+        testTruncatedWrite(true, true, ExceptionType.RuntimeException, 0, false);
     }
 
     @Test
     public void testRuntimeExceptionDuringReadJvm() {
-        testTruncatedWrite(false, true, ExceptionType.RuntimeException, 0);
+        testTruncatedWrite(false, true, ExceptionType.RuntimeException, 0, false);
     }
 
     // This will fail because ECS does not know how much data is the correct amount (as would be the case if
@@ -79,7 +83,7 @@ public class WriteTruncationTest {
     @Ignore
     @Test
     public void testIOExceptionChunkedEncodingApache() {
-        testTruncatedWrite(true, false, ExceptionType.IOException, 0);
+        testTruncatedWrite(true, false, ExceptionType.IOException, 0, false);
     }
 
     // This will fail because ECS does not know how much data is the correct amount (as would be the case if
@@ -89,23 +93,38 @@ public class WriteTruncationTest {
     @Ignore
     @Test
     public void testIOExceptionChunkedEncodingJvm() {
-        testTruncatedWrite(false, false, ExceptionType.IOException, 0);
+        testTruncatedWrite(false, false, ExceptionType.IOException, 0, false);
+    }
+
+    // (see above)
+    // However, when a Content-MD5 header is sent on the PUT, ECS will reject it if the data doesn't match - this is our workaround
+    @Test
+    public void testIOExceptionChunkedEncodingMd5Apache() {
+        testTruncatedWrite(true, false, ExceptionType.IOException, 0, true);
+    }
+
+    // (see above)
+    // However, when a Content-MD5 header is sent on the PUT, ECS will reject it if the data doesn't match - this is our workaround
+    @Test
+    public void testIOExceptionChunkedEncodingMd5Jvm() {
+        testTruncatedWrite(false, false, ExceptionType.IOException, 0, true);
     }
 
     @Test
     public void testDelayedIOExceptionApache() {
-        testTruncatedWrite(true, true, ExceptionType.IOException, 61);
+        testTruncatedWrite(true, true, ExceptionType.IOException, 61, false);
     }
 
     @Test
     public void testDelayedIOExceptionJvm() {
-        testTruncatedWrite(false, true, ExceptionType.IOException, 61);
+        testTruncatedWrite(false, true, ExceptionType.IOException, 61, false);
     }
 
     void testTruncatedWrite(boolean useApacheClient,
                             boolean setContentLength,
                             ExceptionType exceptionType,
-                            int delayBeforeException) {
+                            int delayBeforeException,
+                            boolean sendContentMd5) {
         S3Client s3Client = useApacheClient ? this.s3Client : this.s3JvmClient;
 
         String key = String.format("read-%s%s-%s%stest",
@@ -118,7 +137,12 @@ public class WriteTruncationTest {
         metadata.withRetentionPeriod((long) OBJECT_RETENTION_PERIOD);
         String message = "Injected Exception for testing purposes";
 
-        InputStream dataStream = new RandomInputStream(MOCK_OBJ_SIZE);
+        byte[] data = new byte[MOCK_OBJ_SIZE];
+        random.nextBytes(data);
+        InputStream dataStream = new ByteArrayInputStream(data);
+
+        if (sendContentMd5) metadata.setContentMd5(DatatypeConverter.printBase64Binary(DigestUtils.md5(data)));
+
         FaultInjectionStream badStream;
         if (exceptionType == ExceptionType.RuntimeException) {
             badStream = new FaultInjectionStream(dataStream, MOCK_OBJ_SIZE / 2, new RuntimeException(message));
