@@ -28,19 +28,29 @@ package com.emc.object.s3.request;
 
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
+import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.bean.DeleteObjects;
 import com.emc.object.s3.bean.ObjectKey;
 import com.emc.object.util.RestUtil;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class DeleteObjectsRequest extends AbstractBucketRequest implements EntityRequest {
     private DeleteObjects deleteObjects;
+    private Boolean bypassGovernanceRetention;
 
     public DeleteObjectsRequest(String bucketName) {
         super(Method.POST, bucketName, "", "delete");
         property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
+    }
+
+    @Override
+    public Map<String, List<Object>> getHeaders() {
+        Map<String, List<Object>> headers = super.getHeaders();
+        if (bypassGovernanceRetention != null) RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_BYPASS_GOVERNANCE_RETENTION, Boolean.toString(bypassGovernanceRetention));
+        return headers;
     }
 
     @Override
@@ -88,5 +98,18 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
             objects[i] = new ObjectKey(keys[i]);
         }
         return withKeys(objects);
+    }
+
+    public boolean getBypassGovernanceRetention() {
+        return bypassGovernanceRetention;
+    }
+
+    public void  setBypassGovernanceRetention(Boolean bypassGovernanceRetention) {
+        this.bypassGovernanceRetention = bypassGovernanceRetention;
+    }
+
+    public DeleteObjectsRequest withBypassGovernanceRetention(Boolean bypassGovernanceRetention) {
+        setBypassGovernanceRetention(bypassGovernanceRetention);
+        return this;
     }
 }

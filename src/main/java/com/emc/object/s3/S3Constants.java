@@ -49,6 +49,11 @@ public final class S3Constants {
     public static final String AMZ_SOURCE_UNMODIFIED_SINCE = AMZ_PREFIX + "copy-source-if-unmodified-since";
     public static final String AMZ_SOURCE_VERSION_ID = AMZ_PREFIX + "copy-source-version-id";
     public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";
+    public static final String AMZ_BUCKET_OBJECT_LOCK_ENABLED = AMZ_PREFIX + "bucket-object-lock-enabled";
+    public static final String AMZ_OBJECT_LOCK_LEGAL_HOLD = AMZ_PREFIX + "object-lock-legal-hold";
+    public static final String AMZ_OBJECT_LOCK_MODE = AMZ_PREFIX + "object-lock-mode";
+    public static final String AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE = AMZ_PREFIX + "object-lock-retain-until-date";
+    public static final String AMZ_OBJECT_LOCK_BYPASS_GOVERNANCE_RETENTION = AMZ_PREFIX + "bypass-governance-retention";
 
     public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";
     public static final String PARAM_ATTRIBUTES = "attributes";

@@ -31,8 +31,12 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.ObjectLockLegalHold;
+import com.emc.object.s3.bean.ObjectLockRetention;
 import com.emc.object.util.RestUtil;
 
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +44,8 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
     private S3ObjectMetadata objectMetadata;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
+    private ObjectLockLegalHold objectLockLegalHold;
+    private ObjectLockRetention objectLockRetention;
 
     public InitiateMultipartUploadRequest(String bucketName, String key) {
         super(Method.POST, bucketName, key, "uploads");
@@ -51,6 +57,14 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
         if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
+        if (objectLockLegalHold != null) RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_LEGAL_HOLD, objectLockLegalHold.getStatus());
+        if (objectLockRetention != null) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
+            if (objectLockRetention.getRetainUntilDate() != null) {
+                RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(objectLockRetention.getRetainUntilDate().toInstant().atOffset(ZoneOffset.UTC)));
+            }
+        }
         return headers;
     }
 
@@ -78,6 +92,22 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
         this.cannedAcl = cannedAcl;
     }
 
+    public ObjectLockLegalHold getObjectLockLegalHold() {
+        return objectLockLegalHold;
+    }
+
+    public void setObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        this.objectLockLegalHold = objectLockLegalHold;
+    }
+
+    public ObjectLockRetention getObjectLockRetention() {
+        return objectLockRetention;
+    }
+
+    public void setObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        this.objectLockRetention = objectLockRetention;
+    }
+
     public InitiateMultipartUploadRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -90,6 +120,15 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
 
     public InitiateMultipartUploadRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
+        return this;
+    }
+
+    public InitiateMultipartUploadRequest withObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        setObjectLockLegalHold(objectLockLegalHold);
+        return this;
+    }
+    public InitiateMultipartUploadRequest withObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        setObjectLockRetention(objectLockRetention);
         return this;
     }
 }

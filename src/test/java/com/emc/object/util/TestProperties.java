@@ -33,6 +33,7 @@ public class TestProperties {
     public static final String S3_ENDPOINT = "s3.endpoint";
     public static final String S3_ACCESS_KEY = "s3.access_key";
     public static final String S3_SECRET_KEY = "s3.secret_key";
+    public static final String S3_IAM_USER = "s3.iam_user";
 
     public static final String PROXY_URI = "http.proxyUri";
     public static final String NON_DEFAULT_VPOOL = "nonDefaultVpoolId";

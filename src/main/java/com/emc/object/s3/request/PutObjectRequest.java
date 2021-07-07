@@ -33,8 +33,12 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.ObjectLockLegalHold;
+import com.emc.object.s3.bean.ObjectLockRetention;
 import com.emc.object.util.RestUtil;
 
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +53,8 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     private String ifNoneMatch;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
+    private ObjectLockLegalHold objectLockLegalHold;
+    private ObjectLockRetention objectLockRetention;
 
     public PutObjectRequest(String bucketName, String key, Object object) {
         super(Method.PUT, bucketName, key, null);
@@ -62,6 +68,8 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         this.range = other.range;
         this.acl = other.acl;
         this.cannedAcl = other.cannedAcl;
+        this.objectLockLegalHold = other.objectLockLegalHold;
+        this.objectLockRetention = other.objectLockRetention;
     }
 
     @Override
@@ -77,6 +85,14 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         if (ifNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifNoneMatch);
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
+        if (objectLockLegalHold != null) RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_LEGAL_HOLD, objectLockLegalHold.getStatus());
+        if (objectLockRetention != null) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
+            if (objectLockRetention.getRetainUntilDate() != null) {
+                RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(objectLockRetention.getRetainUntilDate().toInstant().atOffset(ZoneOffset.UTC)));
+            }
+        }
         return headers;
     }
 
@@ -217,6 +233,22 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         return this;
     }
 
+    public ObjectLockLegalHold getObjectLockLegalHold() {
+        return objectLockLegalHold;
+    }
+
+    public void setObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        this.objectLockLegalHold = objectLockLegalHold;
+    }
+
+    public ObjectLockRetention getObjectLockRetention() {
+        return objectLockRetention;
+    }
+
+    public void setObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        this.objectLockRetention = objectLockRetention;
+    }
+
     public PutObjectRequest withRange(Range range) {
         setRange(range);
         return this;
@@ -273,6 +305,15 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     @Deprecated
     public PutObjectRequest withRetentionPolicy(String retentionPolicy) {
         setRetentionPolicy(retentionPolicy);
+        return this;
+    }
+
+    public PutObjectRequest withObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        setObjectLockLegalHold(objectLockLegalHold);
+        return this;
+    }
+    public PutObjectRequest withObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        setObjectLockRetention(objectLockRetention);
         return this;
     }
 }

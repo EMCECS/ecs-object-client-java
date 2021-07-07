@@ -722,6 +722,60 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void setObjectLockConfiguration(String bucketName, ObjectLockConfiguration objectLockConfiguration) {
+        ObjectRequest request = new GenericBucketEntityRequest<ObjectLockConfiguration>(
+                Method.PUT, bucketName, "object-lock", objectLockConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public ObjectLockConfiguration getObjectLockConfiguration(String bucketName) {
+        ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "object-lock");
+        try {
+            return executeRequest(client, request, ObjectLockConfiguration.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode())) return null;
+            throw e;
+        }
+    }
+
+    @Override
+    public void enableObjectLock(String bucketName) {
+        ObjectRequest request = new GenericBucketRequest(Method.PUT, bucketName, "enable-object-lock");
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public void setObjectLegalHold(SetObjectLegalHoldRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public ObjectLockLegalHold getObjectLegalHold(GetObjectLegalHoldRequest request) {
+        try {
+            return executeRequest(client, request, ObjectLockLegalHold.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
+            throw e;
+        }
+    }
+
+    @Override
+    public void setObjectRetention(SetObjectRetentionRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request) {
+        try {
+            return executeRequest(client, request, ObjectLockRetention.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
+            throw e;
+        }
+    }
+
+    @Override
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
         ClientResponse response = executeRequest(client, request);
         try {
