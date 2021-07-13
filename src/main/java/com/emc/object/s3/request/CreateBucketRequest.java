@@ -160,6 +160,10 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         this.metadataSearchKeys = sb.toString();
     }
 
+    public void setObjectLockEnabledForBucket(boolean objectLockEnabled) {
+        this.objectLockEnabled = objectLockEnabled;
+    }
+
     public CreateBucketRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
         return this;
@@ -201,11 +205,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     }
 
     public CreateBucketRequest withObjectLockEnabledForBucket(boolean objectLockEnabled) {
-        this.objectLockEnabled = objectLockEnabled;
+        setObjectLockEnabledForBucket(objectLockEnabled);
         return this;
-    }
-
-    public void setObjectLockEnabledForBucket(boolean objectLockEnabled) {
-        withObjectLockEnabledForBucket(objectLockEnabled);
     }
 }

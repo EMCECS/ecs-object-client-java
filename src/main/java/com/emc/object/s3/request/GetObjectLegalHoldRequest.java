@@ -22,12 +22,12 @@ public class GetObjectLegalHoldRequest extends S3ObjectRequest {
         return this.versionId;
     }
 
-    public GetObjectLegalHoldRequest withVersionId(String versionId) {
+    public void setVersionId(String versionId) {
         this.versionId = versionId;
-        return this;
     }
 
-    public void setVersionId(String versionId) {
-        this.withVersionId(versionId);
+    public GetObjectLegalHoldRequest withVersionId(String versionId) {
+        setVersionId(versionId);
+        return this;
     }
 }

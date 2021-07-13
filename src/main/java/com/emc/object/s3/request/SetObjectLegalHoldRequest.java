@@ -52,25 +52,25 @@ public class SetObjectLegalHoldRequest extends S3ObjectRequest implements Entity
         return this.legalHold;
     }
 
-    public SetObjectLegalHoldRequest withLegalHold(ObjectLockLegalHold legalHold) {
+    public void setLegalHold(ObjectLockLegalHold legalHold) {
         this.legalHold = legalHold;
-        return this;
     }
 
-    public void setLegalHold(ObjectLockLegalHold legalHold) {
-        this.withLegalHold(legalHold);
+    public SetObjectLegalHoldRequest withLegalHold(ObjectLockLegalHold legalHold) {
+        setLegalHold(legalHold);
+        return this;
     }
 
     public String getVersionId() {
         return this.versionId;
     }
 
-    public SetObjectLegalHoldRequest withVersionId(String versionId) {
+    public void setVersionId(String versionId) {
         this.versionId = versionId;
-        return this;
     }
 
-    public void setVersionId(String versionId) {
-        this.withVersionId(versionId);
+    public SetObjectLegalHoldRequest withVersionId(String versionId) {
+        setVersionId(versionId);
+        return this;
     }
 }

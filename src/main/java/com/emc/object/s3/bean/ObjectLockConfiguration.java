@@ -15,31 +15,31 @@ public class ObjectLockConfiguration {
     public String getObjectLockEnabled() { return this.objectLockEnabled; }
 
     public void setObjectLockEnabled(String objectLockEnabled) {
-        this.withObjectLockEnabled(objectLockEnabled);
+        this.objectLockEnabled = objectLockEnabled;
     }
 
     public ObjectLockConfiguration withObjectLockEnabled(String objectLockEnabled) {
-        this.objectLockEnabled = objectLockEnabled;
+        setObjectLockEnabled(objectLockEnabled);
         return this;
-    }
-
-    public ObjectLockConfiguration withObjectLockEnabled(ObjectLockEnabled objectLockEnabled) {
-        return this.withObjectLockEnabled(objectLockEnabled.toString());
     }
 
     public void setObjectLockEnabled(ObjectLockEnabled objectLockEnabled) {
         this.setObjectLockEnabled(objectLockEnabled.toString());
     }
 
+    public ObjectLockConfiguration withObjectLockEnabled(ObjectLockEnabled objectLockEnabled) {
+        return withObjectLockEnabled(objectLockEnabled.toString());
+    }
+
     @XmlElement(name = "Rule")
     public ObjectLockRule getRule() { return this.rule; }
 
     public void setRule(ObjectLockRule rule) {
-        this.withRule(rule);
+        this.rule = rule;
     }
 
     public ObjectLockConfiguration withRule(ObjectLockRule rule) {
-        this.rule = rule;
+        setRule(rule);
         return this;
     }
 

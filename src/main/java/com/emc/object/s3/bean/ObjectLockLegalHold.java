@@ -13,27 +13,23 @@ public class ObjectLockLegalHold {
     @XmlElement(name = "Status")
     public String getStatus() { return status; }
 
-    public ObjectLockLegalHold withStatus(String status) {
+    public void setStatus(String status) {
         this.status = status;
+    }
+
+    public ObjectLockLegalHold withStatus(String status) {
+        setStatus(status);
         return this;
     }
+
+    public void setStatus(Status status) { setStatus(status.toString()); }
 
     public ObjectLockLegalHold withStatus(Status status) {
-        this.status = status.toString();
-        return this;
-    }
-
-    public void setStatus(String status) {
-        withStatus(status);
-    }
-
-    public void setStatus(Status status) {
-        withStatus(status);
+        return withStatus(status.toString());
     }
 
     @XmlEnum
     public enum Status {
         ON, OFF
     }
-
 }

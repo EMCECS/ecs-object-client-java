@@ -57,25 +57,23 @@ public class SetObjectRetentionRequest extends S3ObjectRequest implements Entity
     }
 
     public SetObjectRetentionRequest withRetention(ObjectLockRetention retention) {
-        this.retention = retention;
+        setRetention(retention);
         return this;
     }
 
-    public void setRetention(ObjectLockRetention retention) {
-        withRetention(retention);
-    }
+    public void setRetention(ObjectLockRetention retention) { this.retention = retention; }
 
     public String getVersionId() {
         return versionId;
     }
 
     public SetObjectRetentionRequest withVersionId(String versionId) {
-        this.versionId = versionId;
+        setVersionId(versionId);
         return this;
     }
 
     public void setVersionId(String versionId) {
-        withVersionId(versionId);
+        this.versionId = versionId;
     }
 
     public boolean getBypassGovernanceRetention() {
@@ -83,11 +81,11 @@ public class SetObjectRetentionRequest extends S3ObjectRequest implements Entity
     }
 
     public SetObjectRetentionRequest withBypassGovernanceRetention(Boolean bypassGovernanceRetention) {
-        this.bypassGovernanceRetention = bypassGovernanceRetention;
+        setBypassGovernanceRetention(bypassGovernanceRetention);
         return this;
     }
 
     public void setBypassGovernanceRetention(Boolean bypassGovernanceRetention) {
-        withBypassGovernanceRetention(bypassGovernanceRetention);
+        this.bypassGovernanceRetention = bypassGovernanceRetention;
     }
 }

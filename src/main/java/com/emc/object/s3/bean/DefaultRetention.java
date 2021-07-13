@@ -21,21 +21,21 @@ public class DefaultRetention implements Serializable {
         return this.mode;
     }
 
-    public DefaultRetention withMode(String mode) {
+    public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    public DefaultRetention withMode(String mode) {
+        setMode(mode);
         return this;
     }
 
-    public DefaultRetention withMode(ObjectLockRetentionMode mode) {
-        return this.withMode(mode.toString());
-    }
-
     public void setMode(ObjectLockRetentionMode mode) {
-        this.withMode(mode);
+        setMode(mode.toString());
     }
 
-    public void setMode(String mode) {
-        this.withMode(mode);
+    public DefaultRetention withMode(ObjectLockRetentionMode mode) {
+        return withMode(mode.toString());
     }
 
     @XmlElement(name = "Days")
@@ -43,13 +43,13 @@ public class DefaultRetention implements Serializable {
         return this.days;
     }
 
-    public DefaultRetention withDays(Integer days) {
+    public void setDays(Integer days) {
         this.days = days;
-        return this;
     }
 
-    public void setDays(Integer days) {
-        this.withDays(days);
+    public DefaultRetention withDays(Integer days) {
+        setDays(days);
+        return this;
     }
 
     @XmlElement(name = "Years")
@@ -57,12 +57,12 @@ public class DefaultRetention implements Serializable {
         return this.years;
     }
 
-    public DefaultRetention withYears(Integer years) {
+    public void setYears(Integer years) {
         this.years = years;
-        return this;
     }
 
-    public void setYears(Integer years) {
-        this.withYears(years);
+    public DefaultRetention withYears(Integer years) {
+        setYears(years);
+        return this;
     }
 }

@@ -18,21 +18,19 @@ public class ObjectLockRetention {
         return mode;
     }
 
-    public ObjectLockRetention withMode(String mode) {
+    public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    public ObjectLockRetention withMode(String mode) {
+        setMode(mode);
         return this;
     }
 
+    public void setMode(ObjectLockRetentionMode mode) { setMode(mode.toString()); }
+
     public ObjectLockRetention withMode(ObjectLockRetentionMode mode) {
         return withMode(mode.toString());
-    }
-
-    public void setMode(String mode) {
-        withMode(mode);
-    }
-
-    public void setMode(ObjectLockRetentionMode mode) {
-        setMode(mode.toString());
     }
 
     @XmlElement(name = "RetainUntilDate")
@@ -41,16 +39,13 @@ public class ObjectLockRetention {
         return retainUntilDate;
     }
 
-    public ObjectLockRetention withRetainUntilDate(Date retainUntilDate) {
+    public void setRetainUntilDate(Date retainUntilDate) {
         this.retainUntilDate = retainUntilDate;
+    }
+
+    public ObjectLockRetention withRetainUntilDate(Date retainUntilDate) {
+        setRetainUntilDate(retainUntilDate);
         return this;
     }
-
-    public void setRetainUntilDate(Date retainUntilDate) {
-        withRetainUntilDate(retainUntilDate);
-    }
-
-
-
 }
 

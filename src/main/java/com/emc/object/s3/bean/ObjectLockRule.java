@@ -13,12 +13,12 @@ public class ObjectLockRule implements Serializable {
         return defaultRetention;
     }
 
-    public ObjectLockRule withDefaultRetention(DefaultRetention defaultRetention) {
+    public void setDefaultRetention(DefaultRetention defaultRetention) {
         this.defaultRetention = defaultRetention;
-        return this;
     }
 
-    public void setDefaultRetention(DefaultRetention defaultRetention) {
-        withDefaultRetention(defaultRetention);
+    public ObjectLockRule withDefaultRetention(DefaultRetention defaultRetention) {
+        setDefaultRetention(defaultRetention);
+        return this;
     }
 }

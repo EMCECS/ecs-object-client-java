@@ -243,8 +243,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectLockConfig.setRule(new ObjectLockRule().withDefaultRetention(defaultRetention));
         try {
             client.setObjectLockConfiguration(bucketName, objectLockConfig);
+            Assert.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
         } catch (S3Exception e) {
-            //Object Lock configuration cannot be set on existing bucket without ObjectLock being enabled.
             Assert.assertEquals(409, e.getHttpCode());
             Assert.assertEquals("InvalidBucketState", e.getErrorCode());
         }
@@ -275,6 +275,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("ON", client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName,key).withVersionId(versionId)).getStatus());
         try {
             client.deleteVersion(bucketName, key, versionId);
+            Assert.fail("Exception is expected when deleting version objects with Legal Hold ON.");
         } catch (S3Exception e) {
             Assert.assertEquals("AccessDenied", e.getErrorCode());
         } finally {
@@ -327,7 +328,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         GetObjectRetentionRequest request = new GetObjectRetentionRequest(bucketName,key).withVersionId(versionId);
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(request);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
-        Assert.assertEquals(0, retentionDate.compareTo(objectLockRetention2.getRetainUntilDate()));
+        Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
         Thread.sleep(2000);
 
         //Put Retention on existing object.
@@ -339,7 +340,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setObjectRetention(setObjectRetentionRequest);
         objectLockRetention2 = client.getObjectRetention(request);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
-        Assert.assertEquals(0, retentionDate2.compareTo(objectLockRetention2.getRetainUntilDate()));
+        Assert.assertEquals(retentionDate2, objectLockRetention2.getRetainUntilDate());
         Thread.sleep(2000);
     }
 
@@ -428,7 +429,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         GetObjectRetentionRequest getObjectRetentionRequest = new GetObjectRetentionRequest(bucketName,key).withVersionId(versionId);
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(getObjectRetentionRequest);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
-        Assert.assertEquals(0, retentionDate.compareTo(objectLockRetention2.getRetainUntilDate()));
+        Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
         Thread.sleep(2000);
     }
 
