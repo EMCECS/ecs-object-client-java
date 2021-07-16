@@ -35,8 +35,6 @@ import com.emc.object.s3.bean.ObjectLockLegalHold;
 import com.emc.object.s3.bean.ObjectLockRetention;
 import com.emc.object.util.RestUtil;
 
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +92,7 @@ public class CopyObjectRequest extends S3ObjectRequest {
             RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
             if (objectLockRetention.getRetainUntilDate() != null) {
                 RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
-                        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(objectLockRetention.getRetainUntilDate().toInstant().atOffset(ZoneOffset.UTC)));
+                        RestUtil.awsTimestampFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
             }
         }
         return headers;
