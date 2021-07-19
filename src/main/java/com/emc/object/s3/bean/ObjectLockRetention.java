@@ -34,7 +34,7 @@ public class ObjectLockRetention {
     }
 
     @XmlElement(name = "RetainUntilDate")
-    @XmlJavaTypeAdapter(DateTimeAdapter.class)
+    @XmlJavaTypeAdapter(Iso8601MillisecondAdapter.class)
     public Date getRetainUntilDate() {
         return retainUntilDate;
     }

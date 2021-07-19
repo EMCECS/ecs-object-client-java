@@ -88,7 +88,7 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
             RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
             if (objectLockRetention.getRetainUntilDate() != null) {
                 RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
-                        RestUtil.awsTimestampFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
+                        RestUtil.iso8601MillisecondFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
             }
         }
         return headers;

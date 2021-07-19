@@ -93,7 +93,7 @@ public final class RestUtil {
 
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
 
-    public static final DateTimeFormatter awsTimestampFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(TimeZone.getTimeZone("UTC").toZoneId());
+    public static final DateTimeFormatter iso8601MillisecondFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(TimeZone.getTimeZone("UTC").toZoneId());
 
     private static final String HEADER_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
