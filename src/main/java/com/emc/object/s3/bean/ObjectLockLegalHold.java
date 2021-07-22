@@ -8,24 +8,18 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement(name = "LegalHold")
 @XmlType(propOrder = {"status"})
 public class ObjectLockLegalHold {
-    private String status;
+    private Status status;
 
     @XmlElement(name = "Status")
-    public String getStatus() { return status; }
+    public Status getStatus() { return status; }
 
-    public void setStatus(String status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 
-    public ObjectLockLegalHold withStatus(String status) {
+    public ObjectLockLegalHold withStatus(Status status) {
         setStatus(status);
         return this;
-    }
-
-    public void setStatus(Status status) { setStatus(status.toString()); }
-
-    public ObjectLockLegalHold withStatus(Status status) {
-        return withStatus(status.toString());
     }
 
     @XmlEnum

@@ -10,27 +10,21 @@ import java.util.Date;
 @XmlRootElement(name = "Retention")
 @XmlType(propOrder = {"mode", "retainUntilDate"})
 public class ObjectLockRetention {
-    private String mode;
+    private ObjectLockRetentionMode mode;
     private Date retainUntilDate;
 
     @XmlElement(name = "Mode")
-    public String getMode() {
+    public ObjectLockRetentionMode getMode() {
         return mode;
     }
 
-    public void setMode(String mode) {
+    public void setMode(ObjectLockRetentionMode mode) {
         this.mode = mode;
     }
 
-    public ObjectLockRetention withMode(String mode) {
+    public ObjectLockRetention withMode(ObjectLockRetentionMode mode) {
         setMode(mode);
         return this;
-    }
-
-    public void setMode(ObjectLockRetentionMode mode) { setMode(mode.toString()); }
-
-    public ObjectLockRetention withMode(ObjectLockRetentionMode mode) {
-        return withMode(mode.toString());
     }
 
     @XmlElement(name = "RetainUntilDate")

@@ -219,7 +219,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertNull(objectLockConfig);
         client.enableObjectLock(bucketName);
         objectLockConfig = client.getObjectLockConfiguration(bucketName);
-        Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled.toString(), objectLockConfig.getObjectLockEnabled());
+        Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
     }
 
     @Test
@@ -227,9 +227,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = "s3-client-test-createObjectLockBucket";
-        client.createBucket(new CreateBucketRequest(bucketName).withObjectLockEnabledForBucket(true));
+        client.createBucket(new CreateBucketRequest(bucketName).withObjectLockEnabled(true));
         ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
-        Assert.assertEquals("Enabled", objectLockConfig.getObjectLockEnabled());
+        Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
         client.deleteBucket(bucketName);
     }
 
@@ -272,7 +272,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
 
-        Assert.assertEquals("ON", client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName,key).withVersionId(versionId)).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName,key).withVersionId(versionId)).getStatus());
         try {
             client.deleteVersion(bucketName, key, versionId);
             Assert.fail("Exception is expected when deleting version objects with Legal Hold ON.");
@@ -300,13 +300,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
         GetObjectLegalHoldRequest getObjectLegalHoldRequest = new GetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId);
-        Assert.assertEquals("ON", client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
 
         //Put Legal Hold on existing object
         objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
         SetObjectLegalHoldRequest request = new SetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId).withLegalHold(objectLockLegalHold);
         client.setObjectLegalHold(request);
-        Assert.assertEquals("OFF", client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
     }
 
     @Test
@@ -394,7 +394,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(content, client.readObject(bucketName, key2, String.class));
         String versionId = client.listVersions(bucketName, key2).getVersions().get(0).getVersionId();
         GetObjectLegalHoldRequest getObjectLegalHoldRequest = new GetObjectLegalHoldRequest(bucketName, key2).withVersionId(versionId);
-        Assert.assertEquals("ON", client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
 
         objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
         SetObjectLegalHoldRequest setObjectLegalHoldRequest = new SetObjectLegalHoldRequest(bucketName, key2).withVersionId(versionId).withLegalHold(objectLockLegalHold);
