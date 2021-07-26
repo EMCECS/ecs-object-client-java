@@ -23,11 +23,11 @@ public class GetObjectRetentionRequest extends S3ObjectRequest {
     }
 
     public GetObjectRetentionRequest withVersionId(String versionId) {
-        this.versionId = versionId;
+        setVersionId(versionId);
         return this;
     }
 
     public void setVersionId(String versionId) {
-        this.withVersionId(versionId);
+        this.versionId = versionId;
     }
 }

@@ -23,12 +23,6 @@ public class SetObjectLegalHoldRequest extends S3ObjectRequest implements Entity
     }
 
     @Override
-    public Map<String, List<Object>> getHeaders() {
-        Map<String, List<Object>> headers = super.getHeaders();
-        return headers;
-    }
-
-    @Override
     public Long getContentLength() {
         return null; // assume buffering
     }

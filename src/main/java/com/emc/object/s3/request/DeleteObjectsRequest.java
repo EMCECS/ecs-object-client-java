@@ -49,7 +49,7 @@ public class DeleteObjectsRequest extends AbstractBucketRequest implements Entit
     @Override
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
-        if (bypassGovernanceRetention != null) RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_BYPASS_GOVERNANCE_RETENTION, Boolean.toString(bypassGovernanceRetention));
+        if (bypassGovernanceRetention != null) RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_BYPASS_GOVERNANCE_RETENTION, bypassGovernanceRetention.toString());
         return headers;
     }
 
