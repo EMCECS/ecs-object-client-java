@@ -416,4 +416,41 @@ public interface S3Client {
     CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
 
     void abortMultipartUpload(AbortMultipartUploadRequest request);
+
+    /**
+     * Set Object Lock Configuration for bucket <code>bucketName</code> using parameters in <code>objectLockConfiguration</code>.
+     */
+    void setObjectLockConfiguration(String bucketName, ObjectLockConfiguration objectLockConfiguration);
+
+    /**
+     * Get the Object Lock configuration for bucket <code>bucketName</code>.
+     * If Object Lock Configuration is not set, <code>null</code> is returned.
+     */
+    ObjectLockConfiguration getObjectLockConfiguration(String bucketName);
+
+    /**
+     * Enable Object Lock for bucket <code>bucketName</code>.
+     */
+    void enableObjectLock(String bucketName);
+
+    /**
+     * Set Object Legal Hold configuration using parameters in <code>request</code>.
+     */
+    void setObjectLegalHold(SetObjectLegalHoldRequest request);
+
+    /**
+     * Get Object Legal Hold configuration using parameters in <code>request</code>.
+     */
+    ObjectLockLegalHold getObjectLegalHold(GetObjectLegalHoldRequest request);
+
+    /**
+     * Set Object Lock Retention using parameters in <code>request</code>.
+     */
+    void setObjectRetention(SetObjectRetentionRequest request);
+
+    /**
+     * Get Object Lock Retention using parameters in <code>request</code>.
+     */
+    ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request);
+
 }

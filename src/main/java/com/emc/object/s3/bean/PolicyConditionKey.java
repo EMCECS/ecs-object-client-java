@@ -75,7 +75,15 @@ public enum PolicyConditionKey {
     @XmlEnumValue("s3:delimiter")
     Delimiter("s3:delimiter"),
     @XmlEnumValue("s3:max-keys")
-    MaxKeys("s3:max-keys");
+    MaxKeys("s3:max-keys"),
+    @XmlEnumValue("s3:object-lock-legal-hold")
+    ObjectLockLegalHold("s3:object-lock-legal-hold"),
+    @XmlEnumValue("s3:object-lock-mode")
+    ObjectLockMode("s3:object-lock-mode"),
+    @XmlEnumValue("s3:object-lock-retain-until-date")
+    ObjectLockRetainUntilDate("s3:object-lock-retain-until-date"),
+    @XmlEnumValue("s3:object-lock-remaining-retention-days")
+    ObjectLockRemainingRetentionDays("s3:object-lock-remaining-retention-days");
 
     @JsonCreator
     public static PolicyConditionKey fromValue(String value) {

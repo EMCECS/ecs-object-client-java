@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public final class RestUtil {
@@ -91,6 +92,8 @@ public final class RestUtil {
     public static final int STATUS_NOT_FOUND = 404;
 
     public static final String DEFAULT_CONTENT_TYPE = TYPE_APPLICATION_OCTET_STREAM;
+
+    public static final DateTimeFormatter iso8601MillisecondFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(TimeZone.getTimeZone("UTC").toZoneId());
 
     private static final String HEADER_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();

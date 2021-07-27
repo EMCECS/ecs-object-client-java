@@ -31,6 +31,8 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.ObjectLockLegalHold;
+import com.emc.object.s3.bean.ObjectLockRetention;
 import com.emc.object.util.RestUtil;
 
 import java.util.Date;
@@ -53,6 +55,8 @@ public class CopyObjectRequest extends S3ObjectRequest {
     private S3ObjectMetadata objectMetadata;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
+    private ObjectLockLegalHold objectLockLegalHold;
+    private ObjectLockRetention objectLockRetention;
 
     public CopyObjectRequest(String sourceBucketName, String sourceKey, String bucketName, String key) {
         super(Method.PUT, bucketName, key, null);
@@ -83,6 +87,14 @@ public class CopyObjectRequest extends S3ObjectRequest {
         }
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
+        if (objectLockLegalHold != null) RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_LEGAL_HOLD, objectLockLegalHold.getStatus());
+        if (objectLockRetention != null) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
+            if (objectLockRetention.getRetainUntilDate() != null) {
+                RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
+                        RestUtil.iso8601MillisecondFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
+            }
+        }
         return headers;
     }
 
@@ -174,6 +186,22 @@ public class CopyObjectRequest extends S3ObjectRequest {
         this.cannedAcl = cannedAcl;
     }
 
+    public ObjectLockLegalHold getObjectLockLegalHold() {
+        return objectLockLegalHold;
+    }
+
+    public void setObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        this.objectLockLegalHold = objectLockLegalHold;
+    }
+
+    public ObjectLockRetention getObjectLockRetention() {
+        return objectLockRetention;
+    }
+
+    public void setObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        this.objectLockRetention = objectLockRetention;
+    }
+
     public CopyObjectRequest withSourceVersionId(String sourceVersionId) {
         setSourceVersionId(sourceVersionId);
         return this;
@@ -211,6 +239,15 @@ public class CopyObjectRequest extends S3ObjectRequest {
 
     public CopyObjectRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
+        return this;
+    }
+
+    public CopyObjectRequest withObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        setObjectLockLegalHold(objectLockLegalHold);
+        return this;
+    }
+    public CopyObjectRequest withObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        setObjectLockRetention(objectLockRetention);
         return this;
     }
 }

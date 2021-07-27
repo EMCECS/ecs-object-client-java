@@ -48,6 +48,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     private Boolean encryptionEnabled;
     private Long retentionPeriod;
     private String metadataSearchKeys;
+    private boolean objectLockEnabled = false;
 
     public CreateBucketRequest(String bucketName) {
         super(Method.PUT, bucketName, "", null);
@@ -65,6 +66,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         if (encryptionEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_ENCRYPTION_ENABLED, encryptionEnabled);
         if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
         if (metadataSearchKeys != null) RestUtil.putSingle(headers, RestUtil.EMC_METADATA_SEARCH, metadataSearchKeys);
+        if (objectLockEnabled) RestUtil.putSingle(headers, S3Constants.AMZ_BUCKET_OBJECT_LOCK_ENABLED, objectLockEnabled);
 
         return headers;
     }
@@ -158,6 +160,15 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         this.metadataSearchKeys = sb.toString();
     }
 
+    public boolean getObjectLockEnabled() { return objectLockEnabled; }
+
+    /**
+     * Sets whether S3 Object Lock will be enabled for the new bucket.
+     */
+    public void setObjectLockEnabled(boolean objectLockEnabled) {
+        this.objectLockEnabled = objectLockEnabled;
+    }
+
     public CreateBucketRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
         return this;
@@ -195,6 +206,11 @@ public class CreateBucketRequest extends AbstractBucketRequest {
 
     public CreateBucketRequest withMetadataSearchKeys(List<MetadataSearchKey> metadataSearchKeys) {
         setMetadataSearchKeys(metadataSearchKeys);
+        return this;
+    }
+
+    public CreateBucketRequest withObjectLockEnabled(boolean objectLockEnabled) {
+        setObjectLockEnabled(objectLockEnabled);
         return this;
     }
 }
