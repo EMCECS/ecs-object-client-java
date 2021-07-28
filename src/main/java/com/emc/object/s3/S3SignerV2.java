@@ -63,8 +63,7 @@ public final class S3SignerV2 {
                 S3Constants.PARAM_RESPONSE_HEADER_CONTENT_TYPE,
                 S3Constants.PARAM_RESPONSE_HEADER_EXPIRES,
                 S3Constants.PARAM_ENDPOINT,
-                S3Constants.PARAM_IS_STALE_ALLOWED,
-                S3Constants.PARAM_SECURITY_TOKEN));
+                S3Constants.PARAM_IS_STALE_ALLOWED));
         if (s3Config.isSignMetadataSearch()) {
             signedParameters.add(S3Constants.PARAM_QUERY);
             signedParameters.add(S3Constants.PARAM_SEARCH_METADATA);
