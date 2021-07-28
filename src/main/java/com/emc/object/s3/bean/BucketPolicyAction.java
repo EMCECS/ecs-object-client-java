@@ -85,7 +85,23 @@ public enum BucketPolicyAction {
     @XmlEnumValue("s3:DeleteBucketPolicy")
     DeleteBucketPolicy("s3:DeleteBucketPolicy"),
     @XmlEnumValue("s3:PutBucketPolicy")
-    PutBucketPolicy("s3:PutBucketPolicy");
+    PutBucketPolicy("s3:PutBucketPolicy"),
+    @XmlEnumValue("s3:PutBucketObjectLockConfiguration")
+    PutBucketObjectLockConfiguration("s3:PutBucketObjectLockConfiguration"),
+    @XmlEnumValue("s3:GetBucketObjectLockConfiguration")
+    GetBucketObjectLockConfiguration("s3:GetBucketObjectLockConfiguration"),
+    @XmlEnumValue("s3:PutObjectLegalHold")
+    PutObjectLegalHold("s3:PutObjectLegalHold"),
+    @XmlEnumValue("s3:GetObjectLegalHold")
+    GetObjectLegalHold("s3:GetObjectLegalHold"),
+    @XmlEnumValue("s3:PutObjectRetention")
+    PutObjectRetention("s3:PutObjectRetention"),
+    @XmlEnumValue("s3:GetObjectRetention")
+    GetObjectRetention("s3:GetObjectRetention"),
+    @XmlEnumValue("s3:BypassGovernanceRetention")
+    BypassGovernanceRetention("s3:BypassGovernanceRetention"),
+    @XmlEnumValue("s3:EnableObjectLock")
+    EnableObjectLock("s3:EnableObjectLock");        ;
 
     @JsonCreator
     public static BucketPolicyAction fromValue(String value) {

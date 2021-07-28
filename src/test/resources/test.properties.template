@@ -15,6 +15,9 @@ s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 ## Uncomment to enable vhost-style requests (including the namespace)
 #enableVhost=true
 
+## Uncomment to disable smart client
+#disableSmartClient=true
+
 ## Optional -- HTTP proxy.  Useful for debugging.
 #http.proxyUri=http://localhost:8888
 

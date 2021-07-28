@@ -148,6 +148,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
 
+        // S.C. - CHUNKED ENCODING (match ECS buffer size)
+        smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
+
         // creates a standard (non-load-balancing) jersey client
         if (clientHandler == null) {
             client = SmartClientFactory.createStandardClient(smartConfig);
@@ -185,13 +188,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - GEO-PINNING
             if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
-
-            // S.C. - RETRY CONFIG
-            if (s3Config.isRetryEnabled())
-                smartConfig.setProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
-
-            // S.C. - CHUNKED ENCODING (match ECS buffer size)
-            smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
@@ -543,10 +539,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
-
         // enable checksum of the object
         request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-
         PutObjectResult result = new PutObjectResult();
         fillResponseEntity(result, executeAndClose(client, request));
         return result;
@@ -740,6 +734,60 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public void abortMultipartUpload(AbortMultipartUploadRequest request) {
         executeAndClose(client, request);
+    }
+
+    @Override
+    public void setObjectLockConfiguration(String bucketName, ObjectLockConfiguration objectLockConfiguration) {
+        ObjectRequest request = new GenericBucketEntityRequest<ObjectLockConfiguration>(
+                Method.PUT, bucketName, "object-lock", objectLockConfiguration).withContentType(RestUtil.TYPE_APPLICATION_XML);
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public ObjectLockConfiguration getObjectLockConfiguration(String bucketName) {
+        ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "object-lock");
+        try {
+            return executeRequest(client, request, ObjectLockConfiguration.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode())) return null;
+            throw e;
+        }
+    }
+
+    @Override
+    public void enableObjectLock(String bucketName) {
+        ObjectRequest request = new GenericBucketRequest(Method.PUT, bucketName, "enable-object-lock");
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public void setObjectLegalHold(SetObjectLegalHoldRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public ObjectLockLegalHold getObjectLegalHold(GetObjectLegalHoldRequest request) {
+        try {
+            return executeRequest(client, request, ObjectLockLegalHold.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
+            throw e;
+        }
+    }
+
+    @Override
+    public void setObjectRetention(SetObjectRetentionRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request) {
+        try {
+            return executeRequest(client, request, ObjectLockRetention.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
+            throw e;
+        }
     }
 
     @Override
