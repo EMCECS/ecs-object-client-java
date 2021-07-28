@@ -595,9 +595,23 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         return getPresignedUrl(new PresignedUrlRequest(Method.GET, bucketName, key, expirationTime));
     }
 
+    /**
+     * Generates a pre-signed URL using the parameters specified in <code>request</code>
+     *
+     * @param request
+     */
     @Override
     public URL getPresignedUrl(PresignedUrlRequest request) {
         return signer.generatePresignedUrl(request);
+    }
+
+    @Override
+    public URL getPresignedUrl(PresignedUrlRequest request, Boolean forSts) {
+        if (forSts) {
+            return signer.generatePresignedUrl(request, listDataNodes().getVersionInfo());
+        } else {
+            return signer.generatePresignedUrl(request);
+        }
     }
 
     @Override

@@ -81,6 +81,10 @@ public final class S3SignerV2 {
     }
 
     public URL generatePresignedUrl(PresignedUrlRequest request) {
+        return generatePresignedUrl(request, "");
+    }
+
+    public URL generatePresignedUrl(PresignedUrlRequest request, String version) {
         String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
 
         URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
@@ -107,6 +111,18 @@ public final class S3SignerV2 {
         Map<String, String> queryParams = request.getQueryParams();
         queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
 
+        if (s3Config.getSessionToken() != null) {
+            if (version == null || version == ""){
+                throw new RuntimeException("V2 signer cannot get ECS version for sts presign");
+            }
+            if (version.compareTo("3.6.1") < 0){
+//                tokenAfterSign = new Pair<>("X-Amz-Security-Token", s3Config.getSessionToken());
+                queryParams.put("X-Amz-Security-Token", s3Config.getSessionToken());
+            } else {
+                queryParams.put(S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
+            }
+        }
+
         // sign the request
         String stringToSign = getStringToSign(request.getMethod().toString(), resource, queryParams, request.getHeaders());
         String signature = getSignature(stringToSign);
@@ -114,9 +130,6 @@ public final class S3SignerV2 {
         // add signature to query string
         queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
 
-        if (s3Config.getSessionToken() != null) {
-            queryParams.put("X-Amz-Security-Token", s3Config.getSessionToken());
-        }
 
         // does the request have a sub-resource (i.e. ?acl)?
         String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
@@ -165,11 +178,17 @@ public final class S3SignerV2 {
 
         // canonicalized headers
         SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
+        StringBuilder allCanonicalizedHeaders = new StringBuilder();
         for (String name : canonicalizedHeaders.keySet()) {
-            stringToSign.append(name).append(":").append(canonicalizedHeaders.get(name).trim());
-            stringToSign.append("\n");
+            if (name == S3Constants.AMZ_SECURITY_TOKEN) {
+                stringToSign.append(name).append(":").append(canonicalizedHeaders.get(name).trim());
+                stringToSign.append("\n");
+            } else {
+                allCanonicalizedHeaders.append(name).append(":").append(canonicalizedHeaders.get(name).trim());
+                allCanonicalizedHeaders.append("\n");
+            }
         }
-
+        stringToSign.append(allCanonicalizedHeaders);
         // resource path (includes signed parameters)
         stringToSign.append(resource);
         boolean firstParameter = true;

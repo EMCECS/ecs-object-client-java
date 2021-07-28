@@ -350,6 +350,11 @@ public interface S3Client {
     URL getPresignedUrl(PresignedUrlRequest request);
 
     /**
+     * Generates a pre-signed URL using the parameters specified in <code>request</code> Version is for sts
+     */
+    URL getPresignedUrl(PresignedUrlRequest request, Boolean forSts);
+
+    /**
      * Deletes object <code>key</code> from bucket <code>bucketName</code>
      */
     void deleteObject(String bucketName, String key);
