@@ -6,10 +6,12 @@ import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
-import org.apache.log4j.Logger;
+import com.sun.jersey.api.client.ClientResponse;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -19,7 +21,7 @@ import java.util.Date;
 import java.util.Properties;
 
 public class V2STSBasicTest extends S3JerseyClientTest {
-    private static final Logger l4j = Logger.getLogger(V2STSBasicTest.class);
+    private static final Logger log = LoggerFactory.getLogger(V2STSBasicTest.class);
     private static final String SESSION_TOKEN = "Cghuc190ZXN0MRIIaWFtX3VzZXIaFEFST0EzQjFGMDc0OUJFQkIzRDlFIiB1cm46ZWNzOmlhbTo6bnNfdGVzdDE6cm9sZS9yb2xlMSoUQVNJQUI1MTEzMzYwN0FBNzg1QjUyUE1hc3RlcktleVJlY29yZC0zZGE0ZTJlNmMyMGNiMzg2NDVlZTJlYjlkNWUxYzUxODJiYTBhYjQ3NWIxMDg4YWE5NDBmMzIyZTAyNWEzY2Q1OKXTrK2VL1IMZWNzLXN0cy10ZW1waL_l44QG";
 
     protected S3Config s3ConfigFromProperties() throws Exception {
@@ -44,6 +46,16 @@ public class V2STSBasicTest extends S3JerseyClientTest {
                         "&Signature=DPh574j4iMkdamN4ATyjVQx8Xbk%3D" +
                         "&X-Amz-Security-Token=" + SESSION_TOKEN,
                 url.toString());
+
+        // test real GET
+        String key = "pre-signed-get-test", content = "This is my test object content";
+        client.putObject(getTestBucket(), key, content, "text/plain");
+
+        url = client.getPresignedUrl(getTestBucket(), key, new Date(System.currentTimeMillis() + 100000));
+
+        ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
+        Assert.assertEquals(200, response.getStatus());
+        Assert.assertEquals(content, response.getEntity(String.class));
     }
 
     @Test
@@ -96,9 +108,7 @@ public class V2STSBasicTest extends S3JerseyClientTest {
         url = client.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
                         .withObjectMetadata(new S3ObjectMetadata().addUserMetadata("foo", "bar")));
-        // uncomment to see the next call in a proxy
-//        System.setProperty("http.proxyHost", "127.0.0.1");
-//        System.setProperty("http.proxyPort", "8888");
+
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setFixedLengthStreamingMode(0);
         con.setRequestProperty("x-amz-meta-foo", "bar");

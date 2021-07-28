@@ -27,10 +27,11 @@
 package com.emc.object;
 
 import com.emc.util.ConcurrentJunitRunner;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,7 +40,7 @@ import java.util.Random;
 
 @RunWith(ConcurrentJunitRunner.class)
 public abstract class AbstractClientTest {
-    private static final Logger l4j = Logger.getLogger(AbstractClientTest.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractClientTest.class);
     private static final Random random = new Random();
     private final ThreadLocal<String> testBucket = new ThreadLocal<String>();
 
@@ -78,17 +79,17 @@ public abstract class AbstractClientTest {
 
     @Before
     public final void initTestBucket() throws Exception {
-        l4j.info("initializing client");
+        log.info("initializing client");
         initClient();
 
         testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + (random.nextInt(89999) + 10000));
-        l4j.info("creating test bucket " + getTestBucket());
+        log.info("creating test bucket " + getTestBucket());
         createBucket(getTestBucket());
     }
 
     @After
     public final void destroyTestBucket() throws Exception {
-        l4j.info("cleaning up bucket " + getTestBucket());
+        log.info("cleaning up bucket " + getTestBucket());
         cleanUpBucket(getTestBucket());
     }
 

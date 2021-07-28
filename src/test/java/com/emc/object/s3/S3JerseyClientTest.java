@@ -26,7 +26,10 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.*;
+import com.emc.object.Method;
+import com.emc.object.ObjectConfig;
+import com.emc.object.Protocol;
+import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
@@ -50,11 +53,12 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -67,7 +71,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
-    private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
+    private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
     private boolean testIAM = false;
 
     protected boolean isIAMUser() {
@@ -1381,7 +1385,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
         Assert.assertNotNull(lc);
-        l4j.debug("Bucket location: " + lc.getRegion());
+        log.debug("Bucket location: " + lc.getRegion());
     }
 
     @Test
@@ -2172,17 +2176,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
-        l4j.debug("JMC - successfully created the test object. will read object");
+        log.debug("JMC - successfully created the test object. will read object");
 
         Range range = new Range((long) 0, (long) (content.length() / 2));
         InputStream is = client.readObjectStream(getTestBucket(), key, range);
-        l4j.debug("JMC - readObjectStream seemed to succeed. Will confirm the object contest");
+        log.debug("JMC - readObjectStream seemed to succeed. Will confirm the object contest");
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line;
         while ((line = br.readLine()) != null) {
-            l4j.debug("JMC LINE:" + line);
+            log.debug("JMC LINE:" + line);
         }
-        l4j.debug("JMC - Success");
+        log.debug("JMC - Success");
     }
 
     //<T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
@@ -2192,10 +2196,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         this.createTestObjects("", 1);
         GetObjectRequest request = new GetObjectRequest(getTestBucket(),"TestObject_0");
         GetObjectResult<String> result = client.getObject(request, String.class);
-        l4j.debug("JMC returned from client.getObject");
-        l4j.debug("JMC getObject = " + result.getObject());
+        log.debug("JMC returned from client.getObject");
+        log.debug("JMC getObject = " + result.getObject());
         S3ObjectMetadata meta = result.getObjectMetadata();
-        l4j.debug("JMC meta.getContentLength(): " + meta.getContentLength());
+        log.debug("JMC meta.getContentLength(): " + meta.getContentLength());
     }
 
     @Test
@@ -2427,7 +2431,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
 
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
-        l4j.debug("JMC calling request.setAcl");
+        log.debug("JMC calling request.setAcl");
         request.setAcl(acl);
         client.setObjectAcl(request);
 
@@ -2805,7 +2809,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
 
         // roughly half should fail
-        l4j.info("requests: " + requests + ", failures: " + failures.get());
+        log.info("requests: " + requests + ", failures: " + failures.get());
         Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
     }
 
