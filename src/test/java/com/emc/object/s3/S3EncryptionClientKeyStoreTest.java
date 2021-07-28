@@ -32,9 +32,10 @@ import com.emc.codec.encryption.EncryptionUtil;
 import com.emc.codec.encryption.KeystoreKeyProvider;
 import com.emc.object.EncryptionConfig;
 import com.emc.object.s3.jersey.S3EncryptionClient;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -46,7 +47,7 @@ import java.util.Enumeration;
 import static org.junit.Assert.assertEquals;
 
 public class S3EncryptionClientKeyStoreTest extends S3EncryptionClientBasicTest {
-    private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
+    private static final Logger log = LoggerFactory.getLogger(S3EncryptionClientKeyStoreTest.class);
 
     private String keyAlias = "masterkey";
     private String oldKeyAlias = "oldkey";
@@ -68,9 +69,9 @@ public class S3EncryptionClientKeyStoreTest extends S3EncryptionClientBasicTest 
             if (in == null) throw new FileNotFoundException(keystoreFile);
             keyStore.load(in, keystorePassword.toCharArray());
 
-            l4j.debug("Keystore Loaded");
+            log.debug("Keystore Loaded");
             for (Enumeration<String> aliases = keyStore.aliases(); aliases.hasMoreElements(); ) {
-                l4j.debug("Found key: " + aliases.nextElement());
+                log.debug("Found key: " + aliases.nextElement());
             }
 
             _keyProvider = new KeystoreKeyProvider(keyStore, keystorePassword.toCharArray(), keyAlias);
