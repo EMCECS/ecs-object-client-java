@@ -2465,8 +2465,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Long retentionPeriod = 2L;
         Long newRetentionPeriod = 5L;
 
-        String version = client.listDataNodes().getVersionInfo();
-        Assume.assumeFalse("ECS test bed needs to be 3.6 or later, current version: " + version, version.compareTo("3.6") < 0);
+        Assume.assumeTrue("ECS test bed needs to be 3.6 or later, current version: " + ecsVersion, ecsVersion != null && ecsVersion.compareTo("3.6") >= 0);
 
         String bucket = getTestBucket();
         PutObjectRequest request = new PutObjectRequest(bucket, key, content);
