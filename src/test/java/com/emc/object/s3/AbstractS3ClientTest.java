@@ -51,11 +51,20 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractS3ClientTest.class);
 
     protected S3Client client;
+    /**
+     * may be null
+     */
+    protected String ecsVersion;
 
     protected abstract S3Client createS3Client() throws Exception;
 
     protected final void initClient() throws Exception {
         this.client = createS3Client();
+        try {
+            this.ecsVersion = client.listDataNodes().getVersionInfo();
+        } catch (Exception e) {
+            log.warn("could not get ECS version: " + e);
+        }
     }
 
     @After
