@@ -7,10 +7,7 @@ import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,8 +18,8 @@ import java.net.URL;
 import java.util.Date;
 import java.util.Properties;
 
-public class V2STSBasicTest extends S3JerseyClientTest {
-    private static final Logger log = LoggerFactory.getLogger(V2STSBasicTest.class);
+public class S3TempCredentialsTest extends S3JerseyClientTest {
+    private static final Logger log = LoggerFactory.getLogger(S3TempCredentialsTest.class);
     private static final String SESSION_TOKEN = "Cghuc190ZXN0MRIIaWFtX3VzZXIaFEFST0EzQjFGMDc0OUJFQkIzRDlFIiB1cm46ZWNzOmlhbTo6bnNfdGVzdDE6cm9sZS9yb2xlMSoUQVNJQUI1MTEzMzYwN0FBNzg1QjUyUE1hc3RlcktleVJlY29yZC0zZGE0ZTJlNmMyMGNiMzg2NDVlZTJlYjlkNWUxYzUxODJiYTBhYjQ3NWIxMDg4YWE5NDBmMzIyZTAyNWEzY2Q1OKXTrK2VL1IMZWNzLXN0cy10ZW1waL_l44QG";
 
     protected S3Config s3ConfigFromProperties() throws Exception {
@@ -39,12 +36,9 @@ public class V2STSBasicTest extends S3JerseyClientTest {
         return s3Config;
     }
 
-    @Override
-    public S3Client createS3Client() throws Exception {
-        S3Client s3Client = super.createS3Client();
-        String version = s3Client.listDataNodes().getVersionInfo();
-        Assume.assumeFalse("STS only support ECS 3.6.2 or later, current version: " + version , version.compareTo("3.6.2") < 0);
-        return s3Client;
+    @Before
+    public void versionCheck() {
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
     }
 
     @Test
