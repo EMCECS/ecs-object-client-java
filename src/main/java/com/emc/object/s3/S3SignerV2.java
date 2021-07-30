@@ -107,16 +107,16 @@ public final class S3SignerV2 {
         Map<String, String> queryParams = request.getQueryParams();
         queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
 
+        if (s3Config.getSessionToken() != null) {
+            queryParams.put(S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
+        }
+
         // sign the request
         String stringToSign = getStringToSign(request.getMethod().toString(), resource, queryParams, request.getHeaders());
         String signature = getSignature(stringToSign);
 
         // add signature to query string
         queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
-
-        if (s3Config.getSessionToken() != null) {
-            queryParams.put("X-Amz-Security-Token", s3Config.getSessionToken());
-        }
 
         // does the request have a sub-resource (i.e. ?acl)?
         String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
