@@ -8,6 +8,7 @@ import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -23,6 +24,9 @@ public class V2STSBasicTest extends S3JerseyClientTest {
     private static final String SESSION_TOKEN = "Cghuc190ZXN0MRIIaWFtX3VzZXIaFEFST0EzQjFGMDc0OUJFQkIzRDlFIiB1cm46ZWNzOmlhbTo6bnNfdGVzdDE6cm9sZS9yb2xlMSoUQVNJQUI1MTEzMzYwN0FBNzg1QjUyUE1hc3RlcktleVJlY29yZC0zZGE0ZTJlNmMyMGNiMzg2NDVlZTJlYjlkNWUxYzUxODJiYTBhYjQ3NWIxMDg4YWE5NDBmMzIyZTAyNWEzY2Q1OKXTrK2VL1IMZWNzLXN0cy10ZW1waL_l44QG";
 
     protected S3Config s3ConfigFromProperties() throws Exception {
+        String version = client.listDataNodes().getVersionInfo();
+        Assume.assumeFalse("STS only support ECS 3.6.2 or later, current version: " + version , version.compareTo("3.6.2") < 0);
+
         Properties props = TestConfig.getProperties();
 
         String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_ACCESS_KEY);
@@ -41,8 +45,8 @@ public class V2STSBasicTest extends S3JerseyClientTest {
         URL url = tempClient.getPresignedUrl("johnsmith", "photos/puppy.jpg", new Date(1175139620000L));
         Assert.assertEquals("http://10.246.153.111:9020/johnsmith/photos/puppy.jpg" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
-                        "&Signature=DPh574j4iMkdamN4ATyjVQx8Xbk%3D" +
-                        "&X-Amz-Security-Token=" + SESSION_TOKEN,
+                        "&Signature=sEx2C%2Bc0qiY9kXF9KkQfY%2FjelLI%3D" +
+                        "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
                 url.toString());
     }
 
@@ -60,8 +64,8 @@ public class V2STSBasicTest extends S3JerseyClientTest {
 
         Assert.assertEquals("http://10.246.153.111:9020/static.johnsmith.net/db-backup.dat.gz" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
-                        "&Signature=qoUcMsSsvGhG8hK078svCbl1HxQ%3D" +
-                        "&X-Amz-Security-Token=" + SESSION_TOKEN,
+                        "&Signature=llrkH6%2BoAuzr6F71RD0xsyUqOFY%3D" +
+                        "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
                 url.toString());
 
         // test real PUT
@@ -86,8 +90,8 @@ public class V2STSBasicTest extends S3JerseyClientTest {
                 new PresignedUrlRequest(Method.PUT, "static.johnsmith.net", "db-backup.dat.gz", new Date(1175139620000L)));
         Assert.assertEquals("http://10.246.153.111:9020/static.johnsmith.net/db-backup.dat.gz" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
-                        "&Signature=i5GCI%2B1hKjhPe8mLb7Yi2g1MkQE%3D" +
-                        "&X-Amz-Security-Token=" + SESSION_TOKEN,
+                        "&Signature=Z4JSBg7EHfIGgZeix0YNmy0XQEI%3D" +
+                        "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
                 url.toString());
 
         // test real PUT
@@ -120,8 +124,8 @@ public class V2STSBasicTest extends S3JerseyClientTest {
         URL url = tempClient.getPresignedUrl("test-bucket", "解析依頼C1B068.txt", new Date(1500998758000L));
         Assert.assertEquals("http://10.246.153.111:9020/test-bucket/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt?" +
                         "AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1500998758" +
-                        "&Signature=VT%2B3Yl9Vbg8MU%2FIvLrpK1H%2BLfUI%3D" +
-                        "&X-Amz-Security-Token=" + SESSION_TOKEN,
+                        "&Signature=9JowVXKUdWD43PsmtCa%2BeYkkYL0%3D" +
+                        "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
                 url.toString());
     }
 
@@ -136,8 +140,8 @@ public class V2STSBasicTest extends S3JerseyClientTest {
                                         .withContentMd5("4gJE4saaMU4BqNR0kLY+lw==")));
         Assert.assertEquals("http://10.246.153.111:9020/johnsmith/photos/puppy.jpg" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
-                        "&Signature=CINGoX001if%2Bz18UBYD6casmBSY%3D" +
-                        "&X-Amz-Security-Token=" + SESSION_TOKEN,
+                        "&Signature=qdJYvXmX12mrlbJoiJ3aV2%2BsDxM%3D" +
+                        "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
                 url.toString());
     }
 
@@ -177,6 +181,12 @@ public class V2STSBasicTest extends S3JerseyClientTest {
     @Test
     public void testSetGetBucketAcl() throws Exception {
         super.testSetGetBucketAcl();
+    }
+
+    @Ignore
+    @Test
+    public void testExtendObjectRetentionPeriod() throws Exception {
+        super.testExtendObjectRetentionPeriod();
     }
 
     private S3Client getPresignDummyClient() throws URISyntaxException {
