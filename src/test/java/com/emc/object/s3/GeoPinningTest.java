@@ -38,8 +38,6 @@ import com.emc.rest.smart.HostVetoRule;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.Filterable;
@@ -65,7 +63,10 @@ public class GeoPinningTest extends AbstractS3ClientTest {
     @Override
     protected S3Config createS3Config() throws Exception {
         S3Config s3Config = super.createS3Config();
+
+        // won't work with VHost or if smart-client is disabled
         Assume.assumeFalse(s3Config.isUseVHost());
+        Assume.assumeTrue(s3Config.isSmartClient());
 
         // just going to use the same VDC thrice for lack of a geo env.
         List<? extends Host> hosts = s3Config.getVdcs().get(0).getHosts();
@@ -94,7 +95,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testGuidExtraction() throws Exception {
+    public void testGuidExtraction() {
         Assert.assertEquals("my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "my/object/key"));
         Assert.assertEquals("/my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "/my/object/key"));
 
@@ -123,7 +124,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
     public void testVetoRule() {
         Vdc good = new Vdc("good1", "good2", "good3");
         Vdc bad = new Vdc("bad1", "bad2", "bad3");
-        Map<String, Object> properties = new HashMap<String, Object>();
+        Map<String, Object> properties = new HashMap<>();
         properties.put(GeoPinningRule.PROP_GEO_PINNED_VDC, good);
 
         HostVetoRule geoPinningRule = new GeoPinningRule();
@@ -255,14 +256,9 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
     }
 
-    private class DummyClient extends Filterable {
+    private static class DummyClient extends Filterable {
         public DummyClient() {
-            super(new ClientHandler() {
-                @Override
-                public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-                    return new ClientResponse(200, new InBoundHeaders(), new ByteArrayInputStream(new byte[0]), new DummyWorkers());
-                }
-            });
+            super(cr -> new ClientResponse(200, new InBoundHeaders(), new ByteArrayInputStream(new byte[0]), new DummyWorkers()));
         }
 
         public ClientResponse handle(ClientRequest request) {
@@ -270,7 +266,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
     }
 
-    private class DummyWorkers implements MessageBodyWorkers {
+    private static class DummyWorkers implements MessageBodyWorkers {
         @Override
         public Map<MediaType, List<MessageBodyReader>> getReaders(MediaType mediaType) {
             return null;
