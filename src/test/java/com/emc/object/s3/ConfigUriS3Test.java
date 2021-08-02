@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.util.ConfigUri;
 import com.emc.object.util.RestUtilTest;
@@ -38,8 +39,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ConfigUriS3Test {
     private ConfigUri<S3Config> s3Uri = new ConfigUri<S3Config>(S3Config.class);
@@ -165,6 +165,26 @@ public class ConfigUriS3Test {
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
         assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT), dummyInt);
         assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_READ_TIMEOUT), dummyInt);
+    }
+
+    @Test
+    public void testDisablePings() {
+        // test setting the property directly
+        String dummyString = "dummy";
+        Vdc vdc = new Vdc(dummyString);
+        S3Config s3Config = new S3Config(Protocol.HTTPS, vdc);
+        s3Config.setSmartClient(true);
+        s3Config.setProperty(ObjectConfig.PROPERTY_DISABLE_HEALTH_CHECK, "true");
+
+        SmartConfig smartConfig = s3Config.toSmartConfig();
+        assertTrue(smartConfig.isHostUpdateEnabled());
+        assertFalse(smartConfig.isHealthCheckEnabled());
+
+        // test setting via URI
+        s3Config = s3Uri.parseUri("https://dummy?smartClient=true&properties.com.emc.object.disableHealthCheck=true");
+        smartConfig = s3Config.toSmartConfig();
+        assertTrue(smartConfig.isHostUpdateEnabled());
+        assertFalse(smartConfig.isHealthCheckEnabled());
     }
 
     private void runTests(S3Config s3Config) throws Exception {
