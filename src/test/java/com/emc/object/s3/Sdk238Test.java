@@ -43,24 +43,29 @@ import java.util.List;
 public class Sdk238Test {
     @Test
     public void testTrailingSlash() throws Exception {
-        TestClient client = new TestClient(new S3JerseyClientTest().s3ConfigFromProperties());
+        S3Config s3Config = AbstractS3ClientTest.s3ConfigFromProperties();
+        TestClient client = new TestClient(s3Config);
 
         String bucket = "test-trailing-slash";
         client.createBucket(bucket);
         try {
-            Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
+            if (s3Config.isUseVHost()) {
+                Assert.assertEquals("/", client.getLastUri().getPath());
+            } else {
+                Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
+            }
         } finally {
             client.deleteBucket(bucket);
         }
     }
 
-    private class TestClient extends S3JerseyClient {
-        private UriCaptureFilter captureFilter = new UriCaptureFilter();
+    private static class TestClient extends S3JerseyClient {
+        private final UriCaptureFilter captureFilter = new UriCaptureFilter();
 
         TestClient(S3Config s3Config) {
             super(s3Config);
 
-            List<ClientFilter> filters = new ArrayList<ClientFilter>();
+            List<ClientFilter> filters = new ArrayList<>();
 
             ClientHandler handler = client.getHeadHandler();
             while (handler instanceof ClientFilter) {
@@ -83,7 +88,7 @@ public class Sdk238Test {
         }
     }
 
-    private class UriCaptureFilter extends ClientFilter {
+    private static class UriCaptureFilter extends ClientFilter {
         private URI uri;
 
         @Override
