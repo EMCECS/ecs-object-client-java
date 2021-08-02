@@ -86,7 +86,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     }
 
     @Override
-    protected void cleanUpBucket(String bucketName) throws Exception {
+    protected void cleanUpBucket(String bucketName) {
         if (client != null && client.bucketExists(bucketName)) {
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
                 for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
@@ -101,27 +101,23 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
+    /**
+     * this should be the only hook method for generating an S3Config instance - if a test class needs any
+     * customizations to the config, override this method and call super, then make your customizations
+     */
     protected S3Config createS3Config() throws Exception {
         return s3ConfigFromProperties();
     }
 
-    protected S3Config s3ConfigFromProperties() throws Exception {
+    static S3Config s3ConfigFromProperties() throws Exception {
         Properties props = TestConfig.getProperties();
 
-        String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
-        String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
-
-        S3Config s3Config = s3ConfigNetWorkSetting(props);
-        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
-
-        return s3Config;
-    }
-
-    protected S3Config s3ConfigNetWorkSetting(Properties props) throws Exception {
         URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
         boolean disableSmartClient = Boolean.parseBoolean(props.getProperty(TestProperties.DISABLE_SMART_CLIENT));
         String proxyUriStr = props.getProperty(TestProperties.PROXY_URI);
+        String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
+        String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
 
         S3Config s3Config;
         if (enableVhost) {
@@ -143,6 +139,8 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
         if (disableSmartClient)
             s3Config.setSmartClient(false);
+
+        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
         return s3Config;
     }
