@@ -10,8 +10,9 @@ import com.emc.object.util.FaultInjectionStream;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.log4j.Logger;
 import org.junit.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
@@ -21,7 +22,7 @@ import java.net.URI;
 import java.util.Random;
 
 public class WriteTruncationTest {
-    public static final Logger log = Logger.getLogger(WriteTruncationTest.class);
+    public static final Logger log = LoggerFactory.getLogger(WriteTruncationTest.class);
 
     static final String BUCKET_NAME = "ecs-object-client-write-truncation-test";
     static final int OBJECT_RETENTION_PERIOD = 15; // 15 seconds

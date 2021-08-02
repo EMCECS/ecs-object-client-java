@@ -8,8 +8,6 @@ import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -19,18 +17,17 @@ import java.util.Date;
 import java.util.Properties;
 
 public class S3TempCredentialsTest extends S3JerseyClientTest {
-    private static final Logger log = LoggerFactory.getLogger(S3TempCredentialsTest.class);
     private static final String SESSION_TOKEN = "Cghuc190ZXN0MRIIaWFtX3VzZXIaFEFST0EzQjFGMDc0OUJFQkIzRDlFIiB1cm46ZWNzOmlhbTo6bnNfdGVzdDE6cm9sZS9yb2xlMSoUQVNJQUI1MTEzMzYwN0FBNzg1QjUyUE1hc3RlcktleVJlY29yZC0zZGE0ZTJlNmMyMGNiMzg2NDVlZTJlYjlkNWUxYzUxODJiYTBhYjQ3NWIxMDg4YWE5NDBmMzIyZTAyNWEzY2Q1OKXTrK2VL1IMZWNzLXN0cy10ZW1waL_l44QG";
 
-    protected S3Config s3ConfigFromProperties() throws Exception {
-
+    @Override
+    protected S3Config createS3Config() throws Exception {
         Properties props = TestConfig.getProperties();
 
         String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_ACCESS_KEY);
         String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_TEMP_SECRET_KEY);
         String securityToken = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECURITY_TOKEN);
 
-        S3Config s3Config = s3ConfigNetWorkSetting(props);
+        S3Config s3Config = super.createS3Config();
         s3Config.withIdentity(accessKey).withSecretKey(secretKey).withSessionToken(securityToken);
 
         return s3Config;
@@ -157,46 +154,42 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
 
     @Ignore
     @Test
-    public void testMultipleVdcs() throws Exception {
+    public void testMultipleVdcs() {
     }
 
     @Ignore
     @Test
-    public void testMpuAbortInMiddle() throws Exception {
+    public void testMpuAbortInMiddle() {
     }
 
     @Ignore
     @Test
-    public void testSetObjectAclRequestAcl() throws Exception {
+    public void testSetObjectAclRequestAcl() {
     }
 
     @Ignore
     @Test
-    public void testSetObjectAcl() throws Exception {
+    public void testSetObjectAcl() {
     }
 
     @Ignore
     @Test
     public void testCreateFilesystemBucket() {
-        super.testCreateFilesystemBucket();
     }
 
     @Ignore
     @Test
-    public void testSetBucketAclCanned() throws Exception {
-        super.testSetBucketAclCanned();
+    public void testSetBucketAclCanned() {
     }
 
     @Ignore
     @Test
-    public void testSetGetBucketAcl() throws Exception {
-        super.testSetGetBucketAcl();
+    public void testSetGetBucketAcl() {
     }
 
     @Ignore
     @Test
-    public void testExtendObjectRetentionPeriod() throws Exception {
-        super.testExtendObjectRetentionPeriod();
+    public void testExtendObjectRetentionPeriod() {
     }
 
     private S3Client getPresignDummyClient() throws URISyntaxException {
