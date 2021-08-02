@@ -71,6 +71,10 @@ public final class S3SignerV2 {
     }
 
     public void sign(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+
+        if (s3Config.getSessionToken() != null) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
+        }
         String stringToSign = getStringToSign(method, resource, parameters, headers);
         String signature = getSignature(stringToSign);
         RestUtil.putSingle(headers, "Authorization", "AWS " + s3Config.getIdentity() + ":" + signature);
@@ -102,6 +106,10 @@ public final class S3SignerV2 {
         // build parameters
         Map<String, String> queryParams = request.getQueryParams();
         queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
+
+        if (s3Config.getSessionToken() != null) {
+            queryParams.put(S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
+        }
 
         // sign the request
         String stringToSign = getStringToSign(request.getMethod().toString(), resource, queryParams, request.getHeaders());

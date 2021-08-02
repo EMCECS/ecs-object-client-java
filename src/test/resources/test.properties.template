@@ -12,10 +12,23 @@ s3.secret_key=<secretkey>
 ## Endpoint to the S3 Access Point
 s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 
+
+### STS test part, uncomment the following to test STS
+
+## Your S3 Access Key for sts
+#s3.temp_access_key=<user>@<domain>
+
+## Your S3 Secret Key for sts
+#s3.temp_secret_key=<secretkey>
+
+## Uncomment this to add your sts token
+#s3.security_token=<securityToken>
+
+
 ## Uncomment to enable vhost-style requests (including the namespace)
 #enableVhost=true
 
-## Uncomment to disable smart client
+## Uncomment to disable smart client (with a load balancer or a single node)
 #disableSmartClient=true
 
 ## Optional -- HTTP proxy.  Useful for debugging.

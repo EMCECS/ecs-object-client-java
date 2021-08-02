@@ -128,8 +128,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 .withQuery("(x-amz-meta-string1<='') or (x-amz-meta-string1>='')");
         QueryObjectsResult result = client.queryObjects(request);
 
-        String version = client.listDataNodes().getVersionInfo();
-        boolean is34OrLater = version.compareTo("3.4") >= 0;
+        boolean is34OrLater = ecsVersion != null && ecsVersion.compareTo("3.4") >= 0;
 
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
@@ -267,8 +266,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                 .withQuery("(x-amz-meta-STRING1<='') or (x-amz-meta-STRING1>='')");
         QueryObjectsResult result = client.queryObjects(request);
 
-        String version = client.listDataNodes().getVersionInfo();
-        boolean is34OrLater = version.compareTo("3.4") >= 0;
+        boolean is34OrLater = ecsVersion != null && ecsVersion.compareTo("3.4") >= 0;
 
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());

@@ -26,7 +26,10 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.*;
+import com.emc.object.Method;
+import com.emc.object.ObjectConfig;
+import com.emc.object.Protocol;
+import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
@@ -50,11 +53,12 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -67,7 +71,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
-    private static final Logger l4j = Logger.getLogger(S3JerseyClientTest.class);
+    private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
     private boolean testIAM = false;
 
     protected boolean isIAMUser() {
@@ -212,6 +216,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testEnableObjectLockOnExistingBucket() {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -224,6 +229,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateObjectLockBucket() {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = "s3-client-test-createObjectLockBucket";
@@ -235,6 +241,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSetObjectLockConfiguration() {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -261,18 +268,19 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectWithLegalHoldNotAllowed() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
         String key = "testObject_DeleteWithLegalHold";
         client.enableObjectLock(bucketName);
         ObjectLockLegalHold objectLockLegalHold = new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.ON);
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key,"test Delete With LegalHold Not Allowed")
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, "test Delete With LegalHold Not Allowed")
                 .withObjectLockLegalHold(objectLockLegalHold);
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
 
-        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName,key).withVersionId(versionId)).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId)).getStatus());
         try {
             client.deleteVersion(bucketName, key, versionId);
             Assert.fail("Exception is expected when deleting version objects with Legal Hold ON.");
@@ -287,6 +295,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testPutObjectLegalHold() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -295,7 +304,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         //Put Legal Hold on create
         ObjectLockLegalHold objectLockLegalHold = new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.ON);
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key,"test Put Object LegalHold")
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, "test Put Object LegalHold")
                 .withObjectLockLegalHold(objectLockLegalHold);
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
@@ -311,6 +320,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testPutObjectRetention() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -321,11 +331,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withMode(ObjectLockRetentionMode.COMPLIANCE)
                 .withRetainUntilDate(retentionDate);
         //Put Retention on Create
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key,"test Put Object Retention")
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, "test Put Object Retention")
                 .withObjectLockRetention(objectLockRetention);
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
-        GetObjectRetentionRequest request = new GetObjectRetentionRequest(bucketName,key).withVersionId(versionId);
+        GetObjectRetentionRequest request = new GetObjectRetentionRequest(bucketName, key).withVersionId(versionId);
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(request);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
         Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
@@ -335,7 +345,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Date retentionDate2 = new Date(System.currentTimeMillis() + 2000);
         objectLockRetention.setRetainUntilDate(retentionDate2);
         objectLockRetention.setMode(ObjectLockRetentionMode.GOVERNANCE);
-        SetObjectRetentionRequest setObjectRetentionRequest = new SetObjectRetentionRequest(bucketName,key).withVersionId(versionId)
+        SetObjectRetentionRequest setObjectRetentionRequest = new SetObjectRetentionRequest(bucketName, key).withVersionId(versionId)
                 .withRetention(objectLockRetention);
         client.setObjectRetention(setObjectRetentionRequest);
         objectLockRetention2 = client.getObjectRetention(request);
@@ -346,6 +356,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectWithBypassGovernance() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -356,7 +367,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withMode(ObjectLockRetentionMode.GOVERNANCE)
                 .withRetainUntilDate(retentionDate);
 
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key,"test DeleteObjectWithBypassGovernance")
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, "test DeleteObjectWithBypassGovernance")
                 .withObjectLockRetention(objectLockRetention);
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
@@ -376,6 +387,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCopyObjectWithLegalHoldON() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -403,6 +415,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSingleMultipartUploadWithRetention() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -426,7 +439,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId).withParts(parts));
 
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
-        GetObjectRetentionRequest getObjectRetentionRequest = new GetObjectRetentionRequest(bucketName,key).withVersionId(versionId);
+        GetObjectRetentionRequest getObjectRetentionRequest = new GetObjectRetentionRequest(bucketName, key).withVersionId(versionId);
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(getObjectRetentionRequest);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
         Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
@@ -602,7 +615,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                                 .withSid("statement-1")
                                 .withEffect(Effect.Allow)
                                 .withPrincipal("*")
-                                .withResource("arn:aws:s3:::"+getTestBucket()+"/*")
+                                .withResource("arn:aws:s3:::" + getTestBucket() + "/*")
                                 .withActions(BucketPolicyAction.DeleteObjectVersion, BucketPolicyAction.DeleteObject)
                                 .withCondition(PolicyConditionOperator.StringEquals, new PolicyConditionCriteria()
                                         .withCondition(PolicyConditionKey.UserAgent, "foo-client"))
@@ -900,7 +913,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         byte[] content = new byte[5 * 1024];
         new Random().nextBytes(content);
 
-        for(int i=0; i<numObjects; i++) {
+        for (int i = 0; i < numObjects; i++) {
             client.putObject(getTestBucket(), prefix + "TestObject_" + i, content, null);
         }
     }
@@ -1150,7 +1163,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCreateObjectChunkedWithRequest() {
         int size = 50000;
-        byte[] data =  new byte[size];
+        byte[] data = new byte[size];
         new Random().nextBytes(data);
         String dataStr = new String(data);
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", dataStr);
@@ -1381,7 +1394,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
         Assert.assertNotNull(lc);
-        l4j.debug("Bucket location: " + lc.getRegion());
+        log.debug("Bucket location: " + lc.getRegion());
     }
 
     @Test
@@ -1446,7 +1459,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         List<MultipartPart> mpp = lpr.getParts();
         Assert.assertEquals(3, mpp.size());
 
-        for (MultipartPart part: mpp) {
+        for (MultipartPart part : mpp) {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
                 Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
@@ -1536,7 +1549,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         byte[] b;
         InputStream tmpIs;
         List<InputStream> uploadPartsBytesList = new ArrayList<InputStream>();
-        for (int i=0; i<partCnt;i++) {
+        for (int i = 0; i < partCnt; i++) {
             b = new byte[fiveKB];
             new Random().nextBytes(b);
             tmpIs = new ByteArrayInputStream(b, 0, fiveKB);
@@ -1549,7 +1562,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ExecutorService executor = Executors.newFixedThreadPool(8);
         final AtomicInteger successCount = new AtomicInteger();
         int uploadPartNumber = 1;
-        for(InputStream uploadPartStream: uploadPartsBytesList) {
+        for (InputStream uploadPartStream : uploadPartsBytesList) {
             final UploadPartRequest request =
                     new UploadPartRequest(getTestBucket(), key, uploadId, uploadPartNumber, uploadPartStream);
 
@@ -1575,7 +1588,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         MultipartPartETag eTag;
-        for (MultipartPart part: mpp) {
+        for (MultipartPart part : mpp) {
             eTag = new MultipartPartETag(part.getPartNumber(), part.getETag());
             parts.add(eTag);
         }
@@ -2172,17 +2185,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content);
         request.setObjectMetadata(new S3ObjectMetadata().withContentType("text/plain"));
         client.putObject(request);
-        l4j.debug("JMC - successfully created the test object. will read object");
+        log.debug("JMC - successfully created the test object. will read object");
 
         Range range = new Range((long) 0, (long) (content.length() / 2));
         InputStream is = client.readObjectStream(getTestBucket(), key, range);
-        l4j.debug("JMC - readObjectStream seemed to succeed. Will confirm the object contest");
+        log.debug("JMC - readObjectStream seemed to succeed. Will confirm the object contest");
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line;
         while ((line = br.readLine()) != null) {
-            l4j.debug("JMC LINE:" + line);
+            log.debug("JMC LINE:" + line);
         }
-        l4j.debug("JMC - Success");
+        log.debug("JMC - Success");
     }
 
     //<T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
@@ -2190,12 +2203,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testGetObjectResultTemplate() {
         //creates objects named TestObject_ + zero based index
         this.createTestObjects("", 1);
-        GetObjectRequest request = new GetObjectRequest(getTestBucket(),"TestObject_0");
+        GetObjectRequest request = new GetObjectRequest(getTestBucket(), "TestObject_0");
         GetObjectResult<String> result = client.getObject(request, String.class);
-        l4j.debug("JMC returned from client.getObject");
-        l4j.debug("JMC getObject = " + result.getObject());
+        log.debug("JMC returned from client.getObject");
+        log.debug("JMC getObject = " + result.getObject());
         S3ObjectMetadata meta = result.getObjectMetadata();
-        l4j.debug("JMC meta.getContentLength(): " + meta.getContentLength());
+        log.debug("JMC meta.getContentLength(): " + meta.getContentLength());
     }
 
     @Test
@@ -2282,16 +2295,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), testObject2, content, "text/plain");
 
         DeleteObjectsRequest request = new DeleteObjectsRequest(getTestBucket())
-            .withKeys(testObject1, testObject2);
+                .withKeys(testObject1, testObject2);
         DeleteObjectsResult results = client.deleteObjects(request);
         List<AbstractDeleteResult> resultList = results.getResults();
         Assert.assertEquals(2, resultList.size());
-        for(AbstractDeleteResult result: resultList) {
-            if (result instanceof DeleteError ) {
-                this.inspectDeleteError((DeleteError)result);
+        for (AbstractDeleteResult result : resultList) {
+            if (result instanceof DeleteError) {
+                this.inspectDeleteError((DeleteError) result);
             }
             else {
-                this.inspectDeleteSuccess((DeleteSuccess)result);
+                this.inspectDeleteSuccess((DeleteSuccess) result);
             }
         }
     }
@@ -2332,7 +2345,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         try {
             client.getObjectMetadata(getTestBucket(), testObject);
-        } catch(S3Exception e) {
+        } catch (S3Exception e) {
             Assert.assertEquals("Wrong HTTP status", 404, e.getHttpCode());
             Assert.assertEquals("Wrong ErrorCode", "NoSuchKey", e.getErrorCode());
 
@@ -2427,7 +2440,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
 
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
-        l4j.debug("JMC calling request.setAcl");
+        log.debug("JMC calling request.setAcl");
         request.setAcl(acl);
         client.setObjectAcl(request);
 
@@ -2452,8 +2465,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Long retentionPeriod = 2L;
         Long newRetentionPeriod = 5L;
 
-        String version = client.listDataNodes().getVersionInfo();
-        Assume.assumeFalse("ECS test bed needs to be 3.6 or later, current version: " + version , version.compareTo("3.6") < 0);
+        Assume.assumeTrue("ECS test bed needs to be 3.6 or later, current version: " + ecsVersion, ecsVersion != null && ecsVersion.compareTo("3.6") >= 0);
 
         String bucket = getTestBucket();
         PutObjectRequest request = new PutObjectRequest(bucket, key, content);
@@ -2787,13 +2799,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 @Override
                 public void run() {
 
-            try {
-                clientF.pingNode(hosts.get(i.get() % hosts.size()).getName());
-            } catch (S3Exception e) {
-                if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
-                    failures.incrementAndGet();
-                else throw e;
-            }
+                    try {
+                        clientF.pingNode(hosts.get(i.get() % hosts.size()).getName());
+                    } catch (S3Exception e) {
+                        if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
+                            failures.incrementAndGet();
+                        else throw e;
+                    }
                 }
             }));
         }
@@ -2805,7 +2817,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
 
         // roughly half should fail
-        l4j.info("requests: " + requests + ", failures: " + failures.get());
+        log.info("requests: " + requests + ", failures: " + failures.get());
         Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
     }
 
