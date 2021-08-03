@@ -216,7 +216,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testEnableObjectLockOnExistingBucket() {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -229,7 +229,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateObjectLockBucket() {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = "s3-client-test-createObjectLockBucket";
@@ -241,7 +241,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSetObjectLockConfiguration() {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -268,7 +268,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectWithLegalHoldNotAllowed() throws Exception {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -295,7 +295,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testPutObjectLegalHold() throws Exception {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -320,7 +320,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testPutObjectRetention() throws Exception {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -356,7 +356,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectWithBypassGovernance() throws Exception {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -387,7 +387,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCopyObjectWithLegalHoldON() throws Exception {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
@@ -415,7 +415,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSingleMultipartUploadWithRetention() throws Exception {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
 
         String bucketName = getTestBucket();
