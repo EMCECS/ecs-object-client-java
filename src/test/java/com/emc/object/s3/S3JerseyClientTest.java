@@ -310,12 +310,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
         GetObjectLegalHoldRequest getObjectLegalHoldRequest = new GetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId);
         Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectMetadata(bucketName, key).getObjectLockLegalHold().getStatus());
 
         //Put Legal Hold on existing object
         objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
         SetObjectLegalHoldRequest request = new SetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId).withLegalHold(objectLockLegalHold);
         client.setObjectLegalHold(request);
         Assert.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectMetadata(bucketName, key).getObjectLockLegalHold().getStatus());
     }
 
     @Test
@@ -339,6 +341,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(request);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
         Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
+        S3ObjectMetadata objectMetadata = client.getObjectMetadata(bucketName, key);
+        Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
+        Assert.assertEquals(retentionDate, objectMetadata.getObjectLockRetention().getRetainUntilDate());
         Thread.sleep(2000);
 
         //Put Retention on existing object.
@@ -351,6 +356,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectLockRetention2 = client.getObjectRetention(request);
         Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
         Assert.assertEquals(retentionDate2, objectLockRetention2.getRetainUntilDate());
+        objectMetadata = client.getObjectMetadata(bucketName, key);
+        Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
+        Assert.assertEquals(retentionDate2, objectMetadata.getObjectLockRetention().getRetainUntilDate());
         Thread.sleep(2000);
     }
 
