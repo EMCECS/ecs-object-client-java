@@ -160,6 +160,15 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
         RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
         RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_POLICY, retentionPolicy);
+        if (objectLockLegalHold != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_LEGAL_HOLD, objectLockLegalHold.getStatus());
+        //Object Lock Mode and RetainUntilDate must both be supplied
+        if (objectLockRetention != null && objectLockRetention.getMode() != null && objectLockRetention.getRetainUntilDate() != null) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
+                    RestUtil.iso8601MillisecondFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
+        }
+
         headers.putAll(getUmdHeaders(userMetadata));
         return headers;
     }
@@ -315,8 +324,16 @@ public class S3ObjectMetadata {
         return objectLockLegalHold;
     }
 
+    public void setObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        this.objectLockLegalHold = objectLockLegalHold;
+    }
+
     public ObjectLockRetention getObjectLockRetention() {
         return objectLockRetention;
+    }
+
+    public void setObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        this.objectLockRetention = objectLockRetention;
     }
 
     public S3ObjectMetadata addUserMetadata(String name, String value) {
@@ -375,6 +392,16 @@ public class S3ObjectMetadata {
 
     public S3ObjectMetadata withRetentionPolicy(String retentionPolicy) {
         setRetentionPolicy(retentionPolicy);
+        return this;
+    }
+
+    public S3ObjectMetadata withObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        setObjectLockLegalHold(objectLockLegalHold);
+        return this;
+    }
+
+    public S3ObjectMetadata withObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        setObjectLockRetention(objectLockRetention);
         return this;
     }
 }
