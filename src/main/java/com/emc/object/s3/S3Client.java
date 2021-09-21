@@ -360,6 +360,11 @@ public interface S3Client {
     void deleteObject(String bucketName, String key);
 
     /**
+     * Deletes object using the parameters specified in <code>request</code>
+     */
+    void deleteObject(DeleteObjectRequest request);
+
+    /**
      * Delets version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code>.
      * <p><b>Note:</b> versioning must be enabled in the bucket.</p>
      */
