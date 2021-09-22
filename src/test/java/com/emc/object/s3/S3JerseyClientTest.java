@@ -1151,13 +1151,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // test if-unmodified pass
         cal.add(Calendar.MINUTE, 10); // 5 minutes from now
-        request.withIfUnmodifiedSince(cal.getTime());
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(null);
         client.deleteObject(request);
-
 
         client.putObject(getTestBucket(), key, content, "text/plain");
         // test if-unmodified and if-match(non-matching etag) fail
-        request.withIfUnmodifiedSince(null).withIfMatch(etag2);
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag2);
         try {
             client.deleteObject(request);
             Assert.fail("expected 412");
@@ -1174,32 +1173,20 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(412, e.getHttpCode());
         }
 
-        //test if-match pass
-        request.withIfUnmodifiedSince(null).withIfMatch(etag);
-        client.deleteObject(request);
-
-        //test if-match pass with deleted key
+        //test if-match(correct etag) pass
         request.withIfUnmodifiedSince(null).withIfMatch(etag);
         client.deleteObject(request);
 
         client.putObject(getTestBucket(), key, content, "text/plain");
-        // test if-match * (key exists) pass
-        request.withIfMatch("*");
+        // test if-match * pass
+        request.withIfUnmodifiedSince(null).withIfMatch("*");
         client.deleteObject(request);
 
-        // test if-match * pass with deleted key
-        request.withIfMatch("*");
-        client.deleteObject(request);
-
+        // test pre-condition should not fail on non-existing key
         request.setKey("bogus-key");
-        // test if-unmodified pass on non-existing key
-        request.withIfUnmodifiedSince(cal.getTime());
+        cal.add(Calendar.MINUTE, -10); // 5 minutes ago
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag2);
         client.deleteObject(request);
-
-        // test if-match * pass on non-existing key
-        request.withIfMatch("*");
-        client.deleteObject(request);
-
     }
 
     @Test
