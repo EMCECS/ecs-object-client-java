@@ -383,9 +383,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ObjectKey objectKey = new ObjectKey(key, versionId);
         DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(bucketName).withKeys(objectKey);
 
-        //Expect failure without bypassGovernanceRetention
+        //Expect failure without bypassGovernanceRetention (DeleteObjectsRequest)
         DeleteObjectsResult deleteObjectsResult = client.deleteObjects(deleteObjectsRequest);
         Assert.assertTrue(deleteObjectsResult.getResults().get(0) instanceof DeleteError);
+
+        //Expect failure without bypassGovernanceRetention (DeleteObjectRequest)
+        DeleteObjectRequest request = new DeleteObjectRequest(bucketName, key).withVersionId(versionId);
+        try {
+            client.deleteObject(request);
+            Assert.fail("expected 403");
+        }catch (S3Exception e) {
+            Assert.assertEquals(403, e.getHttpCode());
+        }
 
         //Expect success with bypassGovernanceRetention
         deleteObjectsRequest.setBypassGovernanceRetention(true);
@@ -1105,6 +1114,79 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // test if-none-match * pass
         request.withIfMatch(null).withIfNoneMatch("*");
         client.putObject(request);
+    }
+
+    @Test
+    public void testDeleteObjectPreconditions() {
+        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        String key = "testDeletePreconditions";
+        String content = "hello Delete preconditions!";
+
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MINUTE, -5); // 5 minutes ago
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        String etag = client.getObjectMetadata(getTestBucket(), key).getETag();
+        String etag2 = "d41d8cd98f00b204e9800998ecf8427e"; //non-matching Etag
+
+        DeleteObjectRequest request = new DeleteObjectRequest(getTestBucket(), key);
+
+        // test if-unmodified fail
+        request.withIfUnmodifiedSince(cal.getTime());
+        try {
+            client.deleteObject(request);
+            Assert.fail("expected 412");
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
+        }
+
+        // test if-unmodified and if-match(correct etag) fail
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag);
+        try {
+            client.deleteObject(request);
+            Assert.fail("expected 412");
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
+        }
+
+        // test if-unmodified pass
+        cal.add(Calendar.MINUTE, 10); // 5 minutes from now
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(null);
+        client.deleteObject(request);
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        // test if-unmodified and if-match(non-matching etag) fail
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag2);
+        try {
+            client.deleteObject(request);
+            Assert.fail("expected 412");
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
+        }
+
+        // test if-match(non-matching etag) fail
+        request.withIfUnmodifiedSince(null).withIfMatch(etag2);
+        try {
+            client.deleteObject(request);
+            Assert.fail("expected 412");
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
+        }
+
+        //test if-match(correct etag) pass
+        request.withIfUnmodifiedSince(null).withIfMatch(etag);
+        client.deleteObject(request);
+
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        // test if-match * pass
+        request.withIfUnmodifiedSince(null).withIfMatch("*");
+        client.deleteObject(request);
+
+        // test pre-condition should not fail on non-existing key
+        request.setKey("bogus-key");
+        cal.add(Calendar.MINUTE, -10); // 5 minutes ago
+        request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag2);
+        client.deleteObject(request);
     }
 
     @Test
@@ -2322,6 +2404,23 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
     protected void inspectDeleteSuccess(DeleteSuccess deleteResult) {
         Assert.assertNotNull(deleteResult);
+    }
+
+    @Test
+    public void testDeleteObjectRequest() {
+        String key = "string-test-DeleteObjectRequest";
+        String content = "Hello Strings!";
+        client.putObject(getTestBucket(), key, content, "text/plain");
+        Assert.assertEquals(1, client.listObjects(getTestBucket()).getObjects().size());
+
+        DeleteObjectRequest request = new DeleteObjectRequest(getTestBucket(), key);
+        client.deleteObject(request);
+        try {
+            client.getObjectMetadata(getTestBucket(), key);
+            Assert.fail("expected 404 Not Found");
+        } catch(S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+        }
     }
 
     @Test

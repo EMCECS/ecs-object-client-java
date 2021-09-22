@@ -602,12 +602,17 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public void deleteObject(String bucketName, final String key) {
-        executeAndClose(client, new S3ObjectRequest(Method.DELETE, bucketName, key, null));
+        deleteObject(new DeleteObjectRequest(bucketName, key));
+    }
+
+    @Override
+    public void deleteObject(DeleteObjectRequest request) {
+        executeAndClose(client, request);
     }
 
     @Override
     public void deleteVersion(String bucketName, String key, String versionId) {
-        executeAndClose(client, new S3ObjectRequest(Method.DELETE, bucketName, key, "versionId=" + versionId));
+        deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId));
     }
 
     @Override
