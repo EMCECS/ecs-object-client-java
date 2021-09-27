@@ -24,36 +24,38 @@ public abstract class S3Signer {
     protected static final Logger log = LoggerFactory.getLogger(S3Signer.class);
 
     protected S3Config s3Config;
-    protected SortedSet<String> signedParameters;
 
     S3Signer(S3Config s3Config) {
         this.s3Config = s3Config;
-        signedParameters = new TreeSet<String>(Arrays.asList(
-                "acl", "torrent", "logging", "location", "policy", "requestPayment", "versioning",
-                "versions", "versionId", "notification", "uploadId", "uploads", "partNumber", "website",
-                "delete", "lifecycle", "tagging", "cors", "restore",
-                S3Constants.PARAM_RESPONSE_HEADER_CACHE_CONTROL,
-                S3Constants.PARAM_RESPONSE_HEADER_CONTENT_DISPOSITION,
-                S3Constants.PARAM_RESPONSE_HEADER_CONTENT_ENCODING,
-                S3Constants.PARAM_RESPONSE_HEADER_CONTENT_LANGUAGE,
-                S3Constants.PARAM_RESPONSE_HEADER_CONTENT_TYPE,
-                S3Constants.PARAM_RESPONSE_HEADER_EXPIRES,
-                S3Constants.PARAM_ENDPOINT,
-                S3Constants.PARAM_IS_STALE_ALLOWED));
-        if (s3Config.isSignMetadataSearch()) {
-            signedParameters.add(S3Constants.PARAM_QUERY);
-            signedParameters.add(S3Constants.PARAM_SEARCH_METADATA);
-        }
     }
 
+    /**
+     * Sign the request
+     */
     public abstract void sign(ClientRequest request, String resource, Map<String, String> parameters,
                               Map<String, List<Object>> headers);
 
+    /**
+     * Get the signature as String, singingKey is only
+     * needed for v4 signer
+     */
     protected abstract String getSignature(String stringToSign, byte[] signingKey);
 
+    /**
+     * Get the date as String
+     */
     protected abstract String getDate(Map<String, String> parameters, Map<String, List<Object>> headers);
 
-    // generalized utility function to get hmac values
+    /**
+     * Generate presigned URL and then return the URL
+     */
+    public abstract URL generatePresignedUrl(PresignedUrlRequest request);
+
+    protected abstract SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers,
+                                                              Map<String, String> parameters);
+
+
+        // generalized utility function to get hmac values
     protected byte[] hmac(String algorithm, byte[] var1, String var2) {
         try {
             Mac mac = Mac.getInstance(algorithm);
@@ -79,125 +81,6 @@ public abstract class S3Signer {
         return hash;
     }
 
-    protected String getCanonicalizedQueryString(PresignedUrlRequest request, Map<String, String> queryParams) {
-        // does the request have a sub-resource (i.e. ?acl)?
-        String subresource = request.getSubresource() != null ? request.getSubresource() + "&" : "";
-        // we must manually append the query string to ensure nothing is re-encoded
-        return "?" + subresource + RestUtil.generateRawQueryString(queryParams);
-    }
-
-    public URL generatePresignedUrl(PresignedUrlRequest request) {
-        String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
-
-        URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet
-
-        // must construct both the final URL and the resource for signing
-        String resource = "/" + request.getBucketName() + RestUtil.getEncodedPath(uri); // so here we have a uri encoding
-
-        // insert namespace in host
-        if (namespace != null) {
-            if (s3Config.isUseVHost()) {
-                uri = NamespaceFilter.insertNamespace(uri, namespace);
-                if (s3Config.isSignNamespace())
-                    resource = "/" + namespace + resource; // prepend to resource path for signing
-            } else {
-                // issue warning if namespace is specified and vhost is disabled because we can't put the namespace in the URL
-                log.warn("vHost namespace is disabled, so there is no way to specify a namespace in a pre-signed URL");
-            }
-        }
-
-        // insert bucket in host or path
-        uri = BucketFilter.insertBucket(uri, request.getBucketName(), s3Config.isUseVHost());
-
-        // build parameters
-        // it doesn't look like this is what we need quite
-        // parameters need to be encoded in v4 -- let's see if they needed to be encoded in v2
-        Map<String, String> queryParams = request.getQueryParams();
-        queryParams.put(S3Constants.PARAM_ACCESS_KEY, s3Config.getIdentity());
-
-        // sign the request
-        String stringToSign = getStringToSign(request.getMethod().toString(), resource, queryParams,
-                request.getHeaders());
-        String signature = getSignature(stringToSign, null);
-
-        // add signature to query string
-        queryParams.put(S3Constants.PARAM_SIGNATURE, signature);
-
-        try {
-            return new URL(uri + getCanonicalizedQueryString(request, queryParams));
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("generated URL is not well-formed");
-        }
-    }
-
-    String getStringToSign(String method, String resource, Map<String, String> parameters,
-                           Map<String, List<Object>> headers) {
-        StringBuilder stringToSign = new StringBuilder();
-
-        // method line
-        stringToSign.append(method).append("\n");
-
-        // MD5 line
-        String contentMd5 = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_MD5);
-        if (contentMd5 != null) stringToSign.append(contentMd5);
-        stringToSign.append("\n");
-
-        // content type line
-        String contentType = RestUtil.getFirstAsString(headers, RestUtil.HEADER_CONTENT_TYPE);
-        if (contentType != null) stringToSign.append(contentType);
-        stringToSign.append("\n");
-
-        // add date (must be implemented in concrete class)
-        stringToSign.append(getDate(parameters, headers));
-        stringToSign.append("\n");
-
-        // canonicalized headers
-        // signature v4 requires at least one more header - consider externalizing to abstract function?
-        SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
-        for (String name : canonicalizedHeaders.keySet()) {
-            stringToSign.append(name).append(":").append(canonicalizedHeaders.get(name).trim());
-            stringToSign.append("\n");
-        }
-
-        // resource path (includes signed parameters)
-        stringToSign.append(resource);
-        boolean firstParameter = true;
-        for (String parameter : signedParameters) {
-            if (parameters.containsKey(parameter)) {
-                stringToSign.append(firstParameter ? "?" : "&").append(parameter);
-                String value = parameters.get(parameter);
-                if (value != null) stringToSign.append("=").append(value);
-                firstParameter = false;
-            }
-        }
-
-        String stringToSignStr = stringToSign.toString();
-        log.debug("stringToSign:\n" + stringToSignStr);
-        return stringToSignStr;
-    }
-
-    protected SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers,
-                                                                Map<String, String> parameters) {
-        SortedMap<String, String> canonicalizedHeaders = new TreeMap<String, String>();
-
-        // add x-emc- and x-amz- headers
-        for (String header : headers.keySet()) {
-            String lcHeader = header.toLowerCase();
-            if (lcHeader.startsWith(S3Constants.AMZ_PREFIX) || lcHeader.startsWith(RestUtil.EMC_PREFIX)) {
-                canonicalizedHeaders.put(lcHeader, trimAndJoin(headers.get(header), ","));
-            }
-        }
-
-        // add x-amz- parameters
-        for (String parameter : parameters.keySet()) {
-            String lcParameter = parameter.toLowerCase();
-            if (lcParameter.startsWith(S3Constants.AMZ_PREFIX)) {
-                canonicalizedHeaders.put(lcParameter, parameters.get(parameter));
-            }
-        }
-
-        return canonicalizedHeaders;
-    }
 
     /* *
      * encode byte string to hex - required for v4 auth

@@ -30,6 +30,7 @@ public class S3SignerV4 extends S3Signer {
         super(s3Config);
     }
 
+    @Override
     public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         // # Preparation, add x-amz-date and host headers
         String date = null;
@@ -185,6 +186,7 @@ public class S3SignerV4 extends S3Signer {
         return queryString.toString();
     }
 
+    @Override
     protected SortedMap<String, String> getCanonicalizedHeaders(Map<String, List<Object>> headers,
                                                                 Map<String, String> parameters) {
         SortedMap<String, String> canonicalizedHeaders = new TreeMap<String, String>();
@@ -233,6 +235,7 @@ public class S3SignerV4 extends S3Signer {
         );
     }
 
+    @Override
     protected String getDate(Map<String, String> parameters, Map<String, List<Object>> headers) {
         String date = null;
         // if x-amz-date is specified, date should be the value
@@ -280,6 +283,7 @@ public class S3SignerV4 extends S3Signer {
                 + S3Constants.AWS_V4_TERMINATOR;
     }
 
+    @Override
     protected String getSignature(String stringToSign, byte[] signingKey) {
         try {
             return hexEncode(hmac(S3Constants.HMAC_SHA_256, signingKey, stringToSign));
@@ -292,6 +296,7 @@ public class S3SignerV4 extends S3Signer {
         return S3Constants.AWS_SERVICE_S3;
     }
 
+    @Override
     public URL generatePresignedUrl(PresignedUrlRequest request) {
         String namespace = request.getNamespace() != null ? request.getNamespace() : s3Config.getNamespace();
         URI uri = s3Config.resolvePath(request.getPath(), null); // don't care about the query string yet

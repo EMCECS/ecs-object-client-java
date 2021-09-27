@@ -140,10 +140,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
-        if(!s3Config.isUseV2Signer())
-            this.signer = new S3SignerV4(s3Config);
-        else
+        if(s3Config.isUseV2Signer())
             this.signer = new S3SignerV2(s3Config);
+        else
+            this.signer = new S3SignerV4(s3Config);
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
@@ -198,6 +198,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             }
         }
 
+        // Smart filter will be removed if it exists and then will be re-added.
+        // Because host header could be replaced by smart client, which could make v4 signing fail,
+        // so need to make sure auth filter is after the smart filter.
+        // And also need to make sure that geoPinning filter is before smart filter.
         ClientHandler handler = client.getHeadHandler();
         SmartFilter smartFilter = null;
         while (handler instanceof ClientFilter) {

@@ -84,7 +84,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
     protected float faultInjectionRate = 0.0f;
     protected boolean signMetadataSearch = true;
-    protected boolean useV2Signer = false;
+    protected boolean useV2Signer = true;
 
     /**
      * Empty constructor for internal use only!
@@ -323,6 +323,11 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public S3Config withSignMetadataSearch(boolean signMetadataSearch) {
         setSignMetadataSearch(signMetadataSearch);
+        return this;
+    }
+
+    public S3Config withUseV2Signer(boolean useV2Signer) {
+        setUseV2Signer(useV2Signer);
         return this;
     }
 

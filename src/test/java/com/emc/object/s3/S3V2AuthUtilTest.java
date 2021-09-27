@@ -28,6 +28,8 @@ package com.emc.object.s3;
 
 import com.emc.object.Method;
 import com.emc.object.s3.request.PresignedUrlRequest;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.client.impl.ClientRequestImpl;
 import com.sun.jersey.core.header.OutBoundHeaders;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -121,20 +123,26 @@ public class S3V2AuthUtilTest {
         S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
+        ClientRequest request = new ClientRequestImpl(new URI("http://s3.company.com"), null);
+
         MultivaluedMap<String, Object> headers = new OutBoundHeaders(HEADERS_1);
-        signer.sign(METHOD_1, RESOURCE_1, PARAMETERS_1, headers);
+        request.setMethod(METHOD_1);
+        signer.sign(request, RESOURCE_1, PARAMETERS_1, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_1, headers.getFirst("Authorization"));
 
         headers = new OutBoundHeaders(HEADERS_2);
-        signer.sign(METHOD_2, RESOURCE_2, PARAMETERS_2, headers);
+        request.setMethod(METHOD_2);
+        signer.sign(request, RESOURCE_2, PARAMETERS_2, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_2, headers.getFirst("Authorization"));
 
         headers = new OutBoundHeaders(HEADERS_3);
-        signer.sign(METHOD_3, RESOURCE_3, PARAMETERS_3, headers);
+        request.setMethod(METHOD_3);
+        signer.sign(request, RESOURCE_3, PARAMETERS_3, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_3, headers.getFirst("Authorization"));
 
         headers = new OutBoundHeaders(HEADERS_4);
-        signer.sign(METHOD_4, RESOURCE_4, PARAMETERS_4, headers);
+        request.setMethod(METHOD_4);
+        signer.sign(request, RESOURCE_4, PARAMETERS_4, headers);
         Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_4, headers.getFirst("Authorization"));
     }
 
