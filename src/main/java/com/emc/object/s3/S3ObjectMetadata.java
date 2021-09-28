@@ -26,8 +26,12 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.s3.bean.ObjectLockLegalHold;
+import com.emc.object.s3.bean.ObjectLockRetention;
+import com.emc.object.s3.bean.ObjectLockRetentionMode;
 import com.emc.object.util.RestUtil;
 
+import java.time.ZonedDateTime;
 import java.util.*;
 
 public class S3ObjectMetadata {
@@ -48,6 +52,8 @@ public class S3ObjectMetadata {
     private Date httpExpires;
     private Date lastModified;
     private String versionId;
+    private ObjectLockLegalHold objectLockLegalHold;
+    private ObjectLockRetention objectLockRetention;
     private Map<String, String> userMetadata = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
 
     public static <T> S3ObjectMetadata fromHeaders(Map<String, List<T>> headers) {
@@ -77,6 +83,8 @@ public class S3ObjectMetadata {
         objectMetadata.expirationDate = getExpirationDate(headers);
         objectMetadata.expirationRuleId = getExpirationRuleId(headers);
         objectMetadata.userMetadata = getUserMetadata(headers);
+        objectMetadata.objectLockLegalHold = getObjectLockLegalHold(headers);
+        objectMetadata.objectLockRetention = getObjectLockRetention(headers);
         return objectMetadata;
     }
 
@@ -124,6 +132,24 @@ public class S3ObjectMetadata {
         return null;
     }
 
+    protected static <T> ObjectLockLegalHold getObjectLockLegalHold(Map<String, List<T>> headers) {
+        String objectLockLegalHold = RestUtil.getFirstAsString(headers, S3Constants.AMZ_OBJECT_LOCK_LEGAL_HOLD);
+        if (objectLockLegalHold != null) {
+            return new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.valueOf(objectLockLegalHold));
+        }
+        return null;
+    }
+
+    protected static <T> ObjectLockRetention getObjectLockRetention(Map<String, List<T>> headers) {
+        String objectLockRetentionMode = RestUtil.getFirstAsString(headers, S3Constants.AMZ_OBJECT_LOCK_MODE);
+        String retainUntilDate = RestUtil.getFirstAsString(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE);
+        if (objectLockRetentionMode != null && retainUntilDate != null) {
+            return new ObjectLockRetention().withMode(ObjectLockRetentionMode.valueOf(objectLockRetentionMode))
+                    .withRetainUntilDate(Date.from(ZonedDateTime.parse(retainUntilDate, RestUtil.iso8601MillisecondFormatter).toInstant()));
+        }
+        return null;
+    }
+
     public Map<String, List<Object>> toHeaders() {
         Map<String, List<Object>> headers = new HashMap<String, List<Object>>();
         RestUtil.putSingle(headers, RestUtil.HEADER_CACHE_CONTROL, cacheControl);
@@ -134,6 +160,15 @@ public class S3ObjectMetadata {
         RestUtil.putSingle(headers, RestUtil.HEADER_EXPIRES, RestUtil.headerFormat(httpExpires));
         RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
         RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_POLICY, retentionPolicy);
+        if (objectLockLegalHold != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_LEGAL_HOLD, objectLockLegalHold.getStatus());
+        //Object Lock Mode and RetainUntilDate must both be supplied
+        if (objectLockRetention != null && objectLockRetention.getMode() != null && objectLockRetention.getRetainUntilDate() != null) {
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_MODE, objectLockRetention.getMode());
+            RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
+                    RestUtil.iso8601MillisecondFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
+        }
+
         headers.putAll(getUmdHeaders(userMetadata));
         return headers;
     }
@@ -285,6 +320,22 @@ public class S3ObjectMetadata {
         return RestUtil.urlDecode(getUserMetadata(name));
     }
 
+    public ObjectLockLegalHold getObjectLockLegalHold() {
+        return objectLockLegalHold;
+    }
+
+    public void setObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        this.objectLockLegalHold = objectLockLegalHold;
+    }
+
+    public ObjectLockRetention getObjectLockRetention() {
+        return objectLockRetention;
+    }
+
+    public void setObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        this.objectLockRetention = objectLockRetention;
+    }
+
     public S3ObjectMetadata addUserMetadata(String name, String value) {
         userMetadata.put(name, value);
         return this;
@@ -341,6 +392,16 @@ public class S3ObjectMetadata {
 
     public S3ObjectMetadata withRetentionPolicy(String retentionPolicy) {
         setRetentionPolicy(retentionPolicy);
+        return this;
+    }
+
+    public S3ObjectMetadata withObjectLockLegalHold(ObjectLockLegalHold objectLockLegalHold) {
+        setObjectLockLegalHold(objectLockLegalHold);
+        return this;
+    }
+
+    public S3ObjectMetadata withObjectLockRetention(ObjectLockRetention objectLockRetention) {
+        setObjectLockRetention(objectLockRetention);
         return this;
     }
 }

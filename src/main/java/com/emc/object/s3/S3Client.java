@@ -307,34 +307,39 @@ public interface S3Client {
     /**
      * Reads object <code>key</code> in bucket <code>bucketName</code> and converts it to <code>objectType</code>,
      * provided the conversion is supported by the implementation.
-     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
+     * <p><b>Note:</b> this method will return <code>null</code> for 304 and 412 responses (failed preconditions).</p>
      */
     <T> T readObject(String bucketName, String key, Class<T> objectType);
 
     /**
      * Reads version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code> and converts
      * it to <code>objectType</code>, provided the conversion is supported by the implementation.
-     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
+     * <p><b>Note:</b> this method will return <code>null</code> for 304 and 412 responses (failed preconditions).</p>
      */
     <T> T readObject(String bucketName, String key, String versionId, Class<T> objectType);
 
     /**
      * Reads <code>range</code> bytes of object <code>key</code> in bucket <code>bucketName</code> as a stream.
-     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
+     * <p><b>Note:</b> this method will return <code>null</code> for 304 and 412 responses (failed preconditions).</p>
      */
     InputStream readObjectStream(String bucketName, String key, Range range);
 
     /**
      * Gets object <code>key</code> in bucket <code>bucketName</code>. Object details as well as the data stream
      * (obtained from {@link GetObjectResult#getObject()} are contained in the {@link GetObjectResult} instance.
-     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
+     * <p><b>Note:</b> this method will return <code>null</code> for 304 and 412 responses (failed preconditions).
+     * This method will open a stream for the object data. Be sure to call <code>getObject()</code> and,
+     * if requesting an <code>InputStream</code>, properly close the stream to release the connection.</p>
+     *
      */
     GetObjectResult<InputStream> getObject(String bucketName, String key);
 
     /**
      * Gets an object using the parameters specified in <code>request</code>. Object details as well as the translated
      * data (converted to <code>objectType</code>) are contained in the {@link GetObjectResult} instance.
-     * Note: this method will return <code>null</code> for 304 and 412 responses (failed preconditions)
+     * <p><b>Note:</b> this method will return <code>null</code> for 304 and 412 responses (failed preconditions).
+     * This method will open a stream for the object data. Be sure to call <code>getObject()</code> and,
+     * if requesting an <code>InputStream</code>, properly close the stream to release the connection.</p>
      */
     <T> GetObjectResult<T> getObject(GetObjectRequest request, Class<T> objectType);
 
@@ -355,8 +360,13 @@ public interface S3Client {
     void deleteObject(String bucketName, String key);
 
     /**
-     * Delets version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code>. NOTE:
-     * versioning must be enabled in the bucket
+     * Deletes object using the parameters specified in <code>request</code>
+     */
+    void deleteObject(DeleteObjectRequest request);
+
+    /**
+     * Delets version <code>versionId</code> of object <code>key</code> in bucket <code>bucketName</code>.
+     * <p><b>Note:</b> versioning must be enabled in the bucket.</p>
      */
     void deleteVersion(String bucketName, String key, String versionId);
 
@@ -391,8 +401,8 @@ public interface S3Client {
     AccessControlList getObjectAcl(GetObjectAclRequest request);
 
     /**
-     * Extend retention <code>period</code>(seconds) on object <code>key</code> in bucket <code>bucketName</code>. NOTE:
-     * New retention period value can only be increased. That is, it can be the same as the current or greater value.
+     * Extend retention <code>period</code>(seconds) on object <code>key</code> in bucket <code>bucketName</code>.
+     * <b>Note:</b> New retention period value can only be increased. That is, it can be the same as the current or greater value.
      * If the new retention period value is -1, infinite retention applies on that object.
      */
     void extendRetentionPeriod(String bucketName, String key, Long period);

@@ -280,11 +280,10 @@ public final class RestUtil {
         // workaround for https://bugs.openjdk.java.net/browse/JDK-8037396
         uriString = uriString.replace("[", "%5B").replace("]", "%5D");
 
-        // replace double-slash with /%2f (workaround for apache client)
-        if (path != null && path.length() > 2 && path.charAt(0) == '/' && path.charAt(1) == '/') {
-            int doubleSlashIndex = uriString.indexOf("//");
-            if (scheme != null) doubleSlashIndex = uriString.indexOf("//", doubleSlashIndex + 2);
-            uriString = uriString.substring(0, doubleSlashIndex) + "/%2F" + uriString.substring(doubleSlashIndex + 2);
+        // replace double-slash with /%2f (otherwise apache client will normalize it to one slash)
+        if (path.contains("//")) {
+            if (scheme != null) uriString = uriString.substring(0, 8) + uriString.substring(8).replaceAll("//", "/%2F");
+            else uriString = uriString.replaceAll("//", "/%2F");
         }
 
         // Special case to handle "+" characters that URI doesn't handle well.
@@ -307,9 +306,9 @@ public final class RestUtil {
      * this method works as if by invoking that method and then
      * <a href="#encode">encoding</a> the result.  </p>
      *
-     * @return  The string form of this URI, encoded as needed
-     *          so that it only contains characters in the US-ASCII
-     *          charset
+     * @return The string form of this URI, encoded as needed
+     * so that it only contains characters in the US-ASCII
+     * charset
      */
     public static String toASCIIString(URI u) {
         String s = defineString(u);
@@ -375,7 +374,7 @@ public final class RestUtil {
             return s;
 
         // First check whether we actually need to encode
-        for (int i = 0;;) {
+        for (int i = 0; ; ) {
             if (s.charAt(i) >= '\u0080')
                 break;
             if (++i >= n)
@@ -393,9 +392,9 @@ public final class RestUtil {
         while (bb.hasRemaining()) {
             int b = bb.get() & 0xff;
             if (b >= 0x80)
-                appendEscape(sb, (byte)b);
+                appendEscape(sb, (byte) b);
             else
-                sb.append((char)b);
+                sb.append((char) b);
         }
         return sb.toString();
     }
@@ -419,6 +418,7 @@ public final class RestUtil {
     public static URI replacePath(URI uri, String path) throws URISyntaxException {
         return buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), path, uri.getRawQuery(), uri.getRawFragment());
     }
+
     private static DateFormat getHeaderFormat() {
         DateFormat format = headerFormat.get();
         if (format == null) {
@@ -430,11 +430,11 @@ public final class RestUtil {
     }
 
     public static String join(String separator, Iterable<String> items) {
-        if(separator == null) throw new IllegalArgumentException("separator argument is null");
-        if(items == null) throw new IllegalArgumentException("items argument is null");
+        if (separator == null) throw new IllegalArgumentException("separator argument is null");
+        if (items == null) throw new IllegalArgumentException("items argument is null");
         StringBuilder sb = new StringBuilder();
-        for(String item : items) {
-            if(sb.length() > 0) sb.append(separator);
+        for (String item : items) {
+            if (sb.length() > 0) sb.append(separator);
             sb.append(item);
         }
         return sb.toString();

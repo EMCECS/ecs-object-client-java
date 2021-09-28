@@ -39,29 +39,39 @@ import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
-import org.apache.log4j.Logger;
 import org.junit.After;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Properties;
 
 public abstract class AbstractS3ClientTest extends AbstractClientTest {
-    private static final Logger l4j = Logger.getLogger(AbstractS3ClientTest.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractS3ClientTest.class);
 
     protected S3Client client;
+    /**
+     * may be null
+     */
+    protected String ecsVersion;
 
     protected abstract S3Client createS3Client() throws Exception;
 
     protected final void initClient() throws Exception {
         this.client = createS3Client();
+        try {
+            this.ecsVersion = client.listDataNodes().getVersionInfo();
+        } catch (Exception e) {
+            log.warn("could not get ECS version: " + e);
+        }
     }
 
     @After
     public void dumpLBStats() {
         if (client != null) {
             LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
-            l4j.info(Arrays.toString(loadBalancer.getHostStats()));
+            log.info(Arrays.toString(loadBalancer.getHostStats()));
         }
     }
 
@@ -76,7 +86,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     }
 
     @Override
-    protected void cleanUpBucket(String bucketName) throws Exception {
+    protected void cleanUpBucket(String bucketName) {
         if (client != null && client.bucketExists(bucketName)) {
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
                 for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
@@ -91,19 +101,23 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
+    /**
+     * this should be the only hook method for generating an S3Config instance - if a test class needs any
+     * customizations to the config, override this method and call super, then make your customizations
+     */
     protected S3Config createS3Config() throws Exception {
         return s3ConfigFromProperties();
     }
 
-    protected static S3Config s3ConfigFromProperties() throws Exception {
+    static S3Config s3ConfigFromProperties() throws Exception {
         Properties props = TestConfig.getProperties();
 
-        String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
-        String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
         URI endpoint = new URI(TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ENDPOINT));
         boolean enableVhost = Boolean.parseBoolean(props.getProperty(TestProperties.ENABLE_VHOST));
         boolean disableSmartClient = Boolean.parseBoolean(props.getProperty(TestProperties.DISABLE_SMART_CLIENT));
-        String proxyUri = props.getProperty(TestProperties.PROXY_URI);
+        String proxyUriStr = props.getProperty(TestProperties.PROXY_URI);
+        String accessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
+        String secretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
 
         S3Config s3Config;
         if (enableVhost) {
@@ -115,14 +129,18 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
             s3Config = new S3Config(Protocol.valueOf(endpoint.getScheme().toUpperCase()), endpoint.getHost());
         }
 
-        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
+        if (proxyUriStr != null) {
+            s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUriStr);
+            // in case anything uses URLConnection directly
+            URI proxyUri = URI.create(proxyUriStr);
+            System.setProperty("http.proxyHost", proxyUri.getHost());
+            System.setProperty("http.proxyPort", "" + proxyUri.getPort());
+        }
 
-        if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
-
-        if(disableSmartClient)
+        if (disableSmartClient)
             s3Config.setSmartClient(false);
-        // uncomment to hit a single node
-        //s3Config.property(ObjectConfig.PROPERTY_DISABLE_POLLING, true);
+
+        s3Config.withIdentity(accessKey).withSecretKey(secretKey);
 
         return s3Config;
     }

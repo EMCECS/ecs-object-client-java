@@ -59,14 +59,25 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client:2.3.1',
-            'com.emc.ecs:object-transform:1.1.0',
-            'commons-codec:commons-codec:1.10',
-            'org.jdom:jdom2:2.0.6',
-            'org.slf4j:slf4j-api:1.7.5'
-    runtimeOnly 'org.slf4j:slf4j-log4j12:1.7.5'
-    testImplementation 'junit:junit:4.12',
-            'log4j:log4j:1.2.17'
+    implementation 'com.emc.ecs:smart-client:2.3.2'
+    implementation('com.emc.ecs:object-transform:1.1.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+    }
+    implementation 'commons-codec:commons-codec:1.15'
+    implementation('org.dom4j:dom4j:2.1.3') {
+        // workaround for jdom2 bug (https://github.com/dom4j/dom4j/issues/99)
+        // NOTE: a component metadata rule will not solve the problem for library consumers - this is the only way
+        exclude module: 'pull-parser'
+        exclude module: 'jaxen'
+        exclude module: 'xpp3'
+        exclude module: 'xsdlib'
+        exclude module: 'stax-api'
+        exclude module: 'jaxb-api'
+    }
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    testImplementation 'junit:junit:4.13.2'
+    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.32'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.14.1'
 }
 
 allprojects {

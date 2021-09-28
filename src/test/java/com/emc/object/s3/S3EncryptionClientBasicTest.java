@@ -38,12 +38,12 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
@@ -58,7 +58,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
-    private static final Logger l4j = Logger.getLogger(S3EncryptionClientBasicTest.class);
+    private static final Logger log = LoggerFactory.getLogger(S3EncryptionClientBasicTest.class);
 
     protected int keySize = 128;
     protected S3JerseyClient rclient;
@@ -112,11 +112,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         keyprops.load(keystream);
 
         _masterKey = EncryptionUtil.rsaKeyPairFromBase64(keyprops.getProperty("masterkey.public"), keyprops.getProperty("masterkey.private"));
-        LogMF.debug(l4j, "Master key sizes: public: {} private: {}",
+        log.debug("Master key sizes: public: {} private: {}",
                 ((RSAPublicKey) _masterKey.getPublic()).getModulus().bitLength(),
                 ((RSAPrivateKey) _masterKey.getPrivate()).getModulus().bitLength());
         _oldKey = EncryptionUtil.rsaKeyPairFromBase64(keyprops.getProperty("oldkey.public"), keyprops.getProperty("oldkey.private"));
-        LogMF.debug(l4j, "Old key sizes: public: {} private: {}",
+        log.debug("Old key sizes: public: {} private: {}",
                 ((RSAPublicKey) _oldKey.getPublic()).getModulus().bitLength(),
                 ((RSAPrivateKey) _oldKey.getPrivate()).getModulus().bitLength());
     }
@@ -294,7 +294,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
         S3Config _config = createS3Config();
         _config.setFaultInjectionRate(0.4f);
-        _config.setRetryLimit(6);
+        _config.setRetryLimit(10);
         S3Client _client = new S3EncryptionClient(_config, createEncryptionConfig());
 
         // make sure we hit at least one error
@@ -610,8 +610,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     }
 
     @Override
-    protected void assertForListVersionsPaging(int size, int requestCount)
-    {
+    protected void assertForListVersionsPaging(int size, int requestCount) {
         Assert.assertEquals("The correct number of versions were NOT returned", 10, size);
         Assert.assertEquals("should be 5 pages", 5, requestCount);
     }

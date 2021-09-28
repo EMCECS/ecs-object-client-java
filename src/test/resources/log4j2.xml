@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <Console name="mainAppender">
+            <PatternLayout pattern="%-7r %-5p [%-15t] %c{1}: %m%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="org.apache.http.wire" level="info"/>
+        <Logger name="com.sun.jersey.api.client" level="info"/>
+
+        <!-- signature debugging -->
+        <!--
+        <Logger name="com.emc.object.s3.S3SignerV2" level="trace"/>
+        -->
+
+        <!-- request debugging -->
+        <!--
+        <Logger name="org.apache.http.headers" level="debug"/>
+        -->
+
+        <!-- Turn on for Apache connection management logging -->
+        <!--
+        <Logger name="org.apache.http.conn" level="debug"/>
+        -->
+
+        <Root level="info">
+            <AppenderRef ref="mainAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>

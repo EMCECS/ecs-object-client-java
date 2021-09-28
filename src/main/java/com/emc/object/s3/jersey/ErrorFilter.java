@@ -33,9 +33,8 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.jdom2.Document;
-import org.jdom2.Namespace;
-import org.jdom2.input.SAXBuilder;
+import org.dom4j.Document;
+import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +65,7 @@ public class ErrorFilter extends ClientFilter {
                     }
                 }
             }
-            if(response.hasEntity()) {
+            if (response.hasEntity()) {
                 throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
             } else {
                 // No response entity.  Don't try to parse it.
@@ -105,11 +104,11 @@ public class ErrorFilter extends ClientFilter {
 
         // JAXB will expect a namespace if we try to unmarshall, but some error responses don't include
         // a namespace. In lieu of writing a SAXFilter to apply a default namespace in-line, this works just as well.
-        SAXBuilder sb = new SAXBuilder();
+        SAXReader saxReader = new SAXReader();
 
         Document d;
         try {
-            d = sb.build(reader);
+            d = saxReader.read(reader);
         } catch (Throwable t) {
             return new S3Exception("could not parse error response", statusCode, t);
         } finally {
@@ -120,24 +119,18 @@ public class ErrorFilter extends ClientFilter {
             }
         }
 
-        String code = d.getRootElement().getChildText("Code");
-        if (code == null)
-            code = d.getRootElement().getChildText("Code", Namespace.getNamespace(S3Constants.XML_NAMESPACE));
+        String code = d.getRootElement().elementText("Code");
 
-        String message = d.getRootElement().getChildText("Message");
-        if (message == null)
-            message = d.getRootElement().getChildText("Message", Namespace.getNamespace(S3Constants.XML_NAMESPACE));
+        String message = d.getRootElement().elementText("Message");
 
-        String requestId = d.getRootElement().getChildText("RequestId");
-        if (requestId == null)
-            requestId = d.getRootElement().getChildText("RequestId", Namespace.getNamespace(S3Constants.XML_NAMESPACE));
+        String requestId = d.getRootElement().elementText("RequestId");
 
         if (code == null && message == null) {
             // not an error from S3
             return new S3Exception("no code or message in error response", statusCode);
         }
 
-        log.debug("Error: {}, message: {}, requestId: {}", new Object[] { code, message, requestId });
+        log.debug("Error: {}, message: {}, requestId: {}", new Object[]{code, message, requestId});
         return new S3Exception(message, statusCode, code, requestId);
     }
 }
