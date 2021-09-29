@@ -45,24 +45,24 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class BucketPolicyTest {
-    private static String JSON = "{\n" +
-            "  \"Id\" : \"PolicyId2\",\n" +
-            "  \"Version\" : \"2012-10-17\",\n" +
-            "  \"Statement\" : [ {\n" +
-            "    \"Sid\" : \"AllowIPmix\",\n" +
-            "    \"Effect\" : \"Allow\",\n" +
-            "    \"Principal\" : \"*\",\n" +
-            "    \"Action\" : [ \"s3:*\" ],\n" +
-            "    \"Resource\" : \"arn:aws:s3:::examplebucket/*\",\n" +
-            "    \"Condition\" : {\n" +
-            "      \"IpAddress\" : {\n" +
-            "        \"aws:SourceIp\" : [ \"54.240.143.0/24\", \"2001:DB8:1234:5678::/64\" ]\n" +
-            "      },\n" +
-            "      \"NotIpAddress\" : {\n" +
-            "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]\n" +
-            "      }\n" +
-            "    }\n" +
-            "  } ]\n" +
+    private static String JSON = "{\r\n" +
+            "  \"Id\" : \"PolicyId2\",\r\n" +
+            "  \"Version\" : \"2012-10-17\",\r\n" +
+            "  \"Statement\" : [ {\r\n" +
+            "    \"Sid\" : \"AllowIPmix\",\r\n" +
+            "    \"Effect\" : \"Allow\",\r\n" +
+            "    \"Principal\" : \"*\",\r\n" +
+            "    \"Action\" : [ \"s3:*\" ],\r\n" +
+            "    \"Resource\" : \"arn:aws:s3:::examplebucket/*\",\r\n" +
+            "    \"Condition\" : {\r\n" +
+            "      \"IpAddress\" : {\r\n" +
+            "        \"aws:SourceIp\" : [ \"54.240.143.0/24\", \"2001:DB8:1234:5678::/64\" ]\r\n" +
+            "      },\r\n" +
+            "      \"NotIpAddress\" : {\r\n" +
+            "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]\r\n" +
+            "      }\r\n" +
+            "    }\r\n" +
+            "  } ]\r\n" +
             "}";
 
     private static BucketPolicy OBJECT = new BucketPolicy().withId("PolicyId2").withVersion("2012-10-17").withStatements(

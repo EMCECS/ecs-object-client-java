@@ -59,7 +59,10 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client:2.3.2'
+    implementation 'com.emc.ecs:smart-client-ecs:2.4.0'
+    implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.5'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.5'
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
@@ -76,6 +79,7 @@ dependencies {
     }
     implementation 'org.slf4j:slf4j-api:1.7.32'
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.32'
     testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.16.0'
 }
