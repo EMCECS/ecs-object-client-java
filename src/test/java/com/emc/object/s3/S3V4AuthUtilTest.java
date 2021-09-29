@@ -1,6 +1,5 @@
 package com.emc.object.s3;
 
-import com.emc.object.ObjectRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientRequest;
@@ -105,7 +104,7 @@ public class S3V4AuthUtilTest {
         Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
         Map<String, List<Object>> headers = new HashMap<>();
         RestUtil.putSingle(headers,S3Constants.AMZ_DATE, AMZ_V4_DATE);
-        Assert.assertEquals(CANONICAL_REQUEST, signer.getCanonicalRequest(request, parameters, headers));
+        Assert.assertEquals(CANONICAL_REQUEST, signer.getCanonicalRequest(request.getMethod(), request.getURI(), parameters, headers, false));
     }
 
     @Test

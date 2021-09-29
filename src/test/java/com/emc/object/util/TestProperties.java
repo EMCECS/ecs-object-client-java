@@ -42,6 +42,4 @@ public class TestProperties {
 
     public static final String PROXY_URI = "http.proxyUri";
     public static final String NON_DEFAULT_VPOOL = "nonDefaultVpoolId";
-
-    public static final String USE_V2_SIGNER = "useV2Signer";
 }

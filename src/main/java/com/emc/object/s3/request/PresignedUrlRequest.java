@@ -78,6 +78,10 @@ public class PresignedUrlRequest extends S3ObjectRequest {
         return versionId;
     }
 
+    public void setMethod(Method method) {
+        this.method = method;
+    }
+
     public void setVersionId(String versionId) {
         this.versionId = versionId;
     }
@@ -96,6 +100,11 @@ public class PresignedUrlRequest extends S3ObjectRequest {
 
     public void setHeaderOverrides(Map<ResponseHeaderOverride, String> headerOverrides) {
         this.headerOverrides = headerOverrides;
+    }
+
+    public PresignedUrlRequest withMethod(Method method) {
+        setMethod(method);
+        return this;
     }
 
     public PresignedUrlRequest withVersionId(String versionId) {

@@ -33,7 +33,7 @@ public class S3SignerV4 extends S3Signer {
     @Override
     public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         // # Preparation, add x-amz-date and host headers
-        String date = null;
+        String date;
         String serviceType = getServiceType();
         if (headers.containsKey(S3Constants.AMZ_DATE)) {
             date = RestUtil.getFirstAsString(headers, S3Constants.AMZ_DATE);
@@ -45,7 +45,7 @@ public class S3SignerV4 extends S3Signer {
         addHeadersForV4(request.getURI(), date, headers);
 
         // #1 Create a canonical request for Signature Version 4
-        String canonicalRequest = getCanonicalRequest(request, parameters, headers);
+        String canonicalRequest = getCanonicalRequest(request.getMethod(), request.getURI(), parameters, headers, false);
 
         // #2 Create a string to sign for Signature Version 4
         String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType, canonicalRequest);
@@ -69,7 +69,7 @@ public class S3SignerV4 extends S3Signer {
         RestUtil.putSingle(headers, "Authorization", S3Constants.AWS_HMAC_SHA256_ALGORITHM +
                 " Credential=" + s3Config.getIdentity() + "/" + shortDate +
                 "/" + S3Constants.AWS_DEFAULT_REGION + "/" + serviceType + "/" + S3Constants.AWS_V4_TERMINATOR +
-                ", SignedHeaders=" + signedHeaders.toString() + ", " + S3Constants.PARAM_SIGNATURE + "= " + signature);
+                ", SignedHeaders=" + signedHeaders + ", " + S3Constants.PARAM_SIGNATURE + "=" + signature);
     }
 
     protected void addHeadersForV4(URI uri, String date, Map<String, List<Object>> headers) {
@@ -84,10 +84,17 @@ public class S3SignerV4 extends S3Signer {
         RestUtil.putSingle(headers, RestUtil.HEADER_HOST, hostHeader);
     }
 
-    // This is to generate canonical request for presigned URLs
-    // Payload is UNSIGNED-PAYLOAD
-    protected String getCanonicalRequest(String method, URI uri, Map<String, String> parameters, Map<String, List<Object>> headers) {
+    protected String getCanonicalRequest(String method, URI uri, Map<String, String> parameters, Map<String, List<Object>> headers, Boolean isForPresignedUrl) {
         /*
+        CanonicalRequest =
+            HTTPRequestMethod + '\n' +
+            CanonicalURI + '\n' +
+            CanonicalQueryString + '\n' +
+            CanonicalHeaders + '\n' +
+            SignedHeaders + '\n' +
+            HexEncode(Hash(RequestPayload))
+
+        For presigned URLs:
         CanonicalRequest =
             HTTPRequestMethod + '\n' +
             CanonicalURI + '\n' +
@@ -116,50 +123,16 @@ public class S3SignerV4 extends S3Signer {
         signedHeaders.append("\n");
         canonicalRequest.append(signedHeaders);
 
-        canonicalRequest.append(S3Constants.AMZ_UNSIGNED_PAYLOAD);
-        log.debug("CanonicalRequest: {}", canonicalRequest);
-        return canonicalRequest.toString();
-    }
-
-    protected String getCanonicalRequest(ClientRequest request, Map<String, String> parameters, Map<String, List<Object>> headers) {
-        /*
-        CanonicalRequest =
-            HTTPRequestMethod + '\n' +
-            CanonicalURI + '\n' +
-            CanonicalQueryString + '\n' +
-            CanonicalHeaders + '\n' +
-            SignedHeaders + '\n' +
-            HexEncode(Hash(RequestPayload))
-         */
-        StringBuilder canonicalRequest = new StringBuilder();
-        canonicalRequest.append(request.getMethod()).append("\n");
-        URI uri = request.getURI();
-        String resource = RestUtil.getEncodedPath(uri);
-        canonicalRequest.append(resource).append("\n");
-        canonicalRequest.append(getCanonicalizedQueryString(parameters));
-
-        SortedMap<String, String> canonicalizedHeaders = getCanonicalizedHeaders(headers, parameters);
-        StringBuilder signedHeaders = new StringBuilder();
-        for (String name : canonicalizedHeaders.keySet()) {
-            canonicalRequest.append(name).append(":");
-            if (canonicalizedHeaders.get(name) != null) {
-                canonicalRequest.append(canonicalizedHeaders.get(name).trim());
-            }
-            canonicalRequest.append("\n");
-            if (signedHeaders.length() != 0)
-                signedHeaders.append(";");
-            signedHeaders.append(name);
+        if(isForPresignedUrl) {
+            canonicalRequest.append(S3Constants.AMZ_UNSIGNED_PAYLOAD);
         }
-        canonicalRequest.append("\n");
-
-        signedHeaders.append("\n");
-        canonicalRequest.append(signedHeaders);
-
-        String hashedPayload = "";
-        String payload = "";
-        byte[] hash = hash256(payload);
-        hashedPayload = hexEncode(hash);
-        canonicalRequest.append(hashedPayload);
+        else {
+            String hashedPayload;
+            String payload = "";
+            byte[] hash = hash256(payload);
+            hashedPayload = hexEncode(hash);
+            canonicalRequest.append(hashedPayload);
+        }
         log.debug("CanonicalRequest: {}" + canonicalRequest);
         return canonicalRequest.toString();
     }
@@ -359,7 +332,8 @@ public class S3SignerV4 extends S3Signer {
         sortedParameters.put("X-Amz-SignedHeaders", RestUtil.urlDecode(signedHeaders.toString()));
 
         // #1 Create a canonical request for Signature Version 4
-        String canonicalRequest = getCanonicalRequest(method, uri, sortedParameters, headers);
+        String canonicalRequest = getCanonicalRequest(method, uri, sortedParameters, headers, true);
+        log.debug("CanonicalRequest: {}", canonicalRequest);
 
         // #2 Create a string to sign for Signature Version 4
         String stringToSign = getStringToSign(method, resource, parameters, headers, date, serviceType, canonicalRequest);

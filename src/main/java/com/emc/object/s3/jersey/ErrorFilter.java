@@ -54,10 +54,10 @@ public class ErrorFilter extends ClientFilter {
 
             // check for clock skew (can save hours of troubleshooting)
             if (response.getStatus() == 403) {
-                Date clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(request.getHeaders(), S3Constants.AMZ_DATE), S3Constants.AMZ_DATE);
+                Date clientTime = RestUtil.amzHeaderParse(RestUtil.getFirstAsString(request.getHeaders(), S3Constants.AMZ_DATE));
                 if (clientTime == null)
-                    clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_DATE), RestUtil.HEADER_DATE);
-                Date serverTime = RestUtil.headerParse(RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_DATE), RestUtil.HEADER_DATE);
+                    clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_DATE));
+                Date serverTime = RestUtil.headerParse(RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_DATE));
                 if (clientTime != null && serverTime != null) {
                     long skew = clientTime.getTime() - serverTime.getTime();
                     if (Math.abs(skew) > 5 * 60 * 1000) { // +/- 5 minutes
