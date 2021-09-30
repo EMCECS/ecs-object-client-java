@@ -105,6 +105,18 @@ public class S3SignerV4 extends S3Signer {
          */
         StringBuilder canonicalRequest = new StringBuilder();
         canonicalRequest.append(method).append("\n");
+        // Double-slash between endpoint and resource-path is escaped into "/%2F"
+        // E.g. /s3-bucket//objectPrefix/testObject1 -> /s3-bucket/%2FobjectPrefix/testObject1
+        // However authentication signature is build based on non-encoded double-slash value
+        if (uri != null) {
+            String uriString = uri.toString().replaceAll("%2F", "/");
+            try {
+                uri = new URI(uriString);
+            }
+            catch(URISyntaxException e) {
+                throw new RuntimeException("Invalid URI syntax", e);
+            }
+        }
         String resource = RestUtil.getEncodedPath(uri);
         canonicalRequest.append(resource).append("\n");
         canonicalRequest.append(getCanonicalizedQueryString(parameters));
