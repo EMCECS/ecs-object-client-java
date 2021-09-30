@@ -27,14 +27,14 @@
 package com.emc.object.s3.bean;
 
 
+import com.fasterxml.jackson.databind.AnnotationIntrospector;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.fasterxml.jackson.databind.AnnotationIntrospector;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,24 +45,24 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class BucketPolicyTest {
-    private static String JSON = "{\r\n" +
-            "  \"Id\" : \"PolicyId2\",\r\n" +
-            "  \"Version\" : \"2012-10-17\",\r\n" +
-            "  \"Statement\" : [ {\r\n" +
-            "    \"Sid\" : \"AllowIPmix\",\r\n" +
-            "    \"Effect\" : \"Allow\",\r\n" +
-            "    \"Principal\" : \"*\",\r\n" +
-            "    \"Action\" : [ \"s3:*\" ],\r\n" +
-            "    \"Resource\" : \"arn:aws:s3:::examplebucket/*\",\r\n" +
-            "    \"Condition\" : {\r\n" +
-            "      \"IpAddress\" : {\r\n" +
-            "        \"aws:SourceIp\" : [ \"54.240.143.0/24\", \"2001:DB8:1234:5678::/64\" ]\r\n" +
-            "      },\r\n" +
-            "      \"NotIpAddress\" : {\r\n" +
-            "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]\r\n" +
-            "      }\r\n" +
-            "    }\r\n" +
-            "  } ]\r\n" +
+    private static String JSON = "{" + System.lineSeparator() +
+            "  \"Id\" : \"PolicyId2\"," + System.lineSeparator() +
+            "  \"Version\" : \"2012-10-17\"," + System.lineSeparator() +
+            "  \"Statement\" : [ {" + System.lineSeparator() +
+            "    \"Sid\" : \"AllowIPmix\"," + System.lineSeparator() +
+            "    \"Effect\" : \"Allow\"," + System.lineSeparator() +
+            "    \"Principal\" : \"*\"," + System.lineSeparator() +
+            "    \"Action\" : [ \"s3:*\" ]," + System.lineSeparator() +
+            "    \"Resource\" : \"arn:aws:s3:::examplebucket/*\"," + System.lineSeparator() +
+            "    \"Condition\" : {" + System.lineSeparator() +
+            "      \"IpAddress\" : {" + System.lineSeparator() +
+            "        \"aws:SourceIp\" : [ \"54.240.143.0/24\", \"2001:DB8:1234:5678::/64\" ]" + System.lineSeparator() +
+            "      }," + System.lineSeparator() +
+            "      \"NotIpAddress\" : {" + System.lineSeparator() +
+            "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]" + System.lineSeparator() +
+            "      }" + System.lineSeparator() +
+            "    }" + System.lineSeparator() +
+            "  } ]" + System.lineSeparator() +
             "}";
 
     private static BucketPolicy OBJECT = new BucketPolicy().withId("PolicyId2").withVersion("2012-10-17").withStatements(
