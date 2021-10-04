@@ -12,16 +12,19 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.DateTimeException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class S3SignerV4 extends S3Signer {
-    private static final String HEADER_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss Z";
+    private static final String HEADER_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     //The timestamp must be in UTC and in the following ISO 8601 format: YYYYMMDD'T'HHMMSS'Z'
     private static final String AMZ_DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
     private static final String AMZ_DATE_FORMAT_SHORT = "yyyyMMdd";
     private static final long PRESIGN_URL_MAX_EXPIRATION_SECONDS = 60 * 60 * 24 * 7;
+    private static final String HASHED_EMPTY_PAYLOAD = hexEncode(hash256(""));
+
     private static final SortedSet<String> excludedSignedHeaders = new TreeSet(Arrays.asList(
         "authorization"
     ));
@@ -35,12 +38,7 @@ public class S3SignerV4 extends S3Signer {
         // # Preparation, add x-amz-date and host headers
         String date;
         String serviceType = getServiceType();
-        if (headers.containsKey(S3Constants.AMZ_DATE)) {
-            date = RestUtil.getFirstAsString(headers, S3Constants.AMZ_DATE);
-        }
-        else {
-            date = getDate(parameters, headers);
-        }
+        date = getDate(parameters, headers);
         String shortDate = getShortDate(date);
         addHeadersForV4(request.getURI(), date, headers);
 
@@ -139,11 +137,7 @@ public class S3SignerV4 extends S3Signer {
             canonicalRequest.append(S3Constants.AMZ_UNSIGNED_PAYLOAD);
         }
         else {
-            String hashedPayload;
-            String payload = "";
-            byte[] hash = hash256(payload);
-            hashedPayload = hexEncode(hash);
-            canonicalRequest.append(hashedPayload);
+            canonicalRequest.append(HASHED_EMPTY_PAYLOAD);
         }
         log.debug("CanonicalRequest: {}" + canonicalRequest);
         return canonicalRequest.toString();
@@ -190,13 +184,15 @@ public class S3SignerV4 extends S3Signer {
         StringBuilder stringToSign = new StringBuilder();
         stringToSign.append(S3Constants.AWS_HMAC_SHA256_ALGORITHM).append("\n");
         stringToSign.append(date).append("\n");
-        SimpleDateFormat sdf = new SimpleDateFormat(AMZ_DATE_FORMAT, Locale.US);
+
+        // convert date format
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AMZ_DATE_FORMAT).withLocale(Locale.US);
         try {
-            Date d = sdf.parse(date);
-            sdf.applyPattern(AMZ_DATE_FORMAT_SHORT);
-            date = sdf.format(d);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
+            LocalDateTime dateTime = LocalDateTime.parse(date, formatter);
+            date = DateTimeFormatter.ofPattern(AMZ_DATE_FORMAT_SHORT).withLocale(Locale.US).format(dateTime);
+        }
+        catch(DateTimeException e) {
+            throw new RuntimeException("invalid date header: " + date, e);
         }
         stringToSign.append(getScope(date, service)).append("\n");
 
@@ -235,29 +231,27 @@ public class S3SignerV4 extends S3Signer {
             date = RestUtil.getRequestDate(s3Config.getServerClockSkew());
         }
 
-        // convert date
-        SimpleDateFormat sdf = new SimpleDateFormat(HEADER_DATE_FORMAT, Locale.US);
+        // convert date format
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(HEADER_DATE_FORMAT).withLocale(Locale.US);
         try {
-            Date d = sdf.parse(date);
-            sdf.applyPattern(AMZ_DATE_FORMAT);
-            return sdf.format(d);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
+            LocalDateTime dateTime = LocalDateTime.parse(date, formatter);
+            return DateTimeFormatter.ofPattern(AMZ_DATE_FORMAT).withLocale(Locale.US).format(dateTime);
+        }
+        catch(DateTimeException e) {
+            throw new RuntimeException("invalid date header: " + date, e);
         }
     }
 
     protected String getShortDate(String date) {
         // Date must be consistent with timestamp, so extract it
         // from previous date time format instead of get current date
-        String shortDate = "";
-        SimpleDateFormat sdf = new SimpleDateFormat(AMZ_DATE_FORMAT, Locale.US);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AMZ_DATE_FORMAT).withLocale(Locale.US);
         try {
-            Date d = sdf.parse(date);
-            sdf.applyPattern(AMZ_DATE_FORMAT_SHORT);
-            shortDate = sdf.format(d);
-            return shortDate;
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
+            LocalDateTime dateTime = LocalDateTime.parse(date, formatter);
+            return DateTimeFormatter.ofPattern(AMZ_DATE_FORMAT_SHORT).withLocale(Locale.US).format(dateTime);
+        }
+        catch(DateTimeException e) {
+            throw new RuntimeException("invalid date: " + date, e);
         }
     }
 

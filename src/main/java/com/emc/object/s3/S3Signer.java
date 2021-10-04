@@ -70,7 +70,7 @@ public abstract class S3Signer {
         }
     }
 
-    protected byte[] hash256(String stringToHash) {
+    protected static byte[] hash256(String stringToHash) {
         MessageDigest digest = null;
         try {
             digest = MessageDigest.getInstance(S3Constants.SHA256);
@@ -85,7 +85,7 @@ public abstract class S3Signer {
     /* *
      * encode byte string to hex - required for v4 auth
      * */
-    protected String hexEncode(byte[] arg) {
+    protected static String hexEncode(byte[] arg) {
         return Hex.encodeHexString(arg);
     }
 
