@@ -798,6 +798,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void listObjectsWithPercentAndUrlEncoding() {
+        String key1 = "f%o%%o", key2 = "fo%%o", key3 = "fo%o", content = "Hello List Percent!";
+        client.putObject(getTestBucket(), key1, content, null);
+        client.putObject(getTestBucket(), key2, content, null);
+        client.putObject(getTestBucket(), key3, content, null);
+
+        ListObjectsRequest request = new ListObjectsRequest(getTestBucket()).withEncodingType(EncodingType.url);
+        ListObjectsResult result = client.listObjects(request);
+        Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
+
+        List<S3Object> resultObjects = result.getObjects();
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(3, resultObjects.size());
+
+        Assert.assertEquals(key1, resultObjects.get(0).getKey());
+        Assert.assertEquals(key2, resultObjects.get(1).getKey());
+        Assert.assertEquals(key3, resultObjects.get(2).getKey());
+    }
+
+    @Test
     public void testListAndReadVersions() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
