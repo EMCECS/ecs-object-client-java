@@ -45,8 +45,8 @@ public class ListObjectsResult implements UrlEncodable {
     private String marker;
     private String nextMarker;
     private boolean truncated;
-    private List<S3Object> objects = new ArrayList<S3Object>();
-    private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
+    private List<S3Object> objects = new ArrayList<>();
+    private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,
     //but before this object is set to the parent object.
@@ -58,6 +58,8 @@ public class ListObjectsResult implements UrlEncodable {
             delimiter = RestUtil.urlDecode(delimiter, false);
             marker = RestUtil.urlDecode(marker, false);
             nextMarker = RestUtil.urlDecode(nextMarker, false);
+            for (S3Object object : objects) object._afterUnmarshal(unmarshaller, this);
+            for (CommonPrefix prefix : _commonPrefixes) prefix._afterUnmarshal(unmarshaller, this);
         }
     }
 
@@ -153,7 +155,7 @@ public class ListObjectsResult implements UrlEncodable {
 
     @XmlTransient
     public List<String> getCommonPrefixes() {
-        List<String> prefixes = new ArrayList<String>();
+        List<String> prefixes = new ArrayList<>();
         for (CommonPrefix prefix : _commonPrefixes) {
             prefixes.add(prefix.getPrefix());
         }
