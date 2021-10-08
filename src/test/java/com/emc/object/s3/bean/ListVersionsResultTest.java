@@ -63,6 +63,16 @@ public class ListVersionsResultTest {
                 "<DisplayName>Foo Bar</DisplayName>" +
                 "</Owner>" +
                 "</DeleteMarker>" +
+                "<DeleteMarker>" +
+                "<Key>key%20with%20spaces</Key>" +
+                "<VersionId>qDhprLU80sAlCFLu3DWgXAEDgKzWarn-HS_JU0TvYqs.</VersionId>" +
+                "<IsLatest>true</IsLatest>" +
+                "<LastModified>2050-01-01T00:00:00Z</LastModified>" +
+                "<Owner>" +
+                "<ID>ID12345</ID>" +
+                "<DisplayName>Foo Bar</DisplayName>" +
+                "</Owner>" +
+                "</DeleteMarker>" +
                 "<Version>" +
                 "<Key>sourcekey</Key>" +
                 "<VersionId>wxxQ7ezLaL5JN2Sislq66Syxxo0k7uHTUpb9qiiMxNg.</VersionId>" +
@@ -89,21 +99,43 @@ public class ListVersionsResultTest {
                 "</Owner>" +
                 "<StorageClass>STANDARD</StorageClass>" +
                 "</Version>" +
+                "<Version>" +
+                "<Key>key%20with%20spaces</Key>" +
+                "<VersionId>d-d309mfjFri40QYukDozqBt3UmoQ0DBsVqmcMV16OI.</VersionId>" +
+                "<IsLatest>false</IsLatest>" +
+                "<LastModified>2050-01-01T00:00:00Z</LastModified>" +
+                "<ETag>&amp;quot;396fefef536d5ce46c7537ecf978a360&amp;quot;</ETag>" +
+                "<Size>124</Size>" +
+                "<Owner>" +
+                "<ID>ID12345</ID>" +
+                "<DisplayName>Foo Bar</DisplayName>" +
+                "</Owner>" +
+                "<StorageClass>STANDARD</StorageClass>" +
+                "</Version>" +
                 "<CommonPrefixes>" +
                 "<Prefix>photos/</Prefix>" +
                 "</CommonPrefixes>" +
                 "<CommonPrefixes>" +
-                "<Prefix>videos/</Prefix>" +
+                "<Prefix>videos%20space/</Prefix>" +
                 "</CommonPrefixes>" +
+                "<EncodingType>url</EncodingType>" +
                 "</ListVersionsResult>";
 
-        List<AbstractVersion> versions = new ArrayList<AbstractVersion>();
+        List<AbstractVersion> versions = new ArrayList<>();
 
         CanonicalUser owner = new CanonicalUser("ID12345", "Foo Bar");
 
         AbstractVersion version = new DeleteMarker();
         version.setKey("sourcekey");
         version.setVersionId("qDhprLU80sAlCFLu2DWgXAEDgKzWarn-HS_JU0TvYqs.");
+        version.setLatest(true);
+        version.setLastModified(new Date(2524608000000L));
+        version.setOwner(owner);
+        versions.add(version);
+
+        version = new DeleteMarker();
+        version.setKey("key with spaces");
+        version.setVersionId("qDhprLU80sAlCFLu3DWgXAEDgKzWarn-HS_JU0TvYqs.");
         version.setLatest(true);
         version.setLastModified(new Date(2524608000000L));
         version.setOwner(owner);
@@ -131,6 +163,17 @@ public class ListVersionsResultTest {
         ((Version) version).setStorageClass(StorageClass.STANDARD);
         versions.add(version);
 
+        version = new Version();
+        version.setKey("key with spaces");
+        version.setVersionId("d-d309mfjFri40QYukDozqBt3UmoQ0DBsVqmcMV16OI.");
+        version.setLatest(false);
+        version.setLastModified(new Date(2524608000000L));
+        ((Version) version).setETag("&quot;396fefef536d5ce46c7537ecf978a360&quot;");
+        ((Version) version).setSize(124L);
+        version.setOwner(owner);
+        ((Version) version).setStorageClass(StorageClass.STANDARD);
+        versions.add(version);
+
         ListVersionsResult object = new ListVersionsResult();
         object.setBucketName("bucket");
         object.setPrefix("my");
@@ -142,7 +185,7 @@ public class ListVersionsResultTest {
         object.setDelimiter("/");
         object.setTruncated(true);
         object.setVersions(versions);
-        object.set_commonPrefixes(Arrays.asList(new CommonPrefix("photos/"), new CommonPrefix("videos/")));
+        object.set_commonPrefixes(Arrays.asList(new CommonPrefix("photos/"), new CommonPrefix("videos space/")));
 
         // unmarshall and compare to object
         Unmarshaller unmarshaller = context.createUnmarshaller();

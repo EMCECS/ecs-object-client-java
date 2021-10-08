@@ -45,8 +45,8 @@ public class ListVersionsResult implements UrlEncodable {
     private String nextKeyMarker;
     private String nextVersionIdMarker;
     private boolean truncated;
-    private List<AbstractVersion> versions = new ArrayList<AbstractVersion>();
-    private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
+    private List<AbstractVersion> versions = new ArrayList<>();
+    private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,
     //but before this object is set to the parent object.
@@ -58,6 +58,8 @@ public class ListVersionsResult implements UrlEncodable {
             delimiter = RestUtil.urlDecode(delimiter, false);
             keyMarker = RestUtil.urlDecode(keyMarker, false);
             nextKeyMarker = RestUtil.urlDecode(nextKeyMarker, false);
+            for (AbstractVersion version : versions) version._afterUnmarshal(unmarshaller, this);
+            for (CommonPrefix prefix : _commonPrefixes) prefix._afterUnmarshal(unmarshaller, this);
         }
     }
 
@@ -171,7 +173,7 @@ public class ListVersionsResult implements UrlEncodable {
 
     @XmlTransient
     public List<String> getCommonPrefixes() {
-        List<String> prefixes = new ArrayList<String>();
+        List<String> prefixes = new ArrayList<>();
         for (CommonPrefix prefix : _commonPrefixes) {
             prefixes.add(prefix.getPrefix());
         }

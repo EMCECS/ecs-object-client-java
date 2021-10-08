@@ -41,9 +41,12 @@ public class S3Object {
     private StorageClass storageClass;
     private CanonicalUser owner;
 
-    //This method is called after all the properties (except IDREF) are unmarshalled for this object,
-    //but before this object is set to the parent object.
-    void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+    //NOTE: This method should only be called from the parent afterUnmarshal method.  This will not work as a direct
+    //      implementation of afterUnmarshal because the encodingType element comes at the very end of the XML packet,
+    //      and at the time this method would be called, that property is null, so we have no way of knowing whether the
+    //      response is encoded or not.  Thus, we prefix the name with an underscore, and must call this method from the
+    //      parent afterUnmarshal method.
+    void _afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
         if (parent instanceof UrlEncodable && ((UrlEncodable) parent).getEncodingType() == EncodingType.url) {
             // url-decode applicable values (key)
             key = RestUtil.urlDecode(key, false);

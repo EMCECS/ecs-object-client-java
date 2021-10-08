@@ -47,8 +47,8 @@ public class ListMultipartUploadsResult {
     private String nextKeyMarker;
     private String nextUploadIdMarker;
     private boolean truncated;
-    private List<Upload> uploads = new ArrayList<Upload>();
-    private List<CommonPrefix> _commonPrefixes = new ArrayList<CommonPrefix>();
+    private List<Upload> uploads = new ArrayList<>();
+    private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,
     //but before this object is set to the parent object.
@@ -60,6 +60,8 @@ public class ListMultipartUploadsResult {
             delimiter = RestUtil.urlDecode(delimiter, false);
             keyMarker = RestUtil.urlDecode(keyMarker, false);
             nextKeyMarker = RestUtil.urlDecode(nextKeyMarker, false);
+            for (Upload upload : uploads) upload._afterUnmarshal(unmarshaller, this);
+            for (CommonPrefix prefix : _commonPrefixes) prefix._afterUnmarshal(unmarshaller, this);
         }
     }
 
@@ -173,7 +175,7 @@ public class ListMultipartUploadsResult {
 
     @XmlTransient
     public List<String> getCommonPrefixes() {
-        List<String> prefixes = new ArrayList<String>();
+        List<String> prefixes = new ArrayList<>();
         for (CommonPrefix prefix : _commonPrefixes) {
             prefixes.add(prefix.getPrefix());
         }
