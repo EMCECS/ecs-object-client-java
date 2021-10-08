@@ -67,7 +67,7 @@ public class S3V4AuthUtilTest {
     @BeforeClass
     public static void setup() {
         HEADERS_1.putSingle("Host", "johnsmith.s3.amazonaws.com");
-        HEADERS_1.putSingle("Date", "Sun, 30 Aug 2015 12:36:00 +0000");
+        HEADERS_1.putSingle("Date", "Sun, 30 Aug 2015 12:36:00 GMT");
 
     }
 
