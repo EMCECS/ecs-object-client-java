@@ -55,7 +55,7 @@ public abstract class S3Signer {
                                                               Map<String, String> parameters);
 
 
-        // generalized utility function to get hmac values
+    // generalized utility function to get hmac values
     protected byte[] hmac(String algorithm, byte[] var1, String var2) {
         try {
             Mac mac = Mac.getInstance(algorithm);

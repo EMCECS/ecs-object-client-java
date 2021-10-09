@@ -274,8 +274,8 @@ public class S3Config extends ObjectConfig<S3Config> {
     }
 
     /**
-     * Sets the AWS signature version for authentication requests, default is v4,
-     * set this to true to use v2.
+     * Sets the AWS signature version for authentication requests, default is v2,
+     * set this to false to use v4.
      */
     public void setUseV2Signer(boolean useV2Signer) {
         this.useV2Signer = useV2Signer;
