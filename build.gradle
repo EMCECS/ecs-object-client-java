@@ -34,6 +34,7 @@ plugins {
     id 'maven'
     id 'org.ajoberstar.git-publish' version '3.0.0'
     id 'nebula.release' version '15.2.0'
+    id 'com.github.johnrengelman.shadow' version '5.2.0' apply false
 }
 
 group 'com.emc.ecs'
@@ -241,8 +242,8 @@ clean {
 
 // allow typing in credentials
 // note: this only works when run without the Gradle daemon (--no-daemon)
-gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(':uploadJars')) {
+task setupPublish {
+    doLast {
         if (!rootProject.hasProperty('signingSecretKeyRingFile'))
             rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
         if (!rootProject.hasProperty('signingKeyId'))
@@ -259,7 +260,14 @@ gradle.taskGraph.whenReady { taskGraph ->
         uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
         uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
     }
-    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
+}
+
+tasks.uploadJars.dependsOn(tasks.setupPublish)
+
+// allow typing in credentials
+// note: this only works when run without the Gradle daemon (--no-daemon)
+task setupRelease {
+    doLast {
         if (!rootProject.hasProperty('gitUsername'))
             rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
         if (!rootProject.hasProperty('gitPassword'))
@@ -268,3 +276,6 @@ gradle.taskGraph.whenReady { taskGraph ->
         System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
     }
 }
+
+tasks.gitPublishPush.dependsOn(tasks.setupPublish)
+tasks.release.dependsOn(tasks.setupPublish)

@@ -1,0 +1,125 @@
+plugins {
+    id 'java'
+    id 'signing'
+    id 'maven-publish'
+    id 'com.github.johnrengelman.shadow'
+}
+
+group = rootProject.group
+description = rootProject.description
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    // Let user use this dependencies
+    shadow 'org.slf4j:slf4j-api:1.7.32'
+    shadow 'commons-logging:commons-logging:1.2'
+    implementation(rootProject) {
+        // used for Jackson
+        exclude group: 'jakarta.xml.bind'
+        exclude group: 'jakarta.activation'
+        // used for jersey-json
+        exclude group: 'javax.xml.bind'
+        exclude group: 'com.sun.xml.bind'
+        exclude group: 'javax.activation'
+        // log
+        exclude group: 'org.slf4j'
+        exclude group: 'commons-logging::'
+    }
+}
+
+shadowJar {
+    archiveClassifier = null
+    def r = { String p -> relocate(p, 'com.emc.object.shadow.' + p) }
+    r 'com.fasterxml'
+    r 'com.sun.jersey'
+    r 'com.sun.ws.rs'
+    r 'com.sun.istack'
+    r 'javax.ws.rs'
+    r 'org.apache.commons.codec'
+    r 'org.apache.http'
+    r 'org.codehaus.jettison'
+    r 'org.dom4j'
+    r 'SevenZip'
+
+    mergeServiceFiles()
+}
+
+jar {
+    enabled = false
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) { p ->
+            project.shadow.component(p)
+            pom {
+                name = project.name
+                description = project.description
+                url = githubProjectUrl
+
+                scm {
+                    url = githubProjectUrl
+                    connection = githubScmUrl
+                    developerConnection = githubScmUrl
+                }
+
+                licenses {
+                    license {
+                        name = licenseName
+                        url = licenseUrl
+                        distribution = 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'EMCECS'
+                        name = 'Dell EMC ECS'
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'Sonatype'
+            url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            credentials {
+                username = ''
+                password = ''
+            }
+        }
+    }
+}
+
+signing {
+    required { gradle.taskGraph.hasTask(':setupPublish') }
+    sign publishing.publications.mavenJava
+}
+
+/**
+ * The unit test task is to verify bundled jar.
+ */
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+task shadowTestJar(type: ShadowJar) {
+    archiveClassifier = "tests"
+    from rootProject.sourceSets.test.output
+    configurations = []
+    relocators = shadowJar.relocators
+}
+
+test {
+    // add original unit tests
+    testClassesDirs = rootProject.test.testClassesDirs
+    // shadow test files
+    classpath = tasks.shadowTestJar.outputs.files +
+            // original runtime class path without shadowed dependencies
+            (rootProject.configurations.testRuntimeClasspath - shadowJar.includedDependencies) +
+            // shadow jar
+            shadowJar.outputs.files
+}
