@@ -278,4 +278,5 @@ task setupRelease {
 }
 
 tasks.gitPublishPush.dependsOn(tasks.setupPublish)
-tasks.release.dependsOn(tasks.setupPublish)
+tasks.release.dependsOn(tasks.setupRelease)
+tasks.gitPublishPush.dependsOn(tasks.setupRelease)

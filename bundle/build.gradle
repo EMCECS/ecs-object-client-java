@@ -97,9 +97,24 @@ publishing {
 }
 
 signing {
-    required { gradle.taskGraph.hasTask(':setupPublish') }
+    required { gradle.taskGraph.hasTask(':object-client-bundle:setupPublish') }
     sign publishing.publications.mavenJava
 }
+
+task setupPublish(dependsOn: ":setupPublish") {
+    doLast {
+        ext.'signing.keyId' = rootProject.ext.signingKeyId
+        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
+        ext.'signing.password' = rootProject.ext.signingPass
+        publishing.repositories.findByName("Sonatype") {
+            credentials {
+                username = rootProject.ext.sonatypeUser
+                password = rootProject.ext.sonatypePass
+            }
+        }
+    }
+}
+tasks.publishAllPublicationsToSonatypeRepository.dependsOn(tasks.setupPublish)
 
 /**
  * The unit test task is to verify bundled jar.
