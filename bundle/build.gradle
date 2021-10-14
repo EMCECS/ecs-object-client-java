@@ -27,7 +27,7 @@ dependencies {
         exclude group: 'javax.activation'
         // log
         exclude group: 'org.slf4j'
-        exclude group: 'commons-logging::'
+        exclude group: 'commons-logging'
     }
 }
 
@@ -46,6 +46,10 @@ shadowJar {
     r 'SevenZip'
 
     mergeServiceFiles()
+
+    doLast {
+        println("All ${includedDependencies.files}")
+    }
 }
 
 jar {
