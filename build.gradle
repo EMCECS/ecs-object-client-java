@@ -242,8 +242,8 @@ clean {
 
 // allow typing in credentials
 // note: this only works when run without the Gradle daemon (--no-daemon)
-task setupPublish {
-    doLast {
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(':uploadJars')) {
         if (!rootProject.hasProperty('signingSecretKeyRingFile'))
             rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
         if (!rootProject.hasProperty('signingKeyId'))
@@ -260,14 +260,7 @@ task setupPublish {
         uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
         uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
     }
-}
-
-tasks.uploadJars.dependsOn(tasks.setupPublish)
-
-// allow typing in credentials
-// note: this only works when run without the Gradle daemon (--no-daemon)
-task setupRelease {
-    doLast {
+    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
         if (!rootProject.hasProperty('gitUsername'))
             rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
         if (!rootProject.hasProperty('gitPassword'))
@@ -276,6 +269,3 @@ task setupRelease {
         System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
     }
 }
-
-tasks.gitPublishPush.dependsOn(tasks.setupRelease)
-tasks.release.dependsOn(tasks.setupRelease)

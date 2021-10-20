@@ -46,10 +46,6 @@ shadowJar {
     r 'SevenZip'
 
     mergeServiceFiles()
-
-    doLast {
-        println("All ${includedDependencies.files}")
-    }
 }
 
 jar {
@@ -60,6 +56,8 @@ publishing {
     publications {
         mavenJava(MavenPublication) { p ->
             project.shadow.component(p)
+            artifact tasks.getByPath(":javadocJar")
+            artifact tasks.getByPath(":sourcesJar")
             pom {
                 name = project.name
                 description = project.description
@@ -90,35 +88,18 @@ publishing {
     }
     repositories {
         maven {
-            name = 'Sonatype'
             url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
             credentials {
-                username = ''
-                password = ''
+                username = rootProject.property("sonatypeUser")
+                password = rootProject.property("sonatypePass")
             }
         }
     }
 }
 
 signing {
-    required { gradle.taskGraph.hasTask(':object-client-bundle:setupPublish') }
     sign publishing.publications.mavenJava
 }
-
-task setupPublish(dependsOn: ":setupPublish") {
-    doLast {
-        ext.'signing.keyId' = rootProject.ext.signingKeyId
-        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
-        ext.'signing.password' = rootProject.ext.signingPass
-        publishing.repositories.findByName("Sonatype") {
-            credentials {
-                username = rootProject.ext.sonatypeUser
-                password = rootProject.ext.sonatypePass
-            }
-        }
-    }
-}
-tasks.publishAllPublicationsToSonatypeRepository.dependsOn(tasks.setupPublish)
 
 /**
  * The unit test task is to verify bundled jar.
