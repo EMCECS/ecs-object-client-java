@@ -798,7 +798,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    // Todo: Blocked by SDK-555.
     public void testListAndReadVersions() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -838,13 +837,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
                 Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
             }
-            // Todo: Blocked by SDK-555. Could be removed after SDK-555 is fixed.
-            // Delete all the versions
-            client.deleteVersion(getTestBucket(), key, version.getVersionId());
         }
     }
 
-    @Test // TODO: blocked by SDK-555
+    @Test
     public void testListVersionsPaging() {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -873,12 +869,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         } while (result.isTruncated());
 
         assertForListVersionsPaging(versions.size(), requestCount);
-
-        // Todo: Blocked by SDK-555. Could be removed after SDK-555 is fixed.
-        for (AbstractVersion version : versions) {
-            // Delete all the versions
-            client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
-        }
     }
 
     protected void assertForListVersionsPaging(int size, int requestCount)
@@ -888,7 +878,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    // Todo: Blocked by SDK-555.
     public void testListVersionsPagingPrefixDelim() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -914,15 +903,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(1, result.getCommonPrefixes().size());
         Assert.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
         Assert.assertFalse(result.isTruncated());
-
-        request = new ListVersionsRequest(getTestBucket());
-        result = client.listVersions(request);
-
-        // Todo: Blocked by SDK-555. Could be removed after SDK-555 is fixed.
-        for (AbstractVersion version : result.getVersions()) {
-            // Delete all the versions
-            client.deleteVersion(getTestBucket(), version.getKey(), version.getVersionId());
-        }
     }
 
     protected void createTestObjects(String prefix, int numObjects) {

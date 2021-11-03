@@ -163,7 +163,135 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
     }
 
-    @Test // TODO: blocked by STORAGE-21341
+    @Test // TODO: blocked by STORAGE-30513
+    public void testQueryObjectsWithPrefix() throws Exception {
+        String bucketName = getTestBucket();
+
+        String key1 = "prefix/object1";
+        Map<String, String> userMeta = new HashMap<String, String>();
+        userMeta.put("datetime1", "2015-01-01T00:00:00Z");
+        userMeta.put("decimal1", "3.14159");
+        userMeta.put("integer1", "42");
+        userMeta.put("string1", "test");
+
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setUserMetadata(userMeta);
+        client.putObject(new PutObjectRequest(getTestBucket(), key1, new byte[0]).withObjectMetadata(objectMetadata));
+
+        String key2 = "object2";
+
+        client.putObject(new PutObjectRequest(getTestBucket(), key2, new byte[0]).withObjectMetadata(objectMetadata));
+
+        QueryObjectsRequest request = new QueryObjectsRequest(bucketName)
+                .withAttribute("ContentType")
+                .withAttribute("Size")
+                .withQuery("(x-amz-meta-string1<='') or (x-amz-meta-string1>='')")
+                .withPrefix("prefix");
+        QueryObjectsResult result = client.queryObjects(request);
+
+        boolean is34OrLater = ecsVersion != null && ecsVersion.compareTo("3.4") >= 0;
+
+        Assert.assertFalse(result.isTruncated());
+        Assert.assertEquals(bucketName, result.getBucketName());
+        if (is34OrLater)
+            Assert.assertNull(result.getNextMarker());
+        else
+            Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        Assert.assertNotNull(result.getObjects());
+        Assert.assertEquals(1, result.getObjects().size());
+
+        QueryObject obj = result.getObjects().get(0);
+        Assert.assertEquals(key1, obj.getObjectName());
+
+        /* Blocked by STORAGE-30513. Uncomment after fixed.*/
+        Assert.assertEquals(2, obj.getQueryMds().size());
+        QueryMetadata sysmd = null;
+        QueryMetadata usermd = null;
+        for(QueryMetadata m : obj.getQueryMds()) {
+            switch(m.getType()) {
+                case SYSMD: sysmd = m; break;
+                case USERMD: usermd = m; break;
+            }
+        }
+        Assert.assertNotNull(sysmd);
+        Assert.assertNotNull(usermd);
+
+        Assert.assertEquals("0", sysmd.getMdMap().get("size"));
+        Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
+
+        Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
+        Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
+        Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
+        Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
+    }
+
+    @Test //TODO: blocked by STORAGE-30513
+    public void testQueryObjectsWithPrefixDelim() throws Exception {
+        String bucketName = getTestBucket();
+
+        String key1 = "prefix/object1";
+        Map<String, String> userMeta = new HashMap<String, String>();
+        userMeta.put("datetime1", "2015-01-01T00:00:00Z");
+        userMeta.put("decimal1", "3.14159");
+        userMeta.put("integer1", "42");
+        userMeta.put("string1", "test");
+
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
+        objectMetadata.setUserMetadata(userMeta);
+        client.putObject(new PutObjectRequest(getTestBucket(), key1, new byte[0]).withObjectMetadata(objectMetadata));
+
+        String key2 = "prefix/prefix2/object2";
+        client.putObject(new PutObjectRequest(getTestBucket(), key2, new byte[0]).withObjectMetadata(objectMetadata));
+
+        QueryObjectsRequest request = new QueryObjectsRequest(bucketName)
+                .withAttribute("ContentType")
+                .withAttribute("Size")
+                .withQuery("(x-amz-meta-string1<='') or (x-amz-meta-string1>='')")
+                .withPrefix("prefix/")
+                .withDelimiter("/");
+        QueryObjectsResult result = client.queryObjects(request);
+
+        boolean is34OrLater = ecsVersion != null && ecsVersion.compareTo("3.4") >= 0;
+
+        Assert.assertFalse(result.isTruncated());
+        Assert.assertEquals(bucketName, result.getBucketName());
+        if (is34OrLater)
+            Assert.assertNull(result.getNextMarker());
+        else
+            Assert.assertEquals("NO MORE PAGES", result.getNextMarker());
+        Assert.assertNotNull(result.getObjects());
+        Assert.assertEquals(1, result.getObjects().size());
+
+        QueryObject obj = result.getObjects().get(0);
+        Assert.assertEquals(key1, obj.getObjectName());
+
+        /* Blocked by STORAGE-30513. Uncomment after fixed.*/
+        Assert.assertEquals(2, obj.getQueryMds().size());
+        QueryMetadata sysmd = null;
+        QueryMetadata usermd = null;
+        for(QueryMetadata m : obj.getQueryMds()) {
+            switch(m.getType()) {
+                case SYSMD: sysmd = m; break;
+                case USERMD: usermd = m; break;
+            }
+        }
+        Assert.assertNotNull(sysmd);
+        Assert.assertNotNull(usermd);
+
+        Assert.assertEquals("0", sysmd.getMdMap().get("size"));
+        Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
+
+        Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
+        Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
+        Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
+        Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
+
+        Assert.assertEquals(1, result.getPrefixGroups().size());
+        Assert.assertEquals("prefix/prefix2/", result.getPrefixGroups().get(0));
+        Assert.assertFalse(result.isTruncated());
+    }
+
+    @Test
     public void testListObjectsWithEncoding() {
         String bucketName = getTestBucket();
 
@@ -237,7 +365,99 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         }
     }
 
-    @Test // TODO: blocked by STORAGE-18866
+    @Test //TODO: blocked by STORAGE-30527
+    public void testListObjectsWithPrefixEncoding() {
+        String bucketName = getTestBucket();
+
+        String badKey = "prefix/bad\u001dkey";
+        client.putObject(new PutObjectRequest(getTestBucket(), badKey, new byte[0]).withObjectMetadata(
+                new S3ObjectMetadata().addUserMetadata("index-field", "bad-key")
+                        .addUserMetadata("field-valid", "true")
+                        .addUserMetadata("key-valid", "false")
+        ));
+
+        String goodKey = "prefix/good-key-and-field";
+        client.putObject(new PutObjectRequest(getTestBucket(), goodKey, new byte[0]).withObjectMetadata(
+                new S3ObjectMetadata().addUserMetadata("index-field", "good-key")
+                        .addUserMetadata("field-valid", "true")
+                        .addUserMetadata("key-valid", "true")
+        ));
+
+        String badField = "prefix/bad-field";
+        String badFieldValue = "bad\u001dfield";
+        client.putObject(new PutObjectRequest(getTestBucket(), badField, new byte[0]).withObjectMetadata(
+                new S3ObjectMetadata().addEncodedUserMetadata("index-field", badFieldValue)
+                        .addUserMetadata("field-valid", "false")
+                        .addUserMetadata("key-valid", "true")
+        ));
+
+        try {
+            QueryObjectsRequest request = null;
+            QueryObjectsResult result = null;
+            // list the bad key with wrong prefix
+            /* Blocked by STORAGE-30513. Uncomment after fixed.*/
+            /*
+            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
+                    .withPrefix("prefix1/");
+            result = client.queryObjects(request);
+
+            Assert.assertEquals(0, result.getObjects().size());
+             */
+
+            // list the bad key
+            /* Blocked by STORAGE-30513. Uncomment after fixed.*/
+            /*
+            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
+                    .withPrefix("prefix/");
+            result = client.queryObjects(request);
+
+            Assert.assertEquals(2, result.getObjects().size());
+            Assert.assertEquals(badKey, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+            Assert.assertEquals(goodKey, RestUtil.urlDecode(result.getObjects().get(1).getObjectName()));
+             */
+
+            // list a good field, with bad field results
+            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("x-amz-meta-field-valid=='false'").withPrefix("prefix/");
+            result = client.queryObjects(request);
+
+            Assert.assertEquals(1, result.getObjects().size());
+            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+
+            // list a bad field
+            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                    .withQuery("x-amz-meta-index-field=='" + RestUtil.urlEncode(badFieldValue) + "'")
+                    .withPrefix("prefix/");
+            result = client.queryObjects(request);
+
+            Assert.assertEquals(1, result.getObjects().size());
+            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+
+            List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
+
+            //SYSMD and USERMD
+            Assert.assertEquals(2, queryMds.size());
+            QueryMetadata usermd = null;
+            for (QueryMetadata m : queryMds) {
+                switch (m.getType()) {
+                    case USERMD:
+                        usermd = m;
+                        break;
+                }
+            }
+            Assert.assertNotNull(usermd);
+            //badFieldValue has to be stored in url encoded format. Limit by SDK-553, user application needs to record encoded or not.
+            Assert.assertEquals(badFieldValue, RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-index-field")));
+            Assert.assertEquals("false", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-field-valid")));
+            Assert.assertEquals("true", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-key-valid")));
+        } finally {
+            client.deleteObject(getTestBucket(), badKey);
+        }
+    }
+
+    @Test
     public void testCaseSensitivity() throws Exception {
         String bucketName = getTestBucket();
 
