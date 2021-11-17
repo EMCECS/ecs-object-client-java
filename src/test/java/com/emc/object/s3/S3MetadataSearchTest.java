@@ -163,7 +163,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
     }
 
-    @Test // TODO: blocked by STORAGE-30513
+    @Test
     public void testQueryObjectsWithPrefix() throws Exception {
         String bucketName = getTestBucket();
 
@@ -190,6 +190,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObjectsResult result = client.queryObjects(request);
 
         boolean is34OrLater = ecsVersion != null && ecsVersion.compareTo("3.4") >= 0;
+        boolean is37OrLater = ecsVersion != null && ecsVersion.compareTo("3.7") >= 0;
 
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
@@ -203,32 +204,37 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObject obj = result.getObjects().get(0);
         Assert.assertEquals(key1, obj.getObjectName());
 
-        /* Blocked by STORAGE-30513. Uncomment after fixed.*/
-        /*
-        Assert.assertEquals(2, obj.getQueryMds().size());
-        QueryMetadata sysmd = null;
-        QueryMetadata usermd = null;
-        for(QueryMetadata m : obj.getQueryMds()) {
-            switch(m.getType()) {
-                case SYSMD: sysmd = m; break;
-                case USERMD: usermd = m; break;
+        /* Blocked by STORAGE-30513 for versions before 3.7. */
+        if(is37OrLater) {
+            Assert.assertEquals(2, obj.getQueryMds().size());
+            QueryMetadata sysmd = null;
+            QueryMetadata usermd = null;
+            for (QueryMetadata m : obj.getQueryMds()) {
+                switch (m.getType()) {
+                    case SYSMD:
+                        sysmd = m;
+                        break;
+                    case USERMD:
+                        usermd = m;
+                        break;
+                }
             }
+            System.out.println(usermd.getMdMap().toString());
+
+            Assert.assertNotNull(sysmd);
+            Assert.assertNotNull(usermd);
+
+            Assert.assertEquals("0", sysmd.getMdMap().get("size"));
+            Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
+
+            Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
+            Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
+            Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
+            Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
         }
-        Assert.assertNotNull(sysmd);
-        Assert.assertNotNull(usermd);
-
-        Assert.assertEquals("0", sysmd.getMdMap().get("size"));
-        Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
-
-        Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
-        Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
-        Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
-        Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
-
-         */
     }
 
-    @Test //TODO: blocked by STORAGE-30513
+    @Test
     public void testQueryObjectsWithPrefixDelim() throws Exception {
         String bucketName = getTestBucket();
 
@@ -255,6 +261,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObjectsResult result = client.queryObjects(request);
 
         boolean is34OrLater = ecsVersion != null && ecsVersion.compareTo("3.4") >= 0;
+        boolean is37OrLater = ecsVersion != null && ecsVersion.compareTo("3.7") >= 0;
 
         Assert.assertFalse(result.isTruncated());
         Assert.assertEquals(bucketName, result.getBucketName());
@@ -268,29 +275,33 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         QueryObject obj = result.getObjects().get(0);
         Assert.assertEquals(key1, obj.getObjectName());
 
-        /* Blocked by STORAGE-30513. Uncomment after fixed.*/
-        /*
-        Assert.assertEquals(2, obj.getQueryMds().size());
-        QueryMetadata sysmd = null;
-        QueryMetadata usermd = null;
-        for(QueryMetadata m : obj.getQueryMds()) {
-            switch(m.getType()) {
-                case SYSMD: sysmd = m; break;
-                case USERMD: usermd = m; break;
+        /* Blocked by STORAGE-30513 for versions before 3.7. */
+        if(is37OrLater)
+            {
+            Assert.assertEquals(2, obj.getQueryMds().size());
+            QueryMetadata sysmd = null;
+            QueryMetadata usermd = null;
+            for (QueryMetadata m : obj.getQueryMds()) {
+                switch (m.getType()) {
+                    case SYSMD:
+                        sysmd = m;
+                        break;
+                    case USERMD:
+                        usermd = m;
+                        break;
+                }
             }
+            Assert.assertNotNull(sysmd);
+            Assert.assertNotNull(usermd);
+
+            Assert.assertEquals("0", sysmd.getMdMap().get("size"));
+            Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
+
+            Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
+            Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
+            Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
+            Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
         }
-        Assert.assertNotNull(sysmd);
-        Assert.assertNotNull(usermd);
-
-        Assert.assertEquals("0", sysmd.getMdMap().get("size"));
-        Assert.assertEquals("application/octet-stream", sysmd.getMdMap().get("ctype"));
-
-        Assert.assertEquals("2015-01-01T00:00:00Z", usermd.getMdMap().get("x-amz-meta-datetime1"));
-        Assert.assertEquals("3.14159", usermd.getMdMap().get("x-amz-meta-decimal1"));
-        Assert.assertEquals("42", usermd.getMdMap().get("x-amz-meta-integer1"));
-        Assert.assertEquals("test", usermd.getMdMap().get("x-amz-meta-string1"));
-
-         */
         Assert.assertEquals(1, result.getPrefixGroups().size());
         Assert.assertEquals("prefix/prefix2/", result.getPrefixGroups().get(0));
         Assert.assertFalse(result.isTruncated());
@@ -400,7 +411,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
             QueryObjectsRequest request = null;
             QueryObjectsResult result = null;
             // list the bad key with wrong prefix
-            /* Blocked by STORAGE-30513. Uncomment after fixed.*/
+            /* Blocked by STORAGE-30527. Uncomment after fixed.*/
             /*
             request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
                     .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
@@ -411,7 +422,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
              */
 
             // list the bad key
-            /* Blocked by STORAGE-30513. Uncomment after fixed.*/
+            /* Blocked by STORAGE-30527. Uncomment after fixed.*/
             /*
             request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
                     .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
