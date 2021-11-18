@@ -2791,6 +2791,47 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testResumeMPU() throws Exception {
+        String bucket = getTestBucket();
+        String key = "myprefix/mpu-abort-test";
+        long partSize = LargeFileUploader.MIN_PART_SIZE;
+        long size = 4 * partSize + 1066;
+        byte[] data = new byte[(int)size];
+        new Random().nextBytes(data);
+
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+        int partNum = 1;
+        for (long offset = 0; offset < data.length; offset += partSize) {
+            // skip some parts: first, middle, last
+            if (partNum == 1 || partNum == 3 || partNum == 5) {
+                partNum++;
+                continue;
+            }
+            long length = data.length - offset;
+            if (length > partSize) length = partSize;
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum++,
+                    Arrays.copyOfRange(data, (int) offset, (int) (offset + length)));
+            client.uploadPart(request);
+        }
+
+        try {
+            client.getObjectMetadata(bucket, key);
+            Assert.fail("Object should not exist because MPU upload is incomplete");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+        }
+
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), (long)size)
+                .withPartSize((long)partSize).withResumeMPU(true);
+        lfu.doMultipartUpload();
+
+        ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
+        Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
+        Assert.assertEquals(size, (long)client.getObjectMetadata(bucket, key).getContentLength());
+    }
+
+    @Test
     public void testListMarkerWithSpecialChars() {
         String marker = "foo/bar/blah%blah&blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)

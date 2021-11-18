@@ -128,7 +128,7 @@ public class ListMultipartUploadsResult {
         this.uploadIdMarker = uploadIdMarker;
     }
 
-    @XmlElement(name = "NextsKeyMarker")
+    @XmlElement(name = "NextKeyMarker")
     public String getNextKeyMarker() {
         return nextKeyMarker;
     }

@@ -84,6 +84,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
     private ProgressListener progressListener;
+    private boolean resumeMPU = false;
+    private Upload uploadForResume;
 
     /**
      * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
@@ -169,31 +171,86 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
     }
 
+    private Upload getLatestMultipartUpload(String bucket) {
+        Upload latestUpload = null;
+        try {
+            ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
+            ListMultipartUploadsResult result = null;
+            do {
+                if (result == null)
+                    result = s3Client.listMultipartUploads(request);
+                else
+                    result = s3Client.listMultipartUploads(request.withKeyMarker(result.getNextKeyMarker()).withUploadIdMarker(result.getNextUploadIdMarker()));
+                for (Upload upload : result.getUploads()) {
+                    if (!upload.getKey().equals(key))
+                        continue;
+                    if (latestUpload != null) {
+                        if (upload.getInitiated().after(latestUpload.getInitiated())){
+                            latestUpload = upload;
+                            log.debug("Skip uploadId {} because it's initiated earlier than {}", latestUpload.getUploadId(), upload.getUploadId());
+                        } else {
+                            log.debug("Skip uploadId {} because it's initiated earlier than {}", upload.getUploadId(), latestUpload.getUploadId());
+                        }
+                    } else latestUpload = upload;
+                }
+            } while (result.isTruncated());
+        }catch (S3Exception e) {
+            log.warn("Error in retrieving MPU uploads", e);
+        }
+        return latestUpload;
+    }
+
+
     public void doMultipartUpload() {
         configure();
 
-        // initiate MP upload
-        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
-        initRequest.setObjectMetadata(objectMetadata);
-        initRequest.setAcl(acl);
-        initRequest.setCannedAcl(cannedAcl);
-        String uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
+        String uploadId = null;
+        List<MultipartPart> mpp = null;
+
+        if (resumeMPU && uploadForResume != null) {
+            uploadId = uploadForResume.getUploadId();
+            mpp = s3Client.listParts(new ListPartsRequest(bucket, key, uploadId)).getParts();
+        }
+
+        if (uploadId == null) {
+            // initiate MP upload
+            InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
+            initRequest.setObjectMetadata(objectMetadata);
+            initRequest.setAcl(acl);
+            initRequest.setCannedAcl(cannedAcl);
+            uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
+        }
 
         List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
+        SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
         try {
             // submit all upload tasks
             int partNumber = 1;
             long offset = 0, length = partSize;
             while (offset < fullSize) {
+                boolean foundPart = false;
                 if (offset + length > fullSize) length = fullSize - offset;
-
-                futures.add(executorService.submit(new UploadPartTask(uploadId, partNumber++, offset, length)));
+                if (mpp != null) {
+                    for (MultipartPart part : mpp) {
+                        if (part.getPartNumber() == partNumber) {
+                            if (part.getSize() != length) {
+                                throw new RuntimeException(String.format("Abort resume MPU due to incorrect size detected by uploadID %s, partNum %d: expect %d, actual %d", uploadId, partNumber, part.getSize(), length));
+                            } else {
+                                foundPart = true;
+                                parts.add(new MultipartPartETag(partNumber++, part.getETag()));
+                                log.debug("bucket {} key {} partNumber {} already exists, skip to resume MPU", bucket, key, partNumber);
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (!foundPart)
+                    futures.add(executorService.submit(new UploadPartTask(uploadId, partNumber++, offset, length)));
 
                 offset += length;
             }
 
             // wait for threads to finish and gather parts
-            SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
             for (Future<MultipartPartETag> future : futures) {
                 parts.add(future.get());
             }
@@ -204,10 +261,10 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             eTag = result.getETag();
 
         } catch (Exception e) {
-
             // abort MP upload
             try {
-                s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+                if (!resumeMPU)
+                    s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
@@ -315,6 +372,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                     partSize / 1024, minPartSize / 1024));
             partSize = minPartSize;
         }
+
+        if (resumeMPU && fullSize >= mpuThreshold)
+            uploadForResume = getLatestMultipartUpload(bucket);
 
         // set up thread pool
         if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
@@ -442,6 +502,14 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.progressListener = progressListener;
     }
 
+    public boolean isResumeMPU() {
+        return resumeMPU;
+    }
+
+    public void setResumeMPU(boolean resumeMPU) {
+        this.resumeMPU = resumeMPU;
+    }
+
     public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -484,6 +552,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
     public LargeFileUploader withProgressListener(ProgressListener progressListener) {
         setProgressListener(progressListener);
+        return this;
+    }
+
+    public LargeFileUploader withResumeMPU(boolean resumeMPU) {
+        setResumeMPU(resumeMPU);
         return this;
     }
 
