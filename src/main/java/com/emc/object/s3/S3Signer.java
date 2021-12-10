@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -56,17 +57,17 @@ public abstract class S3Signer {
 
 
     // generalized utility function to get hmac values
-    protected byte[] hmac(String algorithm, byte[] var1, String var2) {
+    protected byte[] hmac(String algorithm, byte[] secretKey, String message) {
         try {
             Mac mac = Mac.getInstance(algorithm);
-            mac.init(new SecretKeySpec(var1, algorithm));
-            byte[] result = mac.doFinal(var2.getBytes(StandardCharsets.UTF_8));
-            log.debug("hmac of {} and {}:\n{}", var1, var2, result);
+            mac.init(new SecretKeySpec(secretKey, algorithm));
+            byte[] result = mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+            log.debug("hmac of {} and {}:\n{}", secretKey, message, result);
             return result;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(algorithm + " algorithm is not supported on this platform", e);
         } catch (InvalidKeyException e) {
-            throw new RuntimeException("The secret key \"" + s3Config.getSecretKey() + "\" is not valid", e);
+            throw new RuntimeException("The secret key is not valid", e);
         }
     }
 
@@ -86,7 +87,14 @@ public abstract class S3Signer {
      * encode byte string to hex - required for v4 auth
      * */
     protected static String hexEncode(byte[] arg) {
-        return Hex.encodeHexString(arg);
+        String hexString = DatatypeConverter.printHexBinary(arg);
+        if (hexString != null) {
+            // return value of DatatypeConverter.printHexBinary is uppercase,
+            // need to convert to lowercase
+            return hexString.toLowerCase();
+        } else {
+            return null;
+        }
     }
 
     protected String trimAndJoin(List<Object> values, String delimiter) {

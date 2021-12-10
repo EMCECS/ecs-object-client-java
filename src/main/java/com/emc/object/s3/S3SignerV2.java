@@ -33,6 +33,7 @@ import com.emc.object.util.RestUtil;
 import com.sun.jersey.api.client.ClientRequest;
 import org.apache.commons.codec.binary.Base64;
 
+import javax.xml.bind.DatatypeConverter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -74,10 +75,10 @@ public final class S3SignerV2 extends S3Signer {
 
     @Override
     protected String getSignature(String stringToSign, byte[] signingKey) {
-        return new String(Base64.encodeBase64(
+        return DatatypeConverter.printBase64Binary(
                 hmac(S3Constants.HMAC_SHA_1,
                         s3Config.getSecretKey().getBytes(StandardCharsets.UTF_8),
-                        stringToSign)));
+                        stringToSign));
     }
 
     @Override
