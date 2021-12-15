@@ -45,29 +45,59 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
     @Test
     public void testListSystemMetadataSearchKeys() throws Exception {
+        boolean is37OrLater = ecsVersion != null && ecsVersion.compareTo("3.7") >= 0;
+        MetadataSearchKey[] expectedIndexableKeys;
+        MetadataSearchKey[] expectedOptionalAttributes;
+        if (!is37OrLater) {
+            expectedIndexableKeys = new MetadataSearchKey[]{
+                    new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
+            };
 
-        MetadataSearchKey[] expectedIndexableKeys = new MetadataSearchKey[] {
-                new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
-                new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
-                new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
-                new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
-                new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
-        };
+            expectedOptionalAttributes = new MetadataSearchKey[]{
+                    new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
+                    new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
+            };
+        }
+        else {
+            expectedIndexableKeys = new MetadataSearchKey[] {
+                    new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("ReplicationStatus", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
+            };
 
-        MetadataSearchKey[] expectedOptionalAttributes = new MetadataSearchKey[] {
-                new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
-                new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
-                new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
-                new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
-                new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
-                new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
-                new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
-                new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
-                new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
-                new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
-                new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
-                new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
-        };
+            expectedOptionalAttributes = new MetadataSearchKey[] {
+                    new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                    new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("ReplicationStatus", MetadataSearchDatatype.string),
+                    new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
+                    new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
+            };
+        }
 
         MetadataSearchList list = client.listSystemMetadataSearchKeys();
         checkMetadataKeys(expectedIndexableKeys, list.getIndexableKeys());
@@ -219,8 +249,6 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                         break;
                 }
             }
-            System.out.println(usermd.getMdMap().toString());
-
             Assert.assertNotNull(sysmd);
             Assert.assertNotNull(usermd);
 
@@ -308,7 +336,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListObjectsWithEncoding() {
+    public void testListObjectsWithEncoding() throws InterruptedException {
         String bucketName = getTestBucket();
 
         String badKey = "bad\u001dkey";
@@ -333,58 +361,57 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                         .addUserMetadata("key-valid", "true")
         ));
 
-        try {
-            // list the bad key
-            QueryObjectsRequest request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')").withSorted("x-amz-meta-index-field");
-            QueryObjectsResult result = client.queryObjects(request);
+        // list the bad key
+        QueryObjectsRequest request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')").withSorted("x-amz-meta-index-field");
+        QueryObjectsResult result = client.queryObjects(request);
 
-            Assert.assertEquals(2, result.getObjects().size());
-            Assert.assertEquals(badKey, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
-            Assert.assertEquals(goodKey, RestUtil.urlDecode(result.getObjects().get(1).getObjectName()));
+        Assert.assertEquals(2, result.getObjects().size());
+        Assert.assertEquals(badKey, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+        Assert.assertEquals(goodKey, RestUtil.urlDecode(result.getObjects().get(1).getObjectName()));
 
-            // list a good field, with bad field results
-            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-field-valid=='false'");
-            result = client.queryObjects(request);
+        // list a good field, with bad field results
+        request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("x-amz-meta-field-valid=='false'");
+        result = client.queryObjects(request);
 
-            Assert.assertEquals(1, result.getObjects().size());
-            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+        Assert.assertEquals(1, result.getObjects().size());
+        Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
 
-            // list a bad field
-            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-index-field=='" + RestUtil.urlEncode(badFieldValue) + "'");
-            result = client.queryObjects(request);
+        // list a bad field
+        request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("x-amz-meta-index-field=='" + RestUtil.urlEncode(badFieldValue) + "'");
+        result = client.queryObjects(request);
 
-            Assert.assertEquals(1, result.getObjects().size());
-            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+        Assert.assertEquals(1, result.getObjects().size());
+        Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
 
-            List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
+        List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
 
-            //SYSMD and USERMD
-            Assert.assertEquals(2, queryMds.size());
-            QueryMetadata usermd = null;
-            for (QueryMetadata m : queryMds) {
-                switch (m.getType()) {
-                    case USERMD:
-                        usermd = m;
-                        break;
-                }
+        // SYSMD and USERMD
+        Assert.assertEquals(2, queryMds.size());
+        QueryMetadata usermd = null;
+        for (QueryMetadata m : queryMds) {
+            switch (m.getType()) {
+                case USERMD:
+                    usermd = m;
+                    break;
             }
-            Assert.assertNotNull(usermd);
-            //badFieldValue has to be stored in url encoded format. Limit by SDK-553, user application needs to record encoded or not.
-            Assert.assertEquals(RestUtil.urlEncode(badFieldValue), RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-index-field")));
-            Assert.assertEquals("false", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-field-valid")));
-            Assert.assertEquals("true", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-key-valid")));
-        } finally {
-            client.deleteObject(getTestBucket(), badKey);
         }
+        Assert.assertNotNull(usermd);
+        // badFieldValue has to be stored in url encoded format. Limit by SDK-553, user application needs to record encoded or not.
+        Assert.assertEquals(RestUtil.urlEncode(badFieldValue), RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-index-field")));
+        Assert.assertEquals("false", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-field-valid")));
+        Assert.assertEquals("true", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-key-valid")));
     }
 
-    @Test //TODO: blocked by STORAGE-30527
+    @Test // blocked by STORAGE-30527
     public void testListObjectsWithPrefixEncoding() {
+        boolean is371OrLater = ecsVersion != null && ecsVersion.compareTo("3.7.1") >= 0;
+        // blocked by STORAGE-30527
+        if(!is371OrLater)
+            return;
         String bucketName = getTestBucket();
-
         String badKey = "prefix/bad\u001dkey";
         client.putObject(new PutObjectRequest(getTestBucket(), badKey, new byte[0]).withObjectMetadata(
                 new S3ObjectMetadata().addUserMetadata("index-field", "bad-key")
@@ -407,70 +434,60 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                         .addUserMetadata("key-valid", "true")
         ));
 
-        try {
-            QueryObjectsRequest request = null;
-            QueryObjectsResult result = null;
-            // list the bad key with wrong prefix
-            /* Blocked by STORAGE-30527. Uncomment after fixed.*/
-            /*
-            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
-                    .withPrefix("prefix1/");
-            result = client.queryObjects(request);
+        QueryObjectsRequest request = null;
+        QueryObjectsResult result = null;
+        // list the bad key with wrong prefix
+        request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
+                .withPrefix("prefix1/");
+        result = client.queryObjects(request);
 
-            Assert.assertEquals(0, result.getObjects().size());
-             */
+        Assert.assertEquals(0, result.getObjects().size());
 
-            // list the bad key
-            /* Blocked by STORAGE-30527. Uncomment after fixed.*/
-            /*
-            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
-                    .withPrefix("prefix/");
-            result = client.queryObjects(request);
+        // list the bad key
+        request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("(x-amz-meta-field-valid=='true') and (x-amz-meta-index-field>'')")
+                .withPrefix("prefix/");
+        result = client.queryObjects(request);
 
-            Assert.assertEquals(2, result.getObjects().size());
-            Assert.assertEquals(badKey, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
-            Assert.assertEquals(goodKey, RestUtil.urlDecode(result.getObjects().get(1).getObjectName()));
-             */
+        Assert.assertEquals(2, result.getObjects().size());
+        Assert.assertEquals(badKey, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+        Assert.assertEquals(goodKey, RestUtil.urlDecode(result.getObjects().get(1).getObjectName()));
 
-            // list a good field, with bad field results
-            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-field-valid=='false'").withPrefix("prefix/");
-            result = client.queryObjects(request);
+        // list a good field, with bad field results
+        request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("x-amz-meta-field-valid=='false'").withPrefix("prefix/");
+        result = client.queryObjects(request);
 
-            Assert.assertEquals(1, result.getObjects().size());
-            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+        Assert.assertEquals(1, result.getObjects().size());
+        Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
 
-            // list a bad field
-            request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
-                    .withQuery("x-amz-meta-index-field=='" + RestUtil.urlEncode(badFieldValue) + "'")
-                    .withPrefix("prefix/");
-            result = client.queryObjects(request);
+        // list a bad field
+        request = new QueryObjectsRequest(bucketName).withEncodingType(EncodingType.url)
+                .withQuery("x-amz-meta-index-field=='" + RestUtil.urlEncode(badFieldValue) + "'")
+                .withPrefix("prefix/");
+        result = client.queryObjects(request);
 
-            Assert.assertEquals(1, result.getObjects().size());
-            Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
+        Assert.assertEquals(1, result.getObjects().size());
+        Assert.assertEquals(badField, RestUtil.urlDecode(result.getObjects().get(0).getObjectName()));
 
-            List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
+        List<QueryMetadata> queryMds = result.getObjects().get(0).getQueryMds();
 
-            //SYSMD and USERMD
-            Assert.assertEquals(2, queryMds.size());
-            QueryMetadata usermd = null;
-            for (QueryMetadata m : queryMds) {
-                switch (m.getType()) {
-                    case USERMD:
-                        usermd = m;
-                        break;
-                }
+        // SYSMD and USERMD
+        Assert.assertEquals(2, queryMds.size());
+        QueryMetadata usermd = null;
+        for (QueryMetadata m : queryMds) {
+            switch (m.getType()) {
+                case USERMD:
+                    usermd = m;
+                    break;
             }
-            Assert.assertNotNull(usermd);
-            //badFieldValue has to be stored in url encoded format. Limit by SDK-553, user application needs to record encoded or not.
-            Assert.assertEquals(badFieldValue, RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-index-field")));
-            Assert.assertEquals("false", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-field-valid")));
-            Assert.assertEquals("true", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-key-valid")));
-        } finally {
-            client.deleteObject(getTestBucket(), badKey);
         }
+        Assert.assertNotNull(usermd);
+        // badFieldValue has to be stored in url encoded format. Limit by SDK-553, user application needs to record encoded or not.
+        Assert.assertEquals(RestUtil.urlEncode(badFieldValue), RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-index-field")));
+        Assert.assertEquals("false", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-field-valid")));
+        Assert.assertEquals("true", RestUtil.urlDecode(usermd.getMdMap().get("x-amz-meta-key-valid")));
     }
 
     @Test
