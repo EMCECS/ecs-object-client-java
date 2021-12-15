@@ -26,6 +26,8 @@
  */
 package com.emc.object.util;
 
+import com.emc.object.s3.S3Constants;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -59,6 +61,7 @@ public final class RestUtil {
     public static final String HEADER_LAST_MODIFIED = "Last-Modified";
     public static final String HEADER_RANGE = "Range";
     public static final String HEADER_USER_AGENT = "User-Agent";
+    public static final String HEADER_HOST = "Host";
 
     public static final String EMC_PREFIX = "x-emc-";
 
@@ -96,7 +99,13 @@ public final class RestUtil {
     public static final DateTimeFormatter iso8601MillisecondFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(TimeZone.getTimeZone("UTC").toZoneId());
 
     private static final String HEADER_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
+    private static final String AMZ_DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
+
+    private static final ThreadLocal<DateFormat> headerFormat = ThreadLocal.withInitial(() -> {
+        DateFormat format = new SimpleDateFormat(HEADER_FORMAT, Locale.ENGLISH);
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return format;
+    });
     private static final ThreadLocal<CharsetEncoder> utf8Encoder = ThreadLocal.withInitial(StandardCharsets.UTF_8::newEncoder);
 
     public static <T> String getFirstAsString(Map<String, List<T>> multiValueMap, String key) {
@@ -197,13 +206,27 @@ public final class RestUtil {
 
     public static String headerFormat(Date date) {
         if (date == null) return null;
-        return getHeaderFormat().format(date);
+        return headerFormat.get().format(date);
     }
 
     public static Date headerParse(String dateString) {
         if (dateString == null) return null;
         try {
-            return getHeaderFormat().parse(dateString);
+            return headerFormat.get().parse(dateString);
+        } catch (ParseException e) {
+            throw new RuntimeException("invalid date header: " + dateString, e);
+        }
+    }
+
+    public static Date amzHeaderParse(String dateString) {
+        if (dateString == null) return null;
+        try {
+            // convert date
+            SimpleDateFormat sdf = new SimpleDateFormat(AMZ_DATE_FORMAT);
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date date = sdf.parse(dateString);
+            sdf.applyPattern(HEADER_FORMAT);
+            return date;
         } catch (ParseException e) {
             throw new RuntimeException("invalid date header: " + dateString, e);
         }
@@ -396,16 +419,6 @@ public final class RestUtil {
 
     public static URI replacePath(URI uri, String path) throws URISyntaxException {
         return buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), path, uri.getRawQuery(), uri.getRawFragment());
-    }
-
-    private static DateFormat getHeaderFormat() {
-        DateFormat format = headerFormat.get();
-        if (format == null) {
-            format = new SimpleDateFormat(HEADER_FORMAT, Locale.ENGLISH);
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
-            headerFormat.set(format);
-        }
-        return format;
     }
 
     public static String join(String separator, Iterable<String> items) {

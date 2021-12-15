@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, EMC Corporation.
+ * Copyright (c) 2015, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,45 +26,40 @@
  */
 package com.emc.object.s3;
 
+import com.emc.codec.CodecChain;
+import com.emc.object.EncryptionConfig;
+import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.ListBucketsRequest;
-import com.emc.object.util.RestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-
-public class ClockSkewTest extends AbstractS3ClientTest {
+public class S3EncryptionWithCompressionV4Test extends S3EncryptionWithCompressionTest {
     @Override
-    protected S3Client createS3Client() throws Exception {
-        return new S3JerseyClient(createS3Config());
+    public S3Client createS3Client() throws Exception {
+        rclient = new S3JerseyClient(createS3Config().withUseV2Signer(false));
+        EncryptionConfig eConfig = createEncryptionConfig();
+        eclient = new S3EncryptionClient(createS3Config().withUseV2Signer(false), eConfig);
+        encodeSpec = eConfig.getEncryptionSpec();
+        if (eConfig.isCompressionEnabled()) encodeSpec = eConfig.getCompressionSpec() + "," + encodeSpec;
+        return eclient;
     }
 
+    @Override
     @Test
-    public void testClockSkew() throws Exception {
-        try {
-            ListBucketsRequest request = new ListBucketsRequest() {
-                @Override
-                public Map<String, List<Object>> getHeaders() {
-                    Map<String, List<Object>> headers = super.getHeaders();
-                    // set x-amz-date, subtracting 30 minutes from current time
-                    Date oldDate = new Date(System.currentTimeMillis() - (30 * 60 * 1000));
-                    SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
-                    try {
-                        Date d = sdf.parse(RestUtil.headerFormat(oldDate));
-                        sdf.applyPattern("yyyyMMdd'T'HHmmss'Z'");
-                        RestUtil.putSingle(headers, S3Constants.AMZ_DATE, sdf.format(d));
-                    } catch (ParseException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return headers;
-                }
-            };
-            client.listBuckets(request);
-        } catch (S3Exception e) {
-            Assert.assertEquals(403, e.getHttpCode());
+    public void testRetries() throws Exception {
+        byte[] data = "Testing retries!!".getBytes();
+        String key = "retry-test";
+
+        S3Config _config = createS3Config().withUseV2Signer(false);
+        _config.setFaultInjectionRate(0.4f);
+        _config.setRetryLimit(6);
+        S3Client _client = new S3EncryptionClient(_config, createEncryptionConfig());
+
+        // make sure we hit at least one error
+        for (int i = 0; i < 6; i++) {
+            _client.putObject(getTestBucket(), key, data, null);
+            S3ObjectMetadata metadata = rclient.getObjectMetadata(getTestBucket(), key);
+            Assert.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
         }
     }
 }

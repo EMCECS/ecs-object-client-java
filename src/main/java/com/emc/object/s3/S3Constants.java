@@ -32,6 +32,12 @@ public final class S3Constants {
     public static final String AMZ_PREFIX = "x-amz-";
     public static final String AMZ_META_PREFIX = AMZ_PREFIX + "meta-";
 
+    public static final String AWS_V4 = "AWS4";
+    public static final String AWS_SERVICE_S3 = "s3";
+    public static final String AWS_SERVICE_IAM = "iam";
+    public static final String AWS_DEFAULT_REGION = "us-east-1";
+    public static final String AWS_V4_TERMINATOR = "aws4_request";
+    public final static String AWS_HMAC_SHA256_ALGORITHM = "AWS4-HMAC-SHA256";
     public static final String AMZ_ACL = AMZ_PREFIX + "acl";
     public static final String AMZ_COPY_SOURCE = AMZ_PREFIX + "copy-source";
     public static final String AMZ_DATE = AMZ_PREFIX + "date";
@@ -49,6 +55,7 @@ public final class S3Constants {
     public static final String AMZ_SOURCE_UNMODIFIED_SINCE = AMZ_PREFIX + "copy-source-if-unmodified-since";
     public static final String AMZ_SOURCE_VERSION_ID = AMZ_PREFIX + "copy-source-version-id";
     public static final String AMZ_VERSION_ID = AMZ_PREFIX + "version-id";
+    public static final String AMZ_UNSIGNED_PAYLOAD= "UNSIGNED-PAYLOAD";
     public static final String AMZ_BUCKET_OBJECT_LOCK_ENABLED = AMZ_PREFIX + "bucket-object-lock-enabled";
     public static final String AMZ_OBJECT_LOCK_LEGAL_HOLD = AMZ_PREFIX + "object-lock-legal-hold";
     public static final String AMZ_OBJECT_LOCK_MODE = AMZ_PREFIX + "object-lock-mode";
@@ -98,6 +105,10 @@ public final class S3Constants {
     public static final String ERROR_INTERNAL = "InternalError";
     public static final String ERROR_INVALID_ARGUMENT = "InvalidArgument";
     public static final String ERROR_METHOD_NOT_ALLOWED = "MethodNotAllowed";
+
+    public static final String HMAC_SHA_1 = "HmacSHA1";
+    public static final String HMAC_SHA_256 = "HmacSHA256";
+    public static final String SHA256 = "SHA-256";
 
     private S3Constants() {
     }

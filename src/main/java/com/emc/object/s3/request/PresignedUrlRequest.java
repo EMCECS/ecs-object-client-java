@@ -37,12 +37,14 @@ import java.util.Map;
 
 public class PresignedUrlRequest extends S3ObjectRequest {
     private Date expirationTime;
+    private Method method;
     private String versionId;
     private S3ObjectMetadata objectMetadata;
     private Map<ResponseHeaderOverride, String> headerOverrides = new HashMap<ResponseHeaderOverride, String>();
 
     public PresignedUrlRequest(Method method, String bucketName, String key, Date expirationTime) {
         super(method, bucketName, key, null);
+        this.method = method;
         this.expirationTime = expirationTime;
     }
 
@@ -68,8 +70,16 @@ public class PresignedUrlRequest extends S3ObjectRequest {
         return expirationTime;
     }
 
+    public Method getMethod() {
+        return method;
+    }
+
     public String getVersionId() {
         return versionId;
+    }
+
+    public void setMethod(Method method) {
+        this.method = method;
     }
 
     public void setVersionId(String versionId) {
@@ -90,6 +100,11 @@ public class PresignedUrlRequest extends S3ObjectRequest {
 
     public void setHeaderOverrides(Map<ResponseHeaderOverride, String> headerOverrides) {
         this.headerOverrides = headerOverrides;
+    }
+
+    public PresignedUrlRequest withMethod(Method method) {
+        setMethod(method);
+        return this;
     }
 
     public PresignedUrlRequest withVersionId(String versionId) {

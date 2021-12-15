@@ -38,13 +38,12 @@ import com.emc.rest.smart.SmartFilter;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.filter.ClientFilter;
 
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URL;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Reference implementation of S3Client.
@@ -126,7 +125,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Config s3Config;
     protected Client client;
     protected LoadBalancer loadBalancer;
-    protected S3SignerV2 signer;
+    protected S3Signer signer;
 
     public S3JerseyClient(S3Config s3Config) {
         this(s3Config, null);
@@ -141,7 +140,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
-        this.signer = new S3SignerV2(s3Config);
+        if(s3Config.isUseV2Signer())
+            this.signer = new S3SignerV2(s3Config);
+        else
+            this.signer = new S3SignerV4(s3Config);
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
         loadBalancer = smartConfig.getLoadBalancer();
@@ -196,14 +198,31 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             }
         }
 
+        // Smart filter will be removed if it exists and then will be re-added.
+        // Because host header could be replaced by smart client, which could make v4 signing fail,
+        // so need to make sure auth filter is after the smart filter.
+        // And also need to make sure that geoPinning filter is before smart filter.
+        ClientHandler handler = client.getHeadHandler();
+        SmartFilter smartFilter = null;
+        while (handler instanceof ClientFilter) {
+            ClientFilter filter = (ClientFilter) handler;
+            if (filter instanceof SmartFilter) {
+                smartFilter = (SmartFilter)filter;
+                client.removeFilter(smartFilter);
+            }
+            handler = filter.getNext();
+        }
         // jersey filters
         client.addFilter(new ErrorFilter());
         if (s3Config.getFaultInjectionRate() > 0.0f)
             client.addFilter(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
-        if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
         if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
         if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter(s3Config));
         client.addFilter(new AuthorizationFilter(s3Config));
+        if(smartFilter != null) {
+            client.addFilter(smartFilter);
+        }
+        if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
         client.addFilter(new BucketFilter(s3Config));
         client.addFilter(new NamespaceFilter(s3Config));
     }

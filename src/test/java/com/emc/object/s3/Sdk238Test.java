@@ -88,7 +88,7 @@ public class Sdk238Test {
         }
     }
 
-    private static class UriCaptureFilter extends ClientFilter {
+    protected static class UriCaptureFilter extends ClientFilter {
         private URI uri;
 
         @Override
