@@ -7,6 +7,7 @@ import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.QueryObjectsRequest;
 import com.emc.object.util.RestUtil;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.*;
@@ -336,7 +337,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListObjectsWithEncoding() throws InterruptedException {
+    public void testListObjectsWithEncoding() throws Exception {
         String bucketName = getTestBucket();
 
         String badKey = "bad\u001dkey";
@@ -409,8 +410,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     public void testListObjectsWithPrefixEncoding() {
         boolean is371OrLater = ecsVersion != null && ecsVersion.compareTo("3.7.1") >= 0;
         // blocked by STORAGE-30527
-        if(!is371OrLater)
-            return;
+        Assume.assumeTrue("ECS version must be at least 3.7.1. ", is371OrLater);
         String bucketName = getTestBucket();
         String badKey = "prefix/bad\u001dkey";
         client.putObject(new PutObjectRequest(getTestBucket(), badKey, new byte[0]).withObjectMetadata(
