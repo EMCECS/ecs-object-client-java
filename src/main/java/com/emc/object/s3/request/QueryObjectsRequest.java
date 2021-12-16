@@ -67,6 +67,8 @@ import java.util.Map;
  * </ul>
  */
 public class QueryObjectsRequest extends AbstractBucketRequest {
+    private String prefix;
+    private String delimiter;
     private Integer maxKeys;
     private String marker;
     private String query;
@@ -82,6 +84,8 @@ public class QueryObjectsRequest extends AbstractBucketRequest {
     @Override
     public Map<String, String> getQueryParams() {
         Map<String, String> paramMap = super.getQueryParams();
+        if (prefix != null) paramMap.put(S3Constants.PARAM_PREFIX, prefix);
+        if (delimiter != null) paramMap.put(S3Constants.PARAM_DELIMITER, delimiter);
         if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys.toString());
         if (marker != null) paramMap.put(S3Constants.PARAM_MARKER, marker);
         if (query != null) paramMap.put(S3Constants.PARAM_QUERY, query);
@@ -94,6 +98,22 @@ public class QueryObjectsRequest extends AbstractBucketRequest {
 
     private static String formatAttributes(List<String> attributes) {
         return RestUtil.join(",", attributes);
+    }
+
+    public String getPrefix() {
+        return prefix;
+    }
+
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }
+
+    public String getDelimiter() {
+        return delimiter;
+    }
+
+    public void setDelimiter(String delimiter) {
+        this.delimiter = delimiter;
     }
 
     public Integer getMaxKeys() {
@@ -148,6 +168,16 @@ public class QueryObjectsRequest extends AbstractBucketRequest {
 
     public void setEncodingType(EncodingType encodingType) {
         this.encodingType = encodingType;
+    }
+
+    public QueryObjectsRequest withPrefix(String prefix) {
+        setPrefix(prefix);
+        return this;
+    }
+
+    public QueryObjectsRequest withDelimiter(String delimiter) {
+        setDelimiter(delimiter);
+        return this;
     }
 
     public QueryObjectsRequest withMaxKeys(Integer maxKeys) {

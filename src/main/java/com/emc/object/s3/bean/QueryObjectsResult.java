@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "BucketQueryResult", namespace = "")
-@XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects"}, namespace = "")
+@XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects", "prefixGroups"}, namespace = "")
 public class QueryObjectsResult {
     private String bucketName;
     private Integer maxKeys;
@@ -42,6 +42,7 @@ public class QueryObjectsResult {
     private List<String> attributes = new ArrayList<String>();
     private String sorted;
     private boolean includeOlderVersions = false;
+    private List<String> prefixGroups = new ArrayList<String>();
 
     @XmlElement(name = "Name")
     public String getBucketName() {
@@ -128,4 +129,14 @@ public class QueryObjectsResult {
     }
 
     public void setIncludeOlderVersions(boolean includeOlderVersions) { this.includeOlderVersions = includeOlderVersions; }
+
+    @XmlElementWrapper(name = "CommonPrefixMatches")
+    @XmlElement(name = "PrefixGroups")
+    public List<String> getPrefixGroups() {
+        return prefixGroups;
+    }
+
+    public void setPrefixGroups(List<String> prefixGroups) {
+        this.prefixGroups = prefixGroups;
+    }
 }
