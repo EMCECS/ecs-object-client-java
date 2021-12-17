@@ -74,7 +74,8 @@ public class S3SignerV4 extends S3Signer {
         StringBuilder hostHeader = new StringBuilder(uri.getHost());
         // If default port is used, do not include the port in host header
         if (!(s3Config.getProtocol().equals("https") && uri.getPort() == 443) &&
-                !(s3Config.getProtocol().equals("http") && uri.getPort() == 80))
+                !(s3Config.getProtocol().equals("http") && uri.getPort() == 80) &&
+                uri.getPort() != -1)
             hostHeader.append(":").append(uri.getPort());
         if (!headers.containsKey(S3Constants.AMZ_DATE)) {
             RestUtil.putSingle(headers, S3Constants.AMZ_DATE, date);
