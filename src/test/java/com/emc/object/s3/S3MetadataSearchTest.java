@@ -305,8 +305,7 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
         Assert.assertEquals(key1, obj.getObjectName());
 
         /* Blocked by STORAGE-30513 for versions before 3.7. */
-        if(is37OrLater)
-            {
+        if(is37OrLater) {
             Assert.assertEquals(2, obj.getQueryMds().size());
             QueryMetadata sysmd = null;
             QueryMetadata usermd = null;

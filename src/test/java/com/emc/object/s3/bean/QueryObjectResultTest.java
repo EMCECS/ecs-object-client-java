@@ -67,7 +67,9 @@ public class QueryObjectResultTest {
                 "</queryMds>" +
                 "</object>" +
                 "</ObjectMatches>" +
-                "<CommonPrefixMatches/>" +
+                "<CommonPrefixMatches>" +
+                "<PrefixGroups>prefix/</PrefixGroups>" +
+                "</CommonPrefixMatches>" +
                 "</BucketQueryResult>";
 
         QueryObjectsResult result = new QueryObjectsResult();
@@ -106,6 +108,9 @@ public class QueryObjectResultTest {
         objects.add(object);
 
         result.setObjects(objects);
+
+        List<String> prefixGroups = new ArrayList<String>(Arrays.asList("prefix/"));
+        result.setPrefixGroups(prefixGroups);
 
         // unmarshall and compare to object
         Unmarshaller unmarshaller = context.createUnmarshaller();
