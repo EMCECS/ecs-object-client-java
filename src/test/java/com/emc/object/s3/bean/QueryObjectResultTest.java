@@ -67,6 +67,7 @@ public class QueryObjectResultTest {
                 "</queryMds>" +
                 "</object>" +
                 "</ObjectMatches>" +
+                "<CommonPrefixMatches/>" +
                 "</BucketQueryResult>";
 
         QueryObjectsResult result = new QueryObjectsResult();
