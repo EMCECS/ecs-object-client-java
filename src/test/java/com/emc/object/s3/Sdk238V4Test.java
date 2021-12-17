@@ -15,12 +15,17 @@ public class Sdk238V4Test extends Sdk238Test{
     @Override
     @Test
     public void testTrailingSlash() throws Exception {
+        S3Config s3Config = AbstractS3ClientTest.s3ConfigFromProperties();
         Sdk238V4Test.TestClient client = new Sdk238V4Test.TestClient(AbstractS3ClientTest.s3ConfigFromProperties());
 
         String bucket = "test-trailing-slash-v4";
         client.createBucket(bucket);
         try {
-            Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
+            if (s3Config.isUseVHost()) {
+                Assert.assertEquals("/", client.getLastUri().getPath());
+            } else {
+                Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
+            }
         } finally {
             client.deleteBucket(bucket);
         }
