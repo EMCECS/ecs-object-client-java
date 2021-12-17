@@ -109,7 +109,7 @@ public class QueryObjectResultTest {
 
         result.setObjects(objects);
 
-        List<String> prefixGroups = new ArrayList<String>(Arrays.asList("prefix/"));
+        List<String> prefixGroups = Arrays.asList("prefix/");
         result.setPrefixGroups(prefixGroups);
 
         // unmarshall and compare to object
