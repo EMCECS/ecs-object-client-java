@@ -16,7 +16,7 @@ public class Sdk238V4Test extends Sdk238Test{
     @Test
     public void testTrailingSlash() throws Exception {
         S3Config s3Config = AbstractS3ClientTest.s3ConfigFromProperties();
-        Sdk238V4Test.TestClient client = new Sdk238V4Test.TestClient(AbstractS3ClientTest.s3ConfigFromProperties());
+        Sdk238V4Test.TestClient client = new Sdk238V4Test.TestClient(s3Config);
 
         String bucket = "test-trailing-slash-v4";
         client.createBucket(bucket);
