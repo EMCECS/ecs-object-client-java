@@ -140,7 +140,7 @@ public class S3SignerV4 extends S3Signer {
         else {
             canonicalRequest.append(HASHED_EMPTY_PAYLOAD);
         }
-        log.debug("CanonicalRequest: {}" + canonicalRequest);
+        log.debug("CanonicalRequest: {}", canonicalRequest);
         return canonicalRequest.toString();
     }
 
