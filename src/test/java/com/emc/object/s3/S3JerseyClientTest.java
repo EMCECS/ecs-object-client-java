@@ -2773,7 +2773,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 future.get();
             } catch (Throwable e) {
                 while (e.getCause() != null && e.getCause() != e) e = e.getCause();
-                if (e instanceof SocketException && e.getMessage().startsWith("Broken pipe")) continue;
+                if (e instanceof SocketException && (e.getMessage().startsWith("Broken pipe")
+                        || e.getMessage().startsWith("Connection reset by peer")
+                        || e.getMessage().startsWith("Software caused connection abort")))
+                    continue;
                 if (!(e instanceof S3Exception)) throw new RuntimeException(e);
                 S3Exception se = (S3Exception) e;
                 if (!"NoSuchUpload".equals(se.getErrorCode()) && !"NoSuchKey".equals(se.getErrorCode()))
