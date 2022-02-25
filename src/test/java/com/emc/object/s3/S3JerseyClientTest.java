@@ -2798,6 +2798,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         new Random().nextBytes(data);
 
         // init MPU
+        Date lastModifiedTime = new Date(System.currentTimeMillis());
         String uploadId = client.initiateMultipartUpload(bucket, key);
         int partNum = 1;
         for (long offset = 0; offset < data.length; offset += partSize) {
@@ -2821,12 +2822,63 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
 
         LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), (long)size)
-                .withPartSize((long)partSize).withResumeMPU(true);
+                .withPartSize((long)partSize).withMpuThreshold(size).withResumeMPU(true).withResumeSafeguard(lastModifiedTime);
         lfu.doMultipartUpload();
 
         ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
+        // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
         Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
+        // object is uploaded successfully
         Assert.assertEquals(size, (long)client.getObjectMetadata(bucket, key).getContentLength());
+    }
+
+    @Test
+    public void testResumeMPUAfterUpdate() throws Exception {
+        String bucket = getTestBucket();
+        String key = "myprefix/mpu-abort-test";
+        long partSize = LargeFileUploader.MIN_PART_SIZE;
+        long size = 4 * partSize + 1066;
+        byte[] data = new byte[(int)size];
+        new Random().nextBytes(data);
+
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+        int partNum = 1;
+        for (long offset = 0; offset < data.length; offset += partSize) {
+            // skip some parts: first, middle, last
+            if (partNum == 1 || partNum == 3 || partNum == 5) {
+                partNum++;
+                continue;
+            }
+            long length = data.length - offset;
+            if (length > partSize) length = partSize;
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum++,
+                    Arrays.copyOfRange(data, (int) offset, (int) (offset + length)));
+            client.uploadPart(request);
+        }
+
+        try {
+            client.getObjectMetadata(bucket, key);
+            Assert.fail("Object should not exist because MPU upload is incomplete");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+        }
+
+        // generate lastModified time to simulate object updates during multipart upload.
+        Date lastModifiedTime = new Date(System.currentTimeMillis());
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), (long)size)
+                .withPartSize((long)partSize).withMpuThreshold(size).withResumeMPU(true).withResumeSafeguard(lastModifiedTime);
+        lfu.doMultipartUpload();
+
+        ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
+        List<Upload> uploads = client.listMultipartUploads(request).getUploads();
+        // multipart upload will not resume from previous uploadId because of resumeSafeGuard check.
+        Assert.assertEquals(uploadId, uploads.get(0).getUploadId());
+        // object is uploaded successfully
+        Assert.assertEquals(size, (long)client.getObjectMetadata(bucket, key).getContentLength());
+
+        AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucket, key, uploadId);
+        client.abortMultipartUpload(abortMultipartUploadRequest);
     }
 
     @Test
