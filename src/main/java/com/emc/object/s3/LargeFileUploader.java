@@ -49,6 +49,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.Date;
 
 /**
  * Convenience class to facilitate multipart upload for large files. This class will split the file
@@ -85,6 +86,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private ExecutorService executorService;
     private ProgressListener progressListener;
     private boolean resumeMPU = false;
+    // set object's lastModified time to resumeSafeguard to avoid using stale parts for MPU resume.
+    private Date resumeSafeguard;
     private Upload uploadForResume;
 
     /**
@@ -185,7 +188,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                     if (!upload.getKey().equals(key))
                         continue;
                     if (latestUpload != null) {
-                        if (upload.getInitiated().after(latestUpload.getInitiated())){
+                        if (upload.getInitiated().after(latestUpload.getInitiated())) {
                             latestUpload = upload;
                             log.debug("Skip uploadId {} because it's initiated earlier than {}", latestUpload.getUploadId(), upload.getUploadId());
                         } else {
@@ -200,6 +203,32 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return latestUpload;
     }
 
+    private List<MultipartPart> getMultiPartsForResume(String uploadId) {
+        List<MultipartPart> mpp = s3Client.listParts(new ListPartsRequest(bucket, key, uploadId)).getParts();
+        if (mpp == null)
+            return null;
+        else {
+            long maxParts = (fullSize + partSize - 1) / partSize;
+            for (MultipartPart part : mpp) {
+                if (resumeSafeguard != null && part.getLastModified().before(resumeSafeguard)) {
+                    log.debug("Invalid MultipartPart LastModified detected in uploadId: {}: PartNum {} , LastModified time {} shouldn't be earlier than {}.",
+                            uploadId, part.getPartNumber(), part.getLastModified(), resumeSafeguard);
+                    return null;
+                }
+                if (part.getPartNumber() < maxParts) {
+                    if (!part.getSize().equals(partSize)) {
+                        log.debug("Invalid MultipartPart size detected in uploadId: {}: {}", uploadId, part);
+                        return null;
+                    }
+                } else if (partSize * (part.getPartNumber() - 1) + part.getSize() != fullSize) {
+                    log.debug("Invalid MultipartPart size detected in uploadId: {}: {}", uploadId, part);
+                    return null;
+                }
+            }
+            return mpp;
+        }
+    }
+
 
     public void doMultipartUpload() {
         configure();
@@ -209,7 +238,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
         if (resumeMPU && uploadForResume != null) {
             uploadId = uploadForResume.getUploadId();
-            mpp = s3Client.listParts(new ListPartsRequest(bucket, key, uploadId)).getParts();
+            mpp = getMultiPartsForResume(uploadId);
+            if (mpp == null) {
+                log.info("Latest uploadID {} is unsafe to be resumed, will start new multipart upload.", uploadId);
+                uploadId = null;
+            }
         }
 
         if (uploadId == null) {
@@ -228,18 +261,16 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             int partNumber = 1;
             long offset = 0, length = partSize;
             while (offset < fullSize) {
-                boolean foundPart = false;
                 if (offset + length > fullSize) length = fullSize - offset;
+
+                boolean foundPart = false;
                 if (mpp != null) {
+                    //Skip upload and reuse existing parts if found.
                     for (MultipartPart part : mpp) {
                         if (part.getPartNumber() == partNumber) {
-                            if (part.getSize() != length) {
-                                throw new RuntimeException(String.format("Abort resume MPU due to incorrect size detected by uploadID %s, partNum %d: expect %d, actual %d", uploadId, partNumber, part.getSize(), length));
-                            } else {
-                                foundPart = true;
-                                parts.add(new MultipartPartETag(partNumber++, part.getETag()));
-                                log.debug("bucket {} key {} partNumber {} already exists, skip to resume MPU", bucket, key, partNumber);
-                            }
+                            foundPart = true;
+                            parts.add(new MultipartPartETag(partNumber++, part.getETag()));
+                            log.debug("bucket {} key {} partNumber {} already exists, will be reused for multipart upload", bucket, key, partNumber);
                             break;
                         }
                     }
@@ -263,8 +294,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         } catch (Exception e) {
             // abort MP upload
             try {
-                if (!resumeMPU)
-                    s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+                s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
@@ -510,6 +540,14 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.resumeMPU = resumeMPU;
     }
 
+    public Date getResumeSafeguard() {
+        return resumeSafeguard;
+    }
+
+    public void setResumeSafeguard(Date resumeSafeguard) {
+        this.resumeSafeguard = resumeSafeguard;
+    }
+
     public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -557,6 +595,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
     public LargeFileUploader withResumeMPU(boolean resumeMPU) {
         setResumeMPU(resumeMPU);
+        return this;
+    }
+
+    public LargeFileUploader withResumeSafeguard(Date resumeSafeguard) {
+        setResumeSafeguard(resumeSafeguard);
         return this;
     }
 
