@@ -35,12 +35,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class LargeFileDownloaderTest extends AbstractS3ClientTest {
@@ -78,6 +76,27 @@ public class LargeFileDownloaderTest extends AbstractS3ClientTest {
         key = "lfd-test";
         LargeFileUploader lfu = new LargeFileUploader(client, getTestBucket(), key, sourceFile).withPartSize(FILE_SIZE / 5);
         lfu.doMultipartUpload();
+    }
+
+    @Test
+    public void testLargeFileDownloader() throws Exception {
+        String key = "large-file-downloader.bin";
+        int size = 20 * 1024 * 1024 + 179; // > 20MB
+        byte[] data = new byte[size];
+        new Random().nextBytes(data);
+        client.putObject(getTestBucket(), key, data, null);
+
+        File file = File.createTempFile("large-file-uploader-test", null);
+        file.deleteOnExit();
+        LargeFileDownloader downloader = new LargeFileDownloader(client, getTestBucket(), key, file);
+        downloader.run();
+
+        byte[] readData = new byte[size];
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        raf.read(readData);
+        raf.close();
+
+        Assert.assertArrayEquals(data, readData);
     }
 
     @Test

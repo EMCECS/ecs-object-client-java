@@ -35,7 +35,6 @@ import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.ProgressListener;
 import com.emc.object.util.RestUtil;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.Host;
@@ -68,7 +67,6 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
@@ -684,7 +682,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
-    @Test // TODO: blocked by STORAGE-6791
+    @Test // bug-ref: STORAGE-6791
     public void testListObjectsPagingWithEncodedDelim() {
         String prefix = "test\u001dDelim/", delim = "/", key = "foo\u001dbar", content = "Hello List Delim!";
         client.putObject(getTestBucket(), prefix + key + 1, content, null);
@@ -1318,150 +1316,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testLargeFileUploader() throws Exception {
-        String key = "large-file-uploader.bin";
-        int size = 20 * 1024 * 1024 + 123; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-        File file = File.createTempFile("large-file-uploader-test", null);
-        file.deleteOnExit();
-        OutputStream out = new FileOutputStream(file);
-        out.write(data);
-        out.close();
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-
-        // multipart
-        uploader.doMultipartUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-
-        client.deleteObject(getTestBucket(), key);
-
-        // parallel byte-range (also test metadata)
-        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
-        uploader = new LargeFileUploader(client, getTestBucket(), key, file);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-        uploader.setObjectMetadata(objectMetadata);
-        uploader.doByteRangeUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
-
-        // test issue 1 (https://github.com/emcvipr/ecs-object-client-java/issues/1)
-        objectMetadata = new S3ObjectMetadata();
-        objectMetadata.withContentLength(size);
-        uploader = new LargeFileUploader(client, getTestBucket(), key + ".2", file);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-        uploader.setObjectMetadata(objectMetadata);
-        uploader.doByteRangeUpload();
-    }
-
-    @Test
-    public void testLargeFileUploaderProgressListener() throws Exception {
-        String key = "large-file-uploader.bin";
-        int size = 20 * 1024 * 1024 + 123; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-        File file = File.createTempFile("large-file-uploader-test", null);
-        file.deleteOnExit();
-        OutputStream out = new FileOutputStream(file);
-        out.write(data);
-        out.close();
-        final AtomicLong completed = new AtomicLong();
-        final AtomicLong total = new AtomicLong();
-        final AtomicLong transferred = new AtomicLong();
-        ProgressListener pl = new ProgressListener() {
-
-            @Override
-            public void progress(long c, long t) {
-                completed.set(c);
-                total.set(t);
-            }
-
-            @Override
-            public void transferred(long size) {
-                transferred.addAndGet(size);
-            }
-        };
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file).withProgressListener(pl);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-
-        // multipart
-        uploader.doMultipartUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(size, completed.get());
-        Assert.assertEquals(size, total.get());
-        Assert.assertTrue(String.format("Should transfer at least %d bytes but only got %d", size, transferred.get()),
-                transferred.get() >= size);
-
-        client.deleteObject(getTestBucket(), key);
-    }
-
-    @Test
-    public void testLargeFileUploaderStream() throws Exception {
-        String key = "large-file-uploader-stream.bin";
-        int size = 20 * 1024 * 1024 + 123; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key,
-                new ByteArrayInputStream(data), size);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-
-        // multipart
-        uploader.doMultipartUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-
-        client.deleteObject(getTestBucket(), key);
-
-        // parallel byte-range (also test metadata)
-        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
-        uploader = new LargeFileUploader(client, getTestBucket(), key, new ByteArrayInputStream(data), size);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-        uploader.setObjectMetadata(objectMetadata);
-        uploader.doByteRangeUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
-    }
-
-    @Test
-    public void testLargeFileDownloader() throws Exception {
-        String key = "large-file-downloader.bin";
-        int size = 20 * 1024 * 1024 + 179; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-        client.putObject(getTestBucket(), key, data, null);
-
-        File file = File.createTempFile("large-file-uploader-test", null);
-        file.deleteOnExit();
-        LargeFileDownloader downloader = new LargeFileDownloader(client, getTestBucket(), key, file);
-        downloader.run();
-
-        byte[] readData = new byte[size];
-        RandomAccessFile raf = new RandomAccessFile(file, "rw");
-        raf.read(readData);
-        raf.close();
-
-        Assert.assertArrayEquals(data, readData);
-    }
-
-    @Test
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
         Assert.assertNotNull(lc);
@@ -2086,7 +1940,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
-    @Test // TODO: blocked by STORAGE-12050
+    @Test // bug-ref: blocked by STORAGE-12050
     public void testCopyObjectWithMeta() throws Exception {
         String key1 = "object1", key2 = "object2", key3 = "object3";
         String content = "Hello copy with meta!";
@@ -2143,7 +1997,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
-    @Test // TODO: blocked by STORAGE-29721
+    @Test // bug-ref: blocked by STORAGE-29721
     public void testUpdateMetadata() {
         String key = "update-metadata";
         String content = "Hello update meta!";
@@ -2786,99 +2640,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertNull(errorMessage, errorMessage);
 
         Assert.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
-    }
-
-    @Test
-    public void testResumeMPU() throws Exception {
-        String bucket = getTestBucket();
-        String key = "myprefix/mpu-abort-test";
-        long partSize = LargeFileUploader.MIN_PART_SIZE;
-        long size = 4 * partSize + 1066;
-        byte[] data = new byte[(int)size];
-        new Random().nextBytes(data);
-
-        // init MPU
-        Date lastModifiedTime = new Date(System.currentTimeMillis());
-        String uploadId = client.initiateMultipartUpload(bucket, key);
-        int partNum = 1;
-        for (long offset = 0; offset < data.length; offset += partSize) {
-            // skip some parts: first, middle, last
-            if (partNum == 1 || partNum == 3 || partNum == 5) {
-                partNum++;
-                continue;
-            }
-            long length = data.length - offset;
-            if (length > partSize) length = partSize;
-            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum++,
-                    Arrays.copyOfRange(data, (int) offset, (int) (offset + length)));
-            client.uploadPart(request);
-        }
-
-        try {
-            client.getObjectMetadata(bucket, key);
-            Assert.fail("Object should not exist because MPU upload is incomplete");
-        } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-        }
-
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), (long)size)
-                .withPartSize((long)partSize).withMpuThreshold(size).withResumeMPU(true).withResumeSafeguard(lastModifiedTime);
-        lfu.doMultipartUpload();
-
-        ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
-        // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
-        Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
-        // object is uploaded successfully
-        Assert.assertEquals(size, (long)client.getObjectMetadata(bucket, key).getContentLength());
-    }
-
-    @Test
-    public void testResumeMPUAfterUpdate() throws Exception {
-        String bucket = getTestBucket();
-        String key = "myprefix/mpu-abort-test";
-        long partSize = LargeFileUploader.MIN_PART_SIZE;
-        long size = 4 * partSize + 1066;
-        byte[] data = new byte[(int)size];
-        new Random().nextBytes(data);
-
-        // init MPU
-        String uploadId = client.initiateMultipartUpload(bucket, key);
-        int partNum = 1;
-        for (long offset = 0; offset < data.length; offset += partSize) {
-            // skip some parts: first, middle, last
-            if (partNum == 1 || partNum == 3 || partNum == 5) {
-                partNum++;
-                continue;
-            }
-            long length = data.length - offset;
-            if (length > partSize) length = partSize;
-            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum++,
-                    Arrays.copyOfRange(data, (int) offset, (int) (offset + length)));
-            client.uploadPart(request);
-        }
-
-        try {
-            client.getObjectMetadata(bucket, key);
-            Assert.fail("Object should not exist because MPU upload is incomplete");
-        } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-        }
-
-        // generate lastModified time to simulate object updates during multipart upload.
-        Date lastModifiedTime = new Date(System.currentTimeMillis());
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), (long)size)
-                .withPartSize((long)partSize).withMpuThreshold(size).withResumeMPU(true).withResumeSafeguard(lastModifiedTime);
-        lfu.doMultipartUpload();
-
-        ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
-        List<Upload> uploads = client.listMultipartUploads(request).getUploads();
-        // multipart upload will not resume from previous uploadId because of resumeSafeGuard check.
-        Assert.assertEquals(uploadId, uploads.get(0).getUploadId());
-        // object is uploaded successfully
-        Assert.assertEquals(size, (long)client.getObjectMetadata(bucket, key).getContentLength());
-
-        AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucket, key, uploadId);
-        client.abortMultipartUpload(abortMultipartUploadRequest);
     }
 
     @Test
