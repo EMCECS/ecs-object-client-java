@@ -95,6 +95,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private Long partSize = DEFAULT_PART_SIZE;
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
+    private boolean externalExecutorService;
     private ProgressListener progressListener;
 
     private LargeFileUploaderResumeContext resumeContext;
@@ -356,6 +357,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 }
             }
 
+            // TODO: allow calling code to stop the upload, allowing in-transfer parts to complete, but then shut down
+            //       and return completed part ETags (ResumeContext)
             // wait for threads to finish and gather parts
             for (Future<MultipartPartETag> future : futures) {
                 parts.add(future.get());
@@ -377,7 +380,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             throw new RuntimeException("error during upload", e);
         } finally {
             // make sure all spawned threads are shut down
-            executorService.shutdown();
+            if (!externalExecutorService) executorService.shutdown();
 
             // make sure we close the input stream if necessary
             if (stream != null && closeStream) {
@@ -428,7 +431,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             throw new RuntimeException("error during upload", e);
         } finally {
             // make sure all spawned threads are shut down
-            executorService.shutdown();
+            if (!externalExecutorService) executorService.shutdown();
 
             // make sure we close the input stream if necessary
             if (stream != null && closeStream) {
@@ -495,7 +498,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
 
         // set up thread pool
-        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
+        if (executorService == null) {
+            executorService = Executors.newFixedThreadPool(threads);
+        } else {
+            externalExecutorService = true;
+        }
     }
 
     public S3Client getS3Client() {
