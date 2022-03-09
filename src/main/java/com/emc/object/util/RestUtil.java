@@ -76,6 +76,7 @@ public final class RestUtil {
     public static final String EMC_RETENTION_PERIOD = EMC_PREFIX + "retention-period";
     public static final String EMC_RETENTION_POLICY = EMC_PREFIX + "retention-policy";
     public static final String EMC_METADATA_SEARCH = EMC_PREFIX + "metadata-search";
+    public static final String EMC_COPY_MODE = EMC_PREFIX + "copy-mode";
 
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
     public static final String TYPE_APPLICATION_XML = "application/xml";
