@@ -289,7 +289,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             existingParts.sort(Comparator.comparingInt(MultipartPartETag::getPartNumber));
 
             // check the parts - if any part size doesn't match, or there are more parts than expected, we cannot resume
-            int lastPart = (int) (fullSize / partSize) + 1;
+            int lastPart = (int) ((fullSize - 1) / partSize) + 1;
             long lastPartSize = fullSize - ((lastPart - 1) * partSize);
             for (MultipartPart part : existingParts) {
                 if (part.getPartNumber() > lastPart) {
@@ -336,7 +336,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         SortedSet<MultipartPartETag> parts = new TreeSet<>();
         try {
             // submit all upload tasks
-            int lastPart = (int) (fullSize / partSize) + 1;
+            int lastPart = (int) ((fullSize - 1) / partSize) + 1;
             for (int partNumber = 1; partNumber <= lastPart; partNumber++) {
                 long offset = (partNumber - 1) * partSize;
                 long length = partSize;
@@ -454,10 +454,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             if (fullSize <= 0)
                 throw new IllegalArgumentException("size must be specified for stream");
 
-            // currently, we cannot resume an upload from a raw stream
-            // TODO: implement support for resuming a raw stream upload (re-read or skip existing part ranges)
-            if (resumeContext != null)
-                throw new IllegalArgumentException("cannot resume an upload from a stream");
+            // If resuming from raw stream, make sure skipped parts are consumed from source stream
+            if (resumeContext != null) resumeContext.setVerifySkippedParts(true);
 
             // must read stream sequentially
             executorService = null;

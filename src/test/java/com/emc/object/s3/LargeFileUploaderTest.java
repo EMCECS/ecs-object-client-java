@@ -26,12 +26,14 @@
  */
 package com.emc.object.s3;
 
+import com.emc.object.s3.bean.GetObjectResult;
 import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.s3.bean.Upload;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.lfu.LargeFileMultipartSource;
 import com.emc.object.s3.lfu.LargeFileUploaderResumeContext;
 import com.emc.object.s3.request.AbortMultipartUploadRequest;
+import com.emc.object.s3.request.GetObjectRequest;
 import com.emc.object.s3.request.ListMultipartUploadsRequest;
 import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.ProgressListener;
@@ -44,7 +46,6 @@ import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.*;
@@ -292,16 +293,17 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testResumeMpu() {
+    public void testResumeMpuFromStream() {
         String bucket = getTestBucket();
-        String key = "myprefix/mpu-abort-test";
-        long partSize = LargeFileUploader.MIN_PART_SIZE;
-        long size = 4 * partSize + 1066;
+        String key = "myprefix/mpu-resume-test-stream";
+        final long partSize = LargeFileUploader.MIN_PART_SIZE;
+        final long size = 4 * partSize + 1066;
         byte[] data = new byte[(int) size];
         new Random().nextBytes(data);
 
         // init MPU
-        Date lastModifiedTime = new Date(System.currentTimeMillis());
+        //Generate last modified time to be 5s ahead of upload for better tolerance of slight time drift
+        Date lastModifiedTime = new Date(System.currentTimeMillis() - 5000);
         String uploadId = client.initiateMultipartUpload(bucket, key);
         int partNum = 1;
         for (long offset = 0; offset < data.length; offset += partSize) {
@@ -337,9 +339,51 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testResumeMpuFromMultiPartSource() {
+        String bucket = getTestBucket();
+        String key = "myprefix/mpu-resume-test-mps";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        final long partSize = mockMultipartSource.getPartSize();
+
+
+        // generate last modified time to be 5s ahead of upload for better tolerance of slight time drift
+        Date lastModifiedTime = new Date(System.currentTimeMillis() - 5000);
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+        Map<Integer, MultipartPartETag> partsToSkip = new HashMap<>();
+
+        // upload first 2 parts
+        for (int partNum = 1; partNum <= 2; partNum++) {
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum,
+                    mockMultipartSource.getPartDataStream((int)(partNum - 1) * partSize, partSize));
+            MultipartPartETag multipartPartETag = client.uploadPart(request);
+            partsToSkip.put(partNum, multipartPartETag);
+        }
+
+        try {
+            client.getObjectMetadata(bucket, key);
+            Assert.fail("Object should not exist because MPU upload is incomplete");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+        }
+
+        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withResumeIfInitiatedAfter(lastModifiedTime)
+                .withUploadId(uploadId).withPartsToSkip(partsToSkip);
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
+        lfu.doMultipartUpload();
+
+        ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
+        // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
+        Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
+        // object is uploaded successfully
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long) client.getObjectMetadata(bucket, key).getContentLength());
+    }
+
+    @Test
     public void testResumeMpuAfterUpdate() {
         String bucket = getTestBucket();
-        String key = "myprefix/mpu-abort-test";
+        String key = "myprefix/mpu-resume-after-update-test";
         long partSize = LargeFileUploader.MIN_PART_SIZE;
         long size = 4 * partSize + 1066;
         byte[] data = new byte[(int) size];
@@ -388,11 +432,16 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
     @Test
     public void testLargeFileMultiPartSource() {
-        // TODO: implement
-        // create LFU
-        // pass in MockMultipartSource
-        // verify bytes of target object
-        // verify ETag (use getMpuETag())
+        String key = "testLargeFileMultiPartSource";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        LargeFileUploader lfu = new LargeFileUploader(client, getTestBucket(), key, mockMultipartSource)
+                .withPartSize(mockMultipartSource.getPartSize()).withMpuThreshold((int)mockMultipartSource.getTotalSize());
+        lfu.doMultipartUpload();
+
+        GetObjectRequest request = new GetObjectRequest(getTestBucket(), key);
+        GetObjectResult<byte[]> result = client.getObject(request, byte[].class);
+        Assert.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
+        Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
     }
 
     static class NullStream extends OutputStream {
@@ -409,19 +458,22 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         }
     }
 
-    public static final String[] MPS_PARTS = new String[]{
-            "Hello part 1!",
-            "I am part 2",
-            "this is part 3",
-            "mumbo jumbo a8df675as87f65d5&^%*&^%*&^%&*^%*^&\n",
-            "бвгджзклмнп"
-    };
-
     static class MockMultipartSource implements LargeFileMultipartSource {
-        @Override
-        public long getTotalSize() {
-            return 0;
+        private static byte[] MPS_PARTS;
+        private static final long partSize = LargeFileUploader.MIN_PART_SIZE;
+        private static final long totalSize = partSize * 4 + 123;
+
+        public MockMultipartSource() {
+            synchronized (MockMultipartSource.class) {
+                if (MPS_PARTS == null) {
+                    MPS_PARTS = new byte[(int) totalSize];
+                    new Random().nextBytes(MPS_PARTS);
+                }
+            }
         }
+
+        @Override
+        public long getTotalSize() { return totalSize; }
 
         @Override
         public InputStream getCompleteDataStream() {
@@ -430,19 +482,23 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         @Override
         public InputStream getPartDataStream(long offset, long length) {
-            return new ByteArrayInputStream(Arrays.copyOfRange(getTotalBytes(), (int) offset, (int) length));
+            return new ByteArrayInputStream(Arrays.copyOfRange(getTotalBytes(), (int) offset, (int) (offset + length)));
         }
 
-        byte[] getTotalBytes() {
-            return String.join("", MPS_PARTS).getBytes(StandardCharsets.UTF_8);
-        }
+        byte[] getTotalBytes() { return MPS_PARTS; }
+
+        public long getPartSize() { return partSize; }
 
         public String getMpuETag() {
             List<MultipartPartETag> partETags = new ArrayList<>();
-            for (int i = 0; i < MPS_PARTS.length; i++) {
-                partETags.add(new MultipartPartETag(i + 1, DigestUtils.md5Hex(MPS_PARTS[i].getBytes(StandardCharsets.UTF_8))));
+            int totalParts =(int) ((totalSize - 1) / partSize + 1);
+            for (int i = 0; i < totalParts; i++) {
+                int from = (int) partSize * i;
+                int to = (int) (from + partSize);
+                partETags.add(new MultipartPartETag(i + 1, DigestUtils.md5Hex(Arrays.copyOfRange(MPS_PARTS, from, to <= getTotalSize() ? to : (int)getTotalSize()))));
             }
             return LargeFileUploader.getMpuETag(partETags);
         }
+
     }
 }
