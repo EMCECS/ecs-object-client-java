@@ -60,6 +60,10 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         this.objectMetadata = other.objectMetadata;
         this.object = other.object;
         this.range = other.range;
+        this.ifModifiedSince = other.ifModifiedSince;
+        this.ifUnmodifiedSince = other.ifUnmodifiedSince;
+        this.ifMatch = other.ifMatch;
+        this.ifNoneMatch = other.ifNoneMatch;
         this.acl = other.acl;
         this.cannedAcl = other.cannedAcl;
     }
