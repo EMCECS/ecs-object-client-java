@@ -346,6 +346,9 @@ public class S3ObjectMetadata {
         return serverSideEncryption;
     }
 
+    /**
+     * @param serverSideEncryption  the SseAlgorithm only supports AES256, AWS KMS is not supported.
+     */
     public void setServerSideEncryption(SseAlgorithm serverSideEncryption) {
         this.serverSideEncryption = serverSideEncryption;
     }
@@ -419,6 +422,9 @@ public class S3ObjectMetadata {
         return this;
     }
 
+    /**
+     * @param serverSideEncryption  the SseAlgorithm only supports AES256, AWS KMS is not supported.
+     */
     public S3ObjectMetadata withServerSideEncryption(SseAlgorithm serverSideEncryption) {
         setServerSideEncryption(serverSideEncryption);
         return this;
