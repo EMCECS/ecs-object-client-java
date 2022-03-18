@@ -155,6 +155,56 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         upload();
     }
 
+    protected String putObject(InputStream is) {
+        PutObjectRequest putRequest = new PutObjectRequest(bucket, key, is);
+        putRequest.setObjectMetadata(objectMetadata);
+        putRequest.setAcl(acl);
+        putRequest.setCannedAcl(cannedAcl);
+
+        PutObjectResult result = s3Client.putObject(putRequest);
+
+        return result.getETag();
+    }
+
+    // must return *all* parts (even if list is truncated)
+    protected List<MultipartPart> listParts(String uploadId) {
+        List<MultipartPart> partList = new ArrayList<>();
+        ListPartsRequest request = new ListPartsRequest(bucket, key, uploadId);
+        ListPartsResult result = null;
+        do {
+            if (result != null) request.setMarker(result.getNextPartNumberMarker());
+            result = s3Client.listParts(request);
+            partList.addAll(result.getParts());
+        } while (result.isTruncated());
+
+        return partList;
+    }
+
+    protected String initMpu() {
+        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
+        initRequest.setObjectMetadata(objectMetadata);
+        initRequest.setAcl(acl);
+        initRequest.setCannedAcl(cannedAcl);
+        return s3Client.initiateMultipartUpload(initRequest).getUploadId();
+    }
+
+    protected MultipartPartETag uploadPart(String uploadId, int partNumber, InputStream is, long length) {
+        UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNumber, is);
+        request.setContentLength(length);
+
+        return s3Client.uploadPart(request);
+    }
+
+    protected String completeMpu(String uploadId, SortedSet<MultipartPartETag> parts) {
+        CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
+        CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(compRequest);
+        return result.getETag();
+    }
+
+    protected void abortMpu(String uploadId) {
+        s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+    }
+
     /**
      * This method will automatically choose between MPU and single-PUT operations based on a configured threshold.
      * Note the default threshold is {@link #DEFAULT_MPU_THRESHOLD}. Also note that the defaults in this class are
@@ -216,14 +266,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         configure();
 
         try (InputStream is = getSourceCompleteDataStream()) {
-            PutObjectRequest putRequest = new PutObjectRequest(bucket, key, is);
-            putRequest.setObjectMetadata(objectMetadata);
-            putRequest.setAcl(acl);
-            putRequest.setCannedAcl(cannedAcl);
-
-            PutObjectResult result = s3Client.putObject(putRequest);
-
-            eTag = result.getETag();
+            eTag = putObject(is);
         } catch (IOException e) {
             throw new RuntimeException("Error opening file", e);
         }
@@ -233,7 +276,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
      * returns the latest (most recently initiated) MPU for the configured bucket/key that was initiated after
      * resumeIfInitiatedAfter (if set), or null if none is found.
      */
-    private String getLatestMultipartUploadId() {
+    protected String getLatestMultipartUploadId() {
         Upload latestUpload = null;
         try {
             ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
@@ -280,7 +323,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
      * part sizes and count are exactly the same as configured in this LFU instance
      */
     private Map<Integer, MultipartPartETag> getUploadPartsForResume(String uploadId) {
-        List<MultipartPart> existingParts = s3Client.listParts(new ListPartsRequest(bucket, key, uploadId)).getParts();
+        List<MultipartPart> existingParts = listParts(uploadId);
         Map<Integer, MultipartPartETag> partsForResume = new HashMap<>();
 
         if (existingParts == null) {
@@ -326,11 +369,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
         if (uploadId == null) {
             // initiate MP upload
-            InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
-            initRequest.setObjectMetadata(objectMetadata);
-            initRequest.setAcl(acl);
-            initRequest.setCannedAcl(cannedAcl);
-            uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
+            uploadId = initMpu();
         }
 
         List<Future<MultipartPartETag>> futures = new ArrayList<>();
@@ -365,14 +404,12 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             }
 
             // complete MP upload
-            CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
-            CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(compRequest);
-            eTag = result.getETag();
+            eTag = completeMpu(uploadId, parts);
 
         } catch (Exception e) {
             // abort MP upload
             try {
-                s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+                abortMpu(uploadId);
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
@@ -715,10 +752,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         @Override
         public MultipartPartETag call() throws Exception {
             try (InputStream is = getSourcePartDataStream(offset, length)) {
-                UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNumber, is);
-                request.setContentLength(length);
-
-                return s3Client.uploadPart(request);
+                return uploadPart(uploadId, partNumber, is, length);
             }
         }
     }
