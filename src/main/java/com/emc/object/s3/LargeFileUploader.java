@@ -319,10 +319,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     }
 
     /*
-     * get a map of exising MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
+     * get a map of existing MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
      * part sizes and count are exactly the same as configured in this LFU instance
      */
-    private Map<Integer, MultipartPartETag> getUploadPartsForResume(String uploadId) {
+    private Map<Integer, MultipartPartETag> getUploadPartsForResume(LargeFileUploaderResumeContext resumeContext) {
+        String uploadId = resumeContext.getUploadId();
         List<MultipartPart> existingParts = listParts(uploadId);
         Map<Integer, MultipartPartETag> partsForResume = new HashMap<>();
 
@@ -343,15 +344,26 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 }
                 long expectedSize = part.getPartNumber() == lastPart ? lastPartSize : partSize;
                 if (!part.getSize().equals(expectedSize)) {
-                    log.debug("Invalid part size detected in uploadId: {}/{}: expected {}, but saw {}",
+                    log.debug("Invalid part size detected in uploadId/partNum: {}/{}: expected {}, but saw {}",
                             uploadId, part.getPartNumber(), expectedSize, part.getSize());
                     return null; // invalid upload
                 }
-
+                if (resumeContext.getPartsToSkip() != null
+                         && !resumeContext.getPartsToSkip().containsKey(part.getPartNumber())) {
+                    log.debug("uploadId/partNum: {}/{} exists but will not be reused because it's not found in provided partsToSkip list",
+                            uploadId, part.getPartNumber());
+                    continue;
+                }
+                if (resumeContext.getResumeIfInitiatedAfter() != null
+                        && part.getLastModified().before(resumeContext.getResumeIfInitiatedAfter())) {
+                    log.debug("Invalid LastModifiedTime detected in uploadId/partNum: {}/{}: expected after {}, but saw {}",
+                            uploadId, part.getPartNumber(), resumeContext.getResumeIfInitiatedAfter(), part.getLastModified());
+                    continue;
+                }
                 // we can skip this part
                 partsForResume.put(part.getPartNumber(), part);
             }
-            return partsForResume;
+            return partsForResume.size() == 0 ? null : partsForResume;
         }
     }
 
@@ -525,8 +537,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 resumeContext.setUploadId(getLatestMultipartUploadId());
             }
             // list existing parts
-            if (resumeContext.getUploadId() != null && resumeContext.getPartsToSkip() == null) {
-                resumeContext.setPartsToSkip(getUploadPartsForResume(resumeContext.getUploadId()));
+            if (resumeContext.getUploadId() != null) {
+                resumeContext.setPartsToSkip(getUploadPartsForResume(resumeContext));
                 if (resumeContext.getPartsToSkip() == null) {
                     log.info("Latest uploadID {} is unsafe to be resumed, will start new multipart upload.", resumeContext.getUploadId());
                     resumeContext.setUploadId(null);
