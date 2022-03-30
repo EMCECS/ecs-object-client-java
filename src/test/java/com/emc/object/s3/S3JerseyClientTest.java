@@ -69,6 +69,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
@@ -2942,4 +2943,172 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(acl1.getOwner(), acl2.getOwner());
         Assert.assertEquals(acl1.getGrants(), acl2.getGrants());
     }
+
+    @Test
+    public void testGetPutDeleteObjectTagging() {
+        // set up env
+        String bucketName = getTestBucket(), key = "test-object-tagging";
+        ObjectTagging t;
+        client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
+        // prepare tags
+        List<ObjectTag> tag = Collections.singletonList(new ObjectTag("k0","v0")); // a new [single] tag
+        List<ObjectTag> tags = new ArrayList<>(); // multiple tags[10]
+        IntStream.rangeClosed(1, 10).forEach(i -> tags.add(new ObjectTag("k" + i, "v" + i)));
+        // more than 10 tags
+        List<ObjectTag> tagsExceeded = new ArrayList<ObjectTag>(){{addAll(tags); add(new ObjectTag("k11", "v11"));}};
+        // The allowed characters across services are: letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @
+        List<ObjectTag> tagMarshalXml = new ArrayList<ObjectTag>(){{add(new ObjectTag("<k", "v%"));}};
+        // A tag key can be up to 128 Unicode characters in length, and tag values can be up to 256 Unicode characters in length
+        String largeKey = new Random().ints(48, 122 + 1).limit(128 + 1).collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
+        String largeValue = new Random().ints(48, 122 + 1).limit(256 + 1).collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
+        List<ObjectTag> tagLargeKV = new ArrayList<ObjectTag>(){{add(new ObjectTag(largeKey, largeValue));}};
+
+        // prepare PutObjectTaggingRequests
+        PutObjectTaggingRequest putObjectTaggingRequestSingleTag = new PutObjectTaggingRequest(bucketName, key).withTagging(new ObjectTagging().withTagSet(tag)),
+                putObjectTaggingRequestMultipleTags = new PutObjectTaggingRequest(bucketName, key).withTagging(new ObjectTagging().withTagSet(tags)),
+                putObjectTaggingRequestExceededTags = new PutObjectTaggingRequest(bucketName, key).withTagging(new ObjectTagging().withTagSet(tagsExceeded)),
+                putObjectTaggingRequestMarshalTag = new PutObjectTaggingRequest(bucketName, key).withTagging(new ObjectTagging().withTagSet(tagMarshalXml)),
+                putObjectTaggingRequestLargeKey = new PutObjectTaggingRequest(bucketName, key).withTagging(new ObjectTagging().withTagSet(tagLargeKV));
+
+        // get different versions of the existing object
+        client.putObject(bucketName, key, "Hello VersionID0 !", "text/plain");
+        String versionId = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+
+        // GET the Tag of a non-existent object
+        try {
+            t = client.getObjectTagging(new GetObjectTaggingRequest(bucketName, "object-key-not-exist"));
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
+
+        // should be able to update tags for a particular version of an object, 1 ~ 10
+        client.putObjectTagging(putObjectTaggingRequestSingleTag.withVersionId(versionId));
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId)).getTagSet().size());
+        client.putObjectTagging(putObjectTaggingRequestMultipleTags.withVersionId(versionId));
+        Assert.assertEquals(10, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId)).getTagSet().size());
+
+        // should not be able to add more than 10 tags per object
+        try {
+            client.putObjectTagging(putObjectTaggingRequestExceededTags.withVersionId(versionId));
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("invalid content length", e.getErrorCode());
+        }
+
+        // should not be able to accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @
+        try {
+            client.putObjectTagging(putObjectTaggingRequestMarshalTag);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("UnexpectedContent", e.getErrorCode());
+        }
+
+        // should not be able to have too large key or value.
+        try {
+            client.putObjectTagging(putObjectTaggingRequestLargeKey);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("UnexpectedContent", e.getErrorCode());
+        }
+
+        // GET the tag of an object where the tag was previously deleted.
+        client.deleteObjectTagging(new DeleteObjectTaggingRequest(bucketName, key).withVersionId(versionId));
+        t = client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId));
+        Assert.assertNull(t.getTagSet());
+
+    }
+
+    @Test
+    public void testGetPutDeleteObjectWithTagging() {
+
+        // set up env
+        String bucketName = getTestBucket(), key = "test-object-tagging";
+        client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+        client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 1 !")
+                .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
+        String versionId1 = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+        client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 2 !"));
+        String versionId2 = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+
+        // Only the particular version of the object should get deleted and no other versions of object should be affected
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2));
+        Assert.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
+
+        // Object and associated multiple tags should get deleted
+        Assert.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1));
+        try {
+            client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class);
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
+
+    }
+
+    @Test
+    public void testCopyObjectWithTagging() {
+
+        // set up env
+        String bucketName = getTestBucket(), key1 = "test-object-tagging-src", key2 = "test-object-tagging-dest1", key3 = "test-object-tagging-dest2", content = "Hello Object Tagging!";
+
+        // should be able to copy the object and copied object should have the tags also
+        client.putObject(new PutObjectRequest(bucketName, key1, content)
+                .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2));
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2));
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+
+        // Versioned object should be copied and user should be able to get the same along with tags
+        client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+        client.putObject(new PutObjectRequest(bucketName, key1, content)
+                .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
+        String versionId = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2).withSourceVersionId(versionId));
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2).withVersionId(versionId)).getTagSet().size());
+
+    }
+
+    @Test
+    public void testMultipartUploadWithTagging() {
+
+        // set up env
+        String bucketName = getTestBucket(), key = "test-object-tagging";
+        int fiveMB = 5 * 1024;
+        byte[] content = new byte[11 * 1024];
+        new Random().nextBytes(content);
+        InputStream is1 = new ByteArrayInputStream(content, 0, fiveMB);
+        InputStream is2 = new ByteArrayInputStream(content, fiveMB, fiveMB);
+        InputStream is3 = new ByteArrayInputStream(content, 2 * fiveMB, content.length - (2 * fiveMB));
+
+        String uploadId = client.initiateMultipartUpload(
+                new InitiateMultipartUploadRequest(bucketName, key)
+                .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k0","v0")))))
+                .getUploadId();
+
+        MultipartPartETag mp1 = client.uploadPart(
+                new UploadPartRequest(bucketName, key, uploadId, 1, is1).withContentLength((long) fiveMB));
+        MultipartPartETag mp2 = client.uploadPart(
+                new UploadPartRequest(bucketName, key, uploadId, 2, is2).withContentLength((long) fiveMB));
+        MultipartPartETag mp3 = client.uploadPart(
+                new UploadPartRequest(bucketName, key, uploadId, 3, is3)
+                        .withContentLength((long) content.length - (2 * fiveMB)));
+
+        TreeSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>(Arrays.asList(mp1, mp2, mp3));
+        client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId).withParts(parts));
+
+        // should be able to get the tag count
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key)).getTagSet().size());
+        // should be able to return proper error when object is deleted
+        client.deleteObject(bucketName, key);
+        try {
+            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key));
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
+    }
+
 }

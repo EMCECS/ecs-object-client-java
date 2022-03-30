@@ -31,8 +31,10 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.ObjectTagging;
 import com.emc.object.util.RestUtil;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +42,7 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
     private S3ObjectMetadata objectMetadata;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
+    private ObjectTagging objectTagging;
 
     public InitiateMultipartUploadRequest(String bucketName, String key) {
         super(Method.POST, bucketName, key, "uploads");
@@ -51,6 +54,8 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
         if (objectMetadata != null) headers.putAll(objectMetadata.toHeaders());
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
+        if (objectTagging != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.fromObjectTaggingToHashMap()));
         return headers;
     }
 
@@ -78,6 +83,14 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
         this.cannedAcl = cannedAcl;
     }
 
+    public ObjectTagging getObjectTagging() {
+        return objectTagging;
+    }
+
+    public void setObjectTagging(ObjectTagging objectTagging) {
+        this.objectTagging = objectTagging;
+    }
+
     public InitiateMultipartUploadRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -90,6 +103,11 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
 
     public InitiateMultipartUploadRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
+        return this;
+    }
+
+    public InitiateMultipartUploadRequest withObjectTagging(ObjectTagging objectTagging) {
+        setObjectTagging(objectTagging);
         return this;
     }
 }

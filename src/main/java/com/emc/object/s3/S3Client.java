@@ -463,4 +463,10 @@ public interface S3Client {
      */
     ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request);
 
+    void putObjectTagging(PutObjectTaggingRequest request);
+
+    ObjectTagging getObjectTagging(GetObjectTaggingRequest request);
+
+    void deleteObjectTagging(DeleteObjectTaggingRequest request);
+
 }
