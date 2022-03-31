@@ -1262,7 +1262,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.withCacheControl(cc).withContentDisposition(cd).withContentEncoding(ce);
         objectMetadata.withHttpExpires(expires.getTime());
         objectMetadata.setUserMetadata(userMeta);
-        objectMetadata.withServerSideEncryption(SseAlgorithm.AES256);
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals(ct, objectMetadata.getContentType());
@@ -1271,7 +1270,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(ce, objectMetadata.getContentEncoding());
         Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
+    }
+
+    @Test
+    public void testServerSideEncryption() {
+        String key = "object-with-serverside-encryption";
+        String content = "Hello SSE-S3!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
