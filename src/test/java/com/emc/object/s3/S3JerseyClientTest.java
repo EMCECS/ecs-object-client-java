@@ -1273,6 +1273,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testServerSideEncryption() {
+        String key = "object-with-serverside-encryption";
+        String content = "Hello SSE-S3!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
     public void testCreateObjectWithRetentionPeriod() throws Exception {
         String key = "object-in-retention";
         String content = "Hello Retention!";
