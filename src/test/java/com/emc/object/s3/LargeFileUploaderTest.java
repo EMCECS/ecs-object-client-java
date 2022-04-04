@@ -345,19 +345,16 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         MockMultipartSource mockMultipartSource = new MockMultipartSource();
         final long partSize = mockMultipartSource.getPartSize();
 
-
         // generate last modified time to be 5s ahead of upload for better tolerance of slight time drift
         Date lastModifiedTime = new Date(System.currentTimeMillis() - 5000);
         // init MPU
         String uploadId = client.initiateMultipartUpload(bucket, key);
-        Map<Integer, MultipartPartETag> partsToSkip = new HashMap<>();
 
         // upload first 2 parts
         for (int partNum = 1; partNum <= 2; partNum++) {
             UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum,
-                    mockMultipartSource.getPartDataStream((int)(partNum - 1) * partSize, partSize));
+                    mockMultipartSource.getPartDataStream((partNum - 1) * partSize, partSize));
             MultipartPartETag multipartPartETag = client.uploadPart(request);
-            partsToSkip.put(partNum, multipartPartETag);
         }
 
         try {
@@ -367,8 +364,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             Assert.assertEquals(404, e.getHttpCode());
         }
 
-        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withResumeIfInitiatedAfter(lastModifiedTime)
-                .withUploadId(uploadId).withPartsToSkip(partsToSkip);
+        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withResumeIfInitiatedAfter(lastModifiedTime);
         LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
                 .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
         lfu.doMultipartUpload();
@@ -377,7 +373,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
         Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
         // object is uploaded successfully
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long) client.getObjectMetadata(bucket, key).getContentLength());
+        S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
+        Assert.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
     }
 
     @Test
