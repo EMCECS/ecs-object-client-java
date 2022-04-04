@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
 /**
  * Convenience class to facilitate multipart upload for large files. This class will split the file
  * and upload it in parts, transferring several parts simultaneously to maximize efficiency.
+ * If any errors occur during the upload, the target object will be deleted (any created MPU will be aborted).
  */
 public class LargeFileUploader implements Runnable, ProgressListener {
 
@@ -99,6 +100,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private ProgressListener progressListener;
 
     private LargeFileUploaderResumeContext resumeContext;
+    private Map<Integer, MultipartPartETag> existingMpuParts = null;
 
     /**
      * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
@@ -273,62 +275,14 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     }
 
     /*
-     * returns the latest (most recently initiated) MPU for the configured bucket/key that was initiated after
-     * resumeIfInitiatedAfter (if set), or null if none is found.
-     */
-    protected String getLatestMultipartUploadId() {
-        Upload latestUpload = null;
-        try {
-            ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
-            ListMultipartUploadsResult result = null;
-            do {
-                if (result == null) {
-                    result = s3Client.listMultipartUploads(request);
-                } else {
-                    result = s3Client.listMultipartUploads(request.withKeyMarker(result.getNextKeyMarker()).withUploadIdMarker(result.getNextUploadIdMarker()));
-                }
-                for (Upload upload : result.getUploads()) {
-                    // filter out non-matching keys
-                    if (!upload.getKey().equals(key)) continue;
-                    // filter out stale uploads
-                    if (resumeContext.getResumeIfInitiatedAfter() != null
-                            && upload.getInitiated().before(resumeContext.getResumeIfInitiatedAfter())) {
-                        log.debug("Stale Upload detected ({}): Initiated time {} shouldn't be earlier than {}.",
-                                upload.getUploadId(), upload.getInitiated(), resumeContext.getResumeIfInitiatedAfter());
-                        continue;
-                    }
-                    if (latestUpload != null) {
-                        if (upload.getInitiated().after(latestUpload.getInitiated())) {
-                            log.debug("found newer matching upload ({} : {})", upload.getUploadId(), upload.getInitiated());
-                            latestUpload = upload;
-                        } else {
-                            log.debug("Skipping upload ({} : {}) because a newer one was found", upload.getUploadId(), upload.getInitiated());
-                        }
-                    } else {
-                        log.debug("found matching upload ({} : {})", upload.getUploadId(), upload.getInitiated());
-                        latestUpload = upload;
-                    }
-                }
-            } while (result.isTruncated());
-        } catch (S3Exception e) {
-            log.warn("Error in retrieving MPU uploads", e);
-        }
-
-        if (latestUpload == null) return null;
-        return latestUpload.getUploadId();
-    }
-
-    /*
      * get a map of exising MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
      * part sizes and count are exactly the same as configured in this LFU instance
      */
-    private Map<Integer, MultipartPartETag> getUploadPartsForResume(String uploadId) {
+    private Map<Integer, MultipartPartETag> listUploadPartsForResume(String uploadId) {
         List<MultipartPart> existingParts = listParts(uploadId);
         Map<Integer, MultipartPartETag> partsForResume = new HashMap<>();
 
-        if (existingParts == null) {
-            return null;
-        } else {
+        if (existingParts != null) {
             // sort parts based on partNumber
             existingParts.sort(Comparator.comparingInt(MultipartPartETag::getPartNumber));
 
@@ -337,43 +291,43 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             long lastPartSize = fullSize - ((lastPart - 1) * partSize);
             for (MultipartPart part : existingParts) {
                 if (part.getPartNumber() > lastPart) {
-                    log.debug("Too many parts in uploadId: {}: last part is {}, but saw partNumber {}",
-                            uploadId, lastPart, part.getPartNumber());
-                    return null; // invalid upload
+                    // invalid upload
+                    throw new IllegalArgumentException(String.format("Too many parts in uploadId: %s: last part is %d, but saw partNumber %d",
+                            uploadId, lastPart, part.getPartNumber()));
                 }
                 long expectedSize = part.getPartNumber() == lastPart ? lastPartSize : partSize;
                 if (!part.getSize().equals(expectedSize)) {
-                    log.debug("Invalid part size detected in uploadId: {}/{}: expected {}, but saw {}",
-                            uploadId, part.getPartNumber(), expectedSize, part.getSize());
-                    return null; // invalid upload
+                    // invalid upload
+                    throw new IllegalArgumentException(String.format("Invalid part size detected in uploadId: %s/%d: expected %d, but saw %d",
+                            uploadId, part.getPartNumber(), expectedSize, part.getSize()));
                 }
 
                 // we can skip this part
                 partsForResume.put(part.getPartNumber(), part);
             }
-            return partsForResume;
         }
+
+        return partsForResume;
     }
 
     public void doMultipartUpload() {
         configure();
 
-        String uploadId = null;
-        Map<Integer, MultipartPartETag> partsToSkip = null;
-
-        if (resumeContext != null) {
-            // these should be set in configure()
-            uploadId = resumeContext.getUploadId();
-            partsToSkip = resumeContext.getPartsToSkip();
+        // if calling code has specified a resume context, and did *not* provide a part list, list the parts now
+        if (resumeContext != null && resumeContext.getUploadId() != null && resumeContext.getUploadedParts() == null) {
+            existingMpuParts = listUploadPartsForResume(resumeContext.getUploadId());
         }
 
-        if (uploadId == null) {
-            // initiate MP upload
-            uploadId = initMpu();
-        }
+        // always maintain an accurate resume context in case of interruption
+        if (resumeContext == null) resumeContext = new LargeFileUploaderResumeContext();
+
+        // initiate MP upload if not resuming
+        if (resumeContext.getUploadId() == null) resumeContext.setUploadId(initMpu());
+
+        // make sure trusted part list is initialized (this will be updated as parts are uploaded)
+        if (resumeContext.getUploadedParts() == null) resumeContext.setUploadedParts(new HashMap<>());
 
         List<Future<MultipartPartETag>> futures = new ArrayList<>();
-        SortedSet<MultipartPartETag> parts = new TreeSet<>();
         try {
             // submit all upload tasks
             int lastPart = (int) ((fullSize - 1) / partSize) + 1;
@@ -382,17 +336,28 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 long length = partSize;
                 if (offset + length > fullSize) length = fullSize - offset;
 
-                // skip upload and reuse existing parts if found.
-                if (partsToSkip != null && partsToSkip.containsKey(partNumber)) {
-                    log.info("bucket {} key {} partNumber {} already exists, will be reused for multipart upload", bucket, key, partNumber);
+                // if we already have a trusted part ETag, skip this part without verifying
+                if (resumeContext.getUploadedParts().containsKey(partNumber)) {
+                    log.debug("bucket {} key {} partNumber {} provided in resume context; will use the provided ETag and this part will not be verified",
+                            bucket, key, partNumber);
+                }
+                // reuse existing MPU parts if found
+                if (existingMpuParts != null && existingMpuParts.containsKey(partNumber)) {
+                    log.debug("bucket {} key {} partNumber {} already exists, will be reused for multipart upload",
+                            bucket, key, partNumber);
                     // re-read source part if necessary
-                    if (resumeContext.isVerifySkippedParts()) {
+                    if (resumeContext.isVerifyPartsFoundInTarget()) {
                         futures.add(executorService.submit(new ReadSourcePartTask(partNumber, offset, length)));
                     } else {
-                        parts.add(new MultipartPartETag(partNumber, partsToSkip.get(partNumber).getETag()));
+                        // calling code has specified *not* to verify existing parts found in the target, so we will
+                        // trust the existing part ETag
+                        log.debug("verifyPartsFoundInTarget is false; not verifying existing part data for partNumber {} (ETag: {})",
+                                partNumber, existingMpuParts.get(partNumber).getETag());
+                        resumeContext.getUploadedParts().put(partNumber, new MultipartPartETag(partNumber, existingMpuParts.get(partNumber).getETag()));
                     }
                 } else {
-                    futures.add(executorService.submit(new UploadPartTask(uploadId, partNumber, offset, length)));
+                    // no existing part to use, so upload this part
+                    futures.add(executorService.submit(new UploadPartTask(resumeContext.getUploadId(), partNumber, offset, length)));
                 }
             }
 
@@ -400,16 +365,17 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             //       and return completed part ETags (ResumeContext)
             // wait for threads to finish and gather parts
             for (Future<MultipartPartETag> future : futures) {
-                parts.add(future.get());
+                resumeContext.getUploadedParts().put(future.get().getPartNumber(), future.get());
             }
 
             // complete MP upload
-            eTag = completeMpu(uploadId, parts);
+            eTag = completeMpu(resumeContext.getUploadId(), new TreeSet<>(resumeContext.getUploadedParts().values()));
 
         } catch (Exception e) {
             // abort MP upload
+            // TODO: are there conditions where the upload should *not* be aborted?
             try {
-                abortMpu(uploadId);
+                abortMpu(resumeContext.getUploadId());
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
@@ -495,7 +461,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 throw new IllegalArgumentException("size must be specified for stream");
 
             // If resuming from raw stream, make sure skipped parts are consumed from source stream
-            if (resumeContext != null) resumeContext.setVerifySkippedParts(true);
+            if (resumeContext != null) resumeContext.setVerifyPartsFoundInTarget(true);
 
             // must read stream sequentially
             executorService = null;
@@ -517,20 +483,15 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             partSize = minPartSize;
         }
 
-        // if we are resuming an MPU, size is above MPU threshold, and we don't have an uploadId to resume,
-        // find an existing upload to resume
-        if (resumeContext != null && fullSize >= mpuThreshold) {
-            // find latest upload
-            if (resumeContext.getUploadId() == null) {
-                resumeContext.setUploadId(getLatestMultipartUploadId());
+        if (resumeContext != null) {
+            // we can only resume an MPU if the size of the source is above the MPU threshold
+            if (fullSize < mpuThreshold) {
+                throw new UnsupportedOperationException("cannot resume MPU because the size of the source is below the MPU threshold");
             }
-            // list existing parts
-            if (resumeContext.getUploadId() != null && resumeContext.getPartsToSkip() == null) {
-                resumeContext.setPartsToSkip(getUploadPartsForResume(resumeContext.getUploadId()));
-                if (resumeContext.getPartsToSkip() == null) {
-                    log.info("Latest uploadID {} is unsafe to be resumed, will start new multipart upload.", resumeContext.getUploadId());
-                    resumeContext.setUploadId(null);
-                }
+
+            // calling code must provide an uploadId to resume
+            if (resumeContext.getUploadId() == null) {
+                throw new IllegalArgumentException("must provide an uploadId to resume");
             }
         }
 
@@ -664,15 +625,24 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.progressListener = progressListener;
     }
 
+    /**
+     * During an upload operation, the <code>resumeContext</code> is kept up-to-date with the uploadId and list of
+     * uploaded parts.
+     */
     public LargeFileUploaderResumeContext getResumeContext() {
         return resumeContext;
     }
 
     /**
-     * Setting this property enables resuming incomplete MPU uploads.
-     * This means an upload is not aborted on failure, and if existing parts
-     * are found, the upload is resumed by skipping any existing parts.
+     * Use when resuming an existing incomplete MPU by skipping existing parts.
+     * To resume an MPU, you *must* provide an uploadId to resume.
+     * If a part list is not provided here, the uploadId parts will be listed to find existing parts to skip.
+     * All parts in the existing upload must conform to the expected part size and count, based on
+     * {@link #setMpuThreshold(long)} and {@link #setPartSize(long)}.
      *
+     * @throws S3Exception                   if the provided uploadId does not exist, or any other S3 errors occur
+     * @throws IllegalArgumentException      if the uploadId is null or any of the parts are invalid
+     * @throws UnsupportedOperationException if the size of the source is *not* above <code>mpuThreshold</code>
      * @see LargeFileUploaderResumeContext
      */
     public void setResumeContext(LargeFileUploaderResumeContext resumeContext) {
@@ -725,11 +695,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     }
 
     /**
-     * Setting this property enables resuming incomplete MPU uploads.
-     * This means an upload is not aborted on failure, and if existing parts
-     * are found, the upload is resumed by skipping any existing parts.
-     *
-     * @see LargeFileUploaderResumeContext
+     * @see #setResumeContext(LargeFileUploaderResumeContext)
      */
     public LargeFileUploader withResumeContext(LargeFileUploaderResumeContext resumeContext) {
         setResumeContext(resumeContext);
@@ -751,6 +717,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
         @Override
         public MultipartPartETag call() throws Exception {
+            log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
+                    bucket, key, uploadId, partNumber, offset, length);
             try (InputStream is = getSourcePartDataStream(offset, length)) {
                 return uploadPart(uploadId, partNumber, is, length);
             }
@@ -790,6 +758,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
         @Override
         public MultipartPartETag call() throws Exception {
+            log.debug("reading existing partNumber {} (offset: {}, length: {}) from source to verify data", partNumber, offset, length);
             String sourceETag = DigestUtils.md5Hex(getSourcePartDataStream(offset, length));
             return new MultipartPartETag(partNumber, sourceETag);
         }

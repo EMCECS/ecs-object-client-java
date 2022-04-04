@@ -2,14 +2,23 @@ package com.emc.object.s3.lfu;
 
 import com.emc.object.s3.bean.MultipartPartETag;
 
-import java.util.Date;
 import java.util.Map;
 
+/**
+ * Used to resume an existing incomplete MPU.
+ * <p>
+ * You *must* provide an <code>uploadId</code> to resume.
+ * All parts provided in <code>uploadedParts</code> are trusted and assumed to be already verified.
+ * If you do not provide a map of <code>uploadedParts</code>, the MPU uploadId parts will be listed. In this case,
+ * the listed parts will *not* be trusted. All parts in the list will be sanity checked, and re-read from the source
+ * data to create an accurate part ETag manifest and verify all object data as per S3 best practices. If you do not
+ * wish to re-verify existing parts found in the target, you can set <code>verifyPartsFoundInTarget</code> to false
+ * (not recommended).
+ */
 public class LargeFileUploaderResumeContext {
     private String uploadId;
-    private Map<Integer, MultipartPartETag> partsToSkip;
-    private Date resumeIfInitiatedAfter;
-    private boolean verifySkippedParts = true;
+    private Map<Integer, MultipartPartETag> uploadedParts = null;
+    private boolean verifyPartsFoundInTarget = true;
 
     public String getUploadId() {
         return uploadId;
@@ -17,57 +26,42 @@ public class LargeFileUploaderResumeContext {
 
     /**
      * Specifies the specific upload ID to resume.
-     * If this is not specified, the latest upload will be resumed, and its uploadId will be set here.
-     * Part sizes/count will be verified as a sanity check.
-     * Keep <code>verifySkippedParts</code> enabled to ensure skipped parts are verified properly.
+     * This is required to resume an MPU.
      */
     public void setUploadId(String uploadId) {
         this.uploadId = uploadId;
     }
 
-    public Map<Integer, MultipartPartETag> getPartsToSkip() {
-        return partsToSkip;
+    public Map<Integer, MultipartPartETag> getUploadedParts() {
+        return uploadedParts;
     }
 
     /**
      * Specifies a map of existing parts to skip.
-     * If this is not specified, the configured uploadId will be listed and its parts will be set here.
-     * Part sizes/count will be verified as a sanity check.
-     * Keep <code>verifySkippedParts</code> enabled to ensure skipped parts are verified properly.
+     * If a part list is provided here, it is trusted, and used in the final part ETag manifest.
+     * If this is not specified, the configured uploadId will be listed to identify parts to skip. However, that list
+     * will *not* be trusted, so all part sizes/count will be verified as a sanity check, and the part ranges will be
+     * re-read from the source to create an accurate part ETag manifest and verify all object data.
      */
-    public void setPartsToSkip(Map<Integer, MultipartPartETag> partsToSkip) {
-        this.partsToSkip = partsToSkip;
+    public void setUploadedParts(Map<Integer, MultipartPartETag> uploadedParts) {
+        this.uploadedParts = uploadedParts;
     }
 
-    public Date getResumeIfInitiatedAfter() {
-        return resumeIfInitiatedAfter;
+    public boolean isVerifyPartsFoundInTarget() {
+        return verifyPartsFoundInTarget;
     }
 
     /**
-     * An existing upload will only be resumed if it was initiated after the specified date.
-     * Set to source data's lastModified time to avoid using a stale upload.
-     */
-    public void setResumeIfInitiatedAfter(Date resumeIfInitiatedAfter) {
-        this.resumeIfInitiatedAfter = resumeIfInitiatedAfter;
-    }
-
-    public boolean isVerifySkippedParts() {
-        return verifySkippedParts;
-    }
-
-    /**
-     * If existing parts are found, this flag will re-read the source part ranges, to verify the
-     * ETags of those parts found in the upload.
+     * If <code>uploadedParts</code> is *not* provided, and existing parts are found in the target, this flag will
+     * re-read the source part ranges, to create a valid part ETag manifest and verify the entire dataset of the object.
      * Default is true
      */
-    public void setVerifySkippedParts(boolean verifySkippedParts) {
-        this.verifySkippedParts = verifySkippedParts;
+    public void setVerifyPartsFoundInTarget(boolean verifyPartsFoundInTarget) {
+        this.verifyPartsFoundInTarget = verifyPartsFoundInTarget;
     }
 
     /**
-     * Specifies the specific upload ID to resume.
-     * If this is not specified, the latest upload will be resumed. Part sizes/count will be verified as a sanity check.
-     * Keep <code>verifySkippedParts</code> enabled to ensure skipped parts are verified properly.
+     * @see #setUploadId(String)
      */
     public LargeFileUploaderResumeContext withUploadId(String uploadId) {
         setUploadId(uploadId);
@@ -75,32 +69,18 @@ public class LargeFileUploaderResumeContext {
     }
 
     /**
-     * Specifies a map of existing parts to skip.
-     * If this is not specified, the configured uploadId will be listed and its parts will be set here.
-     * Part sizes/count will be verified as a sanity check.
-     * Keep <code>verifySkippedParts</code> enabled to ensure skipped parts are verified properly.
+     * @see #setUploadedParts(Map)
      */
-    public LargeFileUploaderResumeContext withPartsToSkip(Map<Integer, MultipartPartETag> partsToSkip) {
-        setPartsToSkip(partsToSkip);
+    public LargeFileUploaderResumeContext withUploadedParts(Map<Integer, MultipartPartETag> uploadedParts) {
+        setUploadedParts(uploadedParts);
         return this;
     }
 
     /**
-     * An existing upload will only be resumed if it was initiated after the specified date.
-     * Set to source data's lastModified time to avoid using a stale upload.
+     * @see #setVerifyPartsFoundInTarget(boolean)
      */
-    public LargeFileUploaderResumeContext withResumeIfInitiatedAfter(Date resumeIfInitiatedAfter) {
-        setResumeIfInitiatedAfter(resumeIfInitiatedAfter);
-        return this;
-    }
-
-    /**
-     * If existing parts are found, this flag will re-read the source part ranges, to verify the
-     * ETags of those parts found in the upload.
-     * Default is true
-     */
-    public LargeFileUploaderResumeContext withVerifySkippedParts(boolean verifySkippedParts) {
-        setVerifySkippedParts(verifySkippedParts);
+    public LargeFileUploaderResumeContext withVerifyPartsFoundInTarget(boolean verifyPartsFoundInTarget) {
+        setVerifyPartsFoundInTarget(verifyPartsFoundInTarget);
         return this;
     }
 }
