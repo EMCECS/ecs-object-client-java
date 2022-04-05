@@ -340,9 +340,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 if (resumeContext.getUploadedParts().containsKey(partNumber)) {
                     log.debug("bucket {} key {} partNumber {} provided in resume context; will use the provided ETag and this part will not be verified",
                             bucket, key, partNumber);
-                }
-                // reuse existing MPU parts if found
-                if (existingMpuParts != null && existingMpuParts.containsKey(partNumber)) {
+
+                    // reuse existing MPU parts if found
+                } else if (existingMpuParts != null && existingMpuParts.containsKey(partNumber)) {
                     log.debug("bucket {} key {} partNumber {} already exists, will be reused for multipart upload",
                             bucket, key, partNumber);
                     // re-read source part if necessary
@@ -355,8 +355,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                                 partNumber, existingMpuParts.get(partNumber).getETag());
                         resumeContext.getUploadedParts().put(partNumber, new MultipartPartETag(partNumber, existingMpuParts.get(partNumber).getETag()));
                     }
-                } else {
+
                     // no existing part to use, so upload this part
+                } else {
                     futures.add(executorService.submit(new UploadPartTask(resumeContext.getUploadId(), partNumber, offset, length)));
                 }
             }
