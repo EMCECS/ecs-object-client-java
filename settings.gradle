@@ -1,2 +1,4 @@
 rootProject.name = 'object-client'
 include 'geo-pin-cli'
+include 'bundle'
+project(":bundle").name = 'object-client-bundle'

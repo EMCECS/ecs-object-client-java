@@ -34,6 +34,7 @@ plugins {
     id 'maven'
     id 'org.ajoberstar.git-publish' version '3.0.1'
     id 'nebula.release' version '15.2.0'
+    id 'com.github.johnrengelman.shadow' version '5.2.0' apply false
 }
 
 group 'com.emc.ecs'
