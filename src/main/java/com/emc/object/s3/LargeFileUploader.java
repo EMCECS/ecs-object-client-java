@@ -101,6 +101,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
     private LargeFileUploaderResumeContext resumeContext;
     private Map<Integer, MultipartPartETag> existingMpuParts = null;
+    private boolean abortMpuOnFailure = true;
 
     /**
      * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
@@ -275,7 +276,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     }
 
     /*
-     * get a map of exising MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
+     * get a map of existing MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
      * part sizes and count are exactly the same as configured in this LFU instance
      */
     private Map<Integer, MultipartPartETag> listUploadPartsForResume(String uploadId) {
@@ -376,7 +377,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             // abort MP upload
             // TODO: are there conditions where the upload should *not* be aborted?
             try {
-                abortMpu(resumeContext.getUploadId());
+                if (abortMpuOnFailure) {
+                    abortMpu(resumeContext.getUploadId());
+                    resumeContext.setUploadId(null);
+                    resumeContext.setUploadedParts(null);
+                }
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
@@ -650,6 +655,14 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.resumeContext = resumeContext;
     }
 
+    public boolean isAbortMpuOnFailure() {
+        return abortMpuOnFailure;
+    }
+
+    public void setAbortMpuOnFailure(boolean abortMpuOnFailure) {
+        this.abortMpuOnFailure = abortMpuOnFailure;
+    }
+
     public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -700,6 +713,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
      */
     public LargeFileUploader withResumeContext(LargeFileUploaderResumeContext resumeContext) {
         setResumeContext(resumeContext);
+        return this;
+    }
+
+    public LargeFileUploader AbortMpuOnFailure(boolean abortMpuOnFailure) {
+        setAbortMpuOnFailure(abortMpuOnFailure);
         return this;
     }
 
