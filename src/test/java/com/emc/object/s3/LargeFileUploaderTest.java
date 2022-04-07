@@ -302,8 +302,6 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         new Random().nextBytes(data);
 
         // init MPU
-        //Generate last modified time to be 5s ahead of upload for better tolerance of slight time drift
-        Date lastModifiedTime = new Date(System.currentTimeMillis() - 5000);
         String uploadId = client.initiateMultipartUpload(bucket, key);
         int partNum = 1;
         for (long offset = 0; offset < data.length; offset += partSize) {
@@ -392,11 +390,197 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
     }
 
-    // TODO: add following test cases:
-    //       + testResumeWithPartList (only the specified parts should be skipped - can compare bytes sent with a progress listener)
-    //       + testResumeWithPartListAndBadPart (use a part list, but one of the ETags is wrong - should abort the upload and throw an exception)
-    //       + testResumeWithBadPart (make one of the existing parts wrong [same size, wrong data] - should overwrite that one part and skip the rest - can use progress listener to compare bytes sent)
-    //       + testResumeWithBadPartAndNoVerify (same as above, but set verifyPartsFoundInTarget to false - should end up with a corrupt object, but all existing parts should be skipped)
+    @Test
+    public void testResumeWithPartList() {
+        String bucket = getTestBucket();
+        String key = "mpu-resume-with-partlist";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        final long partSize = mockMultipartSource.getPartSize();
+        int totalPartsToResume = 2;
+        Map<Integer, MultipartPartETag> uploadedParts = new HashMap<>();
+
+        final AtomicLong completed = new AtomicLong();
+        final AtomicLong total = new AtomicLong();
+        final AtomicLong transferred = new AtomicLong();
+        ProgressListener pl = new ProgressListener() {
+            @Override
+            public void progress(long c, long t) {
+                completed.set(c);
+                total.set(t);
+            }
+
+            @Override
+            public void transferred(long size) {
+                transferred.addAndGet(size);
+            }
+        };
+
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+
+        // upload first 2 parts
+        for (int partNum = 1; partNum <= totalPartsToResume; partNum++) {
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum,
+                    mockMultipartSource.getPartDataStream((partNum - 1) * partSize, partSize));
+            MultipartPartETag multipartPartETag = client.uploadPart(request);
+            uploadedParts.put(partNum, multipartPartETag);
+        }
+
+        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId)
+                .withUploadedParts(uploadedParts);
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext)
+                .withProgressListener(pl);
+        lfu.doMultipartUpload();
+
+        S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
+        Assert.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
+
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, completed.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), total.get());
+    }
+
+
+    @Test
+    public void testResumeWithPartListAndBadPart() {
+        String bucket = getTestBucket();
+        String key = "mpu-resume-with-bad-part-etag";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        final long partSize = mockMultipartSource.getPartSize();
+        int totalPartsToResume = 2;
+        Map<Integer, MultipartPartETag> uploadedParts = new HashMap<>();
+
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+
+        // upload first 2 parts
+        for (int partNum = 1; partNum <= totalPartsToResume; partNum++) {
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum,
+                    mockMultipartSource.getPartDataStream((partNum - 1) * partSize, partSize));
+            MultipartPartETag multipartPartETag = client.uploadPart(request);
+            uploadedParts.put(partNum, multipartPartETag);
+        }
+
+        // crate a wrong MultipartPartETag by reversing Etag
+        MultipartPartETag badMultipartPartETag = new MultipartPartETag(1, new StringBuilder(uploadedParts.get(1).getETag()).reverse().toString());
+        uploadedParts.replace(1, badMultipartPartETag);
+
+        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId)
+                .withUploadedParts(uploadedParts);
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
+        try {
+            lfu.doMultipartUpload();
+            Assert.fail("one of the ETags in uploadedParts is wrong - should abort the upload and throw an exception");
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidPart", e.getErrorCode());
+        }
+    }
+
+    @Test
+    public void testResumeWithBadPart() {
+        String bucket = getTestBucket();
+        String key = "mpu-resume-with-bad-part-data";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        final long partSize = mockMultipartSource.getPartSize();
+        int totalPartsToResume = 2;
+
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+
+        // upload first 2 parts
+        for (int partNum = 1; partNum <= totalPartsToResume; partNum++) {
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum,
+                    mockMultipartSource.getPartDataStream((partNum - 1) * partSize, partSize));
+            client.uploadPart(request);
+            if (partNum == totalPartsToResume) {
+                // simulate an uploaded part got wrong data
+                byte[] data = new byte[(int)partSize];
+                new Random().nextBytes(data);
+                request = new UploadPartRequest(bucket, key, uploadId, partNum, new ByteArrayInputStream(data));
+                client.uploadPart(request);
+            }
+        }
+
+        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource).withPartSize(partSize)
+                .withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
+        try {
+            lfu.doMultipartUpload();
+            Assert.fail("one of the data in uploadedParts is wrong - should abort the upload and throw an exception");
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidPart", e.getErrorCode());
+        }
+        try {
+            client.listParts(bucket, key, uploadId);
+            Assert.fail("UploadId should not exist because MPU is aborted");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchUpload", e.getErrorCode());
+        }
+    }
+
+    @Test
+    public void testResumeWithBadPartAndNoVerify() {
+        String bucket = getTestBucket();
+        String key = "mpu-resume-with-bad-part-data-no-verify";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        final long partSize = mockMultipartSource.getPartSize();
+        int totalPartsToResume = 2;
+        Map<Integer, MultipartPartETag> uploadedParts = new HashMap<>();
+
+        final AtomicLong completed = new AtomicLong();
+        final AtomicLong total = new AtomicLong();
+        final AtomicLong transferred = new AtomicLong();
+        ProgressListener pl = new ProgressListener() {
+            @Override
+            public void progress(long c, long t) {
+                completed.set(c);
+                total.set(t);
+            }
+
+            @Override
+            public void transferred(long size) {
+                transferred.addAndGet(size);
+            }
+        };
+
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucket, key);
+
+        // upload first 2 parts
+        for (int partNum = 1; partNum <= totalPartsToResume; partNum++) {
+            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNum,
+                    mockMultipartSource.getPartDataStream((partNum - 1) * partSize, partSize));
+            client.uploadPart(request);
+            if (partNum == totalPartsToResume) {
+                // simulate an uploaded part got wrong data
+                byte[] data = new byte[(int)partSize];
+                new Random().nextBytes(data);
+                request = new UploadPartRequest(bucket, key, uploadId, partNum, new ByteArrayInputStream(data));
+                client.uploadPart(request);
+            }
+        }
+
+        LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId)
+                .withVerifyPartsFoundInTarget(false);
+        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize())
+                .withResumeContext(resumeContext).withProgressListener(pl);
+        lfu.doMultipartUpload();
+
+        S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
+        Assert.assertNotEquals(mockMultipartSource.getMpuETag(), om.getETag());
+
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, completed.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), total.get());
+    }
 
     static class NullStream extends OutputStream {
         @Override

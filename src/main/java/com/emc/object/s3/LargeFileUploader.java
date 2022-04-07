@@ -659,6 +659,13 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return abortMpuOnFailure;
     }
 
+    /**
+     * Specifies whether MPU is aborted with any failure
+     * If a failure occurs and abortMpuOnFailure is true, then MPU is aborted and the resumeContext is cleared
+     * (uploadId and uploadedParts are set to null).
+     * If abortMpuOnFailure is false, MPU is left intact and the resumeContext could have a list successfully
+     * uploaded parts.
+     */
     public void setAbortMpuOnFailure(boolean abortMpuOnFailure) {
         this.abortMpuOnFailure = abortMpuOnFailure;
     }
