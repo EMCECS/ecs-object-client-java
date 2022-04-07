@@ -28,9 +28,7 @@ package com.emc.object.s3;
 
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
-import com.emc.object.s3.lfu.LargeFileMultipartFileSource;
-import com.emc.object.s3.lfu.LargeFileMultipartSource;
-import com.emc.object.s3.lfu.LargeFileUploaderResumeContext;
+import com.emc.object.s3.lfu.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressInputStream;
 import com.emc.object.util.ProgressListener;
@@ -45,11 +43,11 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -98,6 +96,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private ExecutorService executorService;
     private boolean externalExecutorService;
     private ProgressListener progressListener;
+    private final AtomicBoolean active = new AtomicBoolean(false);
 
     private LargeFileUploaderResumeContext resumeContext;
     private Map<Integer, MultipartPartETag> existingMpuParts = null;
@@ -208,6 +207,51 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     }
 
     /**
+     * This async version of upload() will start the upload process in the background and immediately return a
+     * {@link LargeFileUpload} instance.
+     * This allows pausing or aborting the upload in the middle, or you can use <code>waitForCompletion()</code> to
+     * block until the upload is complete.
+     *
+     * @see #upload()
+     */
+    public LargeFileUpload uploadAsync() {
+        // start a background thread
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<?> future = executor.submit(this::upload);
+        executor.shutdown();
+
+        return new LargeFileUpload() {
+            @Override
+            public void waitForCompletion() {
+                try {
+                    future.get();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public LargeFileUploaderResumeContext pause() {
+                active.set(false); // all part uploads that have not started yet should effectively become no-ops
+                waitForCompletion(); // only waits for parts that are currently uploading
+                return resumeContext; // at this point, resumeContext should be accurate
+            }
+
+            @Override
+            public void abort() {
+                active.set(false); // all part uploads that have not started yet should effectively become no-ops
+                if (resumeContext != null && resumeContext.getUploadId() != null) {
+                    // this should interrupt existing part transfers, but we will not wait for them anyway
+                    abortMpu(resumeContext.getUploadId());
+                }
+                executorService.shutdownNow(); // immediately terminates thread pool and interrupts any running threads
+            }
+        };
+    }
+
+    /**
      * This method will automatically choose between MPU and single-PUT operations based on a configured threshold.
      * Note the default threshold is {@link #DEFAULT_MPU_THRESHOLD}. Also note that the defaults in this class are
      * optimized for high-speed LAN connectivity. When operating over a WAN or a slower connection, you should reduce
@@ -313,6 +357,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     public void doMultipartUpload() {
         configure();
 
+        active.set(true);
+
         // if calling code has specified a resume context, and did *not* provide a part list, list the parts now
         if (resumeContext != null && resumeContext.getUploadId() != null && resumeContext.getUploadedParts() == null) {
             existingMpuParts = listUploadPartsForResume(resumeContext.getUploadId());
@@ -345,9 +391,13 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 } else if (existingMpuParts != null && existingMpuParts.containsKey(partNumber)) {
                     log.debug("bucket {} key {} partNumber {} already exists, will be reused for multipart upload",
                             bucket, key, partNumber);
-                    // re-read source part if necessary
+                    // verify source part if necessary
                     if (resumeContext.isVerifyPartsFoundInTarget()) {
-                        futures.add(executorService.submit(new ReadSourcePartTask(partNumber, offset, length)));
+                        futures.add(CompletableFuture // need to use CompletableFuture to allow chained execution
+                                // first, verify the part ETag by re-reading form source
+                                .supplyAsync(new VerifySourcePartTask(partNumber, offset, length, existingMpuParts.get(partNumber).getETag()), executorService)
+                                // then, if the part is invalid (throws PartMismatchException), re-upload it (if configured to do so)
+                                .exceptionally(partMismatchHandler(resumeContext.getUploadId(), partNumber, offset, length)));
                     } else {
                         // calling code has specified *not* to verify existing parts found in the target, so we will
                         // trust the existing part ETag
@@ -362,11 +412,13 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 }
             }
 
-            // TODO: allow calling code to stop the upload, allowing in-transfer parts to complete, but then shut down
-            //       and return completed part ETags (ResumeContext)
             // wait for threads to finish and gather parts
             for (Future<MultipartPartETag> future : futures) {
-                resumeContext.getUploadedParts().put(future.get().getPartNumber(), future.get());
+                try {
+                    resumeContext.getUploadedParts().put(future.get().getPartNumber(), future.get());
+                } catch (CancellationException ignored) {
+                    // this is only thrown when we are terminated early - cancelled tasks will just be ignored
+                }
             }
 
             // complete MP upload
@@ -395,6 +447,18 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 }
             }
         }
+    }
+
+    private Function<Throwable, ? extends MultipartPartETag> partMismatchHandler(String uploadId, int partNumber, long offset, long length) {
+        return throwable -> {
+            if (resumeContext.isOverwriteMismatchedParts() && throwable instanceof PartMismatchException) {
+                log.warn(throwable.getMessage()); // log details about the part that was mismatched
+                log.info("overwriting partNumber {} due to ETag mismatch", partNumber);
+                return new UploadPartTask(uploadId, partNumber, offset, length).call();
+            } else if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            } else throw new RuntimeException(throwable);
+        };
     }
 
     public void doByteRangeUpload() {
@@ -717,11 +781,18 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
 
         @Override
-        public MultipartPartETag call() throws Exception {
-            log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
-                    bucket, key, uploadId, partNumber, offset, length);
-            try (InputStream is = getSourcePartDataStream(offset, length)) {
-                return uploadPart(uploadId, partNumber, is, length);
+        public MultipartPartETag call() {
+            if (!active.get()) {
+                // we were paused or aborted, so should not start any more tasks
+                throw new CancellationException();
+            } else {
+                log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
+                        bucket, key, uploadId, partNumber, offset, length);
+                try (InputStream is = getSourcePartDataStream(offset, length)) {
+                    return uploadPart(uploadId, partNumber, is, length);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -736,32 +807,48 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
 
         @Override
-        public String call() throws Exception {
+        public String call() {
             try (InputStream is = getSourcePartDataStream(offset, length)) {
                 Range range = Range.fromOffsetLength(offset, length);
 
                 PutObjectRequest request = new PutObjectRequest(bucket, key, is).withRange(range);
 
                 return s3Client.putObject(request).getETag();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
 
-    protected class ReadSourcePartTask implements Callable<MultipartPartETag> {
+    protected class VerifySourcePartTask implements Supplier<MultipartPartETag> {
         private final int partNumber;
         private final long offset, length;
+        private final String uploadedETag;
 
-        public ReadSourcePartTask(int partNumber, long offset, long length) {
+        public VerifySourcePartTask(int partNumber, long offset, long length, String uploadedETag) {
             this.partNumber = partNumber;
             this.offset = offset;
             this.length = length;
+            this.uploadedETag = uploadedETag;
         }
 
         @Override
-        public MultipartPartETag call() throws Exception {
-            log.debug("reading existing partNumber {} (offset: {}, length: {}) from source to verify data", partNumber, offset, length);
-            String sourceETag = DigestUtils.md5Hex(getSourcePartDataStream(offset, length));
-            return new MultipartPartETag(partNumber, sourceETag);
+        public MultipartPartETag get() {
+            if (!active.get()) {
+                // we were paused or aborted, so should not start any more tasks
+                throw new CancellationException();
+            } else {
+                log.debug("reading existing partNumber {} (offset: {}, length: {}) from source to verify data", partNumber, offset, length);
+                try (InputStream is = getSourcePartDataStream(offset, length)) {
+                    String sourceETag = DigestUtils.md5Hex(is);
+                    if (!sourceETag.equals(uploadedETag)) {
+                        throw new PartMismatchException(partNumber, sourceETag, uploadedETag);
+                    }
+                    return new MultipartPartETag(partNumber, sourceETag);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 }
