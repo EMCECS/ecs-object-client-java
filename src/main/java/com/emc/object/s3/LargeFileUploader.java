@@ -101,6 +101,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
     private LargeFileUploaderResumeContext resumeContext;
     private Map<Integer, MultipartPartETag> existingMpuParts = null;
+    private boolean abortMpuOnFailure = true;
 
     /**
      * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
@@ -275,7 +276,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     }
 
     /*
-     * get a map of exising MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
+     * get a map of existing MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
      * part sizes and count are exactly the same as configured in this LFU instance
      */
     private Map<Integer, MultipartPartETag> listUploadPartsForResume(String uploadId) {
@@ -376,7 +377,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             // abort MP upload
             // TODO: are there conditions where the upload should *not* be aborted?
             try {
-                abortMpu(resumeContext.getUploadId());
+                if (abortMpuOnFailure) {
+                    abortMpu(resumeContext.getUploadId());
+                    resumeContext.setUploadId(null);
+                    resumeContext.setUploadedParts(null);
+                }
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
@@ -650,6 +655,21 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.resumeContext = resumeContext;
     }
 
+    public boolean isAbortMpuOnFailure() {
+        return abortMpuOnFailure;
+    }
+
+    /**
+     * Specifies whether MPU is aborted with any failure
+     * If a failure occurs and abortMpuOnFailure is true, then MPU is aborted and the resumeContext is cleared
+     * (uploadId and uploadedParts are set to null).
+     * If abortMpuOnFailure is false, MPU is left intact and the resumeContext could have a list successfully
+     * uploaded parts.
+     */
+    public void setAbortMpuOnFailure(boolean abortMpuOnFailure) {
+        this.abortMpuOnFailure = abortMpuOnFailure;
+    }
+
     public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -700,6 +720,14 @@ public class LargeFileUploader implements Runnable, ProgressListener {
      */
     public LargeFileUploader withResumeContext(LargeFileUploaderResumeContext resumeContext) {
         setResumeContext(resumeContext);
+        return this;
+    }
+
+    /**
+     * @see #setAbortMpuOnFailure(boolean)
+     */
+    public LargeFileUploader withAbortMpuOnFailure(boolean abortMpuOnFailure) {
+        setAbortMpuOnFailure(abortMpuOnFailure);
         return this;
     }
 
