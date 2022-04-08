@@ -723,7 +723,10 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return this;
     }
 
-    public LargeFileUploader AbortMpuOnFailure(boolean abortMpuOnFailure) {
+    /**
+     * @see #setAbortMpuOnFailure(boolean)
+     */
+    public LargeFileUploader withAbortMpuOnFailure(boolean abortMpuOnFailure) {
         setAbortMpuOnFailure(abortMpuOnFailure);
         return this;
     }

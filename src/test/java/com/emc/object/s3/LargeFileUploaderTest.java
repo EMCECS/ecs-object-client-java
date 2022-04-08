@@ -478,6 +478,13 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             Assert.assertEquals(400, e.getHttpCode());
             Assert.assertEquals("InvalidPart", e.getErrorCode());
         }
+        try {
+            client.listParts(bucket, key, uploadId);
+            Assert.fail("UploadId should not exist because MPU is aborted");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchUpload", e.getErrorCode());
+        }
     }
 
     @Test
