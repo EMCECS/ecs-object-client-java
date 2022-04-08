@@ -34,7 +34,6 @@ import com.emc.object.s3.bean.CannedAcl;
 import com.emc.object.s3.bean.ObjectTagging;
 import com.emc.object.util.RestUtil;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +54,7 @@ public class InitiateMultipartUploadRequest extends S3ObjectRequest {
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         if (objectTagging != null)
-            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.fromObjectTaggingToHashMap()));
+            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.toStringMap()));
         return headers;
     }
 

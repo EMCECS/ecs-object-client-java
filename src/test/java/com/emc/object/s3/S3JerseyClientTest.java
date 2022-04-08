@@ -53,10 +53,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,18 +66,19 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
-    private boolean testIAM = false;
+    protected boolean testIAM = false;
 
-    protected boolean isIAMUser() {
+    @Before
+    public void checkIamUser() {
         try {
             Properties props = TestConfig.getProperties();
-            return Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
-        } catch (Exception e) {
-            return false;
+            testIAM = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
+        } catch (Exception ignored) {
         }
     }
 
@@ -91,7 +89,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Override
     public S3Client createS3Client() throws Exception {
-        testIAM = isIAMUser();
         return new S3JerseyClient(createS3Config());
     }
 
@@ -190,6 +187,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateFilesystemBucket() {
+        Assume.assumeFalse("FS buckets are not supported with IAM user.", testIAM);
+
         String bucketName = getTestBucket() + "-y";
 
         client.createBucket(new CreateBucketRequest(bucketName).withFileSystemEnabled(true));
@@ -393,7 +392,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteObject(request);
             Assert.fail("expected 403");
-        }catch (S3Exception e) {
+        } catch (S3Exception e) {
             Assert.assertEquals(403, e.getHttpCode());
         }
 
@@ -515,7 +514,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSetGetBucketAcl() throws Exception {
-        String identity = createS3Config().getIdentity();
+        // need to get canonical user ID from bucket ACL (for IAM users, this is different from the access key)
+        String identity = client.getBucketAcl(getTestBucket()).getOwner().getId();
         CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
         acl.setOwner(owner);
@@ -528,7 +528,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSetBucketAclCanned() throws Exception {
-        String identity = createS3Config().getIdentity();
+        // need to get canonical user ID from bucket ACL (for IAM users, this is different from the access key)
+        String identity = client.getBucketAcl(getTestBucket()).getOwner().getId();
         CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
         acl.setOwner(owner);
@@ -799,6 +800,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void listObjectsWithPercentAndUrlEncoding() {
+        String key1 = "f%o%%o", key2 = "fo%%o", key3 = "fo%o", content = "Hello List Percent!";
+        client.putObject(getTestBucket(), key1, content, null);
+        client.putObject(getTestBucket(), key2, content, null);
+        client.putObject(getTestBucket(), key3, content, null);
+
+        ListObjectsRequest request = new ListObjectsRequest(getTestBucket()).withEncodingType(EncodingType.url);
+        ListObjectsResult result = client.listObjects(request);
+        Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
+
+        List<S3Object> resultObjects = result.getObjects();
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(3, resultObjects.size());
+
+        Assert.assertEquals(key1, resultObjects.get(0).getKey());
+        Assert.assertEquals(key2, resultObjects.get(1).getKey());
+        Assert.assertEquals(key3, resultObjects.get(2).getKey());
+    }
+
+    @Test
     public void testListAndReadVersions() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -872,8 +893,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         assertForListVersionsPaging(versions.size(), requestCount);
     }
 
-    protected void assertForListVersionsPaging(int size, int requestCount)
-    {
+    protected void assertForListVersionsPaging(int size, int requestCount) {
         Assert.assertEquals("The correct number of versions were NOT returned", 6, size);
         Assert.assertEquals("should be 3 pages", 3, requestCount);
     }
@@ -1274,6 +1294,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testServerSideEncryption() {
+        String key = "object-with-serverside-encryption";
+        String content = "Hello SSE-S3!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
     public void testCreateObjectWithRetentionPeriod() throws Exception {
         String key = "object-in-retention";
         String content = "Hello Retention!";
@@ -1535,14 +1566,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
                 Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
-            }
-            else if (part.getPartNumber() == 2) {
+            } else if (part.getPartNumber() == 2) {
                 Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
-            }
-            else if (part.getPartNumber() == 3) {
+            } else if (part.getPartNumber() == 3) {
                 Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
-            }
-            else {
+            } else {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
             }
         }
@@ -2374,15 +2402,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (AbstractDeleteResult result : resultList) {
             if (result instanceof DeleteError) {
                 this.inspectDeleteError((DeleteError) result);
-            }
-            else {
+            } else {
                 this.inspectDeleteSuccess((DeleteSuccess) result);
             }
         }
     }
+
     protected void inspectDeleteError(DeleteError deleteResult) {
         Assert.assertNotNull(deleteResult);
     }
+
     protected void inspectDeleteSuccess(DeleteSuccess deleteResult) {
         Assert.assertNotNull(deleteResult);
     }
@@ -2399,7 +2428,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectMetadata(getTestBucket(), key);
             Assert.fail("expected 404 Not Found");
-        } catch(S3Exception e) {
+        } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
         }
     }
@@ -2774,6 +2803,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 future.get();
             } catch (Throwable e) {
                 while (e.getCause() != null && e.getCause() != e) e = e.getCause();
+                // some versions of ECS reset the socket of ongoing uploads after an abort
                 if (e instanceof SocketException && (e.getMessage().startsWith("Broken pipe")
                         || e.getMessage().startsWith("Connection reset by peer")
                         || e.getMessage().startsWith("Software caused connection abort")))
@@ -2977,7 +3007,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // GET the Tag of a non-existent object
         try {
-            t = client.getObjectTagging(new GetObjectTaggingRequest(bucketName, "object-key-not-exist"));
+            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, "object-key-not-exist"));
+            Assert.fail("Fail was expected. Can NOT get tags of a non-existent object");
         } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
             Assert.assertEquals("NoSuchKey", e.getErrorCode());
@@ -2992,6 +3023,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // should not be able to add more than 10 tags per object
         try {
             client.putObjectTagging(putObjectTaggingRequestExceededTags.withVersionId(versionId));
+            Assert.fail("Fail was expected. Can NOT add more than 10 tags per object");
         } catch (S3Exception e) {
             Assert.assertEquals(400, e.getHttpCode());
             Assert.assertEquals("invalid content length", e.getErrorCode());
@@ -3000,6 +3032,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // should not be able to accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @
         try {
             client.putObjectTagging(putObjectTaggingRequestMarshalTag);
+            Assert.fail("Fail was expected. Can NOT accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @");
         } catch (S3Exception e) {
             Assert.assertEquals(400, e.getHttpCode());
             Assert.assertEquals("UnexpectedContent", e.getErrorCode());
@@ -3008,6 +3041,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // should not be able to have too large key or value.
         try {
             client.putObjectTagging(putObjectTaggingRequestLargeKey);
+            Assert.fail("Fail was expected. Can NOT accept key with >128 Unicode characters in length, and value with > 256 Unicode characters in length");
         } catch (S3Exception e) {
             Assert.assertEquals(400, e.getHttpCode());
             Assert.assertEquals("UnexpectedContent", e.getErrorCode());
@@ -3040,7 +3074,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1));
         try {
-            client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class);
+            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1));
+            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
             Assert.assertEquals("NoSuchKey", e.getErrorCode());
@@ -3056,18 +3091,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // should be able to copy the object and copied object should have the tags also
         client.putObject(new PutObjectRequest(bucketName, key1, content)
-                .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
+                .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k11", "v11")))));
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2));
-        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2));
-        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
 
         // Versioned object should be copied and user should be able to get the same along with tags
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
         client.putObject(new PutObjectRequest(bucketName, key1, content)
                 .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
         String versionId = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
-        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2).withSourceVersionId(versionId));
-        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2).withVersionId(versionId)).getTagSet().size());
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key3).withSourceVersionId(versionId));
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3).withVersionId(versionId)).getTagSet().size());
 
     }
 
@@ -3076,12 +3110,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // set up env
         String bucketName = getTestBucket(), key = "test-object-tagging";
-        int fiveMB = 5 * 1024;
-        byte[] content = new byte[11 * 1024];
-        new Random().nextBytes(content);
-        InputStream is1 = new ByteArrayInputStream(content, 0, fiveMB);
-        InputStream is2 = new ByteArrayInputStream(content, fiveMB, fiveMB);
-        InputStream is3 = new ByteArrayInputStream(content, 2 * fiveMB, content.length - (2 * fiveMB));
+        int fiveKB = 5 * 2014, i = 0;
+        List<Long> sizes = new ArrayList<>();
+        while (i++ < 3) {
+            sizes.add(ThreadLocalRandom.current().nextLong(1, fiveKB));
+        }
+        RandomInputStream is1 = new RandomInputStream(sizes.get(0));
+        RandomInputStream is2 = new RandomInputStream(sizes.get(1));
+        RandomInputStream is3 = new RandomInputStream(sizes.get(2));
 
         String uploadId = client.initiateMultipartUpload(
                 new InitiateMultipartUploadRequest(bucketName, key)
@@ -3089,22 +3125,23 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .getUploadId();
 
         MultipartPartETag mp1 = client.uploadPart(
-                new UploadPartRequest(bucketName, key, uploadId, 1, is1).withContentLength((long) fiveMB));
+                new UploadPartRequest(bucketName, key, uploadId, 1, is1).withContentLength(sizes.get(0)));
         MultipartPartETag mp2 = client.uploadPart(
-                new UploadPartRequest(bucketName, key, uploadId, 2, is2).withContentLength((long) fiveMB));
+                new UploadPartRequest(bucketName, key, uploadId, 2, is2).withContentLength(sizes.get(1)));
         MultipartPartETag mp3 = client.uploadPart(
-                new UploadPartRequest(bucketName, key, uploadId, 3, is3)
-                        .withContentLength((long) content.length - (2 * fiveMB)));
+                new UploadPartRequest(bucketName, key, uploadId, 3, is3).withContentLength(sizes.get(2)));
 
         TreeSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>(Arrays.asList(mp1, mp2, mp3));
         client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId).withParts(parts));
 
         // should be able to get the tag count
         Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key)).getTagSet().size());
+
         // should be able to return proper error when object is deleted
         client.deleteObject(bucketName, key);
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key));
+            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
             Assert.assertEquals("NoSuchKey", e.getErrorCode());

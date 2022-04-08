@@ -29,7 +29,7 @@ package com.emc.object.s3.jersey;
 import com.emc.codec.CodecChain;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.SizeOverrideWriter;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import com.sun.jersey.api.client.*;
 import com.sun.jersey.api.client.filter.ClientFilter;
 

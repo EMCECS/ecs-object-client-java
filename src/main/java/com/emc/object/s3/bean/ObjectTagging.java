@@ -28,7 +28,7 @@ public class ObjectTagging {
         return this;
     }
 
-    public Map<String, String> fromObjectTaggingToHashMap() {
+    public Map<String, String> toStringMap() {
         Map<String, String> map = new HashMap<>();
         for (ObjectTag tag: this.tagSet) {
             map.putIfAbsent(tag.getKey(), tag.getValue());

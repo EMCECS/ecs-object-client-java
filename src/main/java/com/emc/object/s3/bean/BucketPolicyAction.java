@@ -105,7 +105,7 @@ public enum BucketPolicyAction {
     @XmlEnumValue("s3:PutObjectTagging")
     PutObjectTagging("s3:PutObjectTagging"),
     @XmlEnumValue("s3:PutObjectVersionTagging")
-    PutObjectVersionTagging("s3:PutObjectVersionTagging");        ;
+    PutObjectVersionTagging("s3:PutObjectVersionTagging");
 
     @JsonCreator
     public static BucketPolicyAction fromValue(String value) {

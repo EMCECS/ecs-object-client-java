@@ -27,7 +27,7 @@
 package com.emc.object;
 
 import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.SizeOverrideWriter;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;

@@ -63,6 +63,10 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         this.objectMetadata = other.objectMetadata;
         this.object = other.object;
         this.range = other.range;
+        this.ifModifiedSince = other.ifModifiedSince;
+        this.ifUnmodifiedSince = other.ifUnmodifiedSince;
+        this.ifMatch = other.ifMatch;
+        this.ifNoneMatch = other.ifNoneMatch;
         this.acl = other.acl;
         this.cannedAcl = other.cannedAcl;
     }
@@ -81,7 +85,7 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
         if (objectTagging != null)
-            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.fromObjectTaggingToHashMap()));
+            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.toStringMap()));
         return headers;
     }
 

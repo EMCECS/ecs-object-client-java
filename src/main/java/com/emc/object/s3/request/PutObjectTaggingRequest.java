@@ -47,24 +47,24 @@ public class PutObjectTaggingRequest extends S3ObjectRequest implements EntityRe
         return tagging;
     }
 
-    public PutObjectTaggingRequest withTagging(ObjectTagging tagging) {
-        setTagging(tagging);
-        return this;
-    }
-
     public void setTagging(ObjectTagging tagging) { this.tagging = tagging; }
 
     public String getVersionId() {
         return versionId;
     }
 
-    public PutObjectTaggingRequest withVersionId(String versionId) {
-        setVersionId(versionId);
+    public void setVersionId(String versionId) {
+        this.versionId = versionId;
+    }
+
+    public PutObjectTaggingRequest withTagging(ObjectTagging tagging) {
+        setTagging(tagging);
         return this;
     }
 
-    public void setVersionId(String versionId) {
-        this.versionId = versionId;
+    public PutObjectTaggingRequest withVersionId(String versionId) {
+        setVersionId(versionId);
+        return this;
     }
 
 }

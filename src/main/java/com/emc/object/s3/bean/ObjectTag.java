@@ -12,12 +12,7 @@ public class ObjectTag {
 
     private String key;
     private String value;
-
-    private final int TAG_KEY_LIMIT = 128;
-    private final int TAG_VALUE_LIMIT = 256;
-
-    private static Pattern RESTRICTED_CHARS = Pattern.compile("[$&,;\\\\?#|'<>^*()%!{}\"]"); //characters: + - = . _ : / @ are allowed
-
+    
     public ObjectTag() {}
 
     public ObjectTag(String key, String value) {
@@ -43,27 +38,4 @@ public class ObjectTag {
         this.value = value;
     }
 
-    public boolean isValidObjectTag() {
-
-        boolean isValid = true;
-
-        if (key == null || (key.trim().length() == 0) || value == null) {
-            isValid = false;
-        } else {
-            if (key.length() > TAG_KEY_LIMIT || value.length() > TAG_VALUE_LIMIT) {
-                isValid = false;
-            } else {
-                if (containsRestrictedChars(key) || containsRestrictedChars(value)) {
-                    isValid = false;
-                }
-            }
-        }
-
-        return isValid;
-    }
-
-    private boolean containsRestrictedChars(String tagContent) {
-        Matcher matcher = RESTRICTED_CHARS.matcher(tagContent);
-        return matcher.find();
-    }
 }

@@ -65,6 +65,7 @@ public final class S3Constants {
     public static final String AMZ_TAGGING = AMZ_PREFIX + "tagging";
     public static final String AMZ_TAGGING_COUNT = AMZ_PREFIX + "tagging-count";
     public static final String AMZ_TAGGING_DIRECTIVE = AMZ_PREFIX + "tagging-directive";
+    public static final String AMZ_SERVER_SIDE_ENCRYPTION = AMZ_PREFIX + "server-side-encryption";
 
     public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";
     public static final String PARAM_ATTRIBUTES = "attributes";
