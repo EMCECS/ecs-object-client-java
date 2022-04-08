@@ -32,6 +32,7 @@ import com.emc.object.s3.bean.Upload;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.lfu.LargeFileMultipartSource;
 import com.emc.object.s3.lfu.LargeFileUploaderResumeContext;
+import com.emc.object.s3.lfu.PartMismatchException;
 import com.emc.object.s3.request.AbortMultipartUploadRequest;
 import com.emc.object.s3.request.GetObjectRequest;
 import com.emc.object.s3.request.ListMultipartUploadsRequest;
@@ -52,7 +53,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class LargeFileUploaderTest extends AbstractS3ClientTest {
-    static final int FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    static final int FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     File tempFile;
     String md5Hex;
@@ -100,7 +101,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         out.write(data);
         out.close();
 
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        LargeFileUploader uploader = new TestLargeFileUploader(client, getTestBucket(), key, file);
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
 
         // multipart
@@ -114,7 +115,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // parallel byte-range (also test metadata)
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
-        uploader = new LargeFileUploader(client, getTestBucket(), key, file);
+        uploader = new TestLargeFileUploader(client, getTestBucket(), key, file);
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
@@ -127,7 +128,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // test issue 1 (https://github.com/emcvipr/ecs-object-client-java/issues/1)
         objectMetadata = new S3ObjectMetadata();
         objectMetadata.withContentLength(size);
-        uploader = new LargeFileUploader(client, getTestBucket(), key + ".2", file);
+        uploader = new TestLargeFileUploader(client, getTestBucket(), key + ".2", file);
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
@@ -144,24 +145,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         OutputStream out = new FileOutputStream(file);
         out.write(data);
         out.close();
-        final AtomicLong completed = new AtomicLong();
-        final AtomicLong total = new AtomicLong();
-        final AtomicLong transferred = new AtomicLong();
-        ProgressListener pl = new ProgressListener() {
+        ByteProgressListener pl = new ByteProgressListener();
 
-            @Override
-            public void progress(long c, long t) {
-                completed.set(c);
-                total.set(t);
-            }
-
-            @Override
-            public void transferred(long size) {
-                transferred.addAndGet(size);
-            }
-        };
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file).withProgressListener(pl);
+        LargeFileUploader uploader = new TestLargeFileUploader(client, getTestBucket(), key, file).withProgressListener(pl);
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
 
         // multipart
@@ -170,10 +156,10 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         Assert.assertEquals(size, uploader.getBytesTransferred());
         Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
         Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(size, completed.get());
-        Assert.assertEquals(size, total.get());
-        Assert.assertTrue(String.format("Should transfer at least %d bytes but only got %d", size, transferred.get()),
-                transferred.get() >= size);
+        Assert.assertEquals(size, pl.completed.get());
+        Assert.assertEquals(size, pl.total.get());
+        Assert.assertTrue(String.format("Should transfer at least %d bytes but only got %d", size, pl.transferred.get()),
+                pl.transferred.get() >= size);
 
         client.deleteObject(getTestBucket(), key);
     }
@@ -185,7 +171,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         byte[] data = new byte[size];
         new Random().nextBytes(data);
 
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key,
+        LargeFileUploader uploader = new TestLargeFileUploader(client, getTestBucket(), key,
                 new ByteArrayInputStream(data), size);
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
 
@@ -200,7 +186,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // parallel byte-range (also test metadata)
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
-        uploader = new LargeFileUploader(client, getTestBucket(), key, new ByteArrayInputStream(data), size);
+        uploader = new TestLargeFileUploader(client, getTestBucket(), key, new ByteArrayInputStream(data), size);
         uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
@@ -215,23 +201,12 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     public void testAboveThreshold() throws Exception {
         String key = "lfu-mpu-test";
         long partSize = FILE_SIZE / 5;
-        final AtomicLong bytesTransferred = new AtomicLong(), bytesCompleted = new AtomicLong(), bytesTotal = new AtomicLong();
 
         // upload in 4MB parts
-        LargeFileUploader lfu = new LargeFileUploader(client, getTestBucket(), key, tempFile);
+        LargeFileUploader lfu = new TestLargeFileUploader(client, getTestBucket(), key, tempFile);
         lfu.withMpuThreshold(FILE_SIZE).withPartSize(partSize);
-        lfu.setProgressListener(new ProgressListener() {
-            @Override
-            public void progress(long completed, long total) {
-                bytesCompleted.set(completed);
-                bytesTotal.set(total);
-            }
-
-            @Override
-            public void transferred(long size) {
-                bytesTransferred.addAndGet(size);
-            }
-        });
+        ByteProgressListener pl = new ByteProgressListener();
+        lfu.setProgressListener(pl);
         lfu.upload();
 
         // verify MPU
@@ -241,9 +216,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // verify progress indicators
         Assert.assertEquals(FILE_SIZE, lfu.getBytesTransferred());
-        Assert.assertEquals(FILE_SIZE, bytesCompleted.get());
-        Assert.assertEquals(FILE_SIZE, bytesTotal.get());
-        Assert.assertEquals(FILE_SIZE, bytesTransferred.get());
+        Assert.assertEquals(FILE_SIZE, pl.completed.get());
+        Assert.assertEquals(FILE_SIZE, pl.total.get());
+        Assert.assertEquals(FILE_SIZE, pl.transferred.get());
 
         // verify content
         DigestInputStream dis = new DigestInputStream(client.readObjectStream(getTestBucket(), key, null),
@@ -255,23 +230,12 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     @Test
     public void testBelowThreshold() throws Exception {
         String key = "lfu-single-test";
-        final AtomicLong bytesTransferred = new AtomicLong(), bytesCompleted = new AtomicLong(), bytesTotal = new AtomicLong();
 
         // upload in single stream
-        LargeFileUploader lfu = new LargeFileUploader(client, getTestBucket(), key, tempFile);
+        LargeFileUploader lfu = new TestLargeFileUploader(client, getTestBucket(), key, tempFile);
         lfu.withMpuThreshold(FILE_SIZE + 1);
-        lfu.setProgressListener(new ProgressListener() {
-            @Override
-            public void progress(long completed, long total) {
-                bytesCompleted.set(completed);
-                bytesTotal.set(total);
-            }
-
-            @Override
-            public void transferred(long size) {
-                bytesTransferred.addAndGet(size);
-            }
-        });
+        ByteProgressListener pl = new ByteProgressListener();
+        lfu.setProgressListener(pl);
         lfu.upload();
 
         // verify no MPU
@@ -281,9 +245,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // verify progress indicators
         Assert.assertEquals(FILE_SIZE, lfu.getBytesTransferred());
-        Assert.assertEquals(FILE_SIZE, bytesCompleted.get());
-        Assert.assertEquals(FILE_SIZE, bytesTotal.get());
-        Assert.assertEquals(FILE_SIZE, bytesTransferred.get());
+        Assert.assertEquals(FILE_SIZE, pl.completed.get());
+        Assert.assertEquals(FILE_SIZE, pl.total.get());
+        Assert.assertEquals(FILE_SIZE, pl.transferred.get());
 
         // verify content
         DigestInputStream dis = new DigestInputStream(client.readObjectStream(getTestBucket(), key, null),
@@ -296,7 +260,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     public void testResumeMpuFromStream() {
         String bucket = getTestBucket();
         String key = "myprefix/mpu-resume-test-stream";
-        final long partSize = LargeFileUploader.MIN_PART_SIZE;
+        final long partSize = 500 * 1024; // 500 KiB
         final long size = 4 * partSize + 1066;
         byte[] data = new byte[(int) size];
         new Random().nextBytes(data);
@@ -325,7 +289,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         }
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), size)
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), size)
                 .withPartSize(partSize).withMpuThreshold(size).withResumeContext(resumeContext);
         lfu.doMultipartUpload();
 
@@ -363,7 +327,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         }
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource)
                 .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
         lfu.doMultipartUpload();
 
@@ -380,7 +344,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     public void testLargeFileMultiPartSource() {
         String key = "testLargeFileMultiPartSource";
         MockMultipartSource mockMultipartSource = new MockMultipartSource();
-        LargeFileUploader lfu = new LargeFileUploader(client, getTestBucket(), key, mockMultipartSource)
+        LargeFileUploader lfu = new TestLargeFileUploader(client, getTestBucket(), key, mockMultipartSource)
                 .withPartSize(mockMultipartSource.getPartSize()).withMpuThreshold((int) mockMultipartSource.getTotalSize());
         lfu.doMultipartUpload();
 
@@ -399,21 +363,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         int totalPartsToResume = 2;
         Map<Integer, MultipartPartETag> uploadedParts = new HashMap<>();
 
-        final AtomicLong completed = new AtomicLong();
-        final AtomicLong total = new AtomicLong();
-        final AtomicLong transferred = new AtomicLong();
-        ProgressListener pl = new ProgressListener() {
-            @Override
-            public void progress(long c, long t) {
-                completed.set(c);
-                total.set(t);
-            }
-
-            @Override
-            public void transferred(long size) {
-                transferred.addAndGet(size);
-            }
-        };
+        ByteProgressListener pl = new ByteProgressListener();
 
         // init MPU
         String uploadId = client.initiateMultipartUpload(bucket, key);
@@ -428,18 +378,18 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId)
                 .withUploadedParts(uploadedParts);
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource)
                 .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext)
                 .withProgressListener(pl);
         lfu.doMultipartUpload();
 
         S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long) om.getContentLength());
         Assert.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
 
         Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, completed.get());
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), total.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, pl.completed.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
     }
 
 
@@ -469,7 +419,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId)
                 .withUploadedParts(uploadedParts);
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource)
                 .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
         try {
             lfu.doMultipartUpload();
@@ -488,12 +438,23 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testResumeWithBadPart() {
+    public void testResumeWithBadPartOverwrite() {
+        testResumeWithBadPart(true);
+    }
+
+    @Test
+    public void testResumeWithBadPartNoOverwrite() {
+        testResumeWithBadPart(false);
+    }
+
+    private void testResumeWithBadPart(boolean overwriteBadPart) {
         String bucket = getTestBucket();
         String key = "mpu-resume-with-bad-part-data";
         MockMultipartSource mockMultipartSource = new MockMultipartSource();
         final long partSize = mockMultipartSource.getPartSize();
         int totalPartsToResume = 2;
+
+        ByteProgressListener pl = new ByteProgressListener();
 
         // init MPU
         String uploadId = client.initiateMultipartUpload(bucket, key);
@@ -505,7 +466,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             client.uploadPart(request);
             if (partNum == totalPartsToResume) {
                 // simulate an uploaded part got wrong data
-                byte[] data = new byte[(int)partSize];
+                byte[] data = new byte[(int) partSize];
                 new Random().nextBytes(data);
                 request = new UploadPartRequest(bucket, key, uploadId, partNum, new ByteArrayInputStream(data));
                 client.uploadPart(request);
@@ -513,21 +474,38 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         }
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource).withPartSize(partSize)
-                .withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
+        resumeContext.setOverwriteMismatchedParts(overwriteBadPart);
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource).withPartSize(partSize)
+                .withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext)
+                .withProgressListener(pl);
         try {
             lfu.doMultipartUpload();
-            Assert.fail("one of the data in uploadedParts is wrong - should abort the upload and throw an exception");
-        } catch (S3Exception e) {
-            Assert.assertEquals(400, e.getHttpCode());
-            Assert.assertEquals("InvalidPart", e.getErrorCode());
+            if (!overwriteBadPart)
+                Assert.fail("one of the data in uploadedParts is wrong - should abort the upload and throw an exception");
+        } catch (RuntimeException e) {
+            if (overwriteBadPart) throw e;
+            // root exception will be wrapped in ExecutionException and then RuntimeException
+            Assert.assertNotNull(e.getCause());
+            Assert.assertNotNull(e.getCause().getCause());
+            Assert.assertTrue(e.getCause().getCause() instanceof PartMismatchException);
+            // make sure the failed part was expected
+            Assert.assertEquals(totalPartsToResume, ((PartMismatchException) e.getCause().getCause()).getPartNumber());
         }
-        try {
-            client.listParts(bucket, key, uploadId);
-            Assert.fail("UploadId should not exist because MPU is aborted");
-        } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchUpload", e.getErrorCode());
+        if (overwriteBadPart) {
+            // should have re-uploaded the bad part, so this should be reflected in the bytes transferred
+            Assert.assertEquals(mockMultipartSource.getTotalSize() - (partSize * (totalPartsToResume - 1)), lfu.getBytesTransferred());
+            Assert.assertEquals(mockMultipartSource.getTotalSize() - (partSize * (totalPartsToResume - 1)), pl.completed.get());
+            Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
+            Assert.assertEquals(mockMultipartSource.getMpuETag(), lfu.getETag());
+        } else {
+            // MPU should be aborted because of a bad part
+            try {
+                client.listParts(bucket, key, uploadId);
+                Assert.fail("UploadId should not exist because MPU is aborted");
+            } catch (S3Exception e) {
+                Assert.assertEquals(404, e.getHttpCode());
+                Assert.assertEquals("NoSuchUpload", e.getErrorCode());
+            }
         }
     }
 
@@ -538,23 +516,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         MockMultipartSource mockMultipartSource = new MockMultipartSource();
         final long partSize = mockMultipartSource.getPartSize();
         int totalPartsToResume = 2;
-        Map<Integer, MultipartPartETag> uploadedParts = new HashMap<>();
 
-        final AtomicLong completed = new AtomicLong();
-        final AtomicLong total = new AtomicLong();
-        final AtomicLong transferred = new AtomicLong();
-        ProgressListener pl = new ProgressListener() {
-            @Override
-            public void progress(long c, long t) {
-                completed.set(c);
-                total.set(t);
-            }
-
-            @Override
-            public void transferred(long size) {
-                transferred.addAndGet(size);
-            }
-        };
+        ByteProgressListener pl = new ByteProgressListener();
 
         // init MPU
         String uploadId = client.initiateMultipartUpload(bucket, key);
@@ -575,18 +538,18 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId)
                 .withVerifyPartsFoundInTarget(false);
-        LargeFileUploader lfu = new LargeFileUploader(client, bucket, key, mockMultipartSource)
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource)
                 .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize())
                 .withResumeContext(resumeContext).withProgressListener(pl);
         lfu.doMultipartUpload();
 
         S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long) om.getContentLength());
         Assert.assertNotEquals(mockMultipartSource.getMpuETag(), om.getETag());
 
         Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, completed.get());
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), total.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, pl.completed.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
     }
 
     static class NullStream extends OutputStream {
@@ -605,8 +568,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
     static class MockMultipartSource implements LargeFileMultipartSource {
         private static byte[] MPS_PARTS;
-        private static final long partSize = LargeFileUploader.MIN_PART_SIZE;
-        private static final long totalSize = partSize * 4 + 123;
+        private static final long partSize = 500 * 1024; // 500 KiB
+        private static final long totalSize = partSize * 4 + 123; // 5 parts
 
         public MockMultipartSource() {
             synchronized (MockMultipartSource.class) {
@@ -636,14 +599,31 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         public String getMpuETag() {
             List<MultipartPartETag> partETags = new ArrayList<>();
-            int totalParts =(int) ((totalSize - 1) / partSize + 1);
+            int totalParts = (int) ((totalSize - 1) / partSize + 1);
             for (int i = 0; i < totalParts; i++) {
                 int from = (int) partSize * i;
                 int to = (int) (from + partSize);
-                partETags.add(new MultipartPartETag(i + 1, DigestUtils.md5Hex(Arrays.copyOfRange(MPS_PARTS, from, to <= getTotalSize() ? to : (int)getTotalSize()))));
+                partETags.add(new MultipartPartETag(i + 1, DigestUtils.md5Hex(Arrays.copyOfRange(MPS_PARTS, from, to <= getTotalSize() ? to : (int) getTotalSize()))));
             }
             return LargeFileUploader.getMpuETag(partETags);
         }
 
+    }
+
+    static class ByteProgressListener implements ProgressListener {
+        final AtomicLong completed = new AtomicLong();
+        final AtomicLong total = new AtomicLong();
+        final AtomicLong transferred = new AtomicLong();
+
+        @Override
+        public void progress(long c, long t) {
+            completed.set(c);
+            total.set(t);
+        }
+
+        @Override
+        public void transferred(long size) {
+            transferred.addAndGet(size);
+        }
     }
 }

@@ -25,30 +25,28 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.object.s3.lfu;
+package com.emc.object.s3;
 
-public class PartMismatchException extends RuntimeException {
-    private final int partNumber;
-    private final String sourceETag;
-    private final String uploadedETag;
+import com.emc.object.s3.lfu.LargeFileMultipartSource;
 
-    public PartMismatchException(int partNumber, String sourceETag, String uploadedETag) {
-        super(String.format("when verifying partNumber %d for resume, the source ETag (%s) != the uploaded ETag (%s)",
-                partNumber, sourceETag, uploadedETag));
-        this.partNumber = partNumber;
-        this.sourceETag = sourceETag;
-        this.uploadedETag = uploadedETag;
+import java.io.File;
+import java.io.InputStream;
+
+public class TestLargeFileUploader extends LargeFileUploader {
+    public TestLargeFileUploader(S3Client s3Client, String bucket, String key, File file) {
+        super(s3Client, bucket, key, file);
     }
 
-    public int getPartNumber() {
-        return partNumber;
+    public TestLargeFileUploader(S3Client s3Client, String bucket, String key, InputStream stream, long size) {
+        super(s3Client, bucket, key, stream, size);
     }
 
-    public String getSourceETag() {
-        return sourceETag;
+    public TestLargeFileUploader(S3Client s3Client, String bucket, String key, LargeFileMultipartSource multipartSource) {
+        super(s3Client, bucket, key, multipartSource);
     }
 
-    public String getUploadedETag() {
-        return uploadedETag;
+    @Override
+    protected long getMinPartSize() {
+        return 100 * 1024; // 100 KiB for testing
     }
 }

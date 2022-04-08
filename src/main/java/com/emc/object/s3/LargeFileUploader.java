@@ -157,6 +157,10 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         upload();
     }
 
+    protected long getMinPartSize() {
+        return MIN_PART_SIZE;
+    }
+
     protected String putObject(InputStream is) {
         PutObjectRequest putRequest = new PutObjectRequest(bucket, key, is);
         putRequest.setObjectMetadata(objectMetadata);
@@ -200,7 +204,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     protected String completeMpu(String uploadId, SortedSet<MultipartPartETag> parts) {
         CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
         CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(compRequest);
-        return result.getETag();
+        return result.getRawETag();
     }
 
     protected void abortMpu(String uploadId) {
@@ -282,9 +286,6 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             };
         }
 
-        // track progress
-        is = new ProgressInputStream(is, this);
-
         return is;
     }
 
@@ -303,16 +304,17 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             };
         }
 
-        // track progress
-        is = new ProgressInputStream(is, this);
-
         return is;
+    }
+
+    protected InputStream monitorStream(InputStream stream) {
+        return new ProgressInputStream(stream, this);
     }
 
     public void doSinglePut() {
         configure();
 
-        try (InputStream is = getSourceCompleteDataStream()) {
+        try (InputStream is = monitorStream(getSourceCompleteDataStream())) {
             eTag = putObject(is);
         } catch (IOException e) {
             throw new RuntimeException("Error opening file", e);
@@ -396,7 +398,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                     if (resumeContext.isVerifyPartsFoundInTarget()) {
                         futures.add(CompletableFuture // need to use CompletableFuture to allow chained execution
                                 // first, verify the part ETag by re-reading form source
-                                .supplyAsync(new VerifySourcePartTask(partNumber, offset, length, existingMpuParts.get(partNumber).getETag()), executorService)
+                                .supplyAsync(new VerifySourcePartTask(partNumber, offset, length, existingMpuParts.get(partNumber).getRawETag()), executorService)
                                 // then, if the part is invalid (throws PartMismatchException), re-upload it (if configured to do so)
                                 .exceptionally(partMismatchHandler(resumeContext.getUploadId(), partNumber, offset, length)));
                     } else {
@@ -423,7 +425,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             }
 
             // complete MP upload
-            eTag = completeMpu(resumeContext.getUploadId(), new TreeSet<>(resumeContext.getUploadedParts().values()));
+            if (active.get()) {
+                eTag = completeMpu(resumeContext.getUploadId(), new TreeSet<>(resumeContext.getUploadedParts().values()));
+            }
 
         } catch (Exception e) {
             // abort MP upload
@@ -440,8 +444,10 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException("error during upload", e);
         } finally {
+            active.set(false);
+
             // make sure all spawned threads are shut down
-            if (!externalExecutorService) executorService.shutdown();
+            if (!externalExecutorService) executorService.shutdownNow();
 
             // make sure we close the input stream if necessary
             if (stream != null && closeStream) {
@@ -456,6 +462,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
     private Function<Throwable, ? extends MultipartPartETag> partMismatchHandler(String uploadId, int partNumber, long offset, long length) {
         return throwable -> {
+            // peel off the execution exception
+            if (throwable instanceof CompletionException) throwable = throwable.getCause();
             if (resumeContext.isOverwriteMismatchedParts() && throwable instanceof PartMismatchException) {
                 log.warn(throwable.getMessage()); // log details about the part that was mismatched
                 log.info("overwriting partNumber {} due to ETag mismatch", partNumber);
@@ -543,7 +551,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         // make sure content-length isn't set
         if (objectMetadata != null) objectMetadata.setContentLength(null);
 
-        long minPartSize = Math.max(MIN_PART_SIZE, fullSize / MAX_PARTS + 1);
+        long minPartSize = Math.max(getMinPartSize(), fullSize / MAX_PARTS + 1);
         log.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
 
         if (partSize == null) partSize = minPartSize;
@@ -816,7 +824,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             } else {
                 log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
                         bucket, key, uploadId, partNumber, offset, length);
-                try (InputStream is = getSourcePartDataStream(offset, length)) {
+                try (InputStream is = monitorStream(getSourcePartDataStream(offset, length))) {
                     return uploadPart(uploadId, partNumber, is, length);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -836,7 +844,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
         @Override
         public String call() {
-            try (InputStream is = getSourcePartDataStream(offset, length)) {
+            try (InputStream is = monitorStream(getSourcePartDataStream(offset, length))) {
                 Range range = Range.fromOffsetLength(offset, length);
 
                 PutObjectRequest request = new PutObjectRequest(bucket, key, is).withRange(range);
