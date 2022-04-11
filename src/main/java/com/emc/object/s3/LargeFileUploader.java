@@ -85,6 +85,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private long fullSize;
     private final AtomicLong bytesTransferred = new AtomicLong();
     private String eTag;
+    private String versionId;
 
     private S3ObjectMetadata objectMetadata;
     private AccessControlList acl;
@@ -201,10 +202,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return s3Client.uploadPart(request);
     }
 
-    protected String completeMpu(String uploadId, SortedSet<MultipartPartETag> parts) {
+    protected CompleteMultipartUploadResult completeMpu(String uploadId, SortedSet<MultipartPartETag> parts) {
         CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
-        CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(compRequest);
-        return result.getRawETag();
+        return s3Client.completeMultipartUpload(compRequest);
     }
 
     protected void abortMpu(String uploadId) {
@@ -250,6 +250,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 if (resumeContext != null && resumeContext.getUploadId() != null) {
                     // this should interrupt existing part transfers, but we will not wait for them anyway
                     abortMpu(resumeContext.getUploadId());
+                    resumeContext.setUploadId(null);
+                    resumeContext.setUploadedParts(null);
                 }
                 executorService.shutdownNow(); // immediately terminates thread pool and interrupts any running threads
             }
@@ -419,14 +421,17 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             for (Future<MultipartPartETag> future : futures) {
                 try {
                     resumeContext.getUploadedParts().put(future.get().getPartNumber(), future.get());
-                } catch (CancellationException ignored) {
-                    // this is only thrown when we are terminated early - cancelled tasks will just be ignored
+                } catch (ExecutionException e) { // unfortunately, we can't just catch CancellationException here
+                    // CancellationException is only thrown when we are terminated early - cancelled tasks will just be ignored
+                    if (e.getCause() == null || !(e.getCause() instanceof CancellationException)) throw e;
                 }
             }
 
             // complete MP upload
             if (active.get()) {
-                eTag = completeMpu(resumeContext.getUploadId(), new TreeSet<>(resumeContext.getUploadedParts().values()));
+                CompleteMultipartUploadResult result = completeMpu(resumeContext.getUploadId(), new TreeSet<>(resumeContext.getUploadedParts().values()));
+                eTag = result.getRawETag();
+                versionId = result.getVersionId();
             }
 
         } catch (Exception e) {
@@ -609,8 +614,18 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return bytesTransferred.get();
     }
 
+    /**
+     * Returns the result ETag after an upload is successfully complete.
+     */
     public String getETag() {
         return eTag;
+    }
+
+    /**
+     * Returns the result versionId after an upload is successfully completed to a version-enabled bucket.
+     */
+    public String getVersionId() {
+        return versionId;
     }
 
     public S3ObjectMetadata getObjectMetadata() {
