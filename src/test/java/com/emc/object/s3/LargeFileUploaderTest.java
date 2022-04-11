@@ -27,10 +27,12 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.bean.GetObjectResult;
+import com.emc.object.s3.bean.MultipartPart;
 import com.emc.object.s3.bean.MultipartPartETag;
 import com.emc.object.s3.bean.Upload;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.lfu.LargeFileMultipartSource;
+import com.emc.object.s3.lfu.LargeFileUpload;
 import com.emc.object.s3.lfu.LargeFileUploaderResumeContext;
 import com.emc.object.s3.lfu.PartMismatchException;
 import com.emc.object.s3.request.AbortMultipartUploadRequest;
@@ -552,6 +554,116 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
     }
 
+    @Test
+    public void testPauseResume() throws Exception {
+        String bucket = getTestBucket();
+        String key = "mpu-pause";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        // 1-second delay before yielding part streams
+        // this allows us to time the start of the first 2 part uploads accurately
+        mockMultipartSource.setPartDelayMs(2000);
+        final long partSize = mockMultipartSource.getPartSize();
+
+        ByteProgressListener pl = new ByteProgressListener();
+
+        // set 2 threads and pause immediately - only 2 parts should be uploaded
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize())
+                .withThreads(2).withProgressListener(pl);
+        LargeFileUpload upload = lfu.uploadAsync();
+
+        // wait for first 2 parts to start streaming
+        Thread.sleep(2000);
+
+        LargeFileUploaderResumeContext resumeContext = upload.pause();
+
+        // object should not exist
+        try {
+            Assert.assertNull(client.getObjectMetadata(bucket, key));
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
+
+        // check resume context accuracy
+        Assert.assertNotNull(resumeContext.getUploadId());
+        Assert.assertNotNull(resumeContext.getUploadedParts());
+        Assert.assertEquals(2, resumeContext.getUploadedParts().size());
+
+        // check only the bytes of 2 parts were xferred
+        Assert.assertEquals(2 * partSize, pl.transferred.get());
+        Assert.assertEquals(2 * partSize, pl.completed.get());
+
+        // make sure only 2 parts were uploaded and the ETags match our list
+        List<MultipartPart> parts = client.listParts(getTestBucket(), key, resumeContext.getUploadId()).getParts();
+        Assert.assertNotNull(parts);
+        Assert.assertEquals(2, parts.size());
+        Assert.assertEquals(parts.get(0).getRawETag(), resumeContext.getUploadedParts().get(1).getRawETag());
+        Assert.assertEquals(parts.get(1).getRawETag(), resumeContext.getUploadedParts().get(2).getRawETag());
+
+        // disable delay in part streams
+        mockMultipartSource.setPartDelayMs(0);
+        pl = new ByteProgressListener();
+        lfu = new TestLargeFileUploader(client, getTestBucket(), key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize())
+                .withProgressListener(pl).withResumeContext(resumeContext);
+
+        lfu.doMultipartUpload();
+
+        // check complete object
+        Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
+
+        // check only remaining parts were uploaded
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.transferred.get());
+        Assert.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.completed.get());
+    }
+
+    @Test
+    public void testAbort() throws Exception {
+        String bucket = getTestBucket();
+        String key = "mpu-abort";
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        // 1-second delay before yielding part streams
+        // this allows us to time the start of the first 2 part uploads accurately
+        mockMultipartSource.setPartDelayMs(2000);
+        final long partSize = mockMultipartSource.getPartSize();
+
+        // set 2 threads and pause immediately - only 2 parts should be uploaded
+        LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, mockMultipartSource)
+                .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize())
+                .withThreads(2);
+        LargeFileUpload upload = lfu.uploadAsync();
+
+        // wait for first 4 parts to start streaming
+        Thread.sleep(3000);
+
+        // make sure the upload was started
+        Assert.assertEquals(1, client.listMultipartUploads(getTestBucket()).getUploads().size());
+
+        // abort it
+        long abortStart = System.currentTimeMillis();
+        upload.abort();
+        long abortDone = System.currentTimeMillis();
+
+        // this should be immediate (< 500ms)
+        Assert.assertTrue(abortDone - abortStart < 500);
+
+        // make sure resume context is cleared
+        Assert.assertNull(lfu.getResumeContext().getUploadId());
+        Assert.assertNull(lfu.getResumeContext().getUploadedParts());
+
+        // object should not exist
+        try {
+            Assert.assertNull(client.getObjectMetadata(bucket, key));
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
+
+        // upload should not exist
+        Assert.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
+    }
+
     static class NullStream extends OutputStream {
         @Override
         public void write(int b) {
@@ -570,6 +682,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         private static byte[] MPS_PARTS;
         private static final long partSize = 500 * 1024; // 500 KiB
         private static final long totalSize = partSize * 4 + 123; // 5 parts
+        private long partDelayMs = 0;
 
         public MockMultipartSource() {
             synchronized (MockMultipartSource.class) {
@@ -590,6 +703,10 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         @Override
         public InputStream getPartDataStream(long offset, long length) {
+            if (partDelayMs > 0) try {
+                Thread.sleep(partDelayMs);
+            } catch (InterruptedException ignored) {
+            }
             return new ByteArrayInputStream(Arrays.copyOfRange(getTotalBytes(), (int) offset, (int) (offset + length)));
         }
 
@@ -608,6 +725,13 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             return LargeFileUploader.getMpuETag(partETags);
         }
 
+        public long getPartDelayMs() {
+            return partDelayMs;
+        }
+
+        public void setPartDelayMs(long partDelayMs) {
+            this.partDelayMs = partDelayMs;
+        }
     }
 
     static class ByteProgressListener implements ProgressListener {
