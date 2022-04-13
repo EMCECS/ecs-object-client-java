@@ -53,7 +53,9 @@ import java.util.stream.Collectors;
 /**
  * Convenience class to facilitate multipart upload for large files. This class will split the file
  * and upload it in parts, transferring several parts simultaneously to maximize efficiency.
- * If any errors occur during the upload, the target object will be deleted (any created MPU will be aborted).
+ * If any errors occur during the upload, the target object will not exist (byte-range uploaded objects will be deleted
+ * and any created MPU will be aborted),
+ * unless the upload is an MPU and {@link #isAbortMpuOnFailure()} is false, in which case, the MPU will be preserved.
  */
 public class LargeFileUploader implements Runnable, ProgressListener {
 
