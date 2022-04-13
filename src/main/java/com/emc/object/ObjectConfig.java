@@ -33,6 +33,7 @@ import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.api.client.config.ClientConfig;
+import org.apache.http.params.CoreConnectionPNames;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,6 +212,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
 
         // CONNECT_TIMEOUT
         smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, connectTimeout);
+        // apache client uses a different property
+        smartConfig.setProperty(CoreConnectionPNames.CONNECTION_TIMEOUT, connectTimeout);
 
         // READ_TIMEOUT
         smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, readTimeout);
@@ -430,21 +433,27 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         return connectTimeout;
     }
 
-    public void setConnectTimeout(int connectTimeout) {this.connectTimeout = connectTimeout; }
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
 
     @ConfigUriProperty
     public int getReadTimeout() {
         return readTimeout;
     }
 
-    public void setReadTimeout(int readTimeout) {this.readTimeout = readTimeout; }
+    public void setReadTimeout(int readTimeout) {
+        this.readTimeout = readTimeout;
+    }
 
     @ConfigUriProperty
     public String getSessionToken() {
         return sessionToken;
     }
 
-    public void setSessionToken(String sessionToken) {this.sessionToken = sessionToken; }
+    public void setSessionToken(String sessionToken) {
+        this.sessionToken = sessionToken;
+    }
 
     @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {

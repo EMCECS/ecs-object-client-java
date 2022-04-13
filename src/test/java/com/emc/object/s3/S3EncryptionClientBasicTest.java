@@ -377,17 +377,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
-    public void testLargeFileUploader() {
-    }
-
-    @Ignore
-    @Override
     public void testMultiThreadMultipartUploadListPartsPagination() {
-    }
-
-    @Ignore
-    @Override
-    public void testLargeFileDownloader() {
     }
 
     @Ignore
@@ -505,16 +495,6 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     @Ignore
     @Override
     public void testMpuAbortInMiddle() {
-    }
-
-    @Ignore
-    @Override
-    public void testLargeFileUploaderStream() {
-    }
-
-    @Ignore
-    @Override
-    public void testLargeFileUploaderProgressListener() {
     }
 
     @Ignore

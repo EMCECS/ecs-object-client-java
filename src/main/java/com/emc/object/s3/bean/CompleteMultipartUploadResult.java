@@ -26,6 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
+import com.emc.object.ObjectResponse;
+import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -33,7 +35,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 @XmlRootElement(name = "CompleteMultipartUploadResult")
-public class CompleteMultipartUploadResult {
+public class CompleteMultipartUploadResult extends ObjectResponse {
     private String location;
     private String bucketName;
     private String key;
@@ -78,5 +80,10 @@ public class CompleteMultipartUploadResult {
 
     public void setETag(String eTag) {
         this.eTag = eTag;
+    }
+
+    @XmlTransient
+    public String getVersionId() {
+        return firstHeader(S3Constants.AMZ_VERSION_ID);
     }
 }

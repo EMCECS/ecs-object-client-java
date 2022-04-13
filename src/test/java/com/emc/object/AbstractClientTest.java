@@ -37,12 +37,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.Random;
+import java.util.UUID;
 
 @RunWith(ConcurrentJunitRunner.class)
 public abstract class AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractClientTest.class);
-    private static final Random random = new Random();
-    private final ThreadLocal<String> testBucket = new ThreadLocal<String>();
+    private final ThreadLocal<String> testBucket = new ThreadLocal<>();
 
     /**
      * Implement to initialize the object client to be used for each test. Each subclass must keep a reference to the
@@ -82,7 +82,10 @@ public abstract class AbstractClientTest {
         log.info("initializing client");
         initClient();
 
-        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + (random.nextInt(89999) + 10000));
+        String uuid = UUID.randomUUID().toString();
+
+        // {prefix}-{$USER}-{uuid[-6]}
+        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + uuid.substring(uuid.length() - 6));
         log.info("creating test bucket " + getTestBucket());
         createBucket(getTestBucket());
     }
