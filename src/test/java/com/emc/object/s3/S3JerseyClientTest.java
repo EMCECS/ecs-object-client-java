@@ -63,14 +63,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
-    private boolean testIAM = false;
+    protected boolean testIAM = false;
 
-    protected boolean isIAMUser() {
+    @Before
+    public void checkIamUser() {
         try {
             Properties props = TestConfig.getProperties();
-            return Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
-        } catch (Exception e) {
-            return false;
+            testIAM = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
+        } catch (Exception ignored) {
         }
     }
 
@@ -81,7 +81,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Override
     public S3Client createS3Client() throws Exception {
-        testIAM = isIAMUser();
         return new S3JerseyClient(createS3Config());
     }
 
@@ -180,6 +179,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateFilesystemBucket() {
+        Assume.assumeFalse("FS buckets are not supported with IAM user.", testIAM);
+
         String bucketName = getTestBucket() + "-y";
 
         client.createBucket(new CreateBucketRequest(bucketName).withFileSystemEnabled(true));
@@ -383,7 +384,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteObject(request);
             Assert.fail("expected 403");
-        }catch (S3Exception e) {
+        } catch (S3Exception e) {
             Assert.assertEquals(403, e.getHttpCode());
         }
 
@@ -505,7 +506,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSetGetBucketAcl() throws Exception {
-        String identity = createS3Config().getIdentity();
+        // need to get canonical user ID from bucket ACL (for IAM users, this is different from the access key)
+        String identity = client.getBucketAcl(getTestBucket()).getOwner().getId();
         CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
         acl.setOwner(owner);
@@ -518,7 +520,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSetBucketAclCanned() throws Exception {
-        String identity = createS3Config().getIdentity();
+        // need to get canonical user ID from bucket ACL (for IAM users, this is different from the access key)
+        String identity = client.getBucketAcl(getTestBucket()).getOwner().getId();
         CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
         acl.setOwner(owner);
@@ -789,6 +792,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void listObjectsWithPercentAndUrlEncoding() {
+        String key1 = "f%o%%o", key2 = "fo%%o", key3 = "fo%o", content = "Hello List Percent!";
+        client.putObject(getTestBucket(), key1, content, null);
+        client.putObject(getTestBucket(), key2, content, null);
+        client.putObject(getTestBucket(), key3, content, null);
+
+        ListObjectsRequest request = new ListObjectsRequest(getTestBucket()).withEncodingType(EncodingType.url);
+        ListObjectsResult result = client.listObjects(request);
+        Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
+
+        List<S3Object> resultObjects = result.getObjects();
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(3, resultObjects.size());
+
+        Assert.assertEquals(key1, resultObjects.get(0).getKey());
+        Assert.assertEquals(key2, resultObjects.get(1).getKey());
+        Assert.assertEquals(key3, resultObjects.get(2).getKey());
+    }
+
+    @Test
     public void testListAndReadVersions() throws Exception {
         // turn on versioning first
         client.setBucketVersioning(getTestBucket(),
@@ -862,8 +885,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         assertForListVersionsPaging(versions.size(), requestCount);
     }
 
-    protected void assertForListVersionsPaging(int size, int requestCount)
-    {
+    protected void assertForListVersionsPaging(int size, int requestCount) {
         Assert.assertEquals("The correct number of versions were NOT returned", 6, size);
         Assert.assertEquals("should be 3 pages", 3, requestCount);
     }
@@ -1264,6 +1286,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testServerSideEncryption() {
+        String key = "object-with-serverside-encryption";
+        String content = "Hello SSE-S3!";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
+        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        objectMetadata = client.getObjectMetadata(getTestBucket(), key);
+        Assert.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+    }
+
+    @Test
     public void testCreateObjectWithRetentionPeriod() throws Exception {
         String key = "object-in-retention";
         String content = "Hello Retention!";
@@ -1381,14 +1414,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
                 Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
-            }
-            else if (part.getPartNumber() == 2) {
+            } else if (part.getPartNumber() == 2) {
                 Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
-            }
-            else if (part.getPartNumber() == 3) {
+            } else if (part.getPartNumber() == 3) {
                 Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
-            }
-            else {
+            } else {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
             }
         }
@@ -2220,15 +2250,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (AbstractDeleteResult result : resultList) {
             if (result instanceof DeleteError) {
                 this.inspectDeleteError((DeleteError) result);
-            }
-            else {
+            } else {
                 this.inspectDeleteSuccess((DeleteSuccess) result);
             }
         }
     }
+
     protected void inspectDeleteError(DeleteError deleteResult) {
         Assert.assertNotNull(deleteResult);
     }
+
     protected void inspectDeleteSuccess(DeleteSuccess deleteResult) {
         Assert.assertNotNull(deleteResult);
     }
@@ -2245,7 +2276,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectMetadata(getTestBucket(), key);
             Assert.fail("expected 404 Not Found");
-        } catch(S3Exception e) {
+        } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
         }
     }
@@ -2620,6 +2651,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 future.get();
             } catch (Throwable e) {
                 while (e.getCause() != null && e.getCause() != e) e = e.getCause();
+                // some versions of ECS reset the socket of ongoing uploads after an abort
                 if (e instanceof SocketException && (e.getMessage().startsWith("Broken pipe")
                         || e.getMessage().startsWith("Connection reset by peer")
                         || e.getMessage().startsWith("Software caused connection abort")))

@@ -29,6 +29,7 @@ package com.emc.object.s3;
 import com.emc.object.s3.bean.ObjectLockLegalHold;
 import com.emc.object.s3.bean.ObjectLockRetention;
 import com.emc.object.s3.bean.ObjectLockRetentionMode;
+import com.emc.object.s3.bean.SseAlgorithm;
 import com.emc.object.util.RestUtil;
 
 import java.time.ZonedDateTime;
@@ -54,6 +55,7 @@ public class S3ObjectMetadata {
     private String versionId;
     private ObjectLockLegalHold objectLockLegalHold;
     private ObjectLockRetention objectLockRetention;
+    private SseAlgorithm serverSideEncryption;
     private Map<String, String> userMetadata = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
 
     public static <T> S3ObjectMetadata fromHeaders(Map<String, List<T>> headers) {
@@ -85,6 +87,8 @@ public class S3ObjectMetadata {
         objectMetadata.userMetadata = getUserMetadata(headers);
         objectMetadata.objectLockLegalHold = getObjectLockLegalHold(headers);
         objectMetadata.objectLockRetention = getObjectLockRetention(headers);
+        objectMetadata.serverSideEncryption = SseAlgorithm.fromHeaderValue(
+                RestUtil.getFirstAsString(headers, S3Constants.AMZ_SERVER_SIDE_ENCRYPTION));
         return objectMetadata;
     }
 
@@ -168,6 +172,8 @@ public class S3ObjectMetadata {
             RestUtil.putSingle(headers, S3Constants.AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE,
                     RestUtil.iso8601MillisecondFormatter.format(objectLockRetention.getRetainUntilDate().toInstant()));
         }
+        if (serverSideEncryption != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_SERVER_SIDE_ENCRYPTION, serverSideEncryption.getHeaderValue());
 
         headers.putAll(getUmdHeaders(userMetadata));
         return headers;
@@ -336,6 +342,17 @@ public class S3ObjectMetadata {
         this.objectLockRetention = objectLockRetention;
     }
 
+    public SseAlgorithm getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    /**
+     * @param serverSideEncryption  the SseAlgorithm only supports AES256, AWS KMS is not supported.
+     */
+    public void setServerSideEncryption(SseAlgorithm serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+    }
+
     public S3ObjectMetadata addUserMetadata(String name, String value) {
         userMetadata.put(name, value);
         return this;
@@ -402,6 +419,14 @@ public class S3ObjectMetadata {
 
     public S3ObjectMetadata withObjectLockRetention(ObjectLockRetention objectLockRetention) {
         setObjectLockRetention(objectLockRetention);
+        return this;
+    }
+
+    /**
+     * @param serverSideEncryption  the SseAlgorithm only supports AES256, AWS KMS is not supported.
+     */
+    public S3ObjectMetadata withServerSideEncryption(SseAlgorithm serverSideEncryption) {
+        setServerSideEncryption(serverSideEncryption);
         return this;
     }
 }
