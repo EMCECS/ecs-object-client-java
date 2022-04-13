@@ -45,17 +45,10 @@ import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -2713,20 +2706,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         int SOCKET_TIMEOUT_MILLIS = 1000; // 1 second
         int CONNECTION_TIMEOUT_MILLIS = 1000; // 1 second
 
-        HttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
-        HttpConnectionParams.setSoTimeout(httpParams, SOCKET_TIMEOUT_MILLIS);
-
-        s3Config.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
+        s3Config.setConnectTimeout(CONNECTION_TIMEOUT_MILLIS);
+        s3Config.setReadTimeout(SOCKET_TIMEOUT_MILLIS);
 
         final S3Client s3Client = new S3JerseyClient(s3Config);
 
-        Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
-            @Override
-            public void run() {
-                s3Client.pingNode("8.8.4.4");
-                Assert.fail("response was not expected; choose an IP that is not in use");
-            }
+        Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
+            s3Client.pingNode("8.8.4.4");
+            Assert.fail("response was not expected; choose an IP that is not in use");
         });
 
         try {
