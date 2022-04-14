@@ -61,8 +61,10 @@ repositories {
 dependencies {
     implementation 'com.emc.ecs:smart-client-ecs:3.0.0'
     implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
-    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.13.2'
-    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.13.2'
+    // NOTE: Jackson 2.13 dropped support for JAX-RS 1.x, and we use Jersey client 1.x, so we are stuck on Jackson 1.12.x
+    // ref: https://github.com/FasterXML/jackson-jaxrs-providers/issues/90#issuecomment-1081368194
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.6'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.6'
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
@@ -81,7 +83,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.36'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.17.1'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.17.2'
 }
 
 allprojects {
