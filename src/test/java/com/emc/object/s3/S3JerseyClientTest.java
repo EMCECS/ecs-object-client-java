@@ -35,7 +35,6 @@ import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.ProgressListener;
 import com.emc.object.util.RestUtil;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.Host;
@@ -46,13 +45,9 @@ import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
 import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +61,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
@@ -686,7 +680,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
-    @Test // TODO: blocked by STORAGE-6791
+    @Test // bug-ref: STORAGE-6791
     public void testListObjectsPagingWithEncodedDelim() {
         String prefix = "test\u001dDelim/", delim = "/", key = "foo\u001dbar", content = "Hello List Delim!";
         client.putObject(getTestBucket(), prefix + key + 1, content, null);
@@ -1350,150 +1344,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testLargeFileUploader() throws Exception {
-        String key = "large-file-uploader.bin";
-        int size = 20 * 1024 * 1024 + 123; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-        File file = File.createTempFile("large-file-uploader-test", null);
-        file.deleteOnExit();
-        OutputStream out = new FileOutputStream(file);
-        out.write(data);
-        out.close();
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-
-        // multipart
-        uploader.doMultipartUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-
-        client.deleteObject(getTestBucket(), key);
-
-        // parallel byte-range (also test metadata)
-        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
-        uploader = new LargeFileUploader(client, getTestBucket(), key, file);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-        uploader.setObjectMetadata(objectMetadata);
-        uploader.doByteRangeUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
-
-        // test issue 1 (https://github.com/emcvipr/ecs-object-client-java/issues/1)
-        objectMetadata = new S3ObjectMetadata();
-        objectMetadata.withContentLength(size);
-        uploader = new LargeFileUploader(client, getTestBucket(), key + ".2", file);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-        uploader.setObjectMetadata(objectMetadata);
-        uploader.doByteRangeUpload();
-    }
-
-    @Test
-    public void testLargeFileUploaderProgressListener() throws Exception {
-        String key = "large-file-uploader.bin";
-        int size = 20 * 1024 * 1024 + 123; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-        File file = File.createTempFile("large-file-uploader-test", null);
-        file.deleteOnExit();
-        OutputStream out = new FileOutputStream(file);
-        out.write(data);
-        out.close();
-        final AtomicLong completed = new AtomicLong();
-        final AtomicLong total = new AtomicLong();
-        final AtomicLong transferred = new AtomicLong();
-        ProgressListener pl = new ProgressListener() {
-
-            @Override
-            public void progress(long c, long t) {
-                completed.set(c);
-                total.set(t);
-            }
-
-            @Override
-            public void transferred(long size) {
-                transferred.addAndGet(size);
-            }
-        };
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key, file).withProgressListener(pl);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-
-        // multipart
-        uploader.doMultipartUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(size, completed.get());
-        Assert.assertEquals(size, total.get());
-        Assert.assertTrue(String.format("Should transfer at least %d bytes but only got %d", size, transferred.get()),
-                transferred.get() >= size);
-
-        client.deleteObject(getTestBucket(), key);
-    }
-
-    @Test
-    public void testLargeFileUploaderStream() throws Exception {
-        String key = "large-file-uploader-stream.bin";
-        int size = 20 * 1024 * 1024 + 123; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-
-        LargeFileUploader uploader = new LargeFileUploader(client, getTestBucket(), key,
-                new ByteArrayInputStream(data), size);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-
-        // multipart
-        uploader.doMultipartUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-
-        client.deleteObject(getTestBucket(), key);
-
-        // parallel byte-range (also test metadata)
-        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
-        uploader = new LargeFileUploader(client, getTestBucket(), key, new ByteArrayInputStream(data), size);
-        uploader.setPartSize(LargeFileUploader.MIN_PART_SIZE);
-        uploader.setObjectMetadata(objectMetadata);
-        uploader.doByteRangeUpload();
-
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
-    }
-
-    @Test
-    public void testLargeFileDownloader() throws Exception {
-        String key = "large-file-downloader.bin";
-        int size = 20 * 1024 * 1024 + 179; // > 20MB
-        byte[] data = new byte[size];
-        new Random().nextBytes(data);
-        client.putObject(getTestBucket(), key, data, null);
-
-        File file = File.createTempFile("large-file-uploader-test", null);
-        file.deleteOnExit();
-        LargeFileDownloader downloader = new LargeFileDownloader(client, getTestBucket(), key, file);
-        downloader.run();
-
-        byte[] readData = new byte[size];
-        RandomAccessFile raf = new RandomAccessFile(file, "rw");
-        raf.read(readData);
-        raf.close();
-
-        Assert.assertArrayEquals(data, readData);
-    }
-
-    @Test
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
         Assert.assertNotNull(lc);
@@ -2115,7 +1965,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
-    @Test // TODO: blocked by STORAGE-12050
+    @Test // bug-ref: blocked by STORAGE-12050
     public void testCopyObjectWithMeta() throws Exception {
         String key1 = "object1", key2 = "object2", key3 = "object3";
         String content = "Hello copy with meta!";
@@ -2172,7 +2022,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
-    @Test // TODO: blocked by STORAGE-29721
+    @Test // bug-ref: blocked by STORAGE-29721
     public void testUpdateMetadata() {
         String key = "update-metadata";
         String content = "Hello update meta!";
@@ -2890,20 +2740,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         int SOCKET_TIMEOUT_MILLIS = 1000; // 1 second
         int CONNECTION_TIMEOUT_MILLIS = 1000; // 1 second
 
-        HttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
-        HttpConnectionParams.setSoTimeout(httpParams, SOCKET_TIMEOUT_MILLIS);
-
-        s3Config.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
+        s3Config.setConnectTimeout(CONNECTION_TIMEOUT_MILLIS);
+        s3Config.setReadTimeout(SOCKET_TIMEOUT_MILLIS);
 
         final S3Client s3Client = new S3JerseyClient(s3Config);
 
-        Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
-            @Override
-            public void run() {
-                s3Client.pingNode("8.8.4.4");
-                Assert.fail("response was not expected; choose an IP that is not in use");
-            }
+        Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
+            s3Client.pingNode("8.8.4.4");
+            Assert.fail("response was not expected; choose an IP that is not in use");
         });
 
         try {

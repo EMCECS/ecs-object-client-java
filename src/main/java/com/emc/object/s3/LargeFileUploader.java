@@ -28,31 +28,34 @@ package com.emc.object.s3;
 
 import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
+import com.emc.object.s3.lfu.*;
 import com.emc.object.s3.request.*;
-import com.emc.object.util.InputStreamSegment;
 import com.emc.object.util.ProgressInputStream;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.util.SizedInputStream;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Convenience class to facilitate multipart upload for large files. This class will split the file
  * and upload it in parts, transferring several parts simultaneously to maximize efficiency.
+ * If any errors occur during the upload, the target object will not exist (byte-range uploaded objects will be deleted
+ * and any created MPU will be aborted),
+ * unless the upload is an MPU and {@link #isAbortMpuOnFailure()} is false, in which case, the MPU will be preserved.
  */
 public class LargeFileUploader implements Runnable, ProgressListener {
 
@@ -66,14 +69,25 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     public static final long DEFAULT_PART_SIZE = 128 * 1024 * 1024; // 128MB
     public static final int MAX_PARTS = 10000;
 
-    private S3Client s3Client;
-    private String bucket;
-    private String key;
-    private File file;
-    private InputStream stream;
+    public static String getMpuETag(List<MultipartPartETag> partETags) {
+        String aggHexString = partETags.stream().map(MultipartPartETag::getETag).collect(Collectors.joining(""));
+
+        byte[] rawBytes = DatatypeConverter.parseHexBinary(aggHexString);
+
+        return DigestUtils.md5Hex(rawBytes) + "-" + partETags.size();
+    }
+
+    private final S3Client s3Client;
+    private final String bucket;
+    private final String key;
+
+    private final InputStream stream;
+    private final LargeFileMultipartSource multipartSource;
+
     private long fullSize;
-    private AtomicLong bytesTransferred = new AtomicLong();
+    private final AtomicLong bytesTransferred = new AtomicLong();
     private String eTag;
+    private String versionId;
 
     private S3ObjectMetadata objectMetadata;
     private AccessControlList acl;
@@ -83,25 +97,48 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private Long partSize = DEFAULT_PART_SIZE;
     private int threads = DEFAULT_THREADS;
     private ExecutorService executorService;
+    private boolean externalExecutorService;
     private ProgressListener progressListener;
+    private final AtomicBoolean active = new AtomicBoolean(false);
+
+    private LargeFileUploaderResumeContext resumeContext;
+    private Map<Integer, MultipartPartETag> existingMpuParts = null;
+    private boolean abortMpuOnFailure = true;
 
     /**
      * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
      * <code>file</code> to <code>bucket/key</code>.
      */
     public LargeFileUploader(S3Client s3Client, String bucket, String key, File file) {
-        this.s3Client = s3Client;
-        this.bucket = bucket;
-        this.key = key;
-        this.file = file;
+        this(s3Client, bucket, key, new LargeFileMultipartFileSource(file));
     }
 
+    /**
+     * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
+     * from a single <code>stream</code> to <code>bucket/key</code>. Note that this type of upload is
+     * single-threaded and not very efficient.
+     */
     public LargeFileUploader(S3Client s3Client, String bucket, String key, InputStream stream, long size) {
         this.s3Client = s3Client;
         this.bucket = bucket;
         this.key = key;
         this.stream = stream;
         this.fullSize = size;
+        this.multipartSource = null;
+    }
+
+    /**
+     * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to upload
+     * from a <code>multipartSource</code> to <code>bucket/key</code>.
+     *
+     * @see LargeFileMultipartSource
+     */
+    public LargeFileUploader(S3Client s3Client, String bucket, String key, LargeFileMultipartSource multipartSource) {
+        this.s3Client = s3Client;
+        this.bucket = bucket;
+        this.key = key;
+        this.multipartSource = multipartSource;
+        this.stream = null;
     }
 
     @Override
@@ -123,6 +160,106 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         upload();
     }
 
+    protected long getMinPartSize() {
+        return MIN_PART_SIZE;
+    }
+
+    protected String putObject(InputStream is) {
+        PutObjectRequest putRequest = new PutObjectRequest(bucket, key, is);
+        putRequest.setObjectMetadata(objectMetadata);
+        putRequest.setAcl(acl);
+        putRequest.setCannedAcl(cannedAcl);
+
+        PutObjectResult result = s3Client.putObject(putRequest);
+
+        return result.getETag();
+    }
+
+    // must return *all* parts (even if list is truncated)
+    protected List<MultipartPart> listParts(String uploadId) {
+        List<MultipartPart> partList = new ArrayList<>();
+        ListPartsRequest request = new ListPartsRequest(bucket, key, uploadId);
+        ListPartsResult result = null;
+        do {
+            if (result != null) request.setMarker(result.getNextPartNumberMarker());
+            result = s3Client.listParts(request);
+            partList.addAll(result.getParts());
+        } while (result.isTruncated());
+
+        return partList;
+    }
+
+    protected String initMpu() {
+        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
+        initRequest.setObjectMetadata(objectMetadata);
+        initRequest.setAcl(acl);
+        initRequest.setCannedAcl(cannedAcl);
+        return s3Client.initiateMultipartUpload(initRequest).getUploadId();
+    }
+
+    protected MultipartPartETag uploadPart(String uploadId, int partNumber, InputStream is, long length) {
+        UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNumber, is);
+        request.setContentLength(length);
+
+        return s3Client.uploadPart(request);
+    }
+
+    protected CompleteMultipartUploadResult completeMpu(String uploadId, SortedSet<MultipartPartETag> parts) {
+        CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
+        return s3Client.completeMultipartUpload(compRequest);
+    }
+
+    protected void abortMpu(String uploadId) {
+        s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+    }
+
+    /**
+     * This async version of upload() will start the upload process in the background and immediately return a
+     * {@link LargeFileUpload} instance.
+     * This allows pausing or aborting the upload in the middle, or you can use <code>waitForCompletion()</code> to
+     * block until the upload is complete.
+     *
+     * @see #upload()
+     */
+    public LargeFileUpload uploadAsync() {
+        // start a background thread
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<?> future = executor.submit(this::upload);
+        executor.shutdown();
+
+        return new LargeFileUpload() {
+            @Override
+            public void waitForCompletion() {
+                try {
+                    future.get();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public LargeFileUploaderResumeContext pause() {
+                active.set(false); // all part uploads that have not started yet should effectively become no-ops
+                waitForCompletion(); // only waits for parts that are currently uploading
+                return resumeContext; // at this point, resumeContext should be accurate
+            }
+
+            @Override
+            public void abort() {
+                active.set(false); // all part uploads that have not started yet should effectively become no-ops
+                if (resumeContext != null && resumeContext.getUploadId() != null) {
+                    // this should interrupt existing part transfers, but we will not wait for them anyway
+                    abortMpu(resumeContext.getUploadId());
+                    resumeContext.setUploadId(null);
+                    resumeContext.setUploadedParts(null);
+                }
+                executorService.shutdownNow(); // immediately terminates thread pool and interrupts any running threads
+            }
+        };
+    }
+
     /**
      * This method will automatically choose between MPU and single-PUT operations based on a configured threshold.
      * Note the default threshold is {@link #DEFAULT_MPU_THRESHOLD}. Also note that the defaults in this class are
@@ -138,84 +275,186 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             doSinglePut();
     }
 
+    private InputStream getSourceCompleteDataStream() throws IOException {
+        InputStream is;
+        if (multipartSource != null) {
+            is = multipartSource.getCompleteDataStream();
+        } else {
+            // only close the source stream if configured to do so
+            is = new FilterInputStream(stream) {
+                @Override
+                public void close() throws IOException {
+                    if (closeStream) super.close();
+                    else log.debug("leaving source stream open");
+                }
+            };
+        }
+
+        return is;
+    }
+
+    private InputStream getSourcePartDataStream(long offset, long length) throws IOException {
+        InputStream is;
+        if (multipartSource != null) {
+            is = multipartSource.getPartDataStream(offset, length);
+        } else {
+            // NOTE: this assumes all parts of the source data stream are read in series
+            // make sure source stream isn't closed
+            is = new FilterInputStream(new SizedInputStream(stream, length)) {
+                @Override
+                public void close() {
+                    // no-op
+                }
+            };
+        }
+
+        return is;
+    }
+
+    protected InputStream monitorStream(InputStream stream) {
+        return new ProgressInputStream(stream, this);
+    }
+
     public void doSinglePut() {
         configure();
 
-        InputStream is = null;
-        try {
-            is = file != null ? new FileInputStream(file) : stream;
-
-            is = new ProgressInputStream(is, this);
-
-            PutObjectRequest putRequest = new PutObjectRequest(bucket, key, is);
-            putRequest.setObjectMetadata(objectMetadata);
-            putRequest.setAcl(acl);
-            putRequest.setCannedAcl(cannedAcl);
-
-            PutObjectResult result = s3Client.putObject(putRequest);
-
-            eTag = result.getETag();
+        try (InputStream is = monitorStream(getSourceCompleteDataStream())) {
+            eTag = putObject(is);
         } catch (IOException e) {
             throw new RuntimeException("Error opening file", e);
-        } finally {
-            // make sure we close the input stream if necessary
-            if (is != null && closeStream) {
-                try {
-                    is.close();
-                } catch (Throwable t) {
-                    log.warn("could not close stream", t);
+        }
+    }
+
+    /*
+     * get a map of existing MPU parts from which we can resume an MPU. we can only resume an MPU if the existing
+     * part sizes and count are exactly the same as configured in this LFU instance
+     */
+    private Map<Integer, MultipartPartETag> listUploadPartsForResume(String uploadId) {
+        List<MultipartPart> existingParts = listParts(uploadId);
+        Map<Integer, MultipartPartETag> partsForResume = new HashMap<>();
+
+        if (existingParts != null) {
+            // sort parts based on partNumber
+            existingParts.sort(Comparator.comparingInt(MultipartPartETag::getPartNumber));
+
+            // check the parts - if any part size doesn't match, or there are more parts than expected, we cannot resume
+            int lastPart = (int) ((fullSize - 1) / partSize) + 1;
+            long lastPartSize = fullSize - ((lastPart - 1) * partSize);
+            for (MultipartPart part : existingParts) {
+                if (part.getPartNumber() > lastPart) {
+                    // invalid upload
+                    throw new IllegalArgumentException(String.format("Too many parts in uploadId: %s: last part is %d, but saw partNumber %d",
+                            uploadId, lastPart, part.getPartNumber()));
                 }
+                long expectedSize = part.getPartNumber() == lastPart ? lastPartSize : partSize;
+                if (!part.getSize().equals(expectedSize)) {
+                    // invalid upload
+                    throw new IllegalArgumentException(String.format("Invalid part size detected in uploadId: %s/%d: expected %d, but saw %d",
+                            uploadId, part.getPartNumber(), expectedSize, part.getSize()));
+                }
+
+                // we can skip this part
+                partsForResume.put(part.getPartNumber(), part);
             }
         }
+
+        return partsForResume;
     }
 
     public void doMultipartUpload() {
         configure();
 
-        // initiate MP upload
-        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucket, key);
-        initRequest.setObjectMetadata(objectMetadata);
-        initRequest.setAcl(acl);
-        initRequest.setCannedAcl(cannedAcl);
-        String uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
+        active.set(true);
 
-        List<Future<MultipartPartETag>> futures = new ArrayList<Future<MultipartPartETag>>();
+        // if calling code has specified a resume context, and did *not* provide a part list, list the parts now
+        if (resumeContext != null && resumeContext.getUploadId() != null && resumeContext.getUploadedParts() == null) {
+            existingMpuParts = listUploadPartsForResume(resumeContext.getUploadId());
+        }
+
+        // always maintain an accurate resume context in case of interruption
+        if (resumeContext == null) resumeContext = new LargeFileUploaderResumeContext();
+
+        // initiate MP upload if not resuming
+        if (resumeContext.getUploadId() == null) resumeContext.setUploadId(initMpu());
+
+        // make sure trusted part list is initialized (this will be updated as parts are uploaded)
+        if (resumeContext.getUploadedParts() == null) resumeContext.setUploadedParts(new HashMap<>());
+
+        List<Future<MultipartPartETag>> futures = new ArrayList<>();
         try {
             // submit all upload tasks
-            int partNumber = 1;
-            long offset = 0, length = partSize;
-            while (offset < fullSize) {
+            int lastPart = (int) ((fullSize - 1) / partSize) + 1;
+            for (int partNumber = 1; partNumber <= lastPart; partNumber++) {
+                long offset = (partNumber - 1) * partSize;
+                long length = partSize;
                 if (offset + length > fullSize) length = fullSize - offset;
 
-                futures.add(executorService.submit(new UploadPartTask(uploadId, partNumber++, offset, length)));
+                // if we already have a trusted part ETag, skip this part without verifying
+                if (resumeContext.getUploadedParts().containsKey(partNumber)) {
+                    log.debug("bucket {} key {} partNumber {} provided in resume context; will use the provided ETag and this part will not be verified",
+                            bucket, key, partNumber);
 
-                offset += length;
+                    // reuse existing MPU parts if found
+                } else if (existingMpuParts != null && existingMpuParts.containsKey(partNumber)) {
+                    log.debug("bucket {} key {} partNumber {} already exists, will be reused for multipart upload",
+                            bucket, key, partNumber);
+                    // verify source part if necessary
+                    if (resumeContext.isVerifyPartsFoundInTarget()) {
+                        futures.add(CompletableFuture // need to use CompletableFuture to allow chained execution
+                                // first, verify the part ETag by re-reading form source
+                                .supplyAsync(new VerifySourcePartTask(partNumber, offset, length, existingMpuParts.get(partNumber).getRawETag()), executorService)
+                                // then, if the part is invalid (throws PartMismatchException), re-upload it (if configured to do so)
+                                .exceptionally(partMismatchHandler(resumeContext.getUploadId(), partNumber, offset, length)));
+                    } else {
+                        // calling code has specified *not* to verify existing parts found in the target, so we will
+                        // trust the existing part ETag
+                        log.debug("verifyPartsFoundInTarget is false; not verifying existing part data for partNumber {} (ETag: {})",
+                                partNumber, existingMpuParts.get(partNumber).getETag());
+                        resumeContext.getUploadedParts().put(partNumber, new MultipartPartETag(partNumber, existingMpuParts.get(partNumber).getETag()));
+                    }
+
+                    // no existing part to use, so upload this part
+                } else {
+                    futures.add(executorService.submit(new UploadPartTask(resumeContext.getUploadId(), partNumber, offset, length)));
+                }
             }
 
             // wait for threads to finish and gather parts
-            SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
             for (Future<MultipartPartETag> future : futures) {
-                parts.add(future.get());
+                try {
+                    resumeContext.getUploadedParts().put(future.get().getPartNumber(), future.get());
+                } catch (ExecutionException e) { // unfortunately, we can't just catch CancellationException here
+                    // CancellationException is only thrown when we are terminated early - cancelled tasks will just be ignored
+                    if (e.getCause() == null || !(e.getCause() instanceof CancellationException)) throw e;
+                }
             }
 
             // complete MP upload
-            CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucket, key, uploadId).withParts(parts);
-            CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(compRequest);
-            eTag = result.getETag();
+            if (active.get()) {
+                CompleteMultipartUploadResult result = completeMpu(resumeContext.getUploadId(), new TreeSet<>(resumeContext.getUploadedParts().values()));
+                eTag = result.getRawETag();
+                versionId = result.getVersionId();
+            }
 
         } catch (Exception e) {
-
             // abort MP upload
+            // TODO: are there conditions where the upload should *not* be aborted?
             try {
-                s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket, key, uploadId));
+                if (abortMpuOnFailure) {
+                    abortMpu(resumeContext.getUploadId());
+                    resumeContext.setUploadId(null);
+                    resumeContext.setUploadedParts(null);
+                }
             } catch (Throwable t) {
                 log.warn("could not abort upload after failure", t);
             }
             if (e instanceof RuntimeException) throw (RuntimeException) e;
             throw new RuntimeException("error during upload", e);
         } finally {
+            active.set(false);
+
             // make sure all spawned threads are shut down
-            executorService.shutdown();
+            if (!externalExecutorService) executorService.shutdownNow();
 
             // make sure we close the input stream if necessary
             if (stream != null && closeStream) {
@@ -228,6 +467,20 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
     }
 
+    private Function<Throwable, ? extends MultipartPartETag> partMismatchHandler(String uploadId, int partNumber, long offset, long length) {
+        return throwable -> {
+            // peel off the execution exception
+            if (throwable instanceof CompletionException) throwable = throwable.getCause();
+            if (resumeContext.isOverwriteMismatchedParts() && throwable instanceof PartMismatchException) {
+                log.warn(throwable.getMessage()); // log details about the part that was mismatched
+                log.info("overwriting partNumber {} due to ETag mismatch", partNumber);
+                return new UploadPartTask(uploadId, partNumber, offset, length).call();
+            } else if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            } else throw new RuntimeException(throwable);
+        };
+    }
+
     public void doByteRangeUpload() {
         configure();
 
@@ -238,7 +491,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         request.setCannedAcl(cannedAcl);
         s3Client.putObject(request);
 
-        List<Future<String>> futures = new ArrayList<Future<String>>();
+        List<Future<String>> futures = new ArrayList<>();
         try {
             // submit all upload tasks
             long offset = 0, length = partSize;
@@ -266,7 +519,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             throw new RuntimeException("error during upload", e);
         } finally {
             // make sure all spawned threads are shut down
-            executorService.shutdown();
+            if (!externalExecutorService) executorService.shutdown();
 
             // make sure we close the input stream if necessary
             if (stream != null && closeStream) {
@@ -283,30 +536,29 @@ public class LargeFileUploader implements Runnable, ProgressListener {
      * This method should be idempotent
      */
     protected void configure() {
-
         // sanity checks
-        if (file != null) {
-            if (!file.exists() || !file.canRead())
-                throw new IllegalArgumentException("cannot read file: " + file.getPath());
-
-            fullSize = file.length();
-        } else {
-            if (stream == null)
-                throw new IllegalArgumentException("must specify a file or stream to read");
+        if (multipartSource != null) {
+            fullSize = multipartSource.getTotalSize();
+        } else if (stream != null) {
 
             // make sure size is set
             if (fullSize <= 0)
                 throw new IllegalArgumentException("size must be specified for stream");
 
+            // If resuming from raw stream, make sure skipped parts are consumed from source stream
+            if (resumeContext != null) resumeContext.setVerifyPartsFoundInTarget(true);
+
             // must read stream sequentially
             executorService = null;
             threads = 1;
+        } else {
+            throw new IllegalArgumentException("must specify a file, stream, or multipartSource to read");
         }
 
         // make sure content-length isn't set
         if (objectMetadata != null) objectMetadata.setContentLength(null);
 
-        long minPartSize = Math.max(MIN_PART_SIZE, fullSize / MAX_PARTS + 1);
+        long minPartSize = Math.max(getMinPartSize(), fullSize / MAX_PARTS + 1);
         log.debug(String.format("minimum part size calculated as %,dk", minPartSize / 1024));
 
         if (partSize == null) partSize = minPartSize;
@@ -316,8 +568,24 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             partSize = minPartSize;
         }
 
+        if (resumeContext != null) {
+            // we can only resume an MPU if the size of the source is above the MPU threshold
+            if (fullSize < mpuThreshold) {
+                throw new UnsupportedOperationException("cannot resume MPU because the size of the source is below the MPU threshold");
+            }
+
+            // calling code must provide an uploadId to resume
+            if (resumeContext.getUploadId() == null) {
+                throw new IllegalArgumentException("must provide an uploadId to resume");
+            }
+        }
+
         // set up thread pool
-        if (executorService == null) executorService = Executors.newFixedThreadPool(threads);
+        if (executorService == null) {
+            executorService = Executors.newFixedThreadPool(threads);
+        } else {
+            externalExecutorService = true;
+        }
     }
 
     public S3Client getS3Client() {
@@ -332,12 +600,12 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return key;
     }
 
-    public File getFile() {
-        return file;
-    }
-
     public InputStream getStream() {
         return stream;
+    }
+
+    public LargeFileMultipartSource getMultipartSource() {
+        return multipartSource;
     }
 
     public long getFullSize() {
@@ -348,8 +616,18 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return bytesTransferred.get();
     }
 
+    /**
+     * Returns the result ETag after an upload is successfully complete.
+     */
     public String getETag() {
         return eTag;
+    }
+
+    /**
+     * Returns the result versionId after an upload is successfully completed to a version-enabled bucket.
+     */
+    public String getVersionId() {
+        return versionId;
     }
 
     public S3ObjectMetadata getObjectMetadata() {
@@ -442,6 +720,45 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.progressListener = progressListener;
     }
 
+    /**
+     * During an upload operation, the <code>resumeContext</code> is kept up-to-date with the uploadId and list of
+     * uploaded parts.
+     */
+    public LargeFileUploaderResumeContext getResumeContext() {
+        return resumeContext;
+    }
+
+    /**
+     * Use when resuming an existing incomplete MPU by skipping existing parts.
+     * To resume an MPU, you *must* provide an uploadId to resume.
+     * If a part list is not provided here, the uploadId parts will be listed to find existing parts to skip.
+     * All parts in the existing upload must conform to the expected part size and count, based on
+     * {@link #setMpuThreshold(long)} and {@link #setPartSize(long)}.
+     *
+     * @throws S3Exception                   if the provided uploadId does not exist, or any other S3 errors occur
+     * @throws IllegalArgumentException      if the uploadId is null or any of the parts are invalid
+     * @throws UnsupportedOperationException if the size of the source is *not* above <code>mpuThreshold</code>
+     * @see LargeFileUploaderResumeContext
+     */
+    public void setResumeContext(LargeFileUploaderResumeContext resumeContext) {
+        this.resumeContext = resumeContext;
+    }
+
+    public boolean isAbortMpuOnFailure() {
+        return abortMpuOnFailure;
+    }
+
+    /**
+     * Specifies whether MPU is aborted with any failure
+     * If a failure occurs and abortMpuOnFailure is true, then MPU is aborted and the resumeContext is cleared
+     * (uploadId and uploadedParts are set to null).
+     * If abortMpuOnFailure is false, MPU is left intact and the resumeContext could have a list successfully
+     * uploaded parts.
+     */
+    public void setAbortMpuOnFailure(boolean abortMpuOnFailure) {
+        this.abortMpuOnFailure = abortMpuOnFailure;
+    }
+
     public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -487,11 +804,27 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return this;
     }
 
+    /**
+     * @see #setResumeContext(LargeFileUploaderResumeContext)
+     */
+    public LargeFileUploader withResumeContext(LargeFileUploaderResumeContext resumeContext) {
+        setResumeContext(resumeContext);
+        return this;
+    }
+
+    /**
+     * @see #setAbortMpuOnFailure(boolean)
+     */
+    public LargeFileUploader withAbortMpuOnFailure(boolean abortMpuOnFailure) {
+        setAbortMpuOnFailure(abortMpuOnFailure);
+        return this;
+    }
+
     private class UploadPartTask implements Callable<MultipartPartETag> {
-        private String uploadId;
-        private int partNumber;
-        private long offset;
-        private long length;
+        private final String uploadId;
+        private final int partNumber;
+        private final long offset;
+        private final long length;
 
         public UploadPartTask(String uploadId, int partNumber, long offset, long length) {
             this.uploadId = uploadId;
@@ -501,28 +834,25 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
 
         @Override
-        public MultipartPartETag call() throws Exception {
-            InputStream is = file != null ? new FileInputStream(file) : stream;
-
-            is = new ProgressInputStream(is, LargeFileUploader.this);
-
-            SizedInputStream segmentStream;
-            if (file != null) {
-                segmentStream = new InputStreamSegment(is, offset, length);
+        public MultipartPartETag call() {
+            if (!active.get()) {
+                // we were paused or aborted, so should not start any more tasks
+                throw new CancellationException();
             } else {
-                segmentStream = new SizedInputStream(is, length);
+                log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
+                        bucket, key, uploadId, partNumber, offset, length);
+                try (InputStream is = monitorStream(getSourcePartDataStream(offset, length))) {
+                    return uploadPart(uploadId, partNumber, is, length);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
-
-            UploadPartRequest request = new UploadPartRequest(bucket, key, uploadId, partNumber++, segmentStream);
-            request.setContentLength(length);
-
-            return s3Client.uploadPart(request);
         }
     }
 
     protected class PutObjectTask implements Callable<String> {
-        private long offset;
-        private long length;
+        private final long offset;
+        private final long length;
 
         public PutObjectTask(long offset, long length) {
             this.offset = offset;
@@ -530,20 +860,48 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         }
 
         @Override
-        public String call() throws Exception {
-            Range range = Range.fromOffsetLength(offset, length);
+        public String call() {
+            try (InputStream is = monitorStream(getSourcePartDataStream(offset, length))) {
+                Range range = Range.fromOffsetLength(offset, length);
 
-            InputStream is = file != null ? new FileInputStream(file) : stream;
+                PutObjectRequest request = new PutObjectRequest(bucket, key, is).withRange(range);
 
-            is = new ProgressInputStream(is, LargeFileUploader.this);
+                return s3Client.putObject(request).getETag();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
-            SizedInputStream segmentStream = file != null
-                    ? new InputStreamSegment(is, offset, length)
-                    : new SizedInputStream(is, length);
+    protected class VerifySourcePartTask implements Supplier<MultipartPartETag> {
+        private final int partNumber;
+        private final long offset, length;
+        private final String uploadedETag;
 
-            PutObjectRequest request = new PutObjectRequest(bucket, key, segmentStream).withRange(range);
+        public VerifySourcePartTask(int partNumber, long offset, long length, String uploadedETag) {
+            this.partNumber = partNumber;
+            this.offset = offset;
+            this.length = length;
+            this.uploadedETag = uploadedETag;
+        }
 
-            return s3Client.putObject(request).getETag();
+        @Override
+        public MultipartPartETag get() {
+            if (!active.get()) {
+                // we were paused or aborted, so should not start any more tasks
+                throw new CancellationException();
+            } else {
+                log.debug("reading existing partNumber {} (offset: {}, length: {}) from source to verify data", partNumber, offset, length);
+                try (InputStream is = getSourcePartDataStream(offset, length)) {
+                    String sourceETag = DigestUtils.md5Hex(is);
+                    if (!sourceETag.equals(uploadedETag)) {
+                        throw new PartMismatchException(partNumber, sourceETag, uploadedETag);
+                    }
+                    return new MultipartPartETag(partNumber, sourceETag);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 }
