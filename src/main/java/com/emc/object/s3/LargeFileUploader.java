@@ -240,6 +240,17 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             }
 
             @Override
+            public void waitForCompletion(long timeout, TimeUnit timeoutUnit) throws TimeoutException {
+                try {
+                    future.get(timeout, timeoutUnit);
+                } catch (RuntimeException | TimeoutException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
             public LargeFileUploaderResumeContext pause() {
                 active.set(false); // all part uploads that have not started yet should effectively become no-ops
                 waitForCompletion(); // only waits for parts that are currently uploading

@@ -52,6 +52,8 @@ import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class LargeFileUploaderTest extends AbstractS3ClientTest {
@@ -616,6 +618,41 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // check only remaining parts were uploaded
         Assert.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.transferred.get());
         Assert.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.completed.get());
+    }
+
+    @Test
+    public void testAsyncWithTimeout() {
+        String key = "testLfuAsyncTimeout";
+        int delayMs = 2000;
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        // 1-second delay before yielding part streams
+        // this allows us to time the start of the first 2 part uploads accurately
+        mockMultipartSource.setPartDelayMs(delayMs);
+        LargeFileUploader lfu = new TestLargeFileUploader(client, getTestBucket(), key, mockMultipartSource)
+                .withPartSize(mockMultipartSource.getPartSize()).withMpuThreshold((int) mockMultipartSource.getTotalSize())
+                .withThreads(2); // throttle part uploads to 2 threads
+
+        LargeFileUpload upload = lfu.uploadAsync();
+
+        int timeoutCount = 0;
+        while (true) {
+            try {
+                upload.waitForCompletion(delayMs, TimeUnit.MILLISECONDS);
+                break;
+            } catch (TimeoutException e) {
+                timeoutCount++;
+            }
+        }
+
+        // based on part count, thread count and part delay, we expect (ceiling(partCount / threadCount)) timeouts to occur
+        long partCount = (mockMultipartSource.getTotalSize() - 1) / mockMultipartSource.getPartSize() + 1;
+        Assert.assertEquals((partCount - 1) / 2 + 1, timeoutCount);
+
+        // upload should be done
+        GetObjectRequest<?> request = new GetObjectRequest<>(getTestBucket(), key);
+        GetObjectResult<byte[]> result = client.getObject(request, byte[].class);
+        Assert.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
+        Assert.assertEquals(mockMultipartSource.getMpuETag(), result.getObjectMetadata().getETag());
     }
 
     @Test
