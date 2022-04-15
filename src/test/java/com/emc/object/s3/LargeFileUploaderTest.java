@@ -52,6 +52,8 @@ import java.io.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class LargeFileUploaderTest extends AbstractS3ClientTest {
@@ -619,6 +621,42 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testAsyncWithTimeout() {
+        String key = "testLfuAsyncTimeout";
+        int delayMs = 2000;
+        MockMultipartSource mockMultipartSource = new MockMultipartSource();
+        // 1-second delay before yielding part streams
+        // this allows us to time the start of the first 2 part uploads accurately
+        mockMultipartSource.setPartDelayMs(delayMs);
+        LargeFileUploader lfu = new TestLargeFileUploader(client, getTestBucket(), key, mockMultipartSource)
+                .withPartSize(mockMultipartSource.getPartSize()).withMpuThreshold((int) mockMultipartSource.getTotalSize())
+                .withThreads(2); // throttle part uploads to 2 threads
+
+        LargeFileUpload upload = lfu.uploadAsync();
+
+        int timeoutCount = 0;
+        while (true) {
+            try {
+                upload.waitForCompletion(delayMs, TimeUnit.MILLISECONDS);
+                break;
+            } catch (TimeoutException e) {
+                timeoutCount++;
+            }
+        }
+
+        // based on part count, thread count and part delay, we expect at least (ceiling(partCount / threadCount)) timeouts to occur
+        long partCount = (mockMultipartSource.getTotalSize() - 1) / mockMultipartSource.getPartSize() + 1;
+        long expectedTimeouts = (partCount - 1) / 2 + 1;
+        Assert.assertTrue(timeoutCount >= expectedTimeouts);
+
+        // upload should be done
+        GetObjectRequest<?> request = new GetObjectRequest<>(getTestBucket(), key);
+        GetObjectResult<byte[]> result = client.getObject(request, byte[].class);
+        Assert.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
+        Assert.assertEquals(mockMultipartSource.getMpuETag(), result.getObjectMetadata().getETag());
+    }
+
+    @Test
     public void testAbort() throws Exception {
         String bucket = getTestBucket();
         String key = "mpu-abort";
@@ -641,12 +679,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         Assert.assertEquals(1, client.listMultipartUploads(getTestBucket()).getUploads().size());
 
         // abort it
-        long abortStart = System.currentTimeMillis();
         upload.abort();
-        long abortDone = System.currentTimeMillis();
-
-        // this should be immediate (< 500ms)
-        Assert.assertTrue(abortDone - abortStart < 500);
 
         // make sure resume context is cleared
         Assert.assertNull(lfu.getResumeContext().getUploadId());

@@ -21,11 +21,9 @@ import java.util.*;
 
 public class S3JerseyClientV4Test extends S3JerseyClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientV4Test.class);
-    private boolean testIAM = false;
 
     @Override
     public S3Client createS3Client() throws Exception {
-        testIAM = isIAMUser();
         return new S3JerseyClient(createS3Config().withUseV2Signer(false));
     }
 

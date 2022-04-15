@@ -27,11 +27,23 @@
  */
 package com.emc.object.s3.lfu;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 public interface LargeFileUpload {
     /**
      * Blocks until the upload is complete.
      */
     void waitForCompletion();
+
+    /**
+     * Waits if necessary for at most the given time for the upload to complete.
+     *
+     * @param timeout     the maximum time to wait
+     * @param timeoutUnit the time unit of the timeout argument
+     * @throws TimeoutException if the wait timed out
+     */
+    void waitForCompletion(long timeout, TimeUnit timeoutUnit) throws TimeoutException;
 
     /**
      * Pauses this upload and returns a ResumeContext that can be used to later resume it from the same source data.

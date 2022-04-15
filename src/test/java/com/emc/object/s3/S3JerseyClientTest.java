@@ -60,7 +60,6 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
@@ -2847,7 +2846,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // get different versions of the existing object
         client.putObject(bucketName, key, "Hello VersionID0 !", "text/plain");
-        String versionId = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+        String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
 
         // GET the Tag of a non-existent object
         try {
@@ -2906,9 +2905,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
         client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 1 !")
                 .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
-        String versionId1 = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+        String versionId1 = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
         client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 2 !"));
-        String versionId2 = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+        String versionId2 = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
 
         // Only the particular version of the object should get deleted and no other versions of object should be affected
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2));
@@ -2931,7 +2930,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testCopyObjectWithTagging() {
 
         // set up env
-        String bucketName = getTestBucket(), key1 = "test-object-tagging-src", key2 = "test-object-tagging-dest1", key3 = "test-object-tagging-dest2", content = "Hello Object Tagging!";
+        String bucketName = getTestBucket(), key1 = "test-object-tagging-src", key2 = "test-object-tagging-dest1", key3 = "test-object-tagging-dest2", content = "Hello Object Tagging!", content1 = "Hello Object Tagging 1!";
 
         // should be able to copy the object and copied object should have the tags also
         client.putObject(new PutObjectRequest(bucketName, key1, content)
@@ -2941,11 +2940,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // Versioned object should be copied and user should be able to get the same along with tags
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
-        client.putObject(new PutObjectRequest(bucketName, key1, content)
+        client.putObject(new PutObjectRequest(bucketName, key1, content1)
                 .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
-        String versionId = client.listVersions(bucketName, null).getVersions().get(0).getVersionId();
+        String versionId = client.listVersions(bucketName, key1).getVersions().get(0).getVersionId();
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key3).withSourceVersionId(versionId));
-        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3).withVersionId(versionId)).getTagSet().size());
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3)).getTagSet().size());
 
     }
 
