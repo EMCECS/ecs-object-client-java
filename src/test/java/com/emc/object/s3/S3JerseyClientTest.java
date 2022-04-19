@@ -52,14 +52,20 @@ import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
@@ -1413,11 +1419,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (MultipartPart part : mpp) {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
-                Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
+                Assert.assertEquals(mp1.getRawETag(), part.getRawETag());
             } else if (part.getPartNumber() == 2) {
-                Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
+                Assert.assertEquals(mp2.getRawETag(), part.getRawETag());
             } else if (part.getPartNumber() == 3) {
-                Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
+                Assert.assertEquals(mp3.getRawETag(), part.getRawETag());
             } else {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
             }
@@ -2809,6 +2815,82 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withObjectMetadata(new S3ObjectMetadata().withContentEncoding("identity"));
         client.putObject(request);
         Assert.assertNotNull(client.getObjectMetadata(getTestBucket(), key));
+    }
+
+    @Test
+    public void testCopyRangeAPI() {
+        String bucketName = getTestBucket();
+        String key1 = "TestObject_1_" + UUID.randomUUID(),
+                key3 = "TestObject_3_" + UUID.randomUUID(),
+                key4 = "TestObject_4_" + UUID.randomUUID();
+
+        // get ranges
+        String content3 = "hello " + bucketName + ":";
+        int offset3 = content3.length();
+        client.putObject(bucketName, key3, content3, "text/plain");
+        Range range3 = Range.fromOffsetLength(offset3, key3.length());
+        client.putObject(bucketName, key3, range3, (Object) key3);
+
+        String content4 = "hello " + bucketName + ":";
+        int offset4 = content3.length();
+        client.putObject(bucketName, key4, content4, "text/plain");
+        Range range4 = Range.fromOffset(offset4);
+        client.putObject(bucketName, key4, range4, (Object) key4);
+
+        log.info("ETag of key3: " + client.getObjectMetadata(bucketName, key3).getETag());
+        log.info("ETag of key4: " + client.getObjectMetadata(bucketName, key4).getETag());
+
+        // prepare object bucketName:key1
+        client.putObject(bucketName, key1, "Hi " + bucketName + key1, "text/plain");
+
+        // build object bucketName:key1 by copy range API from key3&key4
+        CopyRange CR = new CopyRange()
+                .withContentType("text/plain")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Arrays.asList(
+                                new Segment(bucketName + "/" + key3, null, "0-" + (offset3 - 1), null, null, null),
+                                new Segment(bucketName + "/" + key4, null, offset4 + "-", null, null, null)
+                                )));
+
+        // give content-MD5
+        String contentMD5 = "";
+        try {
+            JAXBContext context = JAXBContext.newInstance(CopyRange.class);
+            Marshaller marshaller = context.createMarshaller();
+            StringWriter writer = new StringWriter();
+            marshaller.marshal(CR, writer);
+            String XMLBody = writer.toString();
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(XMLBody.getBytes(), 0, XMLBody.length());
+            contentMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(md.digest()));
+        } catch (Exception ignored) {}
+
+        // actual copy range
+        CopyRangeRequest CRR1 = new CopyRangeRequest(bucketName, key1)
+                .withCopyMode("shallow")
+                .withMultiPartCopy("true")
+                .withContentMd5(contentMD5)
+                .withCopyRange(CR);
+        CopyRangeResult result = client.copyRange(CRR1);
+
+        log.info("ETag of key1: " + result.getETag());
+
+//        log.info("1 after cp: " + new BufferedReader(
+//                new InputStreamReader(client.readObjectStream(bucketName, key1, Range.fromOffset(0)), StandardCharsets.UTF_8))
+//                .lines()
+//                .collect(Collectors.joining("\n")));
+//        log.info("3 after cp: " + client.readObject(bucketName, key3, String.class));
+//        log.info("4 after cp: " + client.readObject(bucketName, key4, String.class));
+//
+//        client.putObject(bucketName, key3, Range.fromOffset(0), (Object)"range4!");
+//        log.info("1 After update: " + new BufferedReader(
+//                new InputStreamReader(client.readObjectStream(bucketName, key1, Range.fromOffset(0)), StandardCharsets.UTF_8))
+//                .lines()
+//                .collect(Collectors.joining("\n")));
+//        log.info("3 After update: " + client.readObject(bucketName, key1, String.class));
+//        log.info("3 After update: " + client.readObject(bucketName, key3, String.class));
+//        log.info("4 After update: " + client.readObject(bucketName, key4, String.class));
+
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

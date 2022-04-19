@@ -800,15 +800,23 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public CopyRangeResult copyRange(CopyRangeRequest request) {
+        CopyRangeResult result = new CopyRangeResult();
+        fillResponseEntity(result, executeAndClose(client, request));
+        return result;
+    }
+
+    @Override
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
         ClientResponse response = executeRequest(client, request);
+
         try {
             T responseEntity = response.getEntity(responseType);
             fillResponseEntity(responseEntity, response);
             return responseEntity;
         } catch (ClientHandlerException e) {
 
-            // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the
+            // some S3 responses ret12eurn a 200 right away, but may fail and include an error XML package instead of the
             // expected entity. check for that here.
             try {
                 throw ErrorFilter.parseErrorResponse(new StringReader(response.getEntity(String.class)), response.getStatus());

@@ -463,4 +463,6 @@ public interface S3Client {
      */
     ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request);
 
+    CopyRangeResult copyRange(CopyRangeRequest request);
+
 }
