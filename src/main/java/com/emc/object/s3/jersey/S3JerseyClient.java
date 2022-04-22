@@ -140,7 +140,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
-        if(s3Config.isUseV2Signer())
+        if (s3Config.isUseV2Signer())
             this.signer = new S3SignerV2(s3Config);
         else
             this.signer = new S3SignerV4(s3Config);
@@ -207,7 +207,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         while (handler instanceof ClientFilter) {
             ClientFilter filter = (ClientFilter) handler;
             if (filter instanceof SmartFilter) {
-                smartFilter = (SmartFilter)filter;
+                smartFilter = (SmartFilter) filter;
                 client.removeFilter(smartFilter);
             }
             handler = filter.getNext();
@@ -219,7 +219,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
         if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter(s3Config));
         client.addFilter(new AuthorizationFilter(s3Config));
-        if(smartFilter != null) {
+        if (smartFilter != null) {
             client.addFilter(smartFilter);
         }
         if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
@@ -413,6 +413,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void deleteBucketPolicy(String bucketName) {
+        executeAndClose(client, new GenericBucketRequest(Method.DELETE, bucketName, "policy"));
+    }
+
+    @Override
     public LocationConstraint getBucketLocation(String bucketName) {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "location");
         return executeRequest(client, request, LocationConstraint.class);
@@ -459,7 +464,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public QueryObjectsResult queryObjects(QueryObjectsRequest request) {
         String query = request.getQuery();
-        if(query == null || query.isEmpty()) {
+        if (query == null || query.isEmpty()) {
             throw new IllegalArgumentException("QueryObjectsRequest must contain a query expression.");
         }
         QueryObjectsResult result = executeRequest(client, request, QueryObjectsResult.class);
@@ -687,7 +692,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
-    public void extendRetentionPeriod(String bucketName, String key, Long period){
+    public void extendRetentionPeriod(String bucketName, String key, Long period) {
         ObjectRequest request = new S3ObjectRequest(Method.PUT, bucketName, key, S3Constants.PARAM_RETENTION_UPDATE);
         request.addCustomHeader(RestUtil.EMC_RETENTION_PERIOD, period);
         executeAndClose(client, request);
