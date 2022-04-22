@@ -193,6 +193,13 @@ public interface S3Client {
     BucketPolicy getBucketPolicy(String bucketName);
 
     /**
+     * Deletes the bucket policy for <code>bucketName</code>
+     *
+     * @see BucketPolicy
+     */
+    void deleteBucketPolicy(String bucketName);
+
+    /**
      * Gets the location of <code>bucketName</code>. This call will return the name of the primary VDC of the bucket
      */
     LocationConstraint getBucketLocation(String bucketName);

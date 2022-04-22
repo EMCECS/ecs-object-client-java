@@ -637,6 +637,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketPolicy(getTestBucket(), bucketPolicy);
 
         Assert.assertEquals(bucketPolicy, client.getBucketPolicy(getTestBucket()));
+
+        client.deleteBucketPolicy(getTestBucket());
+        try {
+            client.getBucketPolicy(getTestBucket());
+            Assert.fail("get-policy should have thrown an exception after deleting policy");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchBucketPolicy", e.getErrorCode());
+        }
     }
 
     @Test
