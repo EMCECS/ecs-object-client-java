@@ -101,7 +101,11 @@ public enum BucketPolicyAction {
     @XmlEnumValue("s3:BypassGovernanceRetention")
     BypassGovernanceRetention("s3:BypassGovernanceRetention"),
     @XmlEnumValue("s3:EnableObjectLock")
-    EnableObjectLock("s3:EnableObjectLock");        ;
+    EnableObjectLock("s3:EnableObjectLock"),
+    @XmlEnumValue("s3:PutObjectTagging")
+    PutObjectTagging("s3:PutObjectTagging"),
+    @XmlEnumValue("s3:PutObjectVersionTagging")
+    PutObjectVersionTagging("s3:PutObjectVersionTagging");
 
     @JsonCreator
     public static BucketPolicyAction fromValue(String value) {

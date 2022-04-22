@@ -800,6 +800,21 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public ObjectTagging getObjectTagging(GetObjectTaggingRequest request) {
+        return executeRequest(client, request, ObjectTagging.class);
+    }
+
+    @Override
+    public void putObjectTagging(PutObjectTaggingRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public void deleteObjectTagging(DeleteObjectTaggingRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
         ClientResponse response = executeRequest(client, request);
         try {
