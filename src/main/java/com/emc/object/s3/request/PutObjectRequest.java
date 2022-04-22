@@ -37,7 +37,6 @@ import com.emc.object.s3.bean.ObjectTagging;
 import com.emc.object.util.RestUtil;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
