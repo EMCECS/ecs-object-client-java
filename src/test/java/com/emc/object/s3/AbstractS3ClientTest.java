@@ -40,9 +40,11 @@ import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
 import org.junit.After;
+import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Properties;
@@ -55,6 +57,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
      * may be null
      */
     protected String ecsVersion;
+    protected boolean isIamUser = false;
     protected CanonicalUser bucketOwner;
 
     protected abstract S3Client createS3Client() throws Exception;
@@ -66,6 +69,12 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         } catch (Exception e) {
             log.warn("could not get ECS version: " + e);
         }
+    }
+
+    @Before
+    public void checkIamUser() throws IOException {
+        Properties props = TestConfig.getProperties();
+        this.isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
     }
 
     @After
@@ -90,7 +99,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     @Override
     protected void cleanUpBucket(String bucketName) {
         if (client != null && client.bucketExists(bucketName)) {
-            boolean objectLockEnabled = client.getObjectLockConfiguration(bucketName) != null;
+            boolean objectLockEnabled = isIamUser && client.getObjectLockConfiguration(bucketName) != null;
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
                 for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
                     DeleteObjectRequest deleteRequest = new DeleteObjectRequest(bucketName, version.getKey()).withVersionId(version.getVersionId());

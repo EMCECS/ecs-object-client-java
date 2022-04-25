@@ -64,16 +64,6 @@ import java.util.stream.IntStream;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
-    protected boolean testIAM = false;
-
-    @Before
-    public void checkIamUser() {
-        try {
-            Properties props = TestConfig.getProperties();
-            testIAM = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
-        } catch (Exception ignored) {
-        }
-    }
 
     @Override
     protected String getTestBucketPrefix() {
@@ -180,7 +170,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateFilesystemBucket() {
-        Assume.assumeFalse("FS buckets are not supported with IAM user.", testIAM);
+        Assume.assumeFalse("FS buckets are not supported with IAM user.", isIamUser);
 
         String bucketName = getTestBucket() + "-y";
 
@@ -210,7 +200,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testEnableObjectLockOnExistingBucket() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
@@ -223,7 +213,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCreateObjectLockBucket() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = "s3-client-test-createObjectLockBucket";
         client.createBucket(new CreateBucketRequest(bucketName).withObjectLockEnabled(true));
@@ -235,7 +225,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectLockConfiguration() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         ObjectLockConfiguration objectLockConfig = new ObjectLockConfiguration().withObjectLockEnabled(ObjectLockConfiguration.ObjectLockEnabled.Enabled);
@@ -262,7 +252,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testDeleteObjectWithLegalHoldNotAllowed() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_DeleteWithLegalHold";
@@ -289,7 +279,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testPutObjectLegalHold() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectLegalHold";
@@ -316,7 +306,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testPutObjectRetention() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectRetention";
@@ -358,7 +348,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testDeleteObjectWithBypassGovernance() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testDeleteObjectWithBypassGovernance";
@@ -398,7 +388,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCopyObjectWithLegalHoldON() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key1 = "source-object";
@@ -426,7 +416,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSingleMultipartUploadWithRetention() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testMpuSimple";

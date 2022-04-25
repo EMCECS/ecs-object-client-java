@@ -27,13 +27,8 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         return new S3JerseyClient(createS3Config().withUseV2Signer(false));
     }
 
-    @Ignore
-    @Test
+    @Override
     public void testPreSignedUrl() throws Exception {
-    }
-
-    @Test
-    public void testPreSignedUrlV4() throws Exception {
         S3Config s3Config = new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
                 .withUseV2Signer(false);
@@ -47,13 +42,8 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                 url.toString().contains("&X-Amz-SignedHeaders");
     }
 
-    @Ignore
-    @Test
+    @Override
     public void testPreSignedPutUrl() throws Exception {
-    }
-
-    @Test
-    public void testPreSignedPutUrlV4() throws Exception {
         S3Config s3Config = new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
                 .withUseV2Signer(false);
@@ -89,13 +79,8 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
-    @Ignore
-    @Test
+    @Override
     public void testPreSignedPutNoContentType() throws Exception {
-    }
-
-    @Test
-    public void testPreSignedPutNoContentTypeV4() throws Exception {
         S3Config s3Config = new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
                 .withUseV2Signer(false);
@@ -133,13 +118,8 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
-    @Ignore
-    @Test
+    @Override
     public void testPreSignedUrlWithChinese() throws Exception {
-    }
-
-    @Test
-    public void testPreSignedUrlWithChineseV4() throws Exception {
         S3Config s3Config = new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("stu").withSecretKey("/QcPo5pEvQh7EOHKs2XjzCARrt7HokZhlpdGKbHs")
                 .withUseV2Signer(false);
@@ -152,8 +132,8 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                 url.toString().contains("&X-Amz-SignedHeaders=");
     }
 
-    @Test
-    public void testPreSignedUrlWithHeadersV4() throws Exception {
+    @Override
+    public void testPreSignedUrlHeaderOverrides() throws Exception {
         S3Config s3Config = new S3Config(new URI("https://s3.amazonaws.com")).withUseVHost(true)
                 .withIdentity("AKIAIOSFODNN7EXAMPLE").withSecretKey("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
                 .withUseV2Signer(false);
@@ -170,10 +150,5 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                 url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &
                 url.toString().contains("&X-Amz-Expires=") & url.toString().contains("&X-Amz-Signature=") &
                 url.toString().contains("&X-Amz-SignedHeaders=content-md5%3Bcontent-type");
-    }
-
-    @Ignore
-    @Test
-    public void testPreSignedUrlHeaderOverrides() throws Exception {
     }
 }
