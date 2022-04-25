@@ -183,6 +183,13 @@ public class S3EncryptionClient extends S3JerseyClient {
         }
     }
 
+    /**
+     * Encrypted version of {@link S3JerseyClient#putObject(PutObjectRequest)}.
+     * <p>
+     * Note: this method will write the encrypted object first, then update the metadata to finalize encryption
+     * properties (including original SHA1 and metadata signature). For version-enabled buckets, this will create
+     * 2 versions.
+     */
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
         if (request.getRange() != null)
@@ -202,8 +209,11 @@ public class S3EncryptionClient extends S3JerseyClient {
         // encryption filter will modify userMeta with encryption metadata *after* the object is transferred
         // we must send a separate metadata update or the object will be unreadable
         // TODO: should this be atomic?  how do we handle rollback?
+        // TODO: also, for version-enabled buckets, should we delete the intermediate version??
+        //       ... and if so, what to do if retention is enabled?
         CopyObjectRequest metadataUpdate = new CopyObjectRequest(request.getBucketName(), request.getKey(),
                 request.getBucketName(), request.getKey()).withAcl(request.getAcl())
+                .withObjectTagging(request.getObjectTagging())
                 .withObjectMetadata(request.getObjectMetadata()).withIfMatch(result.getETag());
         return super.copyObject(metadataUpdate);
     }
