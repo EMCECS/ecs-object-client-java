@@ -62,6 +62,8 @@ public final class S3Constants {
     public static final String AMZ_OBJECT_LOCK_RETAIN_UNTIL_DATE = AMZ_PREFIX + "object-lock-retain-until-date";
     public static final String AMZ_OBJECT_LOCK_BYPASS_GOVERNANCE_RETENTION = AMZ_PREFIX + "bypass-governance-retention";
     public static final String AMZ_SECURITY_TOKEN = AMZ_PREFIX + "security-token";
+    public static final String AMZ_TAGGING = AMZ_PREFIX + "tagging";
+    public static final String AMZ_TAGGING_COUNT = AMZ_PREFIX + "tagging-count";
     public static final String AMZ_SERVER_SIDE_ENCRYPTION = AMZ_PREFIX + "server-side-encryption";
 
     public static final String PARAM_ACCESS_KEY = "AWSAccessKeyId";

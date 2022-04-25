@@ -57,6 +57,7 @@ public class S3ObjectMetadata {
     private ObjectLockRetention objectLockRetention;
     private SseAlgorithm serverSideEncryption;
     private Map<String, String> userMetadata = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+    private Integer taggingCount;
 
     public static <T> S3ObjectMetadata fromHeaders(Map<String, List<T>> headers) {
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata();
@@ -87,6 +88,9 @@ public class S3ObjectMetadata {
         objectMetadata.userMetadata = getUserMetadata(headers);
         objectMetadata.objectLockLegalHold = getObjectLockLegalHold(headers);
         objectMetadata.objectLockRetention = getObjectLockRetention(headers);
+        if (RestUtil.getFirstAsString(headers, S3Constants.AMZ_TAGGING_COUNT) != null) {
+            objectMetadata.taggingCount = Integer.parseInt(RestUtil.getFirstAsString(headers, S3Constants.AMZ_TAGGING_COUNT));
+        }
         objectMetadata.serverSideEncryption = SseAlgorithm.fromHeaderValue(
                 RestUtil.getFirstAsString(headers, S3Constants.AMZ_SERVER_SIDE_ENCRYPTION));
         return objectMetadata;
@@ -362,6 +366,14 @@ public class S3ObjectMetadata {
         return addUserMetadata(name, RestUtil.urlEncode(value));
     }
 
+    public int getTaggingCount() {
+        return taggingCount;
+    }
+
+    public void setTaggingCount(int taggingCount) {
+        this.taggingCount = taggingCount;
+    }
+
     public S3ObjectMetadata withContentType(String contentType) {
         setContentType(contentType);
         return this;
@@ -419,6 +431,11 @@ public class S3ObjectMetadata {
 
     public S3ObjectMetadata withObjectLockRetention(ObjectLockRetention objectLockRetention) {
         setObjectLockRetention(objectLockRetention);
+        return this;
+    }
+
+    public S3ObjectMetadata withTaggingCount(int taggingCount) {
+        setTaggingCount(taggingCount);
         return this;
     }
 

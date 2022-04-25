@@ -84,7 +84,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private final InputStream stream;
     private final LargeFileMultipartSource multipartSource;
 
-    private long fullSize;
+    private long fullSize = -1;
     private final AtomicLong bytesTransferred = new AtomicLong();
     private String eTag;
     private String versionId;
@@ -553,7 +553,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         } else if (stream != null) {
 
             // make sure size is set
-            if (fullSize <= 0)
+            if (fullSize < 0)
                 throw new IllegalArgumentException("size must be specified for stream");
 
             // If resuming from raw stream, make sure skipped parts are consumed from source stream
