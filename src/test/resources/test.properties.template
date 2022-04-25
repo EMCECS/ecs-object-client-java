@@ -12,6 +12,9 @@ s3.secret_key=<secretkey>
 ## Endpoint to the S3 Access Point
 s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 
+## Specified if the use is an IAM user
+s3.iam_user=false
+
 
 ### STS test part, uncomment the following to test STS
 

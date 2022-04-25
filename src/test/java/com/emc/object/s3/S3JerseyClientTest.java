@@ -2384,11 +2384,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String testObject = "/objectPrefix/testObject1";
         client.putObject(getTestBucket(), testObject, "Hello ACLs!", "text/plain");
 
-        String identity = createS3Config().getIdentity();
-        CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
-        acl.setOwner(owner);
-        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+        acl.setOwner(bucketOwner);
+        acl.addGrants(new Grant(bucketOwner, Permission.FULL_CONTROL));
 
         client.setObjectAcl(getTestBucket(), testObject, acl);
         assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
@@ -2409,11 +2407,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Object Content";
         client.putObject(getTestBucket(), testObject, content, "text/plain");
 
-        String identity = createS3Config().getIdentity();
-        CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
-        acl.setOwner(owner);
-        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+        acl.setOwner(bucketOwner);
+        acl.addGrants(new Grant(bucketOwner, Permission.FULL_CONTROL));
 
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
         log.debug("JMC calling request.setAcl");
