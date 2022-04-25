@@ -2936,10 +2936,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCopyObjectWithTagging() {
-
         // set up env
         String bucketName = getTestBucket(), key1 = "test-object-tagging-src", key2 = "test-object-tagging-dest1",
-                key3 = "test-object-tagging-dest2", key4 = "test-object-tagging-dest3", key5 = "test-object-tagging-dest4",
+                key3 = "test-object-tagging-dest2", key4 = "test-object-tagging-dest3",
                 content = "Hello Object Tagging!", content1 = "Hello Object Tagging 1!";
         S3ObjectMetadata metadata = new S3ObjectMetadata();
         metadata.addUserMetadata("foo", "bar");
@@ -2958,15 +2957,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // make sure user metadata didn't change
         Assert.assertEquals(1, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key4)).getUserMetadata().size());
 
-        // When updating metadata, tags should stay the same
-        metadata = new S3ObjectMetadata().addUserMetadata("biz", "baz").addUserMetadata("flim", "flam");
-        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key5)
-                .withObjectMetadata(metadata));
-        // make sure tagging didn't change
-        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key5)).getTagSet().size());
-        // make sure user metadata did change
-        Assert.assertEquals(2, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key5)).getUserMetadata().size());
-
         // Versioned object should be copied and user should be able to get the same along with tags
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
         client.putObject(new PutObjectRequest(bucketName, key1, content1)
@@ -2974,6 +2964,28 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String versionId = client.listVersions(bucketName, key1).getVersions().get(0).getVersionId();
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key3).withSourceVersionId(versionId));
         Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3)).getTagSet().size());
+    }
+
+    @Test
+    public void testCopyObjectWithTaggingAndMeta() {
+        // set up env
+        String bucketName = getTestBucket(), key1 = "test-object-tagging-meta-src", key2 = "test-object-tagging-meta-dest1",
+                content = "Hello Object Tagging With Meta!", content1 = "Hello Object Tagging With Meta 1!";
+        S3ObjectMetadata metadata = new S3ObjectMetadata();
+        metadata.addUserMetadata("foo", "bar");
+
+        client.putObject(new PutObjectRequest(bucketName, key1, content)
+                .withObjectMetadata(metadata)
+                .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k11", "v11")))));
+
+        // When updating metadata, tags should stay the same
+        metadata = new S3ObjectMetadata().addUserMetadata("biz", "baz").addUserMetadata("flim", "flam");
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2)
+                .withObjectMetadata(metadata));
+        // make sure tagging didn't change
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+        // make sure user metadata did change
+        Assert.assertEquals(2, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key2)).getUserMetadata().size());
     }
 
     @Test

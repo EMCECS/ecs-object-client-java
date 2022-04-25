@@ -35,7 +35,10 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.*;
+import com.emc.object.s3.request.DeleteObjectRequest;
+import com.emc.object.s3.request.GetObjectRequest;
+import com.emc.object.s3.request.GetObjectTaggingRequest;
+import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Assert;
@@ -600,6 +603,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
             Assert.assertEquals(404, e.getHttpCode());
             Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
+    }
+
+    @Ignore
+    @Override
+    public void testCopyObjectWithTaggingAndMeta() {
     }
 
     @Ignore
