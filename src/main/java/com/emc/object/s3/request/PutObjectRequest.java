@@ -33,6 +33,7 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.ObjectTagging;
 import com.emc.object.util.RestUtil;
 
 import java.util.Date;
@@ -49,6 +50,7 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     private String ifNoneMatch;
     private AccessControlList acl;
     private CannedAcl cannedAcl;
+    private ObjectTagging objectTagging;
 
     public PutObjectRequest(String bucketName, String key, Object object) {
         super(Method.PUT, bucketName, key, null);
@@ -81,6 +83,8 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         if (ifNoneMatch != null) RestUtil.putSingle(headers, RestUtil.HEADER_IF_NONE_MATCH, ifNoneMatch);
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
+        if (objectTagging != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.toStringMap()));
         return headers;
     }
 
@@ -216,6 +220,14 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
         objectMetadata.setRetentionPolicy(retentionPolicy);
     }
 
+    public ObjectTagging getObjectTagging() {
+        return objectTagging;
+    }
+
+    public void setObjectTagging(ObjectTagging objectTagging) {
+        this.objectTagging = objectTagging;
+    }
+
     public PutObjectRequest withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -277,6 +289,11 @@ public class PutObjectRequest extends S3ObjectRequest implements EntityRequest {
     @Deprecated
     public PutObjectRequest withRetentionPolicy(String retentionPolicy) {
         setRetentionPolicy(retentionPolicy);
+        return this;
+    }
+
+    public PutObjectRequest withObjectTagging(ObjectTagging objectTagging) {
+        setObjectTagging(objectTagging);
         return this;
     }
 }
