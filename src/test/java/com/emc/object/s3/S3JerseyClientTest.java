@@ -1121,7 +1121,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectPreconditions() {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.7.1", ecsVersion != null && ecsVersion.compareTo("3.7.1") >= 0);
         String key = "testDeletePreconditions";
         String content = "hello Delete preconditions!";
 
