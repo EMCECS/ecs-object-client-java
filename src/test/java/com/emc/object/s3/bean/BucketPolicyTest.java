@@ -62,6 +62,13 @@ public class BucketPolicyTest {
             "        \"aws:SourceIp\" : [ \"54.240.143.128/30\", \"2001:DB8:1234:5678:ABCD::/80\" ]" + System.lineSeparator() +
             "      }" + System.lineSeparator() +
             "    }" + System.lineSeparator() +
+            "  }, {" + System.lineSeparator() +
+            "    \"Sid\" : \"PrincipalArn\"," + System.lineSeparator() +
+            "    \"Effect\" : \"Allow\"," + System.lineSeparator() +
+            "    \"Principal\" : {\"AWS\":[\"arn:ecs:iam::ns:user/my-user\",\"arn:ecs:iam::ns:user/other-user\"]}," + System.lineSeparator() +
+            "    \"Action\" : [ \"s3:*\" ]," + System.lineSeparator() +
+            "    \"Resource\" : \"arn:aws:s3:::examplebucket/*\"," + System.lineSeparator() +
+            "    \"Condition\" : { }" + System.lineSeparator() +
             "  } ]" + System.lineSeparator() +
             "}";
 
@@ -74,7 +81,12 @@ public class BucketPolicyTest {
                     .withCondition(PolicyConditionOperator.IpAddress, new PolicyConditionCriteria()
                             .withCondition(PolicyConditionKey.SourceIp, "54.240.143.0/24", "2001:DB8:1234:5678::/64"))
                     .withCondition(PolicyConditionOperator.NotIpAddress, new PolicyConditionCriteria()
-                            .withCondition(PolicyConditionKey.SourceIp, "54.240.143.128/30", "2001:DB8:1234:5678:ABCD::/80"))
+                            .withCondition(PolicyConditionKey.SourceIp, "54.240.143.128/30", "2001:DB8:1234:5678:ABCD::/80")),
+            new BucketPolicyStatement().withSid("PrincipalArn")
+                    .withEffect(BucketPolicyStatement.Effect.Allow)
+                    .withPrincipal("{\"AWS\":[\"arn:ecs:iam::ns:user/my-user\",\"arn:ecs:iam::ns:user/other-user\"]}")
+                    .withActions(BucketPolicyAction.All)
+                    .withResource("arn:aws:s3:::examplebucket/*")
     );
 
     @Test
