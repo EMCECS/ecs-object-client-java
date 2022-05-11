@@ -565,47 +565,6 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Override
     public void testCopyRangeAPI() {
-        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeFalse("Copy range API is not supported with IAM user.", testIAM);
-
-        String bucketName = getTestBucket();
-        String keyTargetGood = "TestObject_target_0",
-                keyTargetWithRetention = "TestObject_target_1",
-                keyTargetRequestExceeded = "TestObject_target_3",
-                key3 = "TestObject_source_1",
-                key4 = "TestObject_source_2";
-
-        // set up versioning.
-        client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
-
-        // define source objects.
-        client.putObject(bucketName, key3, key3, null);
-        client.putObject(bucketName, key4, key4, null);
-
-        // One or more source objects have invalid SSE-C keys
-        CopyRange CR1 = new CopyRange()
-                .withContentType("application/octet-stream")
-                .withSegments(new Segments()
-                        .withSegmentEntries(Arrays.asList(
-                                new Segment(bucketName + "/" + key3, null, "0-", "AES256", "g0lCfA3Dv40jZz5SQJ1ZukLRFqtI5WorC/8SEKEXAMPLE", "ZjQrne1X/iTcskbY2m3example"),
-                                new Segment(bucketName + "/" + key4, null, "0-", null, null, null)
-                        )));
-        String contentMD51 = getContentMD5(CR1);
-        CopyRangeRequest CRR1 = new CopyRangeRequest(bucketName, keyTargetGood)
-                .withMultiPartCopy("true")
-                .withContentMd5(contentMD51)
-                .withCopyRange(CR1);
-        try {
-            client.copyRange(CRR1);
-        } catch (S3Exception e) {
-            log.info(e.getHttpCode() + " " + e.getErrorCode() + " " + e.getMessage());
-//            Assert.assertEquals(400, e.getHttpCode());
-//            Assert.assertEquals("InvalidCopySource", e.getErrorCode());
-            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
-        }
-
-        // One or more source objects was encrypted using SSE-C but no key was provided
-
     }
 
     private class ErrorStream extends FilterInputStream {
@@ -644,19 +603,6 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     protected void assertForListVersionsPaging(int size, int requestCount) {
         Assert.assertEquals("The correct number of versions were NOT returned", 10, size);
         Assert.assertEquals("should be 5 pages", 5, requestCount);
-    }
-
-    private String getContentMD5(Object obj) {
-        String contentMD5 = null;
-        try {
-            Marshaller marshaller = JAXBContext.newInstance(CopyRange.class).createMarshaller();
-            StringWriter writer = new StringWriter();
-            marshaller.marshal(obj, writer);
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(writer.toString().getBytes());
-            contentMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(md.digest()));
-        } catch (Exception ignored) {}
-        return contentMD5;
     }
 
 }

@@ -2831,146 +2831,240 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeFalse("Copy range API is not supported with IAM user.", testIAM);
 
-        String bucketName = getTestBucket();
-        String keyTargetGood = "TestObject_target_0",
-                keyTargetWithRetention = "TestObject_target_1",
-                keyTargetRequestExceeded = "TestObject_target_3",
-                key3 = "TestObject_source_1",
-                key4 = "TestObject_source_2";
+        String bucketName = getTestBucket(),
+                key1 = "TestObject_source_1",
+                key2 = "TestObject_source_2";
 
         // set up versioning.
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
 
-        // define source objects.
-        client.putObject(bucketName, key3, "", null);
-        client.putObject(bucketName, key4, "", null);
-        client.putObject(bucketName, key3, Range.fromOffsetLength(0, key3.length()), (Object) key3);
-        client.putObject(bucketName, key4, Range.fromOffsetLength(0, key4.length()), (Object) key4);
+        // define source objects, set content to key to make things simple.
+        client.putObject(bucketName, key1, key1, null);
+        client.putObject(bucketName, key2, key2, null);
 
-        // define CopyRanges
+        // define CopyRange
         CopyRange CR = new CopyRange()
                 .withContentType("application/octet-stream")
                 .withSegments(new Segments()
                         .withSegmentEntries(Arrays.asList(
-                                new Segment(bucketName + "/" + key3, null, "0-", null, null, null),
-                                new Segment(bucketName + "/" + key4, null, "0-", null, null, null)
+                                new Segment(bucketName + "/" + key1, null, "0-", null, null, null),
+                                new Segment(bucketName + "/" + key2, null, "0-", null, null, null)
                                 )));
-
-        // define content-MD5 (is MD5 hash of the request body)
-        String contentMD5 = getContentMD5(CR);
 
         // test scenarios
         // 0. success
-//        CopyRangeRequest CRR0 = new CopyRangeRequest(bucketName, keyTargetGood)
-//                .withCopyMode("shallow") // shallow or deep, default is deep
-//                .withMultiPartCopy("true")
-//                .withContentMd5(contentMD5)
-//                .withCopyRange(CR);
-//        client.copyRange(CRR0);
-//        Assert.assertEquals(key3 + key4, new BufferedReader(
-//                new InputStreamReader(client.readObjectStream(bucketName, keyTargetGood, Range.fromOffset(0)), StandardCharsets.UTF_8))
-//                .lines().collect(Collectors.joining("\n")));
+        String keyTargetGood = "TestObject_target_0";
+        CopyRangeRequest CRR0 = new CopyRangeRequest(bucketName, keyTargetGood)
+                .withCopyMode("shallow") // shallow or deep, default is deep
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CR))
+                .withCopyRange(CR);
+        client.copyRange(CRR0);
+        Assert.assertEquals(key1 + key2, new BufferedReader(
+                new InputStreamReader(client.readObjectStream(bucketName, keyTargetGood, Range.fromOffset(0)), StandardCharsets.UTF_8))
+                .lines().collect(Collectors.joining("\n")));
 
         // 1. key Target with retention
-//        PutObjectRequest requestRetention = new PutObjectRequest(bucketName, keyTargetWithRetention, "retention")
-//                .withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(2L));
-//        client.putObject(requestRetention);
-//        CopyRangeRequest CRR1 = new CopyRangeRequest(bucketName, keyTargetWithRetention)
-//                .withMultiPartCopy("true")
-//                .withContentMd5(contentMD5)
-//                .withCopyRange(CR);
-//        try {
-//            client.copyRange(CRR1);
-//        } catch (S3Exception e) {
-//            Assert.assertEquals(409, e.getHttpCode());
-//            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
-//            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
-//        }
+        String keyTargetWithRetention = "TestObject_target_1";
+        PutObjectRequest requestRetention = new PutObjectRequest(bucketName, keyTargetWithRetention, "retention")
+                .withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(2L));
+        client.putObject(requestRetention);
+        CopyRangeRequest CRR1 = new CopyRangeRequest(bucketName, keyTargetWithRetention)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CR))
+                .withCopyRange(CR);
+        try {
+            client.copyRange(CRR1);
+        } catch (S3Exception e) {
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
+            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
+            Assert.assertEquals("retention", client.readObject(bucketName, keyTargetWithRetention, String.class));
+        }
 
         // 2. More than 250 ranges per segment
+        String keyTargetRangesExceeded = "TestObject_target_2";
+        StringBuilder bigRanges = new StringBuilder();
+        IntStream.range(0, 251).forEach(i -> {bigRanges.append("0-, ");});
+        CopyRange CRTooManyRanges = new CopyRange()
+                .withContentType("application/octet-stream")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Collections.singletonList(
+                                new Segment(bucketName + "/" + key1, null, bigRanges.substring(0, bigRanges.length() - 2), null, null, null)
+                        )));
+        CopyRangeRequest CRR2 = new CopyRangeRequest(bucketName, keyTargetRangesExceeded)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CRTooManyRanges))
+                .withCopyRange(CRTooManyRanges);
+        try {
+            client.copyRange(CRR2);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
+            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
+            try {
+                client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
+        }
 
         // 3. body exceeds 256kiB or 250 segments.
+        String keyTargetRequestExceeded = "TestObject_target_3";
         List<Segment> segmentsExceeded = new ArrayList<>();
-        IntStream.range(0, 100).forEach(i -> {segmentsExceeded.add(new Segment(bucketName + "/" + key3, null, "0-", null, null, null));});
+        IntStream.range(0, 251).forEach(i -> {segmentsExceeded.add(new Segment(bucketName + "/" + key1, null, "0-", null, null, null));});
         CopyRange CRExceeded = new CopyRange()
                 .withContentType("application/octet-stream")
                 .withSegments(new Segments().withSegmentEntries(segmentsExceeded));
-        String contentMD5Exceeded = getContentMD5(CRExceeded);
         CopyRangeRequest CRR3 = new CopyRangeRequest(bucketName, keyTargetRequestExceeded)
                 .withMultiPartCopy("true")
-                .withContentMd5(contentMD5Exceeded)
+                .withContentMd5(getContentMD5(CRExceeded))
                 .withCopyRange(CRExceeded);
         try {
             client.copyRange(CRR3);
         } catch (S3Exception e) {
-            log.info(e.getHttpCode() + " " + e.getErrorCode());
-//            Assert.assertEquals(400, e.getHttpCode());
-//            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
-            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
+            try {
+                client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
         }
-        log.info(new BufferedReader(
-                new InputStreamReader(client.readObjectStream(bucketName, keyTargetRequestExceeded, Range.fromOffset(0)), StandardCharsets.UTF_8))
-                .lines().collect(Collectors.joining("\n")));
 
         // 4. One or more source objects does not exist
-//        CopyRange CRSourceNotExist = new CopyRange()
-//                .withContentType("application/octet-stream")
-//                .withSegments(new Segments()
-//                        .withSegmentEntries(Arrays.asList(
-//                                new Segment(bucketName + "/" + "nokey", null, "0-", null, null, null)
-//                        )));
-//        String contentMD5NoSource = getContentMD5(CRSourceNotExist);
-//        CopyRangeRequest CRR4 = new CopyRangeRequest(bucketName, keyTargetGood)
-//                .withMultiPartCopy("true")
-//                .withContentMd5(contentMD5NoSource)
-//                .withCopyRange(CRSourceNotExist);
-//        try {
-//            client.copyRange(CRR4);
-//        } catch (S3Exception e) {
-//            Assert.assertEquals(400, e.getHttpCode());
-//            Assert.assertEquals("InvalidCopySource", e.getErrorCode());
-//            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
-//        }
+        String keyTargetSourceNotFound = "TestObject_target_4";
+        CopyRange CRSourceNotExist = new CopyRange()
+                .withContentType("application/octet-stream")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Collections.singletonList(
+                                new Segment(bucketName + "/" + "nosuchkey", null, "0-", null, null, null)
+                        )));
+        CopyRangeRequest CRR4 = new CopyRangeRequest(bucketName, keyTargetSourceNotFound)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CRSourceNotExist))
+                .withCopyRange(CRSourceNotExist);
+        try {
+            client.copyRange(CRR4);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidCopySource", e.getErrorCode());
+            try {
+                client.getObjectMetadata(bucketName, keyTargetSourceNotFound);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
+        }
 
         // 5. One or more source ranges is invalid
-//        CopyRange CRSourceInvalidRange = new CopyRange()
-//                .withContentType("application/octet-stream")
-//                .withSegments(new Segments()
-//                        .withSegmentEntries(Collections.singletonList(
-//                                new Segment(bucketName + "/" + key3, null, "0-128", null, null, null)
-//                        )));
-//        String contentMD5InvalidRange = getContentMD5(CRSourceInvalidRange);
-//        CopyRangeRequest CRR5 = new CopyRangeRequest(bucketName, keyTargetGood)
-//                .withMultiPartCopy("true")
-//                .withContentMd5(contentMD5InvalidRange)
-//                .withCopyRange(CRSourceInvalidRange);
-//        try {
-//            client.copyRange(CRR5);
-//        } catch (S3Exception e) {
-//            Assert.assertEquals(400, e.getHttpCode());
-//            Assert.assertEquals("InvalidCopyRange", e.getErrorCode());
-//            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
-//        }
+        String keyTargetSourceInvalid = "TestObject_target_5";
+        CopyRange CRSourceInvalidRange = new CopyRange()
+                .withContentType("application/octet-stream")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Collections.singletonList(
+                                new Segment(bucketName + "/" + key1, null, "0-128", null, null, null)
+                        )));
+        CopyRangeRequest CRR5 = new CopyRangeRequest(bucketName, keyTargetSourceInvalid)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CRSourceInvalidRange))
+                .withCopyRange(CRSourceInvalidRange);
+        try {
+            client.copyRange(CRR5);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidCopyRange", e.getErrorCode());
+            try {
+                client.getObjectMetadata(bucketName, keyTargetSourceInvalid);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
+        }
 
         // 6. One or more source objects' Etag does not match what was provided.
-//        CopyRange CRSourceInvalidEtag = new CopyRange()
-//                .withContentType("application/octet-stream")
-//                .withSegments(new Segments()
-//                        .withSegmentEntries(Collections.singletonList(
-//                                new Segment(bucketName + "/" + key3, "invalid-etag", "0-", null, null, null)
-//                        )));
-//        String contentMD5InvalidEtag = getContentMD5(CRSourceInvalidEtag);
-//        CopyRangeRequest CRR6 = new CopyRangeRequest(bucketName, keyTargetGood)
-//                .withMultiPartCopy("true")
-//                .withContentMd5(contentMD5InvalidEtag)
-//                .withCopyRange(CRSourceInvalidEtag);
-//        try {
-//            client.copyRange(CRR6);
-//        } catch (S3Exception e) {
-//            Assert.assertEquals(400, e.getHttpCode());
-//            Assert.assertEquals("InvalidArgument", e.getErrorCode());
-//            // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
-//        }
+        String keyTargetETagInvalid = "TestObject_target_6";
+        CopyRange CRSourceInvalidEtag = new CopyRange()
+                .withContentType("application/octet-stream")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Collections.singletonList(
+                                new Segment(bucketName + "/" + key1, "invalid-etag", "0-", null, null, null)
+                        )));
+        CopyRangeRequest CRR6 = new CopyRangeRequest(bucketName, keyTargetETagInvalid)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CRSourceInvalidEtag))
+                .withCopyRange(CRSourceInvalidEtag);
+        try {
+            client.copyRange(CRR6);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidArgument", e.getErrorCode());
+            try {
+                client.getObjectMetadata(bucketName, keyTargetETagInvalid);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
+        }
+
+        String keySSE = "keySSE", sseKey = null, sseMD5 = null;
+        // 7. One or more source objects have invalid SSE-C keys
+        String keyTargetSSEInvalid = "TestObject_target_7";
+        S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
+        client.putObject(new PutObjectRequest(bucketName, keySSE, keySSE).withObjectMetadata(objectMetadata));
+        try {
+            sseKey = java.util.Base64.getEncoder().encodeToString(keySSE.getBytes(StandardCharsets.UTF_8.toString()));
+            sseMD5 = getContentMD5(keySSE);
+        } catch (Exception ignored) {}
+        CopyRange CRSSE = new CopyRange()
+                .withContentType("application/octet-stream")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Collections.singletonList(
+                                new Segment(bucketName + "/" + keySSE, null, "0-", "AES256", sseKey, sseMD5)
+                        )));
+        CopyRangeRequest CRR7 = new CopyRangeRequest(bucketName, keyTargetSSEInvalid)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CRSSE))
+                .withCopyRange(CRSSE);
+        try {
+            client.copyRange(CRR7);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("Invalid or no customer provided encryption key", e.getErrorCode());
+            try {
+                client.getObjectMetadata(bucketName, keyTargetSSEInvalid);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
+        }
+
+        // 8. One or more source objects was encrypted using SSE-C but no key was provided
+        String keyTargetSSENoKey = "TestObject_target_8";
+        CopyRange CRNoKey = new CopyRange()
+                .withContentType("application/octet-stream")
+                .withSegments(new Segments()
+                        .withSegmentEntries(Collections.singletonList(
+                                new Segment(bucketName + "/" + keySSE, null, "0-", "AES256", null, null)
+                        )));
+        CopyRangeRequest CRR8 = new CopyRangeRequest(bucketName, keyTargetSSENoKey)
+                .withMultiPartCopy("true")
+                .withContentMd5(getContentMD5(CRNoKey))
+                .withCopyRange(CRNoKey);
+        try {
+            client.copyRange(CRR8);
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidArgument", e.getErrorCode());
+            try {
+                client.getObjectMetadata(bucketName, keyTargetSSENoKey);
+                Assert.fail("expected 404 Not Found");
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
+            }
+        }
 
     }
 
@@ -3156,11 +3250,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     private String getContentMD5(Object obj) {
         String contentMD5 = null;
         try {
-            Marshaller marshaller = JAXBContext.newInstance(CopyRange.class).createMarshaller();
-            StringWriter writer = new StringWriter();
-            marshaller.marshal(obj, writer);
             MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(writer.toString().getBytes());
+            if (obj.getClass().equals(String.class)) {
+                md.update(((String)obj).getBytes());
+            } else {
+                Marshaller marshaller = JAXBContext.newInstance(obj.getClass()).createMarshaller();
+                StringWriter writer = new StringWriter();
+                marshaller.marshal(obj, writer);
+                md.update(writer.toString().getBytes());
+            }
             contentMD5 = new String(org.apache.commons.codec.binary.Base64.encodeBase64(md.digest()));
         } catch (Exception ignored) {}
         return contentMD5;

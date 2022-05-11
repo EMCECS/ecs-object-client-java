@@ -44,7 +44,7 @@ public class CopyRangeRequest extends S3ObjectRequest implements EntityRequest {
 
     @Override
     public boolean isChunkable() {
-        return true;
+        return false;
     }
 
     @Override
