@@ -69,16 +69,6 @@ import java.util.stream.IntStream;
 
 public class S3JerseyClientTest extends AbstractS3ClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientTest.class);
-    protected boolean testIAM = false;
-
-    @Before
-    public void checkIamUser() {
-        try {
-            Properties props = TestConfig.getProperties();
-            testIAM = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
-        } catch (Exception ignored) {
-        }
-    }
 
     @Override
     protected String getTestBucketPrefix() {
@@ -185,7 +175,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCreateFilesystemBucket() {
-        Assume.assumeFalse("FS buckets are not supported with IAM user.", testIAM);
+        Assume.assumeFalse("FS buckets are not supported with IAM user.", isIamUser);
 
         String bucketName = getTestBucket() + "-y";
 
@@ -215,7 +205,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testEnableObjectLockOnExistingBucket() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
@@ -228,7 +218,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCreateObjectLockBucket() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = "s3-client-test-createObjectLockBucket";
         client.createBucket(new CreateBucketRequest(bucketName).withObjectLockEnabled(true));
@@ -240,7 +230,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSetObjectLockConfiguration() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         ObjectLockConfiguration objectLockConfig = new ObjectLockConfiguration().withObjectLockEnabled(ObjectLockConfiguration.ObjectLockEnabled.Enabled);
@@ -267,7 +257,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testDeleteObjectWithLegalHoldNotAllowed() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_DeleteWithLegalHold";
@@ -294,7 +284,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testPutObjectLegalHold() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectLegalHold";
@@ -321,7 +311,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testPutObjectRetention() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectRetention";
@@ -363,7 +353,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testDeleteObjectWithBypassGovernance() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testDeleteObjectWithBypassGovernance";
@@ -403,7 +393,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCopyObjectWithLegalHoldON() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key1 = "source-object";
@@ -431,7 +421,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testSingleMultipartUploadWithRetention() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", testIAM);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testMpuSimple";
@@ -1126,7 +1116,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectPreconditions() {
-        Assume.assumeTrue("ECS version must be at least 3.7", ecsVersion != null && ecsVersion.compareTo("3.7") >= 0);
+        Assume.assumeTrue("ECS version must be at least 3.7.1", ecsVersion != null && ecsVersion.compareTo("3.7.1") >= 0);
         String key = "testDeletePreconditions";
         String content = "hello Delete preconditions!";
 
@@ -2389,11 +2379,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String testObject = "/objectPrefix/testObject1";
         client.putObject(getTestBucket(), testObject, "Hello ACLs!", "text/plain");
 
-        String identity = createS3Config().getIdentity();
-        CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
-        acl.setOwner(owner);
-        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+        acl.setOwner(bucketOwner);
+        acl.addGrants(new Grant(bucketOwner, Permission.FULL_CONTROL));
 
         client.setObjectAcl(getTestBucket(), testObject, acl);
         assertAclEquals(acl, client.getBucketAcl(getTestBucket()));
@@ -2414,11 +2402,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Object Content";
         client.putObject(getTestBucket(), testObject, content, "text/plain");
 
-        String identity = createS3Config().getIdentity();
-        CanonicalUser owner = new CanonicalUser(identity, identity);
         AccessControlList acl = new AccessControlList();
-        acl.setOwner(owner);
-        acl.addGrants(new Grant(owner, Permission.FULL_CONTROL));
+        acl.setOwner(bucketOwner);
+        acl.addGrants(new Grant(bucketOwner, Permission.FULL_CONTROL));
 
         SetObjectAclRequest request = new SetObjectAclRequest(getTestBucket(), testObject);
         log.debug("JMC calling request.setAcl");
@@ -2494,7 +2480,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 url.toString());
 
         s3Config = super.createS3Config();
-        if(s3Config.isUseV2Signer()) {
+        if (s3Config.isUseV2Signer()) {
             // test real PUT
             String key = "pre-signed-put-test", content = "This is my test object content";
             url = client.getPresignedUrl(
@@ -3081,7 +3067,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
 
         // prepare tags
-        List<ObjectTag> tag = Collections.singletonList(new ObjectTag("k0","v0")); // a new [single] tag
+        List<ObjectTag> tag = Collections.singletonList(new ObjectTag("k0", "v0")); // a new [single] tag
         List<ObjectTag> tags = new ArrayList<>(); // multiple tags[10]
         IntStream.rangeClosed(1, 10).forEach(i -> tags.add(new ObjectTag("k" + i, "v" + i)));
         // more than 10 tags
@@ -3170,7 +3156,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
 
         // Object and associated multiple tags should get deleted
-        Assert.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1));
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1));
@@ -3184,15 +3169,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testCopyObjectWithTagging() {
-
         // set up env
-        String bucketName = getTestBucket(), key1 = "test-object-tagging-src", key2 = "test-object-tagging-dest1", key3 = "test-object-tagging-dest2", content = "Hello Object Tagging!", content1 = "Hello Object Tagging 1!";
+        String bucketName = getTestBucket(), key1 = "test-object-tagging-src", key2 = "test-object-tagging-dest1",
+                key3 = "test-object-tagging-dest2", key4 = "test-object-tagging-dest3",
+                content = "Hello Object Tagging!", content1 = "Hello Object Tagging 1!";
+        S3ObjectMetadata metadata = new S3ObjectMetadata();
+        metadata.addUserMetadata("foo", "bar");
 
         // should be able to copy the object and copied object should have the tags also
         client.putObject(new PutObjectRequest(bucketName, key1, content)
+                .withObjectMetadata(metadata)
                 .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k11", "v11")))));
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2));
         Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+
+        // Should be able to overwrite tags without affecting metadata
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key4)
+                .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k22", "v22"), new ObjectTag("k33", "v33")))));
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key4)).getTagSet().size());
+        // make sure user metadata didn't change
+        Assert.assertEquals(1, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key4)).getUserMetadata().size());
 
         // Versioned object should be copied and user should be able to get the same along with tags
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
@@ -3201,7 +3197,28 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String versionId = client.listVersions(bucketName, key1).getVersions().get(0).getVersionId();
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key3).withSourceVersionId(versionId));
         Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3)).getTagSet().size());
+    }
 
+    @Test
+    public void testCopyObjectWithTaggingAndMeta() {
+        // set up env
+        String bucketName = getTestBucket(), key1 = "test-object-tagging-meta-src", key2 = "test-object-tagging-meta-dest1",
+                content = "Hello Object Tagging With Meta!", content1 = "Hello Object Tagging With Meta 1!";
+        S3ObjectMetadata metadata = new S3ObjectMetadata();
+        metadata.addUserMetadata("foo", "bar");
+
+        client.putObject(new PutObjectRequest(bucketName, key1, content)
+                .withObjectMetadata(metadata)
+                .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k11", "v11")))));
+
+        // When updating metadata, tags should stay the same
+        metadata = new S3ObjectMetadata().addUserMetadata("biz", "baz").addUserMetadata("flim", "flam");
+        client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2)
+                .withObjectMetadata(metadata));
+        // make sure tagging didn't change
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+        // make sure user metadata did change
+        Assert.assertEquals(2, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key2)).getUserMetadata().size());
     }
 
     @Test
@@ -3219,8 +3236,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         RandomInputStream is3 = new RandomInputStream(sizes.get(2));
 
         String uploadId = client.initiateMultipartUpload(
-                new InitiateMultipartUploadRequest(bucketName, key)
-                .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k0","v0")))))
+                        new InitiateMultipartUploadRequest(bucketName, key)
+                                .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k0", "v0")))))
                 .getUploadId();
 
         MultipartPartETag mp1 = client.uploadPart(

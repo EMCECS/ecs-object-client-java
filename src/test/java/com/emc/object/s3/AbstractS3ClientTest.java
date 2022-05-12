@@ -29,20 +29,22 @@ package com.emc.object.s3;
 import com.emc.object.AbstractClientTest;
 import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
-import com.emc.object.s3.bean.AbstractVersion;
-import com.emc.object.s3.bean.EncodingType;
-import com.emc.object.s3.bean.S3Object;
+import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.s3.request.DeleteObjectRequest;
 import com.emc.object.s3.request.ListObjectsRequest;
 import com.emc.object.s3.request.ListVersionsRequest;
+import com.emc.object.s3.request.SetObjectLegalHoldRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
 import org.junit.After;
+import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Properties;
@@ -55,6 +57,8 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
      * may be null
      */
     protected String ecsVersion;
+    protected boolean isIamUser = false;
+    protected CanonicalUser bucketOwner;
 
     protected abstract S3Client createS3Client() throws Exception;
 
@@ -65,6 +69,12 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         } catch (Exception e) {
             log.warn("could not get ECS version: " + e);
         }
+    }
+
+    @Before
+    public void checkIamUser() throws IOException {
+        Properties props = TestConfig.getProperties();
+        this.isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
     }
 
     @After
@@ -83,14 +93,22 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     @Override
     protected void createBucket(String bucketName) throws Exception {
         client.createBucket(bucketName);
+        this.bucketOwner = client.getBucketAcl(bucketName).getOwner();
     }
 
     @Override
     protected void cleanUpBucket(String bucketName) {
         if (client != null && client.bucketExists(bucketName)) {
+            boolean objectLockEnabled = isIamUser && client.getObjectLockConfiguration(bucketName) != null;
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
                 for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
-                    client.deleteVersion(bucketName, version.getKey(), version.getVersionId());
+                    DeleteObjectRequest deleteRequest = new DeleteObjectRequest(bucketName, version.getKey()).withVersionId(version.getVersionId());
+                    if (objectLockEnabled) {
+                        client.setObjectLegalHold(new SetObjectLegalHoldRequest(bucketName, version.getKey()).withVersionId(version.getVersionId())
+                                .withLegalHold(new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.OFF)));
+                        deleteRequest.withBypassGovernanceRetention(true);
+                    }
+                    client.deleteObject(deleteRequest);
                 }
             } else {
                 for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url)).getObjects()) {

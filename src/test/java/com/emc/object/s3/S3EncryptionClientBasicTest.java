@@ -36,7 +36,9 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.CopyRangeRequest;
+import com.emc.object.s3.request.DeleteObjectRequest;
+import com.emc.object.s3.request.GetObjectRequest;
+import com.emc.object.s3.request.GetObjectTaggingRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -54,7 +56,6 @@ import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -565,6 +566,69 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Override
     public void testCopyRangeAPI() {
+    }
+  
+    @Ignore
+    @Override
+    public void testSingleMultipartUploadWithRetention() {
+    }
+
+    @Ignore
+    @Override
+    public void testCopyObjectWithLegalHoldON() {
+    }
+
+    @Override
+    public void testGetPutDeleteObjectWithTagging() {
+        // set up env
+        String bucketName = getTestBucket(), key = "test-object-tagging";
+        client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
+        // write version 1
+        client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 1 !")
+                .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
+        // write version 2
+        client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 2 !"));
+
+        // NOTE: encryption client creates 2 versions per PUT, due to secondary metadata update operation
+        List<AbstractVersion> versions = client.listVersions(bucketName, key).getVersions();
+        String versionId1a = versions.get(3).getVersionId();
+        String versionId1b = versions.get(2).getVersionId();
+        String versionId2a = versions.get(1).getVersionId();
+        String versionId2b = versions.get(0).getVersionId();
+
+        // Only the particular version of the object should get deleted and no other versions of object should be affected
+        // NOTE: have to delete both versions created by the encryption client
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2a));
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2b));
+        // NOTE: actually both versions that the encryption client creates should have tagging set
+        //       but to test, we must use rclient (raw client) because encryption client cannot read the intermediate version
+        Assert.assertEquals(2,
+                rclient.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1a), String.class).getObjectMetadata().getTaggingCount());
+        Assert.assertEquals(2,
+                client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1b), String.class).getObjectMetadata().getTaggingCount());
+
+        // Object and associated multiple tags should get deleted
+        // NOTE: have to delete both versions created by the encryption client
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1a));
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1b));
+        try {
+            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1b));
+            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
+    }
+
+    @Ignore
+    @Override
+    public void testCopyObjectWithTaggingAndMeta() {
+    }
+
+    @Ignore
+    @Override
+    public void testMultipartUploadWithTagging() {
     }
 
     private class ErrorStream extends FilterInputStream {

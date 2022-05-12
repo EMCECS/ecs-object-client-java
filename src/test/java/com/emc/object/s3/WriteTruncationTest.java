@@ -1,60 +1,65 @@
 package com.emc.object.s3;
 
-import com.emc.object.ObjectConfig;
-import com.emc.object.s3.bean.ListObjectsResult;
-import com.emc.object.s3.bean.S3Object;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.util.FaultInjectionStream;
+import com.emc.util.ConcurrentJunitRunner;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.util.Random;
 
-public class WriteTruncationTest {
-    public static final Logger log = LoggerFactory.getLogger(WriteTruncationTest.class);
-
-    static final String BUCKET_NAME = "ecs-object-client-write-truncation-test";
+@RunWith(ConcurrentJunitRunner.class)
+public class WriteTruncationTest extends AbstractS3ClientTest {
     static final int OBJECT_RETENTION_PERIOD = 15; // 15 seconds
     static final int MOCK_OBJ_SIZE = 5 * 1024 * 1024; // 5MB
 
-    S3Client s3Client;
-    S3Client s3JvmClient;
+    S3Client jvmClient;
     final Random random = new Random();
 
-    @Before
-    public void setup() throws Exception {
-        S3Config s3Config = AbstractS3ClientTest.s3ConfigFromProperties();
-        s3Config.setRetryEnabled(false);
+    @Override
+    protected S3Client createS3Client() throws Exception {
+        S3Config s3Config = createS3Config().withRetryEnabled(false);
+        this.jvmClient = new S3JerseyClient(s3Config, new URLConnectionClientHandler());
+        return new S3JerseyClient(createS3Config().withRetryEnabled(false));
+    }
 
-        String proxy = s3Config.getPropAsString(ObjectConfig.PROPERTY_PROXY_URI);
-        if (proxy != null) {
-            URI proxyUri = new URI(proxy);
-            System.setProperty("http.proxyHost", proxyUri.getHost());
-            System.setProperty("http.proxyPort", "" + proxyUri.getPort());
-        }
+    @Override
+    protected String getTestBucketPrefix() {
+        return "s3-write-truncation-test";
+    }
 
-        s3Client = new S3JerseyClient(s3Config);
-        s3JvmClient = new S3JerseyClient(s3Config, new URLConnectionClientHandler());
+    @Override
+    protected void createBucket(String bucketName) {
+        // create bucket with retention period and D@RE enabled
+        client.createBucket(new CreateBucketRequest(getTestBucket())
+                .withRetentionPeriod(OBJECT_RETENTION_PERIOD)
+                .withEncryptionEnabled(true));
+    }
 
+    @Override
+    protected void cleanUpBucket(String bucketName) {
         try {
-            // create bucket with retention period and D@RE enabled
-            s3Client.createBucket(new CreateBucketRequest(BUCKET_NAME)
-                    .withRetentionPeriod(OBJECT_RETENTION_PERIOD)
-                    .withEncryptionEnabled(true));
-        } catch (S3Exception e) {
-            if (!e.getErrorCode().equals("BucketAlreadyExists")) throw e;
+            Thread.sleep(OBJECT_RETENTION_PERIOD * 1000); // wait for retention to expire
+        } catch (InterruptedException ignored) {
         }
+        super.cleanUpBucket(bucketName);
+    }
+
+    @After
+    public void shutdownJvmClient() {
+        if (jvmClient != null) jvmClient.destroy();
     }
 
     @Test
@@ -126,7 +131,7 @@ public class WriteTruncationTest {
                             ExceptionType exceptionType,
                             int delayBeforeException,
                             boolean sendContentMd5) {
-        S3Client s3Client = useApacheClient ? this.s3Client : this.s3JvmClient;
+        S3Client s3Client = useApacheClient ? this.client : this.jvmClient;
 
         String key = String.format("read-%s%s-%s%stest",
                 delayBeforeException > 0 ? "delayed-" : "",
@@ -153,7 +158,7 @@ public class WriteTruncationTest {
         badStream.setSecondDelayBeforeThrowing(delayBeforeException);
 
         try {
-            s3Client.putObject(new PutObjectRequest(BUCKET_NAME, key, badStream).withObjectMetadata(metadata));
+            s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
         } catch (ClientHandlerException e) {
             if (exceptionType == ExceptionType.RuntimeException) {
@@ -170,35 +175,7 @@ public class WriteTruncationTest {
         } catch (InterruptedException ignored) {
         }
 
-        Assert.assertEquals(0, s3Client.listObjects(BUCKET_NAME).getObjects().size());
-    }
-
-    @After
-    public void teardown() {
-        if (s3Client == null) return;
-
-        try {
-            Thread.sleep(OBJECT_RETENTION_PERIOD * 1000); // wait for retention to expire
-        } catch (InterruptedException ignored) {
-        }
-
-        try {
-            ListObjectsResult listing = null;
-            do {
-                if (listing == null) listing = s3Client.listObjects(BUCKET_NAME);
-                else listing = s3Client.listMoreObjects(listing);
-
-                for (final S3Object summary : listing.getObjects()) {
-                    s3Client.deleteObject(BUCKET_NAME, summary.getKey());
-                }
-            } while (listing.isTruncated());
-
-            s3Client.deleteBucket(BUCKET_NAME);
-        } catch (RuntimeException e) {
-            log.error("could not delete bucket " + BUCKET_NAME, e);
-        } finally {
-            s3Client.destroy();
-        }
+        Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
     }
 
     enum ExceptionType {

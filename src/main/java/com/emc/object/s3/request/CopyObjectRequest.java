@@ -31,6 +31,7 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.AccessControlList;
 import com.emc.object.s3.bean.CannedAcl;
+import com.emc.object.s3.bean.ObjectTagging;
 import com.emc.object.util.RestUtil;
 
 import java.util.Date;
@@ -54,6 +55,9 @@ public class CopyObjectRequest extends S3ObjectRequest {
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
+    private ObjectTagging objectTagging;
+
+  
     public CopyObjectRequest(String sourceBucketName, String sourceKey, String bucketName, String key) {
         super(Method.PUT, bucketName, key, null);
         this.sourceBucketName = sourceBucketName;
@@ -83,7 +87,8 @@ public class CopyObjectRequest extends S3ObjectRequest {
         }
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
-
+        if (objectTagging != null)
+            RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.toStringMap()));
         return headers;
     }
 
@@ -175,6 +180,14 @@ public class CopyObjectRequest extends S3ObjectRequest {
         this.cannedAcl = cannedAcl;
     }
 
+    public ObjectTagging getObjectTagging() {
+        return objectTagging;
+    }
+
+    public void setObjectTagging(ObjectTagging objectTagging) {
+        this.objectTagging = objectTagging;
+    }
+
     public CopyObjectRequest withSourceVersionId(String sourceVersionId) {
         setSourceVersionId(sourceVersionId);
         return this;
@@ -215,4 +228,8 @@ public class CopyObjectRequest extends S3ObjectRequest {
         return this;
     }
 
+    public CopyObjectRequest withObjectTagging(ObjectTagging objectTagging) {
+        setObjectTagging(objectTagging);
+        return this;
+    }
 }
