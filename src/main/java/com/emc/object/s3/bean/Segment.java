@@ -10,7 +10,7 @@ public class Segment {
      * This element defines the path of source object
      * @valid none
      */
-    @XmlElement(name = "Path")
+    @XmlElement(name = "Path", required = true)
     private String path;
 
     /**

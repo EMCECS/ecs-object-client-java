@@ -21,7 +21,7 @@ public class CopyRange {
      */
     private Segments segments;
 
-    @XmlElement(name = "ContentType")
+    @XmlElement(name = "ContentType", required = true)
     public String getContentType() {
         return contentType;
     }
@@ -30,7 +30,7 @@ public class CopyRange {
         this.contentType = contentType;
     }
 
-    @XmlElement(name = "Segments")
+    @XmlElement(name = "Segments", required = true)
     public Segments getSegments() {
         return segments;
     }

@@ -1418,11 +1418,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         for (MultipartPart part : mpp) {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
-                Assert.assertEquals(mp1.getRawETag(), part.getRawETag());
+                Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
             } else if (part.getPartNumber() == 2) {
-                Assert.assertEquals(mp2.getRawETag(), part.getRawETag());
+                Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
             } else if (part.getPartNumber() == 3) {
-                Assert.assertEquals(mp3.getRawETag(), part.getRawETag());
+                Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
             } else {
                 Assert.fail("Unknown Part number: " + part.getPartNumber());
             }
@@ -2815,7 +2815,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testCopyRangeAPI() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
-        Assume.assumeFalse("Copy range API is not supported with IAM user.", testIAM);
+        Assume.assumeFalse("Copy range API is not supported with IAM user.", isIamUser);
 
         String bucketName = getTestBucket(),
                 key1 = "TestObject_source_1",

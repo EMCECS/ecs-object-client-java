@@ -31,7 +31,6 @@ import com.emc.codec.encryption.BasicKeyProvider;
 import com.emc.codec.encryption.EncryptionConstants;
 import com.emc.codec.encryption.EncryptionUtil;
 import com.emc.object.EncryptionConfig;
-import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3EncryptionClient;
@@ -49,17 +48,16 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyPair;
-import java.security.MessageDigest;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -668,5 +666,4 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         Assert.assertEquals("The correct number of versions were NOT returned", 10, size);
         Assert.assertEquals("should be 5 pages", 5, requestCount);
     }
-
 }
