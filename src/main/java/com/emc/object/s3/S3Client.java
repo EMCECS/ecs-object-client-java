@@ -471,10 +471,9 @@ public interface S3Client {
     ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request);
 
     /**
-     * Upload Part - Copy API from S3, would be inefficient because there can be up to 220+ parts per object.
-     * This would cause a lot of transaction overhead to create all the part objects and potentially create a lot of partial garbage to collect if we have to deep copy the parts.
-     * This API can source from multiple objects and reference ranges inside those objects.
-     * It can work though with many Internet proxy servers, web servers (ECS included), and load balancers which have a limit on HTTP headers.
+     * This API is an ECS extension API. 
+     * IN addition to standard UploadPartCopy, it can source from multiple objects and reference ranges inside those objects. 
+     * And it can work though with many Internet proxy servers, web servers (ECS included), and load balancers which may have a limit on HTTP headers.
      */
     CopyRangeResult copyRange(CopyRangeRequest request);
   
