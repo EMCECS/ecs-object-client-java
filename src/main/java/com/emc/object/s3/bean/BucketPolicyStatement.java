@@ -26,13 +26,17 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlType;
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import javax.xml.bind.annotation.*;
+import java.io.IOException;
 import java.util.*;
 
-@XmlType(propOrder = {"sid", "effect", "principal", "actions", "resource", "conditions"})
+@XmlType(propOrder = {"sid", "effect", "rawPrincipal", "actions", "resource", "conditions"})
 public class BucketPolicyStatement {
     private String sid;
     private Effect effect;
@@ -57,10 +61,23 @@ public class BucketPolicyStatement {
 
     public void setEffect(Effect effect) { this.effect = effect; }
 
-    @XmlElement(name = "Principal")
-    public String getPrincipal() { return principal; }
+    @XmlTransient
+    public String getPrincipal() {
+        if ("\"*\"".equals(principal)) return "*"; // backward-compatible for "*"
+        return principal;
+    }
 
-    public void setPrincipal(String principal) { this.principal= principal; }
+    @XmlElement(name = "Principal")
+    @JsonRawValue()
+    @JsonDeserialize(using = RawDeserializer.class)
+    public String getRawPrincipal() { return principal; }
+
+    public void setPrincipal(String principal) {
+        if ("*".equals(principal)) this.principal = "\"*\""; // backward-compatible for "*"
+        else this.principal = principal;
+    }
+
+    public void setRawPrincipal(String principal) { this.principal = principal; }
 
     @XmlElement(name = "Action")
     public List<BucketPolicyAction> getActions() {
@@ -158,5 +175,12 @@ public class BucketPolicyStatement {
     @XmlEnum
     public enum Effect {
         Allow, Deny
+    }
+
+    public static class RawDeserializer extends JsonDeserializer<String> {
+        @Override
+        public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            return p.getCodec().readTree(p).toString();
+        }
     }
 }
