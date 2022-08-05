@@ -24,11 +24,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+import com.github.jk1.license.render.InventoryHtmlReportRenderer
+
 plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-    id 'net.saliman.cobertura' version '3.0.0'
+    id 'net.saliman.cobertura' version '4.0.0'
+    id 'com.github.jk1.dependency-license-report' version '1.17'
     id 'distribution'
     id 'signing'
     id 'maven'
@@ -63,8 +66,8 @@ dependencies {
     implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
     // NOTE: Jackson 2.13 dropped support for JAX-RS 1.x, and we use Jersey client 1.x, so we are stuck on Jackson 1.12.x
     // ref: https://github.com/FasterXML/jackson-jaxrs-providers/issues/90#issuecomment-1081368194
-    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.6'
-    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.6'
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7'
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
@@ -83,7 +86,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.36'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.17.2'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.18.0'
 }
 
 allprojects {
@@ -98,10 +101,7 @@ configurations {
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-compileJava {
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-}
+sourceCompatibility = 1.8
 
 def projectPom = {
     project {
@@ -173,6 +173,10 @@ artifacts {
     jars sourcesJar
 }
 
+licenseReport {
+    renderers = [new InventoryHtmlReportRenderer()]
+}
+
 distributions {
     main {
         contents {
@@ -184,7 +188,7 @@ distributions {
                 include '*.txt'
             }
             into('3rd-party-licenses') {
-                from '3rd-party-licenses'
+                from generateLicenseReport
             }
             into('lib') {
                 from configurations.runtimeClasspath
