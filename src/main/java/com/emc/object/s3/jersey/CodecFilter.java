@@ -104,6 +104,9 @@ public class CodecFilter extends ClientFilter {
                 userMeta.putAll(metaBackup);
             }
             throw e;
+        } finally {
+            // make sure we clear the content-length override for this thread if we set it
+            if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
         }
 
         // get user metadata from response headers
