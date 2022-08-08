@@ -27,7 +27,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 group 'com.emc.ecs'
@@ -44,8 +44,8 @@ repositories {
 
 dependencies {
     implementation rootProject,
-            'commons-cli:commons-cli:1.3.1'
-    testImplementation 'junit:junit:4.12'
+            'commons-cli:commons-cli:1.5.0'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 shadowJar {

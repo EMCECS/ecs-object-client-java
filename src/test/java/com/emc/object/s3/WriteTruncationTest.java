@@ -3,6 +3,7 @@ package com.emc.object.s3;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
+import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.FaultInjectionStream;
 import com.emc.util.ConcurrentJunitRunner;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -176,6 +177,41 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         }
 
         Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
+    }
+
+    @Test
+    public void testPartUploadIOException() throws Exception {
+        S3Client s3Client = new S3JerseyClient(createS3Config()); // apache client with retry enabled
+        try {
+            String key = "mpu-part-IOException-apache-test";
+            String message = "Injected Exception for testing purposes";
+
+            byte[] data = new byte[MOCK_OBJ_SIZE];
+            random.nextBytes(data);
+            InputStream dataStream = new ByteArrayInputStream(data);
+
+            FaultInjectionStream badStream;
+            badStream = new FaultInjectionStream(dataStream, MOCK_OBJ_SIZE / 2, new IOException(message));
+
+            String uploadId = s3Client.initiateMultipartUpload(getTestBucket(), key);
+            try {
+                s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
+                        .withContentLength((long) MOCK_OBJ_SIZE));
+                Assert.fail("exception in input stream did not throw an exception");
+            } catch (ClientHandlerException e) {
+                Assert.assertTrue(e.getCause() instanceof IOException);
+                Assert.assertEquals(message, e.getCause().getMessage());
+
+                // object should not exist
+                Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
+                // upload should exist, but should have no parts
+                Assert.assertEquals(0, s3Client.listParts(getTestBucket(), key, uploadId).getParts().size());
+            } finally {
+                cleanMpus(getTestBucket());
+            }
+        } finally {
+            s3Client.destroy();
+        }
     }
 
     enum ExceptionType {

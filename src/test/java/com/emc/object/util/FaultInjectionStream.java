@@ -3,9 +3,11 @@ package com.emc.object.util;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FaultInjectionStream extends FilterInputStream {
-    private int bytesBeforeFailure;
+    private final AtomicInteger bytesBeforeFailure = new AtomicInteger();
+    private final AtomicInteger markPosition = new AtomicInteger(-1);
     private final IOException ioException;
     private final RuntimeException runtimeException;
     private int secondDelayBeforeThrowing;
@@ -20,7 +22,7 @@ public class FaultInjectionStream extends FilterInputStream {
 
     private FaultInjectionStream(InputStream in, int bytesBeforeFailure, IOException ioException, RuntimeException runtimeException) {
         super(in);
-        this.bytesBeforeFailure = bytesBeforeFailure;
+        this.bytesBeforeFailure.set(bytesBeforeFailure);
         this.ioException = ioException;
         this.runtimeException = runtimeException;
     }
@@ -47,8 +49,20 @@ public class FaultInjectionStream extends FilterInputStream {
         return read;
     }
 
+    @Override
+    public synchronized void mark(int i) {
+        super.mark(i);
+        markPosition.set(bytesBeforeFailure.get());
+    }
+
+    @Override
+    public synchronized void reset() throws IOException {
+        super.reset();
+        bytesBeforeFailure.set(markPosition.get());
+    }
+
     private void failIfReady() throws IOException {
-        if (bytesBeforeFailure <= 0) {
+        if (bytesBeforeFailure.get() <= 0) {
             if (secondDelayBeforeThrowing > 0) {
                 try {
                     Thread.sleep(secondDelayBeforeThrowing * 1000L);
@@ -65,10 +79,10 @@ public class FaultInjectionStream extends FilterInputStream {
     }
 
     private int getAvailableBytes(int requested) {
-        return Math.min(bytesBeforeFailure, requested);
+        return Math.min(bytesBeforeFailure.get(), requested);
     }
 
     private void decrementAvailableBytes(int bytesRead) {
-        bytesBeforeFailure -= bytesRead;
+        bytesBeforeFailure.addAndGet(-bytesRead);
     }
 }

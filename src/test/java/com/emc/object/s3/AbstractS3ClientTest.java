@@ -31,10 +31,7 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.Protocol;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.DeleteObjectRequest;
-import com.emc.object.s3.request.ListObjectsRequest;
-import com.emc.object.s3.request.ListVersionsRequest;
-import com.emc.object.s3.request.SetObjectLegalHoldRequest;
+import com.emc.object.s3.request.*;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
@@ -117,6 +114,15 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
             }
             client.deleteBucket(bucketName);
         }
+    }
+
+    /**
+     * call in subclasses if you create MPUs
+     */
+    protected void cleanMpus(String bucketName) {
+        client.listMultipartUploads(new ListMultipartUploadsRequest(bucketName)).getUploads().stream()
+                .parallel()
+                .forEach(upload -> client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, upload.getKey(), upload.getUploadId())));
     }
 
     /**
