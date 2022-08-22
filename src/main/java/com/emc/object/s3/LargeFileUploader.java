@@ -435,8 +435,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 try {
                     resumeContext.getUploadedParts().put(future.get().getPartNumber(), future.get());
                 } catch (ExecutionException e) { // unfortunately, we can't just catch CancellationException here
+                    // get the root cause
+                    Throwable t = e;
+                    while (t.getCause() != null && t.getCause() != t) t = t.getCause();
                     // CancellationException is only thrown when we are terminated early - cancelled tasks will just be ignored
-                    if (e.getCause() == null || !(e.getCause() instanceof CancellationException)) throw e;
+                    if (!(t instanceof CancellationException)) throw e;
                 }
             }
 
