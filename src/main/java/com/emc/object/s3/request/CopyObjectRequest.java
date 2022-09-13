@@ -55,10 +55,9 @@ public class CopyObjectRequest extends S3ObjectRequest {
     private AccessControlList acl;
     private CannedAcl cannedAcl;
 
-    private String copyMode;
     private ObjectTagging objectTagging;
 
-
+  
     public CopyObjectRequest(String sourceBucketName, String sourceKey, String bucketName, String key) {
         super(Method.PUT, bucketName, key, null);
         this.sourceBucketName = sourceBucketName;
@@ -88,8 +87,6 @@ public class CopyObjectRequest extends S3ObjectRequest {
         }
         if (acl != null) headers.putAll(acl.toHeaders());
         if (cannedAcl != null) RestUtil.putSingle(headers, S3Constants.AMZ_ACL, cannedAcl.getHeaderValue());
-        if (copyMode != null)
-            RestUtil.putSingle(headers, RestUtil.EMC_COPY_MODE, copyMode);
         if (objectTagging != null)
             RestUtil.putSingle(headers, S3Constants.AMZ_TAGGING, RestUtil.generateRawQueryString(objectTagging.toStringMap()));
         return headers;
@@ -183,14 +180,6 @@ public class CopyObjectRequest extends S3ObjectRequest {
         this.cannedAcl = cannedAcl;
     }
 
-    public String getCopyMode() {
-        return copyMode;
-    }
-
-    public void setCopyMode(String copyMode) {
-        this.copyMode = copyMode;
-    }
-
     public ObjectTagging getObjectTagging() {
         return objectTagging;
     }
@@ -236,11 +225,6 @@ public class CopyObjectRequest extends S3ObjectRequest {
 
     public CopyObjectRequest withCannedAcl(CannedAcl cannedAcl) {
         setCannedAcl(cannedAcl);
-        return this;
-    }
-
-    public CopyObjectRequest withCopyMode(String copyMode) {
-        setCopyMode(copyMode);
         return this;
     }
 

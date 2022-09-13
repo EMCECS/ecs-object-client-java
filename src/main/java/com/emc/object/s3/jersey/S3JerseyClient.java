@@ -805,6 +805,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public CopyRangeResult copyRange(CopyRangeRequest request) {
+        CopyRangeResult result = new CopyRangeResult();
+        fillResponseEntity(result, executeAndClose(client, request));
+        return result;
+    }
+      
+    @Override
     public ObjectTagging getObjectTagging(GetObjectTaggingRequest request) {
         return executeRequest(client, request, ObjectTagging.class);
     }

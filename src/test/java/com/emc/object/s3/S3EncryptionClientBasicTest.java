@@ -562,6 +562,10 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     public void testPreSignedUrlHeaderOverrides() throws Exception {
     }
 
+    @Override
+    public void testCopyRangeAPI() {
+    }
+  
     @Ignore
     @Override
     public void testSingleMultipartUploadWithRetention() {

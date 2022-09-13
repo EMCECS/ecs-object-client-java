@@ -470,6 +470,13 @@ public interface S3Client {
      */
     ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request);
 
+    /**
+     * This API is an ECS extension API. 
+     * IN addition to standard UploadPartCopy, it can source from multiple objects and reference ranges inside those objects. 
+     * And it can work though with many Internet proxy servers, web servers (ECS included), and load balancers which may have a limit on HTTP headers.
+     */
+    CopyRangeResult copyRange(CopyRangeRequest request);
+  
     void putObjectTagging(PutObjectTaggingRequest request);
 
     ObjectTagging getObjectTagging(GetObjectTaggingRequest request);
