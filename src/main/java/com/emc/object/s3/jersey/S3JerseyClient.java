@@ -389,7 +389,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             return executeRequest(client, request, LifecycleConfiguration.class);
         } catch (S3Exception e) {
-            if ("NoSuchBucketPolicy".equals(e.getErrorCode())) return null;
+            if ("NoSuchBucketPolicy".equals(e.getErrorCode()) || "NoSuchLifecycleConfiguration".equals(e.getErrorCode()))
+                return null;
             throw e;
         }
     }
