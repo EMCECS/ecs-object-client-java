@@ -28,12 +28,19 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
+import com.emc.rest.smart.HostStats;
+import com.emc.rest.smart.ecs.Vdc;
 import com.sun.jersey.api.client.ClientHandlerException;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Collections;
+
+import static com.emc.object.ObjectConfig.PROPERTY_DISABLE_HEALTH_CHECK;
+import static com.emc.object.ObjectConfig.PROPERTY_DISABLE_HOST_UPDATE;
 
 public class RetryFilterTest extends AbstractS3ClientTest {
     @Override
@@ -130,6 +137,50 @@ public class RetryFilterTest extends AbstractS3ClientTest {
         } catch (ClientHandlerException e) {
             Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
         }
+    }
+
+    @Test
+    public void testDifferentNodes() throws Exception {
+        int retryTimes = 4;
+        final String flagMessage = "This will always fail";
+
+        // tweak config to enable smart-client, have 2 hosts (same endpoint), and disable node discovery and pings
+        S3Config s3Config = createS3Config();
+        s3Config.setSmartClient(true);
+        s3Config.setVdcs(Collections.singletonList(new Vdc(s3Config.getHost(), s3Config.getHost())));
+        s3Config.setProperty(PROPERTY_DISABLE_HOST_UPDATE, true);
+        s3Config.setProperty(PROPERTY_DISABLE_HEALTH_CHECK, true);
+        s3Config.setRetryLimit(retryTimes);
+
+        // need to re-create the client so these changes affect the load balancer, which is initialized at client creation
+        client.destroy();
+        client = new S3JerseyClient(s3Config);
+
+        try {
+            S3ObjectMetadata metadata = new S3ObjectMetadata().withContentLength(1).withContentType("text/plain");
+            PutObjectRequest request = new PutObjectRequest(getTestBucket(), "foo",
+                    new RetryInputStream(null, null) {
+                        @Override
+                        public int read() {
+                            throw new S3Exception(flagMessage, 500);
+                        }
+                    }).withObjectMetadata(metadata);
+            client.putObject(request);
+            Assert.fail("500 error did not bubble an exception");
+        } catch (ClientHandlerException e) {
+            Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
+            Assert.assertEquals("Wrong http code", 500, ((S3Exception) e.getCause()).getHttpCode());
+        }
+
+        HostStats[] stats = ((S3JerseyClient) client).getLoadBalancer().getHostStats();
+        // 2 hosts should be in the load balancer
+        Assert.assertEquals(2, stats.length);
+        // total requests should match (first request + retry count)
+        long sumOfRequests = Arrays.stream(stats).mapToLong(HostStats::getTotalConnections).sum();
+        Assert.assertEquals(sumOfRequests, retryTimes + 1);
+        // each host should have at least 1 request
+        Assert.assertTrue(stats[0].getTotalConnections() > 0);
+        Assert.assertTrue(stats[1].getTotalConnections() > 0);
     }
 
     private class RetryInputStream extends InputStream {
