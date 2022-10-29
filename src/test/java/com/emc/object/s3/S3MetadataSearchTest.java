@@ -46,10 +46,10 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
 
     @Test
     public void testListSystemMetadataSearchKeys() throws Exception {
-        boolean is37OrLater = ecsVersion != null && ecsVersion.compareTo("3.7") >= 0;
+        boolean is37x = ecsVersion != null && ecsVersion.matches("3\\.7\\..*");
         MetadataSearchKey[] expectedIndexableKeys;
         MetadataSearchKey[] expectedOptionalAttributes;
-        if (!is37OrLater) {
+        if (!is37x) {
             expectedIndexableKeys = new MetadataSearchKey[]{
                     new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
                     new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
