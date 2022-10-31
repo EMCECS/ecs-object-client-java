@@ -26,19 +26,23 @@
  */
 package com.emc.object.s3;
 
-public class S3Exception extends RuntimeException {
-    private int httpCode;
+import com.emc.rest.smart.SmartClientException;
+
+public class S3Exception extends SmartClientException {
+    private final int httpCode;
     private String errorCode;
     private String requestId;
 
     public S3Exception(String message, int httpCode) {
         super(message);
         this.httpCode = httpCode;
+        this.setErrorType(fromHttpCode(httpCode));
     }
 
     public S3Exception(String message, int httpCode, Throwable cause) {
         super(message, cause);
         this.httpCode = httpCode;
+        this.setErrorType(fromHttpCode(httpCode));
     }
 
     public S3Exception(String message, int httpCode, String errorCode, String requestId) {
@@ -46,6 +50,7 @@ public class S3Exception extends RuntimeException {
         this.httpCode = httpCode;
         this.errorCode = errorCode;
         this.requestId = requestId;
+        this.setErrorType(fromHttpCode(httpCode));
     }
 
     public int getHttpCode() {
@@ -58,5 +63,11 @@ public class S3Exception extends RuntimeException {
 
     public String getRequestId() {
         return requestId;
+    }
+
+    private ErrorType fromHttpCode(int httpCode) {
+        return httpCode >= 400 && httpCode < 500 ? ErrorType.Client
+                : httpCode >= 500 && httpCode < 600 ? ErrorType.Service
+                : ErrorType.Unknown;
     }
 }
