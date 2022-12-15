@@ -28,14 +28,16 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.*;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.ext.Provider;
+
+import java.io.IOException;
 import java.util.Map;
 
-public class AuthorizationFilter extends ClientFilter {
+@Provider
+public class AuthorizationFilter implements ClientRequestFilter {
     private S3Config s3Config;
     private S3Signer signer;
 
@@ -48,7 +50,7 @@ public class AuthorizationFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+    public void filter(ClientRequestContext request) throws IOException {
 
         // tack on user-agent here
         if (s3Config.getUserAgent() != null) {
@@ -56,19 +58,17 @@ public class AuthorizationFilter extends ClientFilter {
         }
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
-            Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
+            Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getUri().getRawQuery());
 
             String resource = VHostUtil.getResourceString(s3Config,
-                    (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE),
-                    (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
-                    RestUtil.getEncodedPath(request.getURI()));
+                    (String) request.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                    (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                    RestUtil.getEncodedPath(request.getUri()));
 
             signer.sign(request,
                     resource,
                     parameters,
                     request.getHeaders());
         }
-
-        return getNext().handle(request);
     }
 }

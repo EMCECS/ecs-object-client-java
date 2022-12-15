@@ -7,7 +7,7 @@ import com.emc.object.s3.bean.DeleteObjectsResult;
 import com.emc.object.s3.bean.DeleteSuccess;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;

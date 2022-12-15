@@ -26,11 +26,18 @@
  */
 package com.emc.object.s3.jersey;
 
+import com.emc.jersey.AbstractClientRequestAdapter;
+import com.emc.jersey.ClientRequestAdapter;
 import com.emc.object.s3.*;
 import com.emc.object.util.*;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import org.glassfish.jersey.client.ClientRequest;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+
+import javax.ws.rs.ext.Provider;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
@@ -39,7 +46,8 @@ import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
-public class ChecksumFilter extends ClientFilter {
+@Provider
+public class ChecksumFilter implements ClientRequestFilter, ClientResponseFilter {
     private S3Config s3Config;
     private S3Signer signer;
 
@@ -52,53 +60,55 @@ public class ChecksumFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        try {
-            ChecksumAdapter adapter = new ChecksumAdapter(request.getAdapter());
+    public void filter(ClientRequestContext request) throws IOException {
+        ChecksumAdapter adapter = new ChecksumAdapter(request.getAdapter());
 
-            Boolean verifyWrite = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
-            if (verifyWrite != null && verifyWrite) {
-                // wrap stream to calculate write checksum
-                request.setAdapter(adapter);
-            }
-
-            Boolean generateMd5 = (Boolean) request.getProperties().get(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
-            if (generateMd5 != null && generateMd5) {
-                // wrap stream to generate Content-MD5 header
-                ContentMd5Adapter md5Adapter = new ContentMd5Adapter(request.getAdapter());
-                request.setAdapter(md5Adapter);
-            }
-
-            // execute request
-            ClientResponse response = getNext().handle(request);
-
-            // pull etag from response headers
-            String md5Header = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_ETAG);
-            if (md5Header != null) md5Header = md5Header.replaceAll("\"", "");
-            if (md5Header != null && (md5Header.length() <= 2 || md5Header.contains("-")))
-                md5Header = null; // look for valid etags
-
-            // also look for content MD5 (this trumps etag if present)
-            String contentMd5 = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.EMC_CONTENT_MD5);
-            if (contentMd5 != null) md5Header = contentMd5;
-
-            if (verifyWrite != null && verifyWrite && md5Header != null) {
-                // verify write checksum
-                if (!adapter.getChecksum().getHexValue().equals(md5Header))
-                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getHexValue(), md5Header);
-            }
-
-            Boolean verifyRead = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
-            if (verifyRead != null && verifyRead && md5Header != null) {
-                // wrap stream to verify read checksum
-                response.setEntityInputStream(new ChecksummedInputStream(response.getEntityInputStream(),
-                        new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, md5Header))); // won't have length for chunked responses
-            }
-
-            return response;
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("fatal: MD5 algorithm not found");
+        Boolean verifyWrite = (Boolean) request.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
+        if (verifyWrite != null && verifyWrite) {
+            // wrap stream to calculate write checksum
+            request.setAdapter(adapter);
         }
+
+        Boolean generateMd5 = (Boolean) request.getProperty(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
+        if (generateMd5 != null && generateMd5) {
+            // wrap stream to generate Content-MD5 header
+            ContentMd5Adapter md5Adapter = new ContentMd5Adapter(request.getAdapter());
+            request.setAdapter(md5Adapter);
+        }
+    }
+
+    @Override
+    public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
+
+        ChecksumAdapter adapter = new ChecksumAdapter(request.getAdapter());
+        Boolean verifyWrite = (Boolean) request.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
+
+        // pull etag from response headers
+        String md5Header = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_ETAG);
+        if (md5Header != null) md5Header = md5Header.replaceAll("\"", "");
+        if (md5Header != null && (md5Header.length() <= 2 || md5Header.contains("-")))
+            md5Header = null; // look for valid etags
+
+        // also look for content MD5 (this trumps etag if present)
+        String contentMd5 = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.EMC_CONTENT_MD5);
+        if (contentMd5 != null) md5Header = contentMd5;
+
+        if (verifyWrite != null && verifyWrite && md5Header != null) {
+            // verify write checksum
+            if (!adapter.getChecksum().getHexValue().equals(md5Header))
+                throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getHexValue(), md5Header);
+        }
+
+        Boolean verifyRead = (Boolean) request.getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
+        if (verifyRead != null && verifyRead && md5Header != null) {
+            // wrap stream to verify read checksum
+            request.setEntityStream(new ChecksummedInputStream(request.getEntityStream(),
+                    new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, md5Header))); // won't have length for chunked responses
+        }
+
+//        } catch (NoSuchAlgorithmException e) {
+//            throw new RuntimeException("fatal: MD5 algorithm not found");
+//        }
     }
 
     private class ChecksumAdapter extends AbstractClientRequestAdapter {
@@ -157,12 +167,12 @@ public class ChecksumFilter extends ClientFilter {
 
             // need to re-sign request because Content-MD5 is included in the signature!
             if (s3Config.getIdentity() != null) {
-                Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
+                Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getUri().getRawQuery());
 
                 String resource = VHostUtil.getResourceString(s3Config,
-                        (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE),
-                        (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
-                        RestUtil.getEncodedPath(request.getURI()));
+                        (String) request.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                        (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                        RestUtil.getEncodedPath(request.getUri()));
 
                 signer.sign(request,
                         resource,

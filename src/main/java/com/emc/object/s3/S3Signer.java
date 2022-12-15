@@ -4,13 +4,13 @@ import com.emc.object.s3.jersey.BucketFilter;
 import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
 import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.ws.rs.client.ClientRequestContext;
 import javax.xml.bind.DatatypeConverter;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -33,7 +33,7 @@ public abstract class S3Signer {
     /**
      * Sign the request
      */
-    public abstract void sign(ClientRequest request, String resource, Map<String, String> parameters,
+    public abstract void sign(ClientRequestContext request, String resource, Map<String, String> parameters,
                               Map<String, List<Object>> headers);
 
     /**

@@ -27,14 +27,18 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.core.Request;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.client.ClientResponseFilter;
+
+import org.glassfish.jersey.client.ClientRequest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,13 +92,13 @@ public class Sdk238Test {
         }
     }
 
-    protected static class UriCaptureFilter extends ClientFilter {
+    protected static class UriCaptureFilter extends ClientResponseFilter {
         private URI uri;
 
         @Override
-        public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-            uri = cr.getURI();
-            return getNext().handle(cr);
+        public void handle(ClientRequestContext request, ClientResponseContext response) throws IOException {
+            uri = request.getUri();
+//            return getNext().handle(cr);
         }
 
         URI getLastUri() {

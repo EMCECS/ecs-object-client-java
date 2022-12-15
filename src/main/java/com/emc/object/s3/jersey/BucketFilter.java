@@ -29,17 +29,20 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.ext.Provider;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class BucketFilter extends ClientFilter {
+@Provider
+public class BucketFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BucketFilter.class);
 
@@ -69,14 +72,13 @@ public class BucketFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        URI uri = request.getURI();
+    public void filter(ClientRequestContext request) throws IOException {
+        URI uri = request.getUri();
 
-        String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
+        String bucketName = (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
         if (bucketName != null) {
-            request.setURI(insertBucket(uri, bucketName, s3Config.isUseVHost()));
+            request.setUri(insertBucket(uri, bucketName, s3Config.isUseVHost()));
         }
 
-        return getNext().handle(request);
     }
 }

@@ -2,18 +2,23 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.ErrorFilter;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.core.Request;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.client.ClientResponseFilter;
 import com.sun.jersey.core.header.InBoundHeaders;
 import com.sun.jersey.spi.MessageBodyWorkers;
+import org.glassfish.jersey.message.MessageBodyWorkers;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -73,7 +78,7 @@ public class ErrorFilterTest {
         }
     }
 
-    static class TestErrorGenerator extends ClientFilter {
+    static class TestErrorGenerator extends ClientResponseFilter {
         private final int statusCode;
         private final String errorBody;
         private final MessageBodyWorkers messageBodyWorkers;
@@ -85,7 +90,7 @@ public class ErrorFilterTest {
         }
 
         @Override
-        public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
+        public void handle(ClientRequestContext request, ClientResponseContext response) throws IOException {
             InBoundHeaders headers = new InBoundHeaders();
             headers.putSingle("Date", RestUtil.headerFormat(new Date()));
             InputStream dataStream = new ByteArrayInputStream(errorBody.getBytes(StandardCharsets.UTF_8));

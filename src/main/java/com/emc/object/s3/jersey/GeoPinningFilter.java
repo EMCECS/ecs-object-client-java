@@ -31,13 +31,15 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.ecs.Vdc;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.ext.Provider;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +47,8 @@ import java.util.List;
  * Note: this filter must be applied *before* the BucketFilter (it does not remove the bucket from
  * the path to extract the object key)
  */
-public class GeoPinningFilter extends ClientFilter {
+@Provider
+public class GeoPinningFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(GeoPinningFilter.class);
 
@@ -56,10 +59,10 @@ public class GeoPinningFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+    public void filter(ClientRequestContext request) throws IOException {
         // if there's no bucket, we don't need to pin the request (there's no write or read)
-        String bucketName = (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME);
-        String objectKey = (String) request.getProperties().get(S3Constants.PROPERTY_OBJECT_KEY);
+        String bucketName = (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
+        String objectKey = (String) request.getProperty(S3Constants.PROPERTY_OBJECT_KEY);
         if (bucketName != null) {
             List<Vdc> healthyVdcs = new ArrayList<>();
 
@@ -76,7 +79,7 @@ public class GeoPinningFilter extends ClientFilter {
 
             // if this is a read and failover for retries is requested, round-robin the VDCs for each retry
             if (objectConfig.isGeoReadRetryFailover() && Method.GET.name().equalsIgnoreCase(request.getMethod())) {
-                Integer retries = (Integer) request.getProperties().get(RetryFilter.PROP_RETRY_COUNT);
+                Integer retries = (Integer) request.getProperty(RetryFilter.PROP_RETRY_COUNT);
                 if (retries != null) {
                     int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
                     log.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",
@@ -85,10 +88,9 @@ public class GeoPinningFilter extends ClientFilter {
                 }
             }
 
-            request.getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
+            request.getConfiguration().getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
         }
 
-        return getNext().handle(request);
     }
 
     public ObjectConfig<?> getObjectConfig() {

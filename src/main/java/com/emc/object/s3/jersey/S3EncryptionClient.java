@@ -35,8 +35,7 @@ import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import javax.ws.rs.client.ClientResponseFilter;
 
 import java.io.InputStream;
 import java.net.URL;

@@ -1,8 +1,7 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import javax.ws.rs.client.ClientResponseFilter;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -31,11 +31,13 @@ import com.emc.object.s3.request.PresignedUrlRequest;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.client.impl.ClientRequestImpl;
 import com.sun.jersey.core.header.OutBoundHeaders;
+import org.glassfish.jersey.client.ClientRequest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Request;
 import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;

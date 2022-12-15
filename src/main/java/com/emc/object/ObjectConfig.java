@@ -32,8 +32,9 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
-import com.sun.jersey.api.client.config.ClientConfig;
 import org.apache.http.params.CoreConnectionPNames;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,12 +212,12 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         }
 
         // CONNECT_TIMEOUT
-        smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, connectTimeout);
+        smartConfig.setProperty(ClientProperties.CONNECT_TIMEOUT, connectTimeout);
         // apache client uses a different property
         smartConfig.setProperty(CoreConnectionPNames.CONNECTION_TIMEOUT, connectTimeout);
 
         // READ_TIMEOUT
-        smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, readTimeout);
+        smartConfig.setProperty(ClientProperties.READ_TIMEOUT, readTimeout);
 
 
         return smartConfig;

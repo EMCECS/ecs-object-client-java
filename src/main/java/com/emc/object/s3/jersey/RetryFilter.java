@@ -28,10 +28,6 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Exception;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +35,12 @@ import java.io.InputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RetryFilter extends ClientFilter {
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.ext.Provider;
+
+@Provider
+public class RetryFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RetryFilter.class);
 
@@ -52,22 +53,22 @@ public class RetryFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest clientRequest) throws ClientHandlerException {
+    public void filter(ClientRequestContext request) throws IOException {
         int retryCount = 0;
         InputStream entityStream = null;
-        if (clientRequest.getEntity() instanceof InputStream) entityStream = (InputStream) clientRequest.getEntity();
+        if (request.getEntity() instanceof InputStream) entityStream = (InputStream) request.getEntity();
         while (true) {
             try {
                 // if using an InputStream, mark the stream so we can rewind it in case of an error
                 if (entityStream != null && entityStream.markSupported())
                     entityStream.mark(s3Config.getRetryBufferSize());
 
-                return getNext().handle(clientRequest);
+//                return getNext().handle(clientRequest);
             } catch (RuntimeException orig) {
                 Throwable t = orig;
 
                 // in this case, the exception was wrapped by Jersey
-                if (t instanceof ClientHandlerException) t = t.getCause();
+                if (t instanceof IOException) t = t.getCause();
 
                 if (t instanceof S3Exception) {
                     S3Exception se = (S3Exception) t;
@@ -103,8 +104,8 @@ public class RetryFilter extends ClientFilter {
                     }
                 }
 
-                log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
-                clientRequest.getProperties().put(PROP_RETRY_COUNT, retryCount);
+                log.info("error received in response [{}], retrying ({} of {})...", t, retryCount, s3Config.getRetryLimit());
+                request.getConfiguration().getProperties().put(PROP_RETRY_COUNT, retryCount);
             }
         }
     }

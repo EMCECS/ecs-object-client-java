@@ -5,8 +5,8 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 import org.junit.*;
 
 import java.net.HttpURLConnection;

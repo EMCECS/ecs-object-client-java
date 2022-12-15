@@ -27,14 +27,21 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Exception;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import org.glassfish.jersey.client.InjectionManagerClientProvider;
+import org.glassfish.jersey.internal.inject.InjectionManager;
+import org.glassfish.jersey.internal.inject.Providers;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.ext.Provider;
+
+import java.io.IOException;
 import java.util.Random;
 
-public class FaultInjectionFilter extends ClientFilter {
+@Provider
+public class FaultInjectionFilter implements ClientResponseFilter {
     public static final String FAULT_INJECTION_ERROR_CODE = "FaultInjection";
     public static final String FAULT_INJECTION_ERROR_MESSAGE = "Fault Injection";
 
@@ -52,11 +59,9 @@ public class FaultInjectionFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
+    public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
         if (random.nextFloat() < failureRate)
             throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
-
-        return getNext().handle(cr);
     }
 
     public float getFailureRate() {

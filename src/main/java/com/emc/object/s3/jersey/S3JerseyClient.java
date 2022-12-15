@@ -36,9 +36,9 @@ import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.rest.smart.jersey.SmartFilter;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import org.glassfish.jersey.client.ClientProperties;
+
+import javax.ws.rs.client.Client;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -137,7 +137,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that handler, you should
      * set the "http.maxConnections" system property to match your thread count (default is only 5).
      */
-    public S3JerseyClient(S3Config config, ClientHandler clientHandler) {
+    public S3JerseyClient(S3Config config, Client client) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
         if (s3Config.isUseV2Signer())
@@ -149,13 +149,13 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         loadBalancer = smartConfig.getLoadBalancer();
 
         // S.C. - CHUNKED ENCODING (match ECS buffer size)
-        smartConfig.setProperty(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
+        smartConfig.setProperty(ClientProperties.CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
         // creates a standard (non-load-balancing) jersey client
-        if (clientHandler == null) {
+        if (client == null) {
             client = SmartClientFactory.createStandardClient(smartConfig);
         } else {
-            client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
+            SmartClientFactory.createStandardClient(smartConfig, client);
         }
 
         if (s3Config.isSmartClient()) {
@@ -191,10 +191,10 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            if (clientHandler == null) {
+            if (client == null) {
                 client = SmartClientFactory.createSmartClient(smartConfig);
             } else {
-                client = SmartClientFactory.createSmartClient(smartConfig, clientHandler);
+                client = SmartClientFactory.createSmartClient(smartConfig, client);
             }
         }
 
@@ -213,18 +213,18 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             handler = filter.getNext();
         }
         // jersey filters
-        client.addFilter(new ErrorFilter());
+        client.register(new ErrorFilter());
         if (s3Config.getFaultInjectionRate() > 0.0f)
-            client.addFilter(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
-        if (s3Config.isChecksumEnabled()) client.addFilter(new ChecksumFilter(s3Config));
-        client.addFilter(new AuthorizationFilter(s3Config));
+            client.register(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
+        if (s3Config.isChecksumEnabled()) client.register(new ChecksumFilter(s3Config));
+        client.register(new AuthorizationFilter(s3Config));
         if (smartFilter != null) {
-            client.addFilter(smartFilter);
+            client.register(smartFilter);
         }
-        if (s3Config.isRetryEnabled()) client.addFilter(new RetryFilter(s3Config)); // replaces the apache retry handler
-        if (s3Config.isGeoPinningEnabled()) client.addFilter(new GeoPinningFilter(s3Config));
-        client.addFilter(new BucketFilter(s3Config));
-        client.addFilter(new NamespaceFilter(s3Config));
+        if (s3Config.isRetryEnabled()) client.register(new RetryFilter(s3Config)); // replaces the apache retry handler
+        if (s3Config.isGeoPinningEnabled()) client.register(new GeoPinningFilter(s3Config));
+        client.register(new BucketFilter(s3Config));
+        client.register(new NamespaceFilter(s3Config));
     }
 
     @Override
