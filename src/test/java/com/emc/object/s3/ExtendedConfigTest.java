@@ -6,14 +6,9 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.filter.ClientFilter;
-import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import org.apache.http.client.HttpClient;
-import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.client.JerseyClient;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -60,33 +55,26 @@ public class ExtendedConfigTest {
         int connectionLimitTotal = 39; // non-default number
 
         // configure apache connection manager
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new PoolingClientConnectionManager();
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
         connectionManager.setDefaultMaxPerRoute(connectionLimitPerHost);
         connectionManager.setMaxTotal(connectionLimitTotal);
 
         // set connection manager property in config
         // (this will get passed down to the handler by the smart client factory)
-        s3Config.setProperty(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
+        s3Config.setProperty(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
 
         TestS3JerseyClient s3Client = new TestS3JerseyClient(s3Config);
 
         // verify settings in raw apache client
         // first find the handler in the chain
-        Client jerseyClient = s3Client.getClient();
-        ClientHandler handler = jerseyClient.getHeadHandler();
-        while (handler instanceof ClientFilter) {
-            handler = ((ClientFilter) handler).getNext();
-        }
-        // apache handler should be right after the filters
-        ApacheHttpClient4Handler apacheHandler = (ApacheHttpClient4Handler) handler;
-        // get the raw client
-        HttpClient httpClient = apacheHandler.getHttpClient();
+        JerseyClient jerseyClient = s3Client.getClient();
+
         // get the connection manager
-        ClientConnectionManager apacheConnMgr = httpClient.getConnectionManager();
-        Assert.assertTrue(apacheConnMgr instanceof PoolingClientConnectionManager);
+        PoolingHttpClientConnectionManager apacheConnMgr = (PoolingHttpClientConnectionManager) jerseyClient.getConfiguration().getProperty(ApacheClientProperties.CONNECTION_MANAGER);
+        Assert.assertNotNull(apacheConnMgr);
         // check limit settings
-        Assert.assertEquals(connectionLimitPerHost, ((PoolingClientConnectionManager) apacheConnMgr).getDefaultMaxPerRoute());
-        Assert.assertEquals(connectionLimitTotal, ((PoolingClientConnectionManager) apacheConnMgr).getMaxTotal());
+        Assert.assertEquals(connectionLimitPerHost, apacheConnMgr.getDefaultMaxPerRoute());
+        Assert.assertEquals(connectionLimitTotal, apacheConnMgr.getMaxTotal());
     }
 
     static class TestS3JerseyClient extends S3JerseyClient {
@@ -94,7 +82,7 @@ public class ExtendedConfigTest {
             super(s3Config);
         }
 
-        Client getClient() {
+        JerseyClient getClient() {
             return client;
         }
     }

@@ -26,19 +26,25 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.ChecksumFilter;
+import com.emc.object.s3.jersey.ChecksumRequestFilter;
+import com.emc.object.s3.jersey.ChecksumResponseFilter;
+import com.emc.object.s3.jersey.FilterPriorities;
 import com.emc.object.util.ChecksumError;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.core.header.InBoundHeaders;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
+import org.glassfish.jersey.client.JerseyWebTarget;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Priority;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.*;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Random;
 
 public class ChecksumFilterTest {
@@ -49,52 +55,47 @@ public class ChecksumFilterTest {
 
         MockClientHandler mockHandler = new MockClientHandler();
 
-        Client client = new Client(mockHandler);
-        client.addFilter(new ChecksumFilter(new S3Config()));
+        JerseyClient client = JerseyClientBuilder.createClient();
+        client.register(mockHandler);
+        client.register(new ChecksumRequestFilter(new S3Config()));
+        client.register(new ChecksumResponseFilter());
 
         // positive test
         mockHandler.setBadMd5(false);
-        WebResource resource = client.resource("http://foo.com");
-        resource.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-        ClientResponse response = resource.put(ClientResponse.class, data);
+        JerseyWebTarget resource = client.target("http://foo.com");
+        resource.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
+        Response response = resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
         Assert.assertNotNull(response);
         Assert.assertEquals(200, response.getStatus());
+        response.close();
 
         try {
             mockHandler.setBadMd5(true);
-            resource = client.resource("http://foo.com");
-            resource.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-            resource.put(ClientResponse.class, data);
+            resource = client.target("http://foo.com");
+            resource.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
+            resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
             Assert.fail("bad MD5 should throw exception");
-        } catch (ChecksumError e) {
+        } catch (ProcessingException e) {
             // expected
+            Assert.assertTrue(e.getCause() instanceof ChecksumError);
         }
+        client.close();
     }
 
-    // assumes byte[] entity
-    class MockClientHandler implements ClientHandler {
+    @Provider
+    @Priority(FilterPriorities.PRIORITY_CHECKSUM_RESPONSE + 1)
+    class MockClientHandler implements ClientResponseFilter {
         boolean badMd5 = false;
 
         @Override
-        public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-            byte[] content = (byte[]) cr.getEntity();
-
-            // make sure entity is actually written (so digest stream will get real MD5)
-            try {
-                OutputStream out = cr.getAdapter().adapt(cr, new ByteArrayOutputStream());
-                out.write((byte[]) cr.getEntity());
-                out.close();
-            } catch (IOException e) {
-                throw new ClientHandlerException(e);
-            }
-
+        public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
+            byte[] content = (byte[]) requestContext.getEntity();
             // set content MD5 header in response (bad or real)
-            InBoundHeaders headers = new InBoundHeaders();
-            if (badMd5) headers.add(RestUtil.EMC_CONTENT_MD5, "abcdef0123456789abcdef0123456789");
-            else headers.add(RestUtil.EMC_CONTENT_MD5, DigestUtils.md5Hex(content));
-
+            String MD5 = badMd5 ? "abcdef0123456789abcdef0123456789" : DigestUtils.md5Hex(content);
             // return mock response with headers and no data
-            return new ClientResponse(ClientResponse.Status.OK, headers, new ByteArrayInputStream(new byte[0]), null);
+            responseContext.setStatus(Response.Status.OK.getStatusCode());
+            responseContext.getHeaders().putSingle(RestUtil.EMC_CONTENT_MD5, MD5);
+            responseContext.setEntityStream(new ByteArrayInputStream(new byte[0]));
         }
 
         public void setBadMd5(boolean badMd5) {

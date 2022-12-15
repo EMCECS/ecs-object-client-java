@@ -27,14 +27,18 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Exception;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import com.emc.object.util.RestUtil;
 
+import javax.annotation.Priority;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.ext.Provider;
 import java.util.Random;
 
-public class FaultInjectionFilter extends ClientFilter {
+@Provider
+@Priority(FilterPriorities.PRIORITY_FAULTINJECTION)
+public class FaultInjectionFilter implements ClientRequestFilter {
     public static final String FAULT_INJECTION_ERROR_CODE = "FaultInjection";
     public static final String FAULT_INJECTION_ERROR_MESSAGE = "Fault Injection";
 
@@ -52,11 +56,10 @@ public class FaultInjectionFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-        if (random.nextFloat() < failureRate)
+    public void filter(ClientRequestContext requestContext) throws WebApplicationException {
+        if (random.nextFloat() < failureRate) {
             throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
-
-        return getNext().handle(cr);
+        }
     }
 
     public float getFailureRate() {

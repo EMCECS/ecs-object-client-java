@@ -1,22 +1,16 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.ErrorFilter;
-import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
-import com.sun.jersey.core.header.InBoundHeaders;
-import com.sun.jersey.spi.MessageBodyWorkers;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.ws.rs.core.Response;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 
 public class ErrorFilterTest {
     @Test
@@ -31,19 +25,32 @@ public class ErrorFilterTest {
                 "<RequestId>0af69b4a:17a531ff169:46673:155</RequestId>" +
                 "</Error>";
 
-        Client client = Client.create();
-        // order of execution is reversed from this order
-        client.addFilter(new TestErrorGenerator(statusCode, xml, client.getMessageBodyWorkers()));
-        client.addFilter(new ErrorFilter());
+        JerseyClient client = JerseyClientBuilder.createClient();
+        client.register(new ErrorFilter());
+
+        // as ConnectException could not be passed by ClientResponseFilter in Jersey 2.x,
+        // basically we cannot generate a specific error by defining any customized filter to test the functionality of ErrorFilter.
+        WireMockServer wireMockServer = new WireMockServer(options().dynamicPort().dynamicHttpsPort());
+        wireMockServer.start();
+        int httpPort = wireMockServer.port();
+        wireMockServer.stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
+                .withStatus(statusCode)
+                .withStatusMessage(message)
+                .withHeader("Content-Type", "application/xml")
+                .withBody(xml.getBytes(StandardCharsets.UTF_8))));
 
         try {
-            client.resource("http://127.0.0.1/foo").head();
+            // Note that head() is not working here, cause Jersey 2.x would swallow the response body.
+            // Then ErrorFilter will have nothing to parse. So we got to use get().
+            client.target("http://127.0.0.1:" + httpPort + "/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
             Assert.assertEquals(statusCode, e.getHttpCode());
             Assert.assertEquals(errorCode, e.getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
+        client.close();
+        wireMockServer.stop();
     }
 
     @Test
@@ -58,38 +65,30 @@ public class ErrorFilterTest {
                 "<RequestId>0af69b4a:17a531ff169:46673:155</RequestId>" +
                 "</Error>";
 
-        Client client = Client.create();
-        // order of execution is reversed from this order
-        client.addFilter(new TestErrorGenerator(statusCode, xml, client.getMessageBodyWorkers()));
-        client.addFilter(new ErrorFilter());
+        JerseyClient client = JerseyClientBuilder.createClient();
+        client.register(new ErrorFilter());
+
+        // as above
+        WireMockServer wireMockServer = new WireMockServer(options().dynamicPort().dynamicHttpsPort());
+        wireMockServer.start();
+        int httpPort = wireMockServer.port();
+        wireMockServer.stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
+                .withStatus(statusCode)
+                .withStatusMessage(message)
+                .withHeader("Content-Type", "application/xml")
+                .withBody(xml.getBytes(StandardCharsets.UTF_8))));
 
         try {
-            client.resource("http://127.0.0.1/foo").head();
+            // as above
+            client.target("http://127.0.0.1:" + httpPort + "/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
             Assert.assertEquals(statusCode, e.getHttpCode());
             Assert.assertEquals(errorCode, e.getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
+        client.close();
+        wireMockServer.stop();
     }
 
-    static class TestErrorGenerator extends ClientFilter {
-        private final int statusCode;
-        private final String errorBody;
-        private final MessageBodyWorkers messageBodyWorkers;
-
-        TestErrorGenerator(int statusCode, String errorBody, MessageBodyWorkers messageBodyWorkers) {
-            this.statusCode = statusCode;
-            this.errorBody = errorBody;
-            this.messageBodyWorkers = messageBodyWorkers;
-        }
-
-        @Override
-        public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-            InBoundHeaders headers = new InBoundHeaders();
-            headers.putSingle("Date", RestUtil.headerFormat(new Date()));
-            InputStream dataStream = new ByteArrayInputStream(errorBody.getBytes(StandardCharsets.UTF_8));
-            return new ClientResponse(Response.Status.fromStatusCode(statusCode), headers, dataStream, messageBodyWorkers);
-        }
-    }
 }

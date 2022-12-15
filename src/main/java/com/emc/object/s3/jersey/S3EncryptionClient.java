@@ -35,14 +35,10 @@ import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import org.glassfish.jersey.client.JerseyClient;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -113,8 +109,8 @@ public class S3EncryptionClient extends S3JerseyClient {
         this(s3Config, null, encryptionConfig);
     }
 
-    public S3EncryptionClient(S3Config s3Config, ClientHandler clientHandler, EncryptionConfig encryptionConfig) {
-        super(s3Config, clientHandler);
+    public S3EncryptionClient(S3Config s3Config, String clientTransportConnector, EncryptionConfig encryptionConfig) {
+        super(s3Config, clientTransportConnector);
         this.encryptionConfig = encryptionConfig;
 
         // create an encode chain based on parameters
@@ -123,28 +119,9 @@ public class S3EncryptionClient extends S3JerseyClient {
                 : new CodecChain(encryptionConfig.getEncryptionSpec());
         encodeChain.setProperties(encryptionConfig.getCodecProperties());
 
-        // insert codec filter into chain before the authorization filter
-        // as usual, Jersey makes this quite hard
-
-        // first, make a list of the filters
-        List<ClientFilter> filters = new ArrayList<ClientFilter>();
-        ClientHandler handler = client.getHeadHandler();
-        while (handler instanceof ClientFilter) {
-            ClientFilter filter = (ClientFilter) handler;
-            if (filter instanceof AuthorizationFilter) {
-                // insert codec filter before checksum filter
-                filters.add(new CodecFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
-            }
-            filters.add(filter);
-            handler = filter.getNext();
-        }
-
-        // then re-create the filter list (must reverse the list because filters are inserted back to front)
-        Collections.reverse(filters);
-        client.removeAllFilters();
-        for (ClientFilter filter : filters) {
-            client.addFilter(filter);
-        }
+        // insert codec filter into chain before the authorization filter, checksum filter
+        client.register(new CodecRequestFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
+        client.register(new CodecResponseFilter().withCodecProperties(encryptionConfig.getCodecProperties()));
     }
 
     /**

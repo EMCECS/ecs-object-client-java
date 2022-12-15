@@ -82,7 +82,6 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
-    @After
     public void shutdownClient() {
         if (client != null) client.destroy();
     }
@@ -114,6 +113,12 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
             }
             client.deleteBucket(bucketName);
         }
+    }
+
+    @Override
+    protected void cleanUpTestBucket(String bucketName) {
+        cleanUpBucket(bucketName);
+        shutdownClient();
     }
 
     /**

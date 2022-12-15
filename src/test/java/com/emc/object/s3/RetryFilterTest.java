@@ -30,7 +30,6 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.rest.smart.HostStats;
 import com.emc.rest.smart.ecs.Vdc;
-import com.sun.jersey.api.client.ClientHandlerException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,8 +64,8 @@ public class RetryFilterTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("Retried more than retryLimit times");
-        } catch (ClientHandlerException e) {
-            Assert.assertEquals("Wrong exception thrown", flagMessage, e.getCause().getMessage());
+        } catch (S3Exception e) {
+            Assert.assertEquals("Wrong exception thrown", flagMessage, e.getMessage());
         }
 
         s3Config.setRetryLimit(retryLimit + 1);
@@ -82,7 +81,7 @@ public class RetryFilterTest extends AbstractS3ClientTest {
             request = new PutObjectRequest(getTestBucket(), "foo",
                     new RetryInputStream(null, null) {
                         @Override
-                        public int read() throws IOException {
+                        public int read() {
                             switch (callCount++) {
                                 case 0:
                                     throw new S3Exception("should not retry", 400);
@@ -94,15 +93,15 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                     }).withObjectMetadata(metadata);
             client.putObject(request);
             Assert.fail("HTTP 400 was retried and should not be");
-        } catch (ClientHandlerException e) {
-            Assert.assertEquals("Wrong http code", 400, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("Wrong http code", 400, e.getHttpCode());
         }
 
         try {
             request = new PutObjectRequest(getTestBucket(), "foo",
                     new RetryInputStream(null, null) {
                         @Override
-                        public int read() throws IOException {
+                        public int read() {
                             switch (callCount++) {
                                 case 0:
                                     throw new S3Exception("should not retry", 501);
@@ -114,15 +113,15 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                     }).withObjectMetadata(metadata);
             client.putObject(request);
             Assert.fail("HTTP 501 was retried and should not be");
-        } catch (ClientHandlerException e) {
-            Assert.assertEquals("Wrong http code", 501, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("Wrong http code", 501, e.getHttpCode());
         }
 
         try {
             request = new PutObjectRequest(getTestBucket(), "foo",
                     new RetryInputStream(null, null) {
                         @Override
-                        public int read() throws IOException {
+                        public int read() {
                             switch (callCount++) {
                                 case 0:
                                     throw new RuntimeException(flagMessage);
@@ -134,7 +133,7 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                     }).withObjectMetadata(metadata);
             client.putObject(request);
             Assert.fail("RuntimeException was retried and should not be");
-        } catch (ClientHandlerException e) {
+        } catch (RuntimeException e) {
             Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
         }
     }
@@ -167,9 +166,9 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                     }).withObjectMetadata(metadata);
             client.putObject(request);
             Assert.fail("500 error did not bubble an exception");
-        } catch (ClientHandlerException e) {
-            Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
-            Assert.assertEquals("Wrong http code", 500, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("Wrong exception message", flagMessage, e.getMessage());
+            Assert.assertEquals("Wrong http code", 500, e.getHttpCode());
         }
 
         HostStats[] stats = ((S3JerseyClient) client).getLoadBalancer().getHostStats();

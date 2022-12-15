@@ -1,15 +1,10 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.filter.ClientFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class Sdk238V4Test extends Sdk238Test{
     @Override
@@ -36,23 +31,7 @@ public class Sdk238V4Test extends Sdk238Test{
 
         TestClient(S3Config s3Config) {
             super(s3Config.withUseV2Signer(false));
-
-            List<ClientFilter> filters = new ArrayList<ClientFilter>();
-
-            ClientHandler handler = client.getHeadHandler();
-            while (handler instanceof ClientFilter) {
-                ClientFilter filter = (ClientFilter) handler;
-                filters.add(filter);
-                handler = filter.getNext();
-            }
-
-            filters.add(captureFilter);
-
-            Collections.reverse(filters);
-            client.removeAllFilters();
-            for (ClientFilter filter : filters) {
-                client.addFilter(filter);
-            }
+            client.register(captureFilter);
         }
 
         URI getLastUri() {

@@ -62,12 +62,18 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client-ecs:3.0.2'
-    implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
-    // NOTE: Jackson 2.13 dropped support for JAX-RS 1.x, and we use Jersey client 1.x, so we are stuck on Jackson 1.12.x
-    // ref: https://github.com/FasterXML/jackson-jaxrs-providers/issues/90#issuecomment-1081368194
-    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7'
-    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7'
+    implementation 'com.emc.ecs:smart-client-ecs:4.0.0-rc.1'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.40'
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-xml-provider:2.14.2'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.40'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.40'
+
+    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.8'
+
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
@@ -82,11 +88,13 @@ dependencies {
         exclude module: 'stax-api'
         exclude module: 'jaxb-api'
     }
-    implementation 'org.slf4j:slf4j-api:1.7.36'
+    implementation 'org.slf4j:slf4j-api:2.0.6'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
-    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.36'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.19.0'
+    testImplementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.6'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0'
+    testImplementation 'com.github.tomakehurst:wiremock:2.27.2'
+
 }
 
 allprojects {

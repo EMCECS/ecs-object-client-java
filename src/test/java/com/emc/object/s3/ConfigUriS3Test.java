@@ -32,7 +32,7 @@ import com.emc.object.util.ConfigUri;
 import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
-import com.sun.jersey.api.client.config.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.junit.Test;
 
 import java.net.URI;
@@ -163,8 +163,9 @@ public class ConfigUriS3Test {
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_URI), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
-        assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT), dummyInt);
-        assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_READ_TIMEOUT), dummyInt);
+        // TIMEOUT properties have been moved into ClientConfig.
+//        assertEquals(smartConfig.getProperty(ClientProperties.CONNECT_TIMEOUT), dummyInt);
+//        assertEquals(smartConfig.getProperty(ClientProperties.READ_TIMEOUT), dummyInt);
     }
 
     @Test

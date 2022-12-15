@@ -26,19 +26,25 @@
  */
 package com.emc.object;
 
+import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-
-import java.net.URI;
-import java.util.Map;
-
+import org.glassfish.jersey.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Variant;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.emc.object.ObjectConfig.PROPERTY_RETRY_COUNT;
 
 public abstract class AbstractJerseyClient {
 
@@ -50,95 +56,172 @@ public abstract class AbstractJerseyClient {
         this.objectConfig = objectConfig;
     }
 
-    protected ClientResponse executeAndClose(Client client, ObjectRequest request) {
-        ClientResponse response = executeRequest(client, request);
+    protected Response executeAndClose(JerseyClient client, ObjectRequest request) {
+        Response response = executeRequest(client, request);
         response.close();
         return response;
     }
 
     @SuppressWarnings("unchecked")
-    protected ClientResponse executeRequest(Client client, ObjectRequest request) {
-        try {
-            if (request.getMethod().isRequiresEntity()) {
-                String contentType = RestUtil.DEFAULT_CONTENT_TYPE;
-                Object entity = new byte[0];
-                if (request instanceof EntityRequest) {
-                    EntityRequest entityRequest = (EntityRequest) request;
+    protected Response executeRequest(JerseyClient client, ObjectRequest request) {
+        String contentType = null;
+        //TODO: should enable contentEncoding feature to EntityRequest. Make a simple workaround fix for test case here.
+        String contentEncoding = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_ENCODING);
+        Object entity = null;
+        Method method = request.getMethod();
+        if (method.isRequiresEntity()) {
+            contentType = RestUtil.DEFAULT_CONTENT_TYPE;
+            entity = new byte[0];
 
-                    if (entityRequest.getContentType() != null) contentType = entityRequest.getContentType();
+            if (request instanceof EntityRequest) {
+                EntityRequest entityRequest = (EntityRequest) request;
 
-                    if (entityRequest.getEntity() != null) entity = entityRequest.getEntity();
+                if (entityRequest.getContentType() != null) contentType = entityRequest.getContentType();
 
-                    // if content-length is set (perhaps by user), force jersey to use it
-                    if (entityRequest.getContentLength() != null) {
-                        log.debug("enabling content-length override ({})", entityRequest.getContentLength().toString());
-                        SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
+                if (entityRequest.getEntity() != null)
+                    entity = entityRequest.getEntity();
 
-                        // otherwise chunked encoding will be used. if the request does not support it, try to ensure
-                        // that the entity is buffered (will set content length from buffered write)
-                    } else if (!entityRequest.isChunkable()) {
-                        log.debug("no content-length and request is not chunkable, attempting to enable buffering");
-                        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
-                        request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, null);
-                    }
-                } else {
+                // if content-length is set (perhaps by user), force jersey to use it
+                if (entityRequest.getContentLength() != null) {
+                    log.debug("enabling content-length override ({})", entityRequest.getContentLength().toString());
+                    SizeOverrideWriter.setEntitySize(entityRequest.getContentLength());
 
-                    // no entity, but make sure the apache handler doesn't mess up the content-length somehow
-                    // (i.e. if content-encoding is set)
-                    request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
+                    // otherwise chunked encoding will be used. if the request does not support it, try to ensure
+                    // that the entity is buffered (will set content length from buffered write)
+                } else if (!entityRequest.isChunkable()) {
+                    log.debug("no content-length and request is not chunkable, attempting to enable buffering");
+                    request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.BUFFERED);
+                    request.property(ClientProperties.CHUNKED_ENCODING_SIZE, null);
+                }
+            } else {
 
-                    String headerContentType = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_TYPE);
-                    if (headerContentType != null) contentType = headerContentType;
+                // no entity, but make sure the apache handler doesn't mess up the content-length somehow
+                // (i.e. if content-encoding is set)
+                request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.BUFFERED);
+
+                String headerContentType = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_TYPE);
+                if (headerContentType != null) contentType = headerContentType;
+            }
+
+        } else { // non-entity request method
+
+            // can't send content with non-entity methods (GET, HEAD, etc.)
+            if (request instanceof EntityRequest)
+                throw new UnsupportedOperationException("an entity request is using a non-entity method (" + request.getMethod() + ")");
+
+        }
+
+        JerseyInvocation.Builder builder = buildRequest(client, request);
+
+        // retry
+        int retryCount = 0;
+        InputStream entityStream = null;
+        if (entity instanceof InputStream)
+            entityStream = (InputStream) entity;
+
+        while (true) {
+            try {
+                // if using an InputStream, mark the stream so we can rewind it in case of an error
+                if (objectConfig.isRetryEnabled() && entityStream != null && entityStream.markSupported())
+                    entityStream.mark(objectConfig.getRetryBufferSize());
+
+                return Objects.isNull(entity)
+                        ? builder.method(method.name())
+                        : builder.method(method.name(), Entity.entity(entity, new Variant(MediaType.valueOf(contentType), (String) null, contentEncoding)));
+
+            } catch (RuntimeException orig) {
+                // TODO: handle a sudden broken connection
+
+                Throwable t = orig;
+
+                // in this case, the exception was wrapped by Jersey
+                if (t instanceof ProcessingException)
+                    t = t.getCause();
+
+                if (t instanceof S3Exception) {
+                    S3Exception se = (S3Exception) t;
+
+                    // retry all 50x errors except 501 (not implemented)
+                    if (se.getHttpCode() < 500 || se.getHttpCode() == 501)
+                        throw se;
+
+                    // retry all IO exceptions
+                } else if (!(t instanceof IOException))
+                    throw orig;
+
+                // clean usermetadata in PutObject encryption requests
+                Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
+                if (encode != null && encode) {
+                    Map<String, String> userMeta = (Map<String, String>) request.getProperties().get(RestUtil.PROPERTY_USER_METADATA);
+                    userMeta.clear();
                 }
 
-                WebResource.Builder builder = buildRequest(client, request);
+                if (!objectConfig.isRetryEnabled())
+                    throw orig;
 
-                // jersey requires content-type for entity requests
-                builder.type(contentType);
-                return builder.method(request.getMethod().toString(), ClientResponse.class, entity);
-            } else { // non-entity request method
+                // only retry retryLimit times
+                if (++retryCount > objectConfig.getRetryLimit()) throw orig;
 
-                // can't send content with non-entity methods (GET, HEAD, etc.)
-                if (request instanceof EntityRequest)
-                    throw new UnsupportedOperationException("an entity request is using a non-entity method (" + request.getMethod() + ")");
+                // attempt to reset InputStream
+                if (entityStream != null) {
+                    try {
+                        entityStream.reset();
+                    } catch (IOException e) {
+                        log.warn("could not reset entity stream for retry: " + e);
+                        throw orig;
+                    }
+                }
 
-                WebResource.Builder builder = buildRequest(client, request);
-
-                return builder.method(request.getMethod().toString(), ClientResponse.class);
+                // wait for retry delay
+                if (objectConfig.getInitialRetryDelay() > 0) {
+                    int retryDelay = objectConfig.getInitialRetryDelay() * (int) Math.pow(2, retryCount - 1);
+                    try {
+                        log.debug("waiting {}ms before retry", retryDelay);
+                        Thread.sleep(retryDelay);
+                    } catch (InterruptedException e) {
+                        log.warn("interrupted while waiting to retry: " + e.getMessage());
+                    }
+                    log.warn("error received in response [{}], retrying ({} of {})...", t, retryCount, objectConfig.getRetryLimit());
+                    request.property(PROPERTY_RETRY_COUNT, retryCount);
+                }
+            } finally {
+                // make sure we clear the content-length override for this thread
+                SizeOverrideWriter.setEntitySize(null);
             }
-        } finally {
-            // make sure we clear the content-length override for this thread
-            SizeOverrideWriter.setEntitySize(null);
         }
     }
 
-    protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
-        ClientResponse response = executeRequest(client, request);
-        T responseEntity = response.getEntity(responseType);
+    protected <T> T executeRequest(JerseyClient client, ObjectRequest request, Class<T> responseType) {
+        Response response = executeRequest(client, request);
+        T responseEntity = response.readEntity(responseType);
         fillResponseEntity(responseEntity, response);
+        response.close(); // in Jersey 2.x, we should always release resources actively.
         return responseEntity;
     }
 
-    protected void fillResponseEntity(Object responseEntity, ClientResponse response) {
+    protected void fillResponseEntity(Object responseEntity, Response response) {
         if (responseEntity instanceof ObjectResponse)
-            ((ObjectResponse) responseEntity).setHeaders(response.getHeaders());
+            ((ObjectResponse) responseEntity).setHeaders(response.getStringHeaders());
     }
 
-    protected WebResource.Builder buildRequest(Client client, ObjectRequest request) {
+    protected JerseyInvocation.Builder buildRequest(JerseyClient client, ObjectRequest request) {
+
+        System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
+
         URI uri = objectConfig.resolvePath(request.getPath(), request.getRawQueryString());
-        WebResource resource = client.resource(uri);
+        JerseyWebTarget webTarget = client.target(uri);
 
         // set properties
         for (Map.Entry<String, Object> entry : request.getProperties().entrySet()) {
-            resource.setProperty(entry.getKey(), entry.getValue());
+            webTarget.property(entry.getKey(), entry.getValue());
         }
 
         // set namespace
         String namespace = request.getNamespace() != null ? request.getNamespace() : objectConfig.getNamespace();
         if (namespace != null)
-            resource.setProperty(RestUtil.PROPERTY_NAMESPACE, namespace);
+            webTarget.property(RestUtil.PROPERTY_NAMESPACE, namespace);
 
-        WebResource.Builder builder = resource.getRequestBuilder();
+        JerseyInvocation.Builder builder = webTarget.request();
 
         // set headers
         for (String name : request.getHeaders().keySet()) {

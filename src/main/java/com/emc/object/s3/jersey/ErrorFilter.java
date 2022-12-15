@@ -29,27 +29,31 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import org.dom4j.Document;
 import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Priority;
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Date;
 
-public class ErrorFilter extends ClientFilter {
+@Provider
+@Priority(FilterPriorities.PRIORITY_ERROR)
+public class ErrorFilter implements ClientResponseFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ErrorFilter.class);
 
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        ClientResponse response = getNext().handle(request);
-
+    @Override
+    public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
         if (response.getStatus() > 299) {
 
             // check for clock skew (can save hours of troubleshooting)
@@ -66,11 +70,11 @@ public class ErrorFilter extends ClientFilter {
                 }
             }
             if (response.hasEntity()) {
-                throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
+                throw parseErrorResponse(new InputStreamReader(response.getEntityStream()), response.getStatus());
             } else {
                 // No response entity.  Don't try to parse it.
                 try {
-                    response.close();
+                    response.getEntityStream().close();
                 } catch (Throwable t) {
                     log.warn("could not close response after error", t);
                 }
@@ -80,7 +84,6 @@ public class ErrorFilter extends ClientFilter {
             }
         }
 
-        return response;
     }
 
     private String guessStatus(int statusCode) {

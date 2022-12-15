@@ -32,8 +32,10 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
-import com.sun.jersey.api.client.config.ClientConfig;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.params.CoreConnectionPNames;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +56,9 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final String PROPERTY_PROXY_USER = "com.emc.object.proxyUser";
     public static final String PROPERTY_PROXY_PASS = "com.emc.object.proxyPass";
 
+    public static final String PROPERTY_RETRY_COUNT = "com.emc.object.retryCount";
+    protected boolean retryEnabled = true;
+
     public static final String PACKAGE_VERSION = ObjectConfig.class.getPackage().getImplementationVersion();
     public static final String DEFAULT_USER_AGENT = String.format("ECS Java SDK%s Java/%s (%s; %s; %s)",
             (PACKAGE_VERSION != null ? " v" + PACKAGE_VERSION : ""), System.getProperty("java.version"),
@@ -61,6 +66,13 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final int DEFAULT_CHUNKED_ENCODING_SIZE = 2 * 1024 * 1024; // 2MB to match ECS buffer size
     public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
     public static final int DEFAULT_READ_TIMEOUT = 0; // default is infinity
+
+    public static final int DEFAULT_INITIAL_RETRY_DELAY = 1000; // ms
+    public static final int DEFAULT_RETRY_LIMIT = 3;
+    public static final int DEFAULT_RETRY_BUFFER_SIZE = 2 * 1024 * 1024;
+    protected int initialRetryDelay = DEFAULT_INITIAL_RETRY_DELAY;
+    protected int retryLimit = DEFAULT_RETRY_LIMIT;
+    protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
 
     // NOTE: if you add a property, make sure you add it to the cloning constructor!
     private Protocol protocol;
@@ -138,6 +150,11 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.readTimeout = other.readTimeout;
         this.sessionToken = other.sessionToken;
         this.properties = new HashMap<String, Object>(other.properties);
+
+        this.retryEnabled = other.retryEnabled;
+        this.initialRetryDelay = other.initialRetryDelay;
+        this.retryLimit = other.retryLimit;
+        this.retryBufferSize = other.retryBufferSize;
     }
 
     public abstract Host resolveHost();
@@ -209,15 +226,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         for (String prop : properties.keySet()) {
             smartConfig.withProperty(prop, properties.get(prop));
         }
-
-        // CONNECT_TIMEOUT
-        smartConfig.setProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT, connectTimeout);
-        // apache client uses a different property
-        smartConfig.setProperty(CoreConnectionPNames.CONNECTION_TIMEOUT, connectTimeout);
-
-        // READ_TIMEOUT
-        smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, readTimeout);
-
 
         return smartConfig;
     }
@@ -455,6 +463,58 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.sessionToken = sessionToken;
     }
 
+    @ConfigUriProperty
+    public boolean isRetryEnabled() {
+        return retryEnabled;
+    }
+
+    /**
+     * Set to false to disable automatic retry of (retriable) requests (default is true)
+     */
+    public void setRetryEnabled(boolean retryEnabled) {
+        this.retryEnabled = retryEnabled;
+    }
+
+    @ConfigUriProperty
+    public int getInitialRetryDelay() {
+        return initialRetryDelay;
+    }
+
+    /**
+     * number of milliseconds to delay before the first retry attempt after a failed request. The delay time
+     * increases by a factor of 2 after each failed request
+     */
+    public void setInitialRetryDelay(int initialRetryDelay) {
+        this.initialRetryDelay = initialRetryDelay;
+    }
+
+    @ConfigUriProperty
+    public int getRetryLimit() {
+        return retryLimit;
+    }
+
+    /**
+     * Sets the maximum number of automatic retries of failed (retriable) requests. Default is 3 retries
+     * (maximum 4 total requests)
+     */
+    public void setRetryLimit(int retryLimit) {
+        this.retryLimit = retryLimit;
+    }
+
+    @ConfigUriProperty
+    public int getRetryBufferSize() {
+        return retryBufferSize;
+    }
+
+    /**
+     * Allocates a stream buffer to use for retries. Requests that fail before sending this much data will be
+     * retried using data from the buffer. Default buffer is 2MB
+     */
+    public void setRetryBufferSize(int retryBufferSize) {
+        this.retryBufferSize = retryBufferSize;
+    }
+
+
     @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {
         return properties;
@@ -563,6 +623,31 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         setReadTimeout(readTimeout);
         return (T) this;
     }
+
+    @SuppressWarnings("unchecked")
+    public T withRetryEnabled(boolean retryEnabled) {
+        setRetryEnabled(retryEnabled);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withInitialRetryDelay(int initialRetryDelay) {
+        setInitialRetryDelay(initialRetryDelay);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withRetryLimit(int retryLimit) {
+        setRetryLimit(retryLimit);
+        return (T) this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T withRetryBufferSize(int retryBufferSize) {
+        setRetryBufferSize(retryBufferSize);
+        return (T) this;
+    }
+
 
     @SuppressWarnings("unchecked")
     public T withProperty(String propName, Object value) {

@@ -1,23 +1,18 @@
 package com.emc.object.s3;
 
 import com.emc.object.Method;
-import com.emc.object.s3.bean.AbstractDeleteResult;
-import com.emc.object.s3.bean.DeleteError;
-import com.emc.object.s3.bean.DeleteObjectsResult;
-import com.emc.object.s3.bean.DeleteSuccess;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.*;
-import com.sun.jersey.api.client.Client;
+import com.emc.object.s3.request.PresignedUrlRequest;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Entity;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.*;
+import java.util.Date;
 
 public class S3JerseyClientV4Test extends S3JerseyClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientV4Test.class);
@@ -68,12 +63,12 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         String key = "pre-signed-put-test", content = "This is my test object content";
         url = client.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
-                        .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
+                        .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                 .addUserMetadata("foo", "bar"))
         );
-        Client.create().resource(url.toURI())
-                .type("application/x-download").header("x-amz-meta-foo", "bar")
-                .put(content);
+        JerseyClientBuilder.createClient().target(url.toURI())
+                .request("text/plain").header("x-amz-meta-foo", "bar")
+                .put(Entity.text(content));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));

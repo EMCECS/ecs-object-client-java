@@ -42,16 +42,17 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
 import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import java.io.*;
@@ -332,7 +333,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(bucketName, key);
         Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
         Assert.assertEquals(retentionDate, objectMetadata.getObjectLockRetention().getRetainUntilDate());
-        Thread.sleep(2000);
+        Thread.sleep(3000);
 
         //Put Retention on existing object.
         Date retentionDate2 = new Date(System.currentTimeMillis() + 2000);
@@ -2485,12 +2486,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             String key = "pre-signed-put-test", content = "This is my test object content";
             url = client.getPresignedUrl(
                     new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
-                            .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
+                            .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                     .addUserMetadata("foo", "bar"))
-            );
-            Client.create().resource(url.toURI())
-                    .type("application/x-download").header("x-amz-meta-foo", "bar")
-                    .put(content);
+            ); // http://10.246.151.71:9020/s3-client-test-null-0196d4/pre-signed-put-test?AWSAccessKeyId=obj1&Expires=1679987253&Signature=H81IV4HrtAGOGuDQ1uQJV0ZO4go%3D
+            JerseyClientBuilder.createClient().target(url.toURI()).request()
+                    .accept("text/plain")
+                    .header("x-amz-meta-foo", "bar")
+                    .put(Entity.text(content));
             Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
             S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
             Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
@@ -2575,7 +2577,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         URL url = client.getPresignedUrl(new PresignedUrlRequest(Method.GET, getTestBucket(), key, expiration.getTime())
                 .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
 
-        ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
+        Response response = JerseyClientBuilder.createClient().target(url.toURI()).request().get();
         Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 
@@ -2655,7 +2657,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 // some versions of ECS reset the socket of ongoing uploads after an abort
                 if (e instanceof SocketException && (e.getMessage().startsWith("Broken pipe")
                         || e.getMessage().startsWith("Connection reset by peer")
-                        || e.getMessage().startsWith("Software caused connection abort")))
+                        || e.getMessage().startsWith("An established connection was aborted by the software in your host machine")))
+                    continue;
+                if (e instanceof IOException && e.getMessage().startsWith("Error writing to server"))
                     continue;
                 if (!(e instanceof S3Exception)) throw new RuntimeException(e);
                 S3Exception se = (S3Exception) e;
@@ -2754,7 +2758,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         } catch (TimeoutException e) {
             Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {
-            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getCause() instanceof ProcessingException);
             Assert.assertTrue(e.getMessage().contains("timed out"));
         }
     }
@@ -2813,7 +2817,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyRangeAPI() {
+    public void testCopyRangeAPI() throws InterruptedException {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeFalse("Copy range API is not supported with IAM user.", isIamUser);
 
@@ -2913,7 +2917,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(400, e.getHttpCode());
             Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
             try {
-                client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
+                client.getObjectMetadata(bucketName, keyTargetRequestExceeded);
                 Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
                 Assert.assertEquals(404, es.getHttpCode());
@@ -3052,6 +3056,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             }
         }
 
+        // avoid "The object is under retention and can't be deleted or modified" when cleaning the test bucket
+        Thread.sleep(2000);
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
