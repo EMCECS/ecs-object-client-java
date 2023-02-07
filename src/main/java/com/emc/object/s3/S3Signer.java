@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.ws.rs.client.ClientRequestContext;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.xml.bind.DatatypeConverter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;

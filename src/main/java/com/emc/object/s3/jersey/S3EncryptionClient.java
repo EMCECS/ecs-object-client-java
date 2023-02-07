@@ -35,6 +35,8 @@ import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
+
+import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientResponseFilter;
 
 import java.io.InputStream;
@@ -112,7 +114,7 @@ public class S3EncryptionClient extends S3JerseyClient {
         this(s3Config, null, encryptionConfig);
     }
 
-    public S3EncryptionClient(S3Config s3Config, ClientHandler clientHandler, EncryptionConfig encryptionConfig) {
+    public S3EncryptionClient(S3Config s3Config, Client clientHandler, EncryptionConfig encryptionConfig) {
         super(s3Config, clientHandler);
         this.encryptionConfig = encryptionConfig;
 
@@ -126,6 +128,7 @@ public class S3EncryptionClient extends S3JerseyClient {
         // as usual, Jersey makes this quite hard
 
         // first, make a list of the filters
+        /* Billy
         List<ClientFilter> filters = new ArrayList<ClientFilter>();
         ClientHandler handler = client.getHeadHandler();
         while (handler instanceof ClientFilter) {
@@ -144,6 +147,8 @@ public class S3EncryptionClient extends S3JerseyClient {
         for (ClientFilter filter : filters) {
             client.addFilter(filter);
         }
+
+         */
     }
 
     /**

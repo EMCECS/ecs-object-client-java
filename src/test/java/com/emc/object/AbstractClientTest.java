@@ -85,15 +85,15 @@ public abstract class AbstractClientTest {
         String uuid = UUID.randomUUID().toString();
 
         // {prefix}-{$USER}-{uuid[-6]}
-        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + uuid.substring(uuid.length() - 6));
-        log.info("creating test bucket " + getTestBucket());
-        createBucket(getTestBucket());
+//        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + uuid.substring(uuid.length() - 6));
+//        log.info("creating test bucket " + getTestBucket());
+//        createBucket(getTestBucket());
     }
 
     @After
     public final void destroyTestBucket() throws Exception {
-        log.info("cleaning up bucket " + getTestBucket());
-        cleanUpBucket(getTestBucket());
+//        log.info("cleaning up bucket " + getTestBucket());
+//        cleanUpBucket(getTestBucket());
     }
 
     protected File createRandomTempFile(int size) throws Exception {

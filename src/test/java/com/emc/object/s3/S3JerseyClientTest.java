@@ -42,8 +42,10 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
 import com.emc.util.TestConfig;
-import javax.ws.rs.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
+
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
@@ -52,8 +54,8 @@ import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.Marshaller;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
@@ -169,8 +171,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String bucketName = getTestBucket() + "-x";
         client.createBucket(new CreateBucketRequest(bucketName));
 
-        Assert.assertTrue(client.bucketExists(bucketName));
-        client.deleteBucket(bucketName);
+         Assert.assertTrue(client.bucketExists(bucketName));
+         client.deleteBucket(bucketName);
     }
 
     @Test
@@ -2488,9 +2490,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                             .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                     .addUserMetadata("foo", "bar"))
             );
-            Client.create().resource(url.toURI())
-                    .type("application/x-download").header("x-amz-meta-foo", "bar")
-                    .put(content);
+            ClientBuilder.newClient().target(url.toURI())
+                    .request("application/x-download").header("x-amz-meta-foo", "bar")
+                    .put(Entity.text(content));
             Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
             S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
             Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
@@ -2575,7 +2577,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         URL url = client.getPresignedUrl(new PresignedUrlRequest(Method.GET, getTestBucket(), key, expiration.getTime())
                 .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
 
-        ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
+        Response response = ClientBuilder.newClient().target(url.toURI()).request().get();
         Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 
@@ -2754,7 +2756,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         } catch (TimeoutException e) {
             Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {
-            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getCause() instanceof ProcessingException);
+
             Assert.assertTrue(e.getMessage().contains("timed out"));
         }
     }

@@ -26,10 +26,10 @@
  */
 package com.emc.object.util;
 
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import java.beans.BeanInfo;
 import java.beans.Introspector;
@@ -212,7 +212,7 @@ public class ConfigUri<C> {
             if (defaultObject == null) defaultObject = targetClass.newInstance();
 
             // collect parameters
-            MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+            MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
 
             // standard properties
             for (Map.Entry<String, PropertyDescriptor> entry : paramPropertyMap.entrySet()) {
@@ -271,7 +271,7 @@ public class ConfigUri<C> {
     private static final Pattern PARAM_PATTERN = Pattern.compile("^([^=]+)(?:=(.+))?$");
 
     private MultivaluedMap<String, String> getParameterMap(String query) {
-        MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
         if (isNotBlank(query)) {
             String[] queryParts = query.split("&");
             for (String queryPart : queryParts) {

@@ -1,16 +1,12 @@
 package com.emc.object.s3;
 
 import com.emc.object.Method;
-import com.emc.object.s3.bean.AbstractDeleteResult;
-import com.emc.object.s3.bean.DeleteError;
-import com.emc.object.s3.bean.DeleteObjectsResult;
-import com.emc.object.s3.bean.DeleteSuccess;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+
 import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,9 +67,9 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                 .addUserMetadata("foo", "bar"))
         );
-        Client.create().resource(url.toURI())
-                .type("application/x-download").header("x-amz-meta-foo", "bar")
-                .put(content);
+        ClientBuilder.newClient().target(url.toURI())
+                .request("application/x-download").header("x-amz-meta-foo", "bar")
+                .put(Entity.text(content));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));

@@ -29,14 +29,19 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.*;
 import com.emc.object.util.RestUtil;
 
+import javax.annotation.Priority;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.ext.Provider;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Properties;
 
 @Provider
+@Priority(FilterPriorities.PRIORITY_AUTHORIZATION)
 public class AuthorizationFilter implements ClientRequestFilter {
     private S3Config s3Config;
     private S3Signer signer;
@@ -59,10 +64,10 @@ public class AuthorizationFilter implements ClientRequestFilter {
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
             Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getUri().getRawQuery());
-
+            Configuration configuration = request.getConfiguration();
             String resource = VHostUtil.getResourceString(s3Config,
-                    (String) request.getProperty(RestUtil.PROPERTY_NAMESPACE),
-                    (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                    (String) configuration.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                    (String) configuration.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
                     RestUtil.getEncodedPath(request.getUri()));
 
             signer.sign(request,

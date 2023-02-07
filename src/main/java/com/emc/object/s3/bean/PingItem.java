@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlEnum;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlEnum;
 
 public class PingItem {
     public static final String MAINTENANCE_MODE = "MAINTENANCE_MODE";

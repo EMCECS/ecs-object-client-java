@@ -30,6 +30,8 @@ import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
+import javax.annotation.Priority;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
@@ -42,6 +44,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 @Provider
+@Priority(FilterPriorities.PRIORITY_BUCKET)
 public class BucketFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BucketFilter.class);
@@ -75,7 +78,7 @@ public class BucketFilter implements ClientRequestFilter {
     public void filter(ClientRequestContext request) throws IOException {
         URI uri = request.getUri();
 
-        String bucketName = (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
+        String bucketName = (String) request.getConfiguration().getProperty(S3Constants.PROPERTY_BUCKET_NAME);
         if (bucketName != null) {
             request.setUri(insertBucket(uri, bucketName, s3Config.isUseVHost()));
         }

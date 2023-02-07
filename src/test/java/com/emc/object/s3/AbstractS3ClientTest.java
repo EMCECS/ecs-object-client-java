@@ -61,11 +61,12 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
 
     protected final void initClient() throws Exception {
         this.client = createS3Client();
-        try {
-            this.ecsVersion = client.listDataNodes().getVersionInfo();
-        } catch (Exception e) {
-            log.warn("could not get ECS version: " + e);
-        }
+        // Billy
+//        try {
+//            this.ecsVersion = client.listDataNodes().getVersionInfo();
+//        } catch (Exception e) {
+//            log.warn("could not get ECS version: " + e);
+//        }
     }
 
     @Before

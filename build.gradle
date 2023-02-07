@@ -63,11 +63,18 @@ repositories {
 
 dependencies {
 //    implementation 'com.emc.ecs:smart-client-ecs:3.0.2'
-    implementation 'org.glassfish.jersey.core:jersey-client:2.36'
-    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.36'
-    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.36'
-    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.36'
-    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.36'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.38'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.38'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.38'
+    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.38'
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-xml-provider:2.14.2'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.38'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.38'
+
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.0' // Billy need JDK11+
+    implementation 'javax.xml.bind:jaxb-api:2.3.1' // Billy todo remove the old impl
+    implementation 'com.sun.xml.bind:jaxb-impl:4.0.2' // Billy remove this old jaxb impl
+//    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.8'
 
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'

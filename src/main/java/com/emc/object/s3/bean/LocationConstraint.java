@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlValue;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlValue;
 
 @XmlRootElement(name = "LocationConstraint")
 public class LocationConstraint {

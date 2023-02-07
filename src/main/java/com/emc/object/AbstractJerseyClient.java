@@ -26,28 +26,30 @@
  */
 package com.emc.object;
 
+import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
+
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.UriBuilder;
 
-import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientProperties;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.Objects;
 
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.ClientResponse;
-import org.glassfish.jersey.internal.util.Property;
+import org.glassfish.jersey.client.RequestEntityProcessing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.emc.object.ObjectConfig.PROPERTY_RETRY_COUNT;
 
 public abstract class AbstractJerseyClient {
 
@@ -74,6 +76,7 @@ public abstract class AbstractJerseyClient {
             if (method.isRequiresEntity()) {
                 contentType = RestUtil.DEFAULT_CONTENT_TYPE;
                 entity = new byte[0];
+
                 if (request instanceof EntityRequest) {
                     EntityRequest entityRequest = (EntityRequest) request;
 
@@ -90,13 +93,15 @@ public abstract class AbstractJerseyClient {
                         // that the entity is buffered (will set content length from buffered write)
                     } else if (!entityRequest.isChunkable()) {
                         log.debug("no content-length and request is not chunkable, attempting to enable buffering");
+                        // Billy
+                        request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.BUFFERED);
                         request.property(ClientProperties.CHUNKED_ENCODING_SIZE, null);
                     }
                 } else {
 
                     // no entity, but make sure the apache handler doesn't mess up the content-length somehow
                     // (i.e. if content-encoding is set)
-                    request.property(ClientProperties.CHUNKED_ENCODING_SIZE, null);
+                    request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.BUFFERED);
 
                     String headerContentType = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_TYPE);
                     if (headerContentType != null) contentType = headerContentType;
@@ -109,12 +114,73 @@ public abstract class AbstractJerseyClient {
                     throw new UnsupportedOperationException("an entity request is using a non-entity method (" + request.getMethod() + ")");
 
             }
-            Invocation.Builder builder = buildRequest(client, request, contentType);
 
-            if (!Objects.isNull(entity))
-                return builder.build(method.name(), Entity.json(entity)).invoke(Response.class);
-            else
-                return builder.build(method.name()).invoke(Response.class);
+            Invocation.Builder builder = buildRequest(client, request);
+
+            // retry
+            int retryCount = 0;
+            InputStream entityStream = null;
+            if (entity instanceof InputStream)
+                entityStream = (InputStream) entity;
+            while (true) {
+
+                try {
+                    // if using an InputStream, mark the stream so we can rewind it in case of an error
+                    if (entityStream != null && entityStream.markSupported())
+                        entityStream.mark(objectConfig.getRetryBufferSize());
+
+                    Response response = Objects.isNull(entity)
+                            ? builder.method(method.name())
+                            : builder.method(method.name(), Entity.entity(entity, contentType));
+                    if (response.getStatus() == 200)
+                        return response;
+
+                } catch (RuntimeException orig) {
+                    Throwable t = orig;
+
+                    // in this case, the exception was wrapped by Jersey
+                    if (t instanceof ProcessingException)
+                        t = t.getCause();
+
+                    if (t instanceof S3Exception) {
+                        S3Exception se = (S3Exception) t;
+
+                        // retry all 50x errors except 501 (not implemented)
+                        if (se.getHttpCode() < 500 || se.getHttpCode() == 501) throw orig;
+
+                        // retry all IO exceptions
+                    } else if (!(t instanceof IOException)) throw orig;
+
+                    // only retry retryLimit times
+                    if (++retryCount > objectConfig.getRetryLimit()) throw orig;
+
+                    // attempt to reset InputStream
+                    if (entityStream != null) {
+                        try {
+                            if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
+                            entityStream.reset();
+                        } catch (IOException e) {
+                            log.warn("could not reset entity stream for retry: " + e);
+                            throw orig;
+                        }
+                    }
+
+                    // wait for retry delay
+                    if (objectConfig.getInitialRetryDelay() > 0) {
+                        int retryDelay = objectConfig.getInitialRetryDelay() * (int) Math.pow(2, retryCount - 1);
+                        try {
+                            log.debug("waiting {}ms before retry", retryDelay);
+                            Thread.sleep(retryDelay);
+                        } catch (InterruptedException e) {
+                            log.warn("interrupted while waiting to retry: " + e.getMessage());
+                        }
+                        log.info("error received in response [{}], retrying ({} of {})...", t, retryCount, objectConfig.getRetryLimit());
+                        request.property(PROPERTY_RETRY_COUNT, retryCount);
+                    }
+                }
+
+            }
+
         } finally {
             // make sure we clear the content-length override for this thread
             SizeOverrideWriter.setEntitySize(null);
@@ -133,20 +199,21 @@ public abstract class AbstractJerseyClient {
             ((ObjectResponse) responseEntity).setHeaders(response.getStringHeaders());
     }
 
-    protected Invocation.Builder buildRequest(Client client, ObjectRequest request, String contentType) {
+    protected Invocation.Builder buildRequest(Client client, ObjectRequest request) {
         URI uri = objectConfig.resolvePath(request.getPath(), request.getRawQueryString());
         WebTarget webTarget = client.target(uri);
-        Map<String, Object> properties = webTarget.getConfiguration().getProperties();
 
         // set properties
-        properties.putAll(request.getProperties());
+        for (Map.Entry<String, Object> entry : request.getProperties().entrySet()) {
+            webTarget.property(entry.getKey(), entry.getValue());
+        }
 
         // set namespace
         String namespace = request.getNamespace() != null ? request.getNamespace() : objectConfig.getNamespace();
         if (namespace != null)
-            properties.put(RestUtil.PROPERTY_NAMESPACE, namespace);
+            webTarget.property(RestUtil.PROPERTY_NAMESPACE, namespace);
 
-        Invocation.Builder builder = contentType != null ? webTarget.request(contentType) : webTarget.request();
+        Invocation.Builder builder = webTarget.request();
 
         // set headers
         for (String name : request.getHeaders().keySet()) {

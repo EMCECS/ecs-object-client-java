@@ -29,6 +29,8 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Config;
 import com.emc.object.util.RestUtil;
 
+import javax.annotation.Priority;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
@@ -41,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Provider
+@Priority(FilterPriorities.PRIORITY_NAMESPACE)
 public class NamespaceFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(NamespaceFilter.class);
@@ -66,7 +69,8 @@ public class NamespaceFilter implements ClientRequestFilter {
 
     @Override
     public void filter(ClientRequestContext request) throws IOException {
-        String namespace = (String) request.getProperty(RestUtil.PROPERTY_NAMESPACE);
+        String namespace = (String) request.getConfiguration().getProperty(RestUtil.PROPERTY_NAMESPACE);
+
         if (namespace != null) {
 
             if (s3Config.isUseVHost()) {

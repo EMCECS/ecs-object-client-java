@@ -6,6 +6,8 @@ import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
 import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
 import org.junit.*;
 
@@ -54,9 +56,9 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
 
         url = client.getPresignedUrl(getTestBucket(), key, new Date(System.currentTimeMillis() + 100000));
 
-        ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
+        Response response = ClientBuilder.newClient().target(url.toURI()).request().get(Response.class);
         Assert.assertEquals(200, response.getStatus());
-        Assert.assertEquals(content, response.getEntity(String.class));
+        Assert.assertEquals(content, response.readEntity(String.class));
     }
 
     @Test
@@ -84,9 +86,9 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                 .addUserMetadata("foo", "bar"))
         );
-        Client.create().resource(url.toURI())
-                .type("application/x-download").header("x-amz-meta-foo", "bar")
-                .put(content);
+        ClientBuilder.newClient().target(url.toURI())
+                .request("application/x-download").header("x-amz-meta-foo", "bar")
+                .put(Entity.text(content));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));

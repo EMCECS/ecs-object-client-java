@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-@XmlSchema(namespace = "http://s3.amazonaws.com/doc/2006-03-01/", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
+@XmlSchema(namespace = "http://s3.amazonaws.com/doc/2006-03-01/", elementFormDefault = jakarta.xml.bind.annotation.XmlNsForm.QUALIFIED)
 @XmlJavaTypeAdapters({
         @XmlJavaTypeAdapter(value = Iso8601DateTimeAdapter.class, type = java.util.Date.class),
         @XmlJavaTypeAdapter(value = RegionAdapter.class, type = com.emc.object.s3.bean.Region.class)
@@ -33,6 +33,6 @@
 import com.emc.object.s3.RegionAdapter;
 import com.emc.object.util.Iso8601DateTimeAdapter;
 
-import javax.xml.bind.annotation.XmlSchema;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapters;
+import jakarta.xml.bind.annotation.XmlSchema;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapters;

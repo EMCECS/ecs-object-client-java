@@ -64,9 +64,6 @@ import java.net.URI;
 public class S3Config extends ObjectConfig<S3Config> {
     public static final int DEFAULT_HTTP_PORT = 9020;
     public static final int DEFAULT_HTTPS_PORT = 9021;
-    public static final int DEFAULT_INITIAL_RETRY_DELAY = 1000; // ms
-    public static final int DEFAULT_RETRY_LIMIT = 3;
-    public static final int DEFAULT_RETRY_BUFFER_SIZE = 2 * 1024 * 1024;
 
     protected static int defaultPort(Protocol protocol) {
         if (protocol == Protocol.HTTP) return DEFAULT_HTTP_PORT;
@@ -78,10 +75,6 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected boolean useVHost = false;
     protected boolean signNamespace = true;
     protected boolean checksumEnabled = true;
-    protected boolean retryEnabled = true;
-    protected int initialRetryDelay = DEFAULT_INITIAL_RETRY_DELAY;
-    protected int retryLimit = DEFAULT_RETRY_LIMIT;
-    protected int retryBufferSize = DEFAULT_RETRY_BUFFER_SIZE;
     protected float faultInjectionRate = 0.0f;
     protected boolean signMetadataSearch = true;
     protected boolean useV2Signer = true;
@@ -124,10 +117,6 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.useVHost = other.useVHost;
         this.signNamespace = other.signNamespace;
         this.checksumEnabled = other.checksumEnabled;
-        this.retryEnabled = other.retryEnabled;
-        this.initialRetryDelay = other.initialRetryDelay;
-        this.retryLimit = other.retryLimit;
-        this.retryBufferSize = other.retryBufferSize;
         this.faultInjectionRate = other.faultInjectionRate;
         this.signMetadataSearch = other.signMetadataSearch;
         this.useV2Signer = other.useV2Signer;
@@ -189,57 +178,6 @@ public class S3Config extends ObjectConfig<S3Config> {
     }
 
     @ConfigUriProperty
-    public boolean isRetryEnabled() {
-        return retryEnabled;
-    }
-
-    /**
-     * Set to false to disable automatic retry of (retriable) requests (default is true)
-     */
-    public void setRetryEnabled(boolean retryEnabled) {
-        this.retryEnabled = retryEnabled;
-    }
-
-    @ConfigUriProperty
-    public int getInitialRetryDelay() {
-        return initialRetryDelay;
-    }
-
-    /**
-     * number of milliseconds to delay before the first retry attempt after a failed request. The delay time
-     * increases by a factor of 2 after each failed request
-     */
-    public void setInitialRetryDelay(int initialRetryDelay) {
-        this.initialRetryDelay = initialRetryDelay;
-    }
-
-    @ConfigUriProperty
-    public int getRetryLimit() {
-        return retryLimit;
-    }
-
-    /**
-     * Sets the maximum number of automatic retries of failed (retriable) requests. Default is 3 retries
-     * (maximum 4 total requests)
-     */
-    public void setRetryLimit(int retryLimit) {
-        this.retryLimit = retryLimit;
-    }
-
-    @ConfigUriProperty
-    public int getRetryBufferSize() {
-        return retryBufferSize;
-    }
-
-    /**
-     * Allocates a stream buffer to use for retries. Requests that fail before sending this much data will be
-     * retried using data from the buffer. Default buffer is 2MB
-     */
-    public void setRetryBufferSize(int retryBufferSize) {
-        this.retryBufferSize = retryBufferSize;
-    }
-
-    @ConfigUriProperty
     public float getFaultInjectionRate() {
         return faultInjectionRate;
     }
@@ -293,26 +231,6 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public S3Config withChecksumEnabled(boolean checksumEnabled) {
         setChecksumEnabled(checksumEnabled);
-        return this;
-    }
-
-    public S3Config withRetryEnabled(boolean retryEnabled) {
-        setRetryEnabled(retryEnabled);
-        return this;
-    }
-
-    public S3Config withInitialRetryDelay(int initialRetryDelay) {
-        setInitialRetryDelay(initialRetryDelay);
-        return this;
-    }
-
-    public S3Config withRetryLimit(int retryLimit) {
-        setRetryLimit(retryLimit);
-        return this;
-    }
-
-    public S3Config withRetryBufferSize(int retryBufferSize) {
-        setRetryBufferSize(retryBufferSize);
         return this;
     }
 

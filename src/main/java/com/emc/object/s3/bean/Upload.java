@@ -28,8 +28,8 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
 
-import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.Unmarshaller;
+import jakarta.xml.bind.annotation.XmlElement;
 import java.util.Date;
 
 public class Upload {

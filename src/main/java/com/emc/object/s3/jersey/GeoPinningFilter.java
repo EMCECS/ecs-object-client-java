@@ -32,8 +32,11 @@ import com.emc.object.s3.S3Constants;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.ecs.Vdc;
 
+import javax.annotation.Priority;
+import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.ext.Provider;
 
 import org.slf4j.Logger;
@@ -48,6 +51,7 @@ import java.util.List;
  * the path to extract the object key)
  */
 @Provider
+@Priority(FilterPriorities.PRIORITY_GEOPINNING)
 public class GeoPinningFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(GeoPinningFilter.class);
@@ -61,8 +65,9 @@ public class GeoPinningFilter implements ClientRequestFilter {
     @Override
     public void filter(ClientRequestContext request) throws IOException {
         // if there's no bucket, we don't need to pin the request (there's no write or read)
-        String bucketName = (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
-        String objectKey = (String) request.getProperty(S3Constants.PROPERTY_OBJECT_KEY);
+        Configuration configuration = request.getConfiguration();
+        String bucketName = (String) configuration.getProperty(S3Constants.PROPERTY_BUCKET_NAME);
+        String objectKey = (String) configuration.getProperty(S3Constants.PROPERTY_OBJECT_KEY);
         if (bucketName != null) {
             List<Vdc> healthyVdcs = new ArrayList<>();
 
@@ -79,7 +84,7 @@ public class GeoPinningFilter implements ClientRequestFilter {
 
             // if this is a read and failover for retries is requested, round-robin the VDCs for each retry
             if (objectConfig.isGeoReadRetryFailover() && Method.GET.name().equalsIgnoreCase(request.getMethod())) {
-                Integer retries = (Integer) request.getProperty(RetryFilter.PROP_RETRY_COUNT);
+                Integer retries = (Integer) configuration.getProperty(ObjectConfig.PROPERTY_RETRY_COUNT);
                 if (retries != null) {
                     int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
                     log.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",

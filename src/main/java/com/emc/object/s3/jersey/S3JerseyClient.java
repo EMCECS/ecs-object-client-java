@@ -34,14 +34,22 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
+import com.emc.rest.smart.jersey.OctetStreamXmlProvider;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.rest.smart.jersey.SmartFilter;
 import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.ClientResponse;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.Response;
 
 import java.io.InputStream;
 import java.io.StringReader;
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.util.*;
 
@@ -137,7 +145,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that handler, you should
      * set the "http.maxConnections" system property to match your thread count (default is only 5).
      */
-    public S3JerseyClient(S3Config config, Client client) {
+    public S3JerseyClient(S3Config config, Client clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
         if (s3Config.isUseV2Signer())
@@ -152,11 +160,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         smartConfig.setProperty(ClientProperties.CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
         // creates a standard (non-load-balancing) jersey client
-        if (client == null) {
-            client = SmartClientFactory.createStandardClient(smartConfig);
-        } else {
-            SmartClientFactory.createStandardClient(smartConfig, client);
-        }
+        client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
 
         if (s3Config.isSmartClient()) {
             // SMART CLIENT SETUP
@@ -191,40 +195,30 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            if (client == null) {
-                client = SmartClientFactory.createSmartClient(smartConfig);
-            } else {
-                client = SmartClientFactory.createSmartClient(smartConfig, client);
-            }
+            SmartClientFactory.createSmartClient(smartConfig, client);
         }
 
         // Smart filter will be removed if it exists and then will be re-added.
         // Because host header could be replaced by smart client, which could make v4 signing fail,
         // so need to make sure auth filter is after the smart filter.
         // And also need to make sure that geoPinning filter is before smart filter.
-        ClientHandler handler = client.getHeadHandler();
-        SmartFilter smartFilter = null;
-        while (handler instanceof ClientFilter) {
-            ClientFilter filter = (ClientFilter) handler;
-            if (filter instanceof SmartFilter) {
-                smartFilter = (SmartFilter) filter;
-                client.removeFilter(smartFilter);
-            }
-            handler = filter.getNext();
-        }
+
         // jersey filters
         client.register(new ErrorFilter());
         if (s3Config.getFaultInjectionRate() > 0.0f)
             client.register(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
-        if (s3Config.isChecksumEnabled()) client.register(new ChecksumFilter(s3Config));
+        // Billy
+        // if (s3Config.isChecksumEnabled()) client.register(new ChecksumFilter(s3Config));
         client.register(new AuthorizationFilter(s3Config));
+        /* Billy smartfilter insertion is not needed here.
         if (smartFilter != null) {
             client.register(smartFilter);
-        }
-        if (s3Config.isRetryEnabled()) client.register(new RetryFilter(s3Config)); // replaces the apache retry handler
+        } */
+
         if (s3Config.isGeoPinningEnabled()) client.register(new GeoPinningFilter(s3Config));
         client.register(new BucketFilter(s3Config));
         client.register(new NamespaceFilter(s3Config));
+
     }
 
     @Override
@@ -276,9 +270,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public PingResponse pingNode(Protocol protocol, String host, int port) {
         String portStr = (port > 0) ? ":" + port : "";
-        WebResource resource = client.resource(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
-        resource.setProperty(SmartFilter.BYPASS_LOAD_BALANCER, true);
-        return resource.get(PingResponse.class);
+        WebTarget webTarget = client.target(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
+        Invocation.Builder invocationBuilder = webTarget.property(SmartFilter.BYPASS_LOAD_BALANCER, true).request();
+        return invocationBuilder.get(PingResponse.class);
     }
 
     @Override
@@ -323,7 +317,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public BucketInfo getBucketInfo(String bucketName) {
         BucketInfo result = new BucketInfo();
         result.setBucketName(bucketName);
-        fillResponseEntity(result, executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null)));
+        fillResponseEntity(result, executeAndClose(client, new GenericBucketRequest(Method.GET, bucketName, null)));
         return result;
     }
 
@@ -604,9 +598,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             }
 
             GetObjectResult<T> result = new GetObjectResult<T>();
-            ClientResponse response = executeRequest(client, request);
+            Response response = executeRequest(client, request);
             fillResponseEntity(result, response);
-            result.setObject(response.getEntity(objectType));
+            result.setObject(response.readEntity(objectType));
             return result;
         } catch (S3Exception e) {
             // a 304 or 412 means If-* headers were used and a condition failed
@@ -829,23 +823,27 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
-        ClientResponse response = executeRequest(client, request);
+        Response response = executeRequest(client, request);
+        // BILLY todo read response entity !!!
+        // org.glassfish.jersey.message.internal.MessageBodyProviderNotFoundException: MessageBodyReader not found for media type=application/xml, type=class com.emc.object.s3.bean.ListBucketsResult, genericType=class com.emc.object.s3.bean.ListBucketsResult.
+        Object entity = response.getEntity();
         try {
-            T responseEntity = response.getEntity(responseType);
+            T responseEntity = response.readEntity(responseType);
             fillResponseEntity(responseEntity, response);
             return responseEntity;
-        } catch (ClientHandlerException e) {
+        } catch (ProcessingException e) {
 
-            // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the
-            // expected entity. check for that here.
+            // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the expected entity.
+            // check for that here. it's not into retry loop.
+            String xx = entity.toString();
             try {
-                throw ErrorFilter.parseErrorResponse(new StringReader(response.getEntity(String.class)), response.getStatus());
+                throw ErrorFilter.parseErrorResponse(new StringReader(entity.toString()), response.getStatus());
             } catch (Throwable t) {
-
-                // must be a reader error
+                // it must be a SAXReader DocumentException
                 throw e;
             }
         }
+
     }
 
     public S3Config getS3Config() {

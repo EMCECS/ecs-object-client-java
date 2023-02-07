@@ -28,8 +28,8 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.Iso8601DateAdapter;
 
-import javax.xml.bind.annotation.*;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import jakarta.xml.bind.annotation.*;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.Date;
 
 @XmlType(propOrder = {"id", "prefix", "status", "expiration", "noncurrentVersionExpiration"})

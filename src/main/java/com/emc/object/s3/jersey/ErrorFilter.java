@@ -52,8 +52,6 @@ public class ErrorFilter implements ClientResponseFilter {
 
     @Override
     public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
-        // execute request
-        //        ClientResponse response = getNext().handle(request);
 
         if (response.getStatus() > 299) {
 
