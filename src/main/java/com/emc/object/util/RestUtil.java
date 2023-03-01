@@ -26,8 +26,6 @@
  */
 package com.emc.object.util;
 
-import com.emc.object.s3.S3Constants;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;

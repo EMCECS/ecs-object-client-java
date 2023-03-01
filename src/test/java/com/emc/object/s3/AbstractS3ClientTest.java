@@ -36,8 +36,9 @@ import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +50,7 @@ import java.util.Properties;
 public abstract class AbstractS3ClientTest extends AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractS3ClientTest.class);
 
-    protected S3Client client;
+    protected static S3Client client;
     /**
      * may be null
      */
@@ -60,22 +61,21 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     protected abstract S3Client createS3Client() throws Exception;
 
     protected final void initClient() throws Exception {
-        this.client = createS3Client();
-        // Billy
-//        try {
-//            this.ecsVersion = client.listDataNodes().getVersionInfo();
-//        } catch (Exception e) {
-//            log.warn("could not get ECS version: " + e);
-//        }
+        client = createS3Client();
+        try {
+            this.ecsVersion = client.listDataNodes().getVersionInfo();
+        } catch (Exception e) {
+            log.warn("could not get ECS version: " + e);
+        }
     }
 
-    @Before
+    @BeforeEach
     public void checkIamUser() throws IOException {
         Properties props = TestConfig.getProperties();
         this.isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
     }
 
-    @After
+    @AfterEach
     public void dumpLBStats() {
         if (client != null) {
             LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
@@ -83,8 +83,8 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
-    @After
-    public void shutdownClient() {
+    @AfterAll
+    static void shutdownClient() {
         if (client != null) client.destroy();
     }
 
@@ -99,17 +99,20 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         if (client != null && client.bucketExists(bucketName)) {
             boolean objectLockEnabled = isIamUser && client.getObjectLockConfiguration(bucketName) != null;
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
-                for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
+                ListVersionsResult listVersionsResult = client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url));
+                for (AbstractVersion version : listVersionsResult.getVersions()) {
                     DeleteObjectRequest deleteRequest = new DeleteObjectRequest(bucketName, version.getKey()).withVersionId(version.getVersionId());
                     if (objectLockEnabled) {
-                        client.setObjectLegalHold(new SetObjectLegalHoldRequest(bucketName, version.getKey()).withVersionId(version.getVersionId())
-                                .withLegalHold(new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.OFF)));
+                        SetObjectLegalHoldRequest setObjectLegalHoldRequest = new SetObjectLegalHoldRequest(bucketName, version.getKey()).withVersionId(version.getVersionId())
+                                .withLegalHold(new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.OFF));
+                        client.setObjectLegalHold(setObjectLegalHoldRequest);
                         deleteRequest.withBypassGovernanceRetention(true);
                     }
                     client.deleteObject(deleteRequest);
                 }
             } else {
-                for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url)).getObjects()) {
+                ListObjectsResult listObjectsResult = client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url));
+                for (S3Object object : listObjectsResult.getObjects()) {
                     client.deleteObject(bucketName, object.getKey());
                 }
             }

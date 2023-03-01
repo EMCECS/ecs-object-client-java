@@ -29,8 +29,8 @@ package com.emc.object.s3.bean;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import jakarta.xml.bind.annotation.XmlEnum;
-import jakarta.xml.bind.annotation.XmlEnumValue;
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlEnumValue;
 
 @XmlEnum
 public enum PolicyConditionKey {
@@ -85,18 +85,18 @@ public enum PolicyConditionKey {
     @XmlEnumValue("s3:object-lock-remaining-retention-days")
     ObjectLockRemainingRetentionDays("s3:object-lock-remaining-retention-days");
 
+    private String conditionKey;
+
+    PolicyConditionKey(String conditionKey) {
+        this.conditionKey = conditionKey;
+    }
+
     @JsonCreator
     public static PolicyConditionKey fromValue(String value) {
         for (PolicyConditionKey instance : values()) {
             if (value.equals(instance.getConditionKey())) return instance;
         }
         return null;
-    }
-
-    private String conditionKey;
-
-    PolicyConditionKey(String conditionKey) {
-        this.conditionKey = conditionKey;
     }
 
     @JsonValue

@@ -26,10 +26,17 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @XmlRootElement(name = "BucketQueryResult", namespace = "")
 @XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects", "prefixGroups"}, namespace = "")
 public class QueryObjectsResult {
@@ -85,7 +92,7 @@ public class QueryObjectsResult {
         return nextMarker != null && !nextMarker.isEmpty() && !"NO MORE PAGES".equals(nextMarker);
     }
 
-    @XmlElementWrapper(name = "ObjectMatches")
+    @JacksonXmlElementWrapper(localName = "ObjectMatches")
     @XmlElement(name = "object")
     public List<QueryObject> getObjects() {
         return objects;
@@ -128,9 +135,11 @@ public class QueryObjectsResult {
         return includeOlderVersions;
     }
 
-    public void setIncludeOlderVersions(boolean includeOlderVersions) { this.includeOlderVersions = includeOlderVersions; }
+    public void setIncludeOlderVersions(boolean includeOlderVersions) {
+        this.includeOlderVersions = includeOlderVersions;
+    }
 
-    @XmlElementWrapper(name = "CommonPrefixMatches")
+    @JacksonXmlElementWrapper(localName = "CommonPrefixMatches")
     @XmlElement(name = "PrefixGroups")
     public List<String> getPrefixGroups() {
         return prefixGroups;

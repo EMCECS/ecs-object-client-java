@@ -27,11 +27,12 @@
 package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
-import jakarta.xml.bind.Unmarshaller;
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,6 +48,7 @@ public class ListObjectsResult implements UrlEncodable {
     private boolean truncated;
     private List<S3Object> objects = new ArrayList<>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
+    private boolean isServerSideEncrypted;
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,
     //but before this object is set to the parent object.
@@ -136,6 +138,7 @@ public class ListObjectsResult implements UrlEncodable {
     }
 
     @XmlElement(name = "Contents")
+    @JacksonXmlElementWrapper(useWrapping = false)
     public List<S3Object> getObjects() {
         return objects;
     }
@@ -151,6 +154,15 @@ public class ListObjectsResult implements UrlEncodable {
 
     protected void set_commonPrefixes(List<CommonPrefix> _commonPrefixes) {
         this._commonPrefixes = _commonPrefixes;
+    }
+
+    @XmlElement(name = "ServerSideEncryptionEnabled")
+    public boolean isServerSideEncrypted() {
+        return isServerSideEncrypted;
+    }
+
+    public void setServerSideEncrypted(boolean serverSideEncrypted) {
+        isServerSideEncrypted = serverSideEncrypted;
     }
 
     @XmlTransient

@@ -26,11 +26,14 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlType;
-import jakarta.xml.bind.annotation.adapters.XmlAdapter;
-import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import java.util.*;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.adapters.XmlAdapter;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @XmlType(propOrder = {"type", "mdMap"}, namespace = "")
 public class QueryMetadata {
@@ -54,6 +57,24 @@ public class QueryMetadata {
 
     public void setMdMap(Map<String, String> mdMap) {
         this.mdMap = mdMap;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        QueryMetadata metadata = (QueryMetadata) o;
+
+        if (type != metadata.type) return false;
+        return mdMap != null ? mdMap.equals(metadata.mdMap) : metadata.mdMap == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type != null ? type.hashCode() : 0;
+        result = 31 * result + (mdMap != null ? mdMap.hashCode() : 0);
+        return result;
     }
 
     public static class MapAdapter extends XmlAdapter<FlatMap, Map<String, String>> {
@@ -93,23 +114,5 @@ public class QueryMetadata {
             this.key = key;
             this.value = value;
         }
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        QueryMetadata metadata = (QueryMetadata) o;
-
-        if (type != metadata.type) return false;
-        return mdMap != null ? mdMap.equals(metadata.mdMap) : metadata.mdMap == null;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = type != null ? type.hashCode() : 0;
-        result = 31 * result + (mdMap != null ? mdMap.hashCode() : 0);
-        return result;
     }
 }

@@ -26,7 +26,6 @@
  */
 package com.emc.object;
 
-import com.emc.object.s3.S3Config;
 import com.emc.object.util.ConfigUri;
 import com.emc.object.util.ConfigUriProperty;
 import com.emc.object.util.RestUtil;
@@ -34,7 +33,6 @@ import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
 import org.apache.http.params.CoreConnectionPNames;
-import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

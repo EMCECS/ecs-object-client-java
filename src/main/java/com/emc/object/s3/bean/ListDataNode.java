@@ -26,18 +26,22 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlElements;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @XmlRootElement(name = "ListDataNode")
 public class ListDataNode {
     private List<String> dataNodes = new ArrayList<String>();
     private String versionInfo;
 
-    @XmlElements(@XmlElement(name = "DataNodes"))
+    @XmlElement(name = "DataNodes")
+    @JacksonXmlElementWrapper(useWrapping = false)
     public List<String> getDataNodes() {
         return dataNodes;
     }

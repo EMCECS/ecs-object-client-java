@@ -36,8 +36,8 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
@@ -97,12 +97,12 @@ public class BucketPolicyTest {
                 .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JaxbAnnotationIntrospector(TypeFactory.defaultInstance())));
 
         String generatedJson = mapper.writeValueAsString(OBJECT);
-        Assert.assertEquals(JSON, generatedJson);
+        Assertions.assertEquals(JSON, generatedJson);
 
-        Assert.assertEquals(OBJECT, mapper.readValue(JSON, BucketPolicy.class));
+        Assertions.assertEquals(OBJECT, mapper.readValue(JSON, BucketPolicy.class));
 
         // round trip
-        Assert.assertEquals(OBJECT, mapper.readValue(generatedJson, BucketPolicy.class));
+        Assertions.assertEquals(OBJECT, mapper.readValue(generatedJson, BucketPolicy.class));
     }
 
     @Test
@@ -120,7 +120,7 @@ public class BucketPolicyTest {
         provider.writeTo(OBJECT, BucketPolicy.class, BucketPolicy.class, null, MediaType.APPLICATION_JSON_TYPE,
                 null, baos);
 
-        Assert.assertEquals(JSON, new String(baos.toByteArray(), StandardCharsets.UTF_8));
+        Assertions.assertEquals(JSON, new String(baos.toByteArray(), StandardCharsets.UTF_8));
 
         // test reading
         provider.readFrom(Object.class, BucketPolicy.class, null, MediaType.APPLICATION_JSON_TYPE,

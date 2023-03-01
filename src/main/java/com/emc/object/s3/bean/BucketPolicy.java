@@ -26,14 +26,15 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlType;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@XmlRootElement
+@JacksonXmlRootElement
 @XmlType(propOrder = {"id", "version", "statements"})
 public class BucketPolicy {
     private String id;

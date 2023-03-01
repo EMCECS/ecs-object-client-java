@@ -1,25 +1,22 @@
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.BucketFilter;
-import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
-import com.emc.object.util.RestUtil;
-import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.ws.rs.client.ClientRequestContext;
-import jakarta.xml.bind.DatatypeConverter;
-import java.net.MalformedURLException;
-import java.net.URI;
+import javax.xml.bind.DatatypeConverter;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
 
 public abstract class S3Signer {
     protected static final Logger log = LoggerFactory.getLogger(S3Signer.class);

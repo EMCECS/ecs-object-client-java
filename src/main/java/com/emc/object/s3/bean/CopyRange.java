@@ -1,27 +1,29 @@
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- *  Container for the multi copy range request
+ * Container for the multi copy range request
  */
 @XmlRootElement(name = "CopyRangeRequest")
 public class CopyRange {
 
     /**
      * This element defines the content type of target object
+     *
      * @valid none
      */
     private String contentType;
 
     /**
      * This element defines segments the target object will copy from
+     *
      * @valid none
      */
     private Segments segments;
 
-    @XmlElement(name = "ContentType", required = true)
+    @XmlElement(name = "ContentType") // todo required = true
     public String getContentType() {
         return contentType;
     }
@@ -30,7 +32,7 @@ public class CopyRange {
         this.contentType = contentType;
     }
 
-    @XmlElement(name = "Segments", required = true)
+    @XmlElement(name = "Segments") // todo required = true
     public Segments getSegments() {
         return segments;
     }

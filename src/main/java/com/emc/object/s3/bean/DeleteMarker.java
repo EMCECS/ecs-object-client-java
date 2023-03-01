@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
-@XmlRootElement(name = "DeleteMarker")
+@XmlType(name = "DeleteMarker")
 public class DeleteMarker extends AbstractVersion {
 }

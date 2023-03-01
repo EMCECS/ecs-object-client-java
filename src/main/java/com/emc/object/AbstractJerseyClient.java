@@ -29,25 +29,22 @@ package com.emc.object;
 import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.RequestEntityProcessing;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
-
-import org.glassfish.jersey.client.ClientProperties;
-
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.Objects;
-
-import org.glassfish.jersey.client.RequestEntityProcessing;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.emc.object.ObjectConfig.PROPERTY_RETRY_COUNT;
 
@@ -82,7 +79,8 @@ public abstract class AbstractJerseyClient {
 
                     if (entityRequest.getContentType() != null) contentType = entityRequest.getContentType();
 
-                    if (entityRequest.getEntity() != null) entity = entityRequest.getEntity();
+                    if (entityRequest.getEntity() != null)
+                        entity = entityRequest.getEntity();
 
                     // if content-length is set (perhaps by user), force jersey to use it
                     if (entityRequest.getContentLength() != null) {
@@ -93,7 +91,6 @@ public abstract class AbstractJerseyClient {
                         // that the entity is buffered (will set content length from buffered write)
                     } else if (!entityRequest.isChunkable()) {
                         log.debug("no content-length and request is not chunkable, attempting to enable buffering");
-                        // Billy
                         request.property(ClientProperties.REQUEST_ENTITY_PROCESSING, RequestEntityProcessing.BUFFERED);
                         request.property(ClientProperties.CHUNKED_ENCODING_SIZE, null);
                     }
@@ -129,11 +126,9 @@ public abstract class AbstractJerseyClient {
                     if (entityStream != null && entityStream.markSupported())
                         entityStream.mark(objectConfig.getRetryBufferSize());
 
-                    Response response = Objects.isNull(entity)
-                            ? builder.method(method.name())
+                    Response response = Objects.isNull(entity) ? builder.method(method.name())
                             : builder.method(method.name(), Entity.entity(entity, contentType));
-                    if (response.getStatus() == 200)
-                        return response;
+                    return response;
 
                 } catch (RuntimeException orig) {
                     Throwable t = orig;
@@ -146,7 +141,8 @@ public abstract class AbstractJerseyClient {
                         S3Exception se = (S3Exception) t;
 
                         // retry all 50x errors except 501 (not implemented)
-                        if (se.getHttpCode() < 500 || se.getHttpCode() == 501) throw orig;
+                        if (se.getHttpCode() < 500 || se.getHttpCode() == 501)
+                            throw se;
 
                         // retry all IO exceptions
                     } else if (!(t instanceof IOException)) throw orig;
@@ -157,7 +153,8 @@ public abstract class AbstractJerseyClient {
                     // attempt to reset InputStream
                     if (entityStream != null) {
                         try {
-                            if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
+                            if (!entityStream.markSupported())
+                                throw new IOException("stream does not support mark/reset");
                             entityStream.reset();
                         } catch (IOException e) {
                             log.warn("could not reset entity stream for retry: " + e);
@@ -174,7 +171,7 @@ public abstract class AbstractJerseyClient {
                         } catch (InterruptedException e) {
                             log.warn("interrupted while waiting to retry: " + e.getMessage());
                         }
-                        log.info("error received in response [{}], retrying ({} of {})...", t, retryCount, objectConfig.getRetryLimit());
+                        log.warn("error received in response [{}], retrying ({} of {})...", t, retryCount, objectConfig.getRetryLimit());
                         request.property(PROPERTY_RETRY_COUNT, retryCount);
                     }
                 }

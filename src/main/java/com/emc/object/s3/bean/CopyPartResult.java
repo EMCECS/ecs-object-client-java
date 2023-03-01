@@ -30,9 +30,9 @@ import com.emc.object.ObjectResponse;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.Date;
 
 @XmlRootElement(name = "CopyPartResult")
@@ -55,13 +55,13 @@ public class CopyPartResult extends ObjectResponse {
         return eTag;
     }
 
+    public void setETag(String eTag) {
+        this.eTag = eTag;
+    }
+
     @XmlTransient
     public String getRawETag() {
         return RestUtil.stripQuotes(eTag);
-    }
-
-    public void setETag(String eTag) {
-        this.eTag = eTag;
     }
 
     @XmlTransient

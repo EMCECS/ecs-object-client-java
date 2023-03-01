@@ -30,8 +30,8 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.rest.smart.HostStats;
 import com.emc.rest.smart.ecs.Vdc;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.ProcessingException;
 import java.io.IOException;
@@ -64,9 +64,9 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                 new RetryInputStream(s3Config, flagMessage)).withObjectMetadata(metadata);
         try {
             client.putObject(request);
-            Assert.fail("Retried more than retryLimit times");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("Wrong exception thrown", flagMessage, e.getCause().getMessage());
+            Assertions.fail("Retried more than retryLimit times");
+        } catch (RuntimeException e) {
+            Assertions.assertEquals(flagMessage, e.getCause().getMessage(), "Wrong exception thrown");
         }
 
         s3Config.setRetryLimit(retryLimit + 1);
@@ -75,8 +75,8 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                 new RetryInputStream(s3Config, flagMessage)).withObjectMetadata(metadata);
         client.putObject(request);
         byte[] content = client.readObject(getTestBucket(), "foo", byte[].class);
-        Assert.assertEquals("Content wrong size", 1, content.length);
-        Assert.assertEquals("Wrong content", (byte) 65, content[0]);
+        Assertions.assertEquals(1, content.length, "Content wrong size");
+        Assertions.assertEquals((byte) 65, content[0], "Wrong content");
 
         try {
             request = new PutObjectRequest(getTestBucket(), "foo",
@@ -93,9 +93,9 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                         }
                     }).withObjectMetadata(metadata);
             client.putObject(request);
-            Assert.fail("HTTP 400 was retried and should not be");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("Wrong http code", 400, ((S3Exception) e.getCause()).getHttpCode());
+            Assertions.fail("HTTP 400 was retried and should not be");
+        } catch (RuntimeException e) {
+            Assertions.assertEquals(400, ((S3Exception) e).getHttpCode(), "Wrong http code");
         }
 
         try {
@@ -113,9 +113,9 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                         }
                     }).withObjectMetadata(metadata);
             client.putObject(request);
-            Assert.fail("HTTP 501 was retried and should not be");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("Wrong http code", 501, ((S3Exception) e.getCause()).getHttpCode());
+            Assertions.fail("HTTP 501 was retried and should not be");
+        } catch (RuntimeException e) {
+            Assertions.assertEquals(501, ((S3Exception) e).getHttpCode(), "Wrong http code");
         }
 
         try {
@@ -133,9 +133,9 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                         }
                     }).withObjectMetadata(metadata);
             client.putObject(request);
-            Assert.fail("RuntimeException was retried and should not be");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
+            Assertions.fail("RuntimeException was retried and should not be");
+        } catch (RuntimeException e) {
+            Assertions.assertEquals(flagMessage, e.getCause().getMessage(), "Wrong exception message");
         }
     }
 
@@ -166,21 +166,21 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                         }
                     }).withObjectMetadata(metadata);
             client.putObject(request);
-            Assert.fail("500 error did not bubble an exception");
+            Assertions.fail("500 error did not bubble an exception");
         } catch (ProcessingException e) {
-            Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
-            Assert.assertEquals("Wrong http code", 500, ((S3Exception) e.getCause()).getHttpCode());
+            Assertions.assertEquals(flagMessage, e.getCause().getMessage(), "Wrong exception message");
+            Assertions.assertEquals(500, ((S3Exception) e.getCause()).getHttpCode(), "Wrong http code");
         }
 
         HostStats[] stats = ((S3JerseyClient) client).getLoadBalancer().getHostStats();
         // 2 hosts should be in the load balancer
-        Assert.assertEquals(2, stats.length);
+        Assertions.assertEquals(2, stats.length);
         // total requests should match (first request + retry count)
         long sumOfRequests = Arrays.stream(stats).mapToLong(HostStats::getTotalConnections).sum();
-        Assert.assertEquals(sumOfRequests, retryTimes + 1);
+        Assertions.assertEquals(sumOfRequests, retryTimes + 1);
         // each host should have at least 1 request
-        Assert.assertTrue(stats[0].getTotalConnections() > 0);
-        Assert.assertTrue(stats[1].getTotalConnections() > 0);
+        Assertions.assertTrue(stats[0].getTotalConnections() > 0);
+        Assertions.assertTrue(stats[1].getTotalConnections() > 0);
     }
 
     private class RetryInputStream extends InputStream {
@@ -204,17 +204,17 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                     throw new S3Exception("foo", 500);
                 case 1:
                     now = System.currentTimeMillis();
-                    Assert.assertTrue("Retry delay for 1st error was not honored", now - lastTime >= retryDelay);
+                    Assertions.assertTrue(now - lastTime >= retryDelay, "Retry delay for 1st error was not honored");
                     lastTime = now;
                     throw new S3Exception("bar", 503);
                 case 2:
                     now = System.currentTimeMillis();
-                    Assert.assertTrue("Retry delay for 2nd error was not honored", now - lastTime >= retryDelay);
+                    Assertions.assertTrue(now - lastTime >= retryDelay, "Retry delay for 2nd error was not honored");
                     lastTime = now;
                     throw new IOException("baz");
                 case 3:
                     now = System.currentTimeMillis();
-                    Assert.assertTrue("Retry delay for 3rd error was not honored", now - lastTime >= retryDelay);
+                    Assertions.assertTrue(now - lastTime >= retryDelay, "Retry delay for 3rd error was not honored");
                     lastTime = now;
                     throw new S3Exception(flagMessage, 500);
                 case 4:

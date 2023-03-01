@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package com.emc.object.s3.bean;
+
 public abstract class AbstractGrantee implements Comparable<AbstractGrantee> {
     @Override
     public int compareTo(AbstractGrantee o) {
@@ -32,4 +33,5 @@ public abstract class AbstractGrantee implements Comparable<AbstractGrantee> {
     }
 
     public abstract String getHeaderValue();
+
 }

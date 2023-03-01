@@ -32,7 +32,7 @@ import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
 
 import javax.ws.rs.client.ClientRequestContext;
-import jakarta.xml.bind.DatatypeConverter;
+import javax.xml.bind.DatatypeConverter;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;

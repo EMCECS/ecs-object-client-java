@@ -28,7 +28,6 @@ package com.emc.object.s3.request;
 
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
-import com.emc.object.util.RestUtil;
 
 public class GenericBucketEntityRequest<T> extends GenericBucketRequest implements EntityRequest {
     private T entity;
@@ -37,7 +36,8 @@ public class GenericBucketEntityRequest<T> extends GenericBucketRequest implemen
     public GenericBucketEntityRequest(Method method, String bucketName, String subresource, T entity) {
         super(method, bucketName, subresource);
         this.entity = entity;
-        property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
+        // Billy todo: remove comment
+//        property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
     }
 
     @Override

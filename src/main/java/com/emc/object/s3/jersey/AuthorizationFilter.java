@@ -30,15 +30,12 @@ import com.emc.object.s3.*;
 import com.emc.object.util.RestUtil;
 
 import javax.annotation.Priority;
-import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.core.Configuration;
 import javax.ws.rs.ext.Provider;
-
 import java.io.IOException;
 import java.util.Map;
-import java.util.Properties;
 
 @Provider
 @Priority(FilterPriorities.PRIORITY_AUTHORIZATION)

@@ -26,9 +26,9 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlEnum;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "VersioningConfiguration")
 public class VersioningConfiguration {
@@ -43,13 +43,13 @@ public class VersioningConfiguration {
         this.status = status;
     }
 
-    @XmlEnum
-    public static enum Status {
-        Enabled, Suspended
-    }
-
     public VersioningConfiguration withStatus(Status status) {
         setStatus(status);
         return this;
+    }
+
+    @XmlEnum
+    public static enum Status {
+        Enabled, Suspended
     }
 }

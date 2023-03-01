@@ -26,14 +26,15 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.Date;
 
-@XmlType(propOrder = {"name", "creationDate"})
+@XmlType(propOrder = {"name", "creationDate", "isServerSideEncrypted"})
 public class Bucket {
     private String name;
     private Date creationDate;
+    private boolean isServerSideEncrypted;
 
     @XmlElement(name = "Name")
     public String getName() {
@@ -51,6 +52,15 @@ public class Bucket {
 
     public void setCreationDate(Date creationDate) {
         this.creationDate = creationDate;
+    }
+
+    @XmlElement(name = "ServerSideEncryptionEnabled")
+    public boolean getIsServerSideEncrypted() {
+        return isServerSideEncrypted;
+    }
+
+    public void setServerSideEncrypted(boolean serverSideEncrypted) {
+        this.isServerSideEncrypted = serverSideEncrypted;
     }
 
     @Override

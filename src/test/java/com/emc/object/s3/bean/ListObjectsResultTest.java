@@ -26,11 +26,11 @@
  */
 package com.emc.object.s3.bean;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.Unmarshaller;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -138,25 +138,25 @@ public class ListObjectsResultTest {
         // unmarshall and compare to object
         Unmarshaller unmarshaller = context.createUnmarshaller();
         ListObjectsResult unmarshalledObject = (ListObjectsResult) unmarshaller.unmarshal(new StringReader(xml));
-        Assert.assertEquals(objectsResult.getBucketName(), unmarshalledObject.getBucketName());
-        Assert.assertEquals(objectsResult.getPrefix(), unmarshalledObject.getPrefix());
-        Assert.assertEquals(objectsResult.getMarker(), unmarshalledObject.getMarker());
-        Assert.assertEquals(objectsResult.getNextMarker(), unmarshalledObject.getNextMarker());
-        Assert.assertEquals(objectsResult.getMaxKeys(), unmarshalledObject.getMaxKeys());
-        Assert.assertEquals(objectsResult.getDelimiter(), unmarshalledObject.getDelimiter());
-        Assert.assertEquals(objectsResult.isTruncated(), unmarshalledObject.isTruncated());
-        Assert.assertEquals(objectsResult.getCommonPrefixes(), unmarshalledObject.getCommonPrefixes());
-        Assert.assertEquals(objectsResult.getObjects().size(), unmarshalledObject.getObjects().size());
+        Assertions.assertEquals(objectsResult.getBucketName(), unmarshalledObject.getBucketName());
+        Assertions.assertEquals(objectsResult.getPrefix(), unmarshalledObject.getPrefix());
+        Assertions.assertEquals(objectsResult.getMarker(), unmarshalledObject.getMarker());
+        Assertions.assertEquals(objectsResult.getNextMarker(), unmarshalledObject.getNextMarker());
+        Assertions.assertEquals(objectsResult.getMaxKeys(), unmarshalledObject.getMaxKeys());
+        Assertions.assertEquals(objectsResult.getDelimiter(), unmarshalledObject.getDelimiter());
+        Assertions.assertEquals(objectsResult.isTruncated(), unmarshalledObject.isTruncated());
+        Assertions.assertEquals(objectsResult.getCommonPrefixes(), unmarshalledObject.getCommonPrefixes());
+        Assertions.assertEquals(objectsResult.getObjects().size(), unmarshalledObject.getObjects().size());
         for (int i = 0; i < objectsResult.getObjects().size(); i++) {
             S3Object obj = objectsResult.getObjects().get(i);
             S3Object unobj = unmarshalledObject.getObjects().get(i);
-            Assert.assertEquals(obj.getClass(), unobj.getClass());
-            Assert.assertEquals(obj.getKey(), unobj.getKey());
-            Assert.assertEquals(obj.getOwner(), unobj.getOwner());
-            Assert.assertEquals(obj.getLastModified(), unobj.getLastModified());
-            Assert.assertEquals(obj.getETag(), unobj.getETag());
-            Assert.assertEquals(obj.getSize(), unobj.getSize());
-            Assert.assertEquals(obj.getStorageClass(), unobj.getStorageClass());
+            Assertions.assertEquals(obj.getClass(), unobj.getClass());
+            Assertions.assertEquals(obj.getKey(), unobj.getKey());
+            Assertions.assertEquals(obj.getOwner(), unobj.getOwner());
+            Assertions.assertEquals(obj.getLastModified(), unobj.getLastModified());
+            Assertions.assertEquals(obj.getETag(), unobj.getETag());
+            Assertions.assertEquals(obj.getSize(), unobj.getSize());
+            Assertions.assertEquals(obj.getStorageClass(), unobj.getStorageClass());
         }
     }
 }

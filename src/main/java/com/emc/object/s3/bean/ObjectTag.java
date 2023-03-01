@@ -1,10 +1,8 @@
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlType;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 @XmlRootElement(name = "Tag")
 @XmlType(propOrder = {"key", "value"})
@@ -12,15 +10,16 @@ public class ObjectTag {
 
     private String key;
     private String value;
-    
-    public ObjectTag() {}
+
+    public ObjectTag() {
+    }
 
     public ObjectTag(String key, String value) {
         this.key = key;
         this.value = value;
     }
 
-    @XmlElement(name = "Key", required = true)
+    @XmlElement(name = "Key") // todo required = true
     public String getKey() {
         return key;
     }
@@ -29,7 +28,7 @@ public class ObjectTag {
         this.key = key;
     }
 
-    @XmlElement(name = "Value", required = true)
+    @XmlElement(name = "Value") // todo required = true
     public String getValue() {
         return value;
     }

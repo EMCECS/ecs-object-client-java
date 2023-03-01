@@ -2,18 +2,17 @@ package com.emc.object.s3;
 
 import com.emc.object.Method;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.*;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-
-import org.junit.Assert;
+import com.emc.object.s3.request.PresignedUrlRequest;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.*;
+import java.util.Date;
 
 public class S3JerseyClientV4Test extends S3JerseyClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3JerseyClientV4Test.class);
@@ -70,9 +69,9 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         ClientBuilder.newClient().target(url.toURI())
                 .request("application/x-download").header("x-amz-meta-foo", "bar")
                 .put(Entity.text(content));
-        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Override
@@ -106,12 +105,12 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         con.setDoOutput(true);
         con.setDoInput(true);
         con.connect();
-        Assert.assertEquals(200, con.getResponseCode());
+        Assertions.assertEquals(200, con.getResponseCode());
 
-        Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
 
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Override

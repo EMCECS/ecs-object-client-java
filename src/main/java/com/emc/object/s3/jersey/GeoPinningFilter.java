@@ -31,17 +31,14 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.ecs.Vdc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Priority;
-import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.core.Configuration;
 import javax.ws.rs.ext.Provider;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

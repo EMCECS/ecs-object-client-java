@@ -1,7 +1,7 @@
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 
 /**
  * Describes a metadata search key associated with a bucket.
@@ -11,7 +11,8 @@ public class MetadataSearchKey {
     private String name;
     private MetadataSearchDatatype datatype;
 
-    public MetadataSearchKey() {}
+    public MetadataSearchKey() {
+    }
 
     public MetadataSearchKey(String name, MetadataSearchDatatype datatype) {
         this.name = name;
@@ -32,5 +33,7 @@ public class MetadataSearchKey {
         return datatype;
     }
 
-    public void setDatatype(MetadataSearchDatatype datatype) { this.datatype = datatype; }
+    public void setDatatype(MetadataSearchDatatype datatype) {
+        this.datatype = datatype;
+    }
 }

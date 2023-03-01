@@ -26,12 +26,12 @@
  */
 package com.emc.object.s3.bean;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.Marshaller;
-import jakarta.xml.bind.Unmarshaller;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.*;
@@ -116,21 +116,21 @@ public class QueryObjectResultTest {
         Unmarshaller unmarshaller = context.createUnmarshaller();
         QueryObjectsResult unmarshalledObject = (QueryObjectsResult) unmarshaller.unmarshal(new StringReader(xml));
 
-        Assert.assertEquals(result.getBucketName(), unmarshalledObject.getBucketName());
-        Assert.assertEquals(result.getNextMarker(), unmarshalledObject.getNextMarker());
-        Assert.assertEquals(result.getMaxKeys(), unmarshalledObject.getMaxKeys());
+        Assertions.assertEquals(result.getBucketName(), unmarshalledObject.getBucketName());
+        Assertions.assertEquals(result.getNextMarker(), unmarshalledObject.getNextMarker());
+        Assertions.assertEquals(result.getMaxKeys(), unmarshalledObject.getMaxKeys());
 
         for (QueryObject o : result.getObjects()) {
-            Assert.assertTrue(unmarshalledObject.getObjects().contains(o));
+            Assertions.assertTrue(unmarshalledObject.getObjects().contains(o));
         }
         for (QueryObject o : unmarshalledObject.getObjects()) {
-            Assert.assertTrue(result.getObjects().contains(o));
+            Assertions.assertTrue(result.getObjects().contains(o));
         }
 
         // re-marshall and compare to string
         Marshaller marshaller = context.createMarshaller();
         StringWriter writer = new StringWriter();
         marshaller.marshal(result, writer);
-        Assert.assertEquals(xml, writer.toString());
+        Assertions.assertEquals(xml, writer.toString());
     }
 }

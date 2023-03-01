@@ -28,28 +28,37 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlType;
 
-@XmlRootElement(name = "Version")
+@XmlType(name = "Version")
 public class Version extends AbstractVersion {
     private String eTag;
     private Long size;
     private StorageClass storageClass;
+
+    public Version() {
+    }
+
+    public Version(String eTag, Long size, StorageClass storageClass) {
+        this.eTag = eTag;
+        this.size = size;
+        this.storageClass = storageClass;
+    }
 
     @XmlElement(name = "ETag")
     public String getETag() {
         return eTag;
     }
 
+    public void setETag(String eTag) {
+        this.eTag = eTag;
+    }
+
     @XmlTransient
     public String getRawETag() {
         return RestUtil.stripQuotes(eTag);
-    }
-
-    public void setETag(String eTag) {
-        this.eTag = eTag;
     }
 
     @XmlElement(name = "Size")

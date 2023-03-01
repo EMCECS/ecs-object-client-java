@@ -26,23 +26,29 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlType;
+import com.emc.object.s3.AbstractGranteeDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 
 @XmlType(propOrder = {"grantee", "permission"})
 public class Grant implements Comparable<Grant> {
-    private AbstractGrantee grantee;
-    private Permission permission;
 
-    public Grant() {
-    }
+    private AbstractGrantee grantee;
+
+    private Permission permission;
 
     public Grant(AbstractGrantee grantee, Permission permission) {
         this.grantee = grantee;
         this.permission = permission;
     }
 
+    public Grant() {
+    }
+
     @XmlElement(name = "Grantee")
+    @JsonDeserialize(using = AbstractGranteeDeserializer.class)
     public AbstractGrantee getGrantee() {
         return grantee;
     }

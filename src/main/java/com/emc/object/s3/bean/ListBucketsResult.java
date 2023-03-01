@@ -26,14 +26,16 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlElementWrapper;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "ListAllMyBucketsResult")
 public class ListBucketsResult {
+
     private CanonicalUser owner;
     private Integer maxBuckets;
     private String marker;
@@ -86,7 +88,7 @@ public class ListBucketsResult {
         this.truncated = truncated;
     }
 
-    @XmlElementWrapper(name = "Buckets")
+    @JacksonXmlElementWrapper(localName = "Buckets")
     @XmlElement(name = "Bucket")
     public List<Bucket> getBuckets() {
         return buckets;

@@ -3,8 +3,9 @@ package com.emc.object.s3;
 import com.emc.object.Range;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 
 public class S3IfNoneMatchTest extends AbstractS3ClientTest {
     @Override
@@ -45,7 +46,7 @@ public class S3IfNoneMatchTest extends AbstractS3ClientTest {
         try {
             client.putObject(ifNoneMatchRequest);
         } catch (S3Exception e){
-            Assert.assertEquals("error not matched","At least one of the preconditions you specified did not hold.", e.getMessage());
+            Assertions.assertEquals("At least one of the preconditions you specified did not hold.", e.getMessage(), "error not matched");
             System.out.printf("error");
         }
     }

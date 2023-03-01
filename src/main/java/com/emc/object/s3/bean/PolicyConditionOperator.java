@@ -26,7 +26,7 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlEnum;
 
 /**
  * http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_condition_operators.html

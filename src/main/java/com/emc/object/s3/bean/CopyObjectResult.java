@@ -29,9 +29,9 @@ package com.emc.object.s3.bean;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
-import jakarta.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.Date;
 
 @XmlRootElement(name = "CopyObjectResult")
@@ -58,12 +58,12 @@ public class CopyObjectResult extends PutObjectResult {
         return eTag;
     }
 
+    public void setETag(String eTag) {
+        this.eTag = eTag;
+    }
+
     @XmlTransient
     public String getRawETag() {
         return RestUtil.stripQuotes(eTag);
-    }
-
-    public void setETag(String eTag) {
-        this.eTag = eTag;
     }
 }

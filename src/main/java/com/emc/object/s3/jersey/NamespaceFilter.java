@@ -28,19 +28,16 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.util.RestUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Priority;
-import javax.ws.rs.Priorities;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Provider
 @Priority(FilterPriorities.PRIORITY_NAMESPACE)

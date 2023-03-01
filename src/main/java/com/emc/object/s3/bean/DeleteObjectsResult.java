@@ -26,9 +26,10 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElementRef;
-import jakarta.xml.bind.annotation.XmlElementRefs;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import com.emc.object.s3.AbstractDeleteResultDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +37,7 @@ import java.util.List;
 public class DeleteObjectsResult {
     private List<AbstractDeleteResult> results = new ArrayList<AbstractDeleteResult>();
 
-    @XmlElementRefs({@XmlElementRef(type = DeleteSuccess.class), @XmlElementRef(type = DeleteError.class)})
+    @JsonDeserialize(using = AbstractDeleteResultDeserializer.class)
     public List<AbstractDeleteResult> getResults() {
         return results;
     }

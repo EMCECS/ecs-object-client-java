@@ -37,13 +37,8 @@ import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
 
 import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientResponseFilter;
-
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 /**

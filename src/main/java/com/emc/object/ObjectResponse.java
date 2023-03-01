@@ -26,8 +26,7 @@
  */
 package com.emc.object;
 
-import jakarta.xml.bind.annotation.XmlTransient;
-
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.List;
 import java.util.Map;
 

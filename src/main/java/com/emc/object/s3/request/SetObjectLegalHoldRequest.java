@@ -1,10 +1,10 @@
 package com.emc.object.s3.request;
+
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
 import com.emc.object.s3.bean.ObjectLockLegalHold;
 import com.emc.object.util.RestUtil;
 
-import java.util.List;
 import java.util.Map;
 
 public class SetObjectLegalHoldRequest extends S3ObjectRequest implements EntityRequest {
@@ -34,7 +34,7 @@ public class SetObjectLegalHoldRequest extends S3ObjectRequest implements Entity
 
     @Override
     public Object getEntity() {
-        return legalHold;
+        return this.legalHold;
     }
 
     @Override

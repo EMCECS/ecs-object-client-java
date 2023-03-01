@@ -26,13 +26,18 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "Error")
 public class DeleteError extends AbstractDeleteResult {
     private String code;
     private String message;
+
+    public DeleteError(String code, String message) {
+        this.code = code;
+        this.message = message;
+    }
 
     @XmlElement(name = "Code")
     public String getCode() {

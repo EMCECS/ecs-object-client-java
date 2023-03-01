@@ -29,8 +29,8 @@ package com.emc.object.s3.bean;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import jakarta.xml.bind.annotation.XmlEnum;
-import jakarta.xml.bind.annotation.XmlEnumValue;
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlEnumValue;
 
 @XmlEnum
 public enum BucketPolicyAction {
@@ -107,18 +107,18 @@ public enum BucketPolicyAction {
     @XmlEnumValue("s3:PutObjectVersionTagging")
     PutObjectVersionTagging("s3:PutObjectVersionTagging");
 
+    private String actionName;
+
+    BucketPolicyAction(String actionName) {
+        this.actionName = actionName;
+    }
+
     @JsonCreator
     public static BucketPolicyAction fromValue(String value) {
         for (BucketPolicyAction instance : values()) {
             if (value.equals(instance.getActionName())) return instance;
         }
         return null;
-    }
-
-    private String actionName;
-
-    BucketPolicyAction(String actionName) {
-        this.actionName = actionName;
     }
 
     @JsonValue

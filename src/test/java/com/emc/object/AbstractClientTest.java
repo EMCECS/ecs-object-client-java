@@ -26,10 +26,10 @@
  */
 package com.emc.object;
 
-import com.emc.util.ConcurrentJunitRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,9 @@ import java.io.OutputStream;
 import java.util.Random;
 import java.util.UUID;
 
-@RunWith(ConcurrentJunitRunner.class)
+//@ExtendWith(ConcurrentJunitRunner.class) Billy todo: test ConcurrentJunitRunner
+@Execution(ExecutionMode.CONCURRENT)
+//@Concurrent(threads = 5)
 public abstract class AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractClientTest.class);
     private final ThreadLocal<String> testBucket = new ThreadLocal<>();
@@ -77,7 +79,7 @@ public abstract class AbstractClientTest {
         return testBucket.get();
     }
 
-    @Before
+    @BeforeEach
     public final void initTestBucket() throws Exception {
         log.info("initializing client");
         initClient();
@@ -85,15 +87,15 @@ public abstract class AbstractClientTest {
         String uuid = UUID.randomUUID().toString();
 
         // {prefix}-{$USER}-{uuid[-6]}
-//        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + uuid.substring(uuid.length() - 6));
-//        log.info("creating test bucket " + getTestBucket());
-//        createBucket(getTestBucket());
+        testBucket.set(getTestBucketPrefix() + "-" + System.getenv("USER") + "-" + uuid.substring(uuid.length() - 6));
+        log.info("creating test bucket " + getTestBucket());
+        createBucket(getTestBucket());
     }
 
-    @After
+    @AfterEach
     public final void destroyTestBucket() throws Exception {
-//        log.info("cleaning up bucket " + getTestBucket());
-//        cleanUpBucket(getTestBucket());
+        log.info("cleaning up bucket " + getTestBucket());
+        cleanUpBucket(getTestBucket());
     }
 
     protected File createRandomTempFile(int size) throws Exception {

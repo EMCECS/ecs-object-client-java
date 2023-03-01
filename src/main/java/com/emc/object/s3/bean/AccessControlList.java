@@ -27,15 +27,19 @@
 package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
-import jakarta.xml.bind.annotation.*;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.*;
 
 @XmlRootElement(name = "AccessControlPolicy")
 @XmlType(propOrder = {"owner", "grants"})
-@XmlSeeAlso({CanonicalUser.class, Group.class})
 public class AccessControlList {
+
     private CanonicalUser owner;
+
     private Set<Grant> grants = new LinkedHashSet<Grant>();
 
     @XmlElement(name = "Owner")
@@ -47,7 +51,7 @@ public class AccessControlList {
         this.owner = owner;
     }
 
-    @XmlElementWrapper(name = "AccessControlList")
+    @JacksonXmlElementWrapper(localName = "AccessControlList")
     @XmlElement(name = "Grant")
     public Set<Grant> getGrants() {
         return grants;

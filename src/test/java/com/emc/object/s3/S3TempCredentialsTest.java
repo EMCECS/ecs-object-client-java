@@ -5,12 +5,11 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
-import javax.ws.rs.client.Client;
+import org.junit.jupiter.api.*;
+
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
-import org.junit.*;
-
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,16 +34,16 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         return s3Config;
     }
 
-    @Before
+    @BeforeEach
     public void versionCheck() {
-        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
     }
 
     @Test
     public void testPreSignedUrl() throws Exception {
         S3Client tempClient = getPresignDummyClient();
         URL url = tempClient.getPresignedUrl("johnsmith", "photos/puppy.jpg", new Date(1175139620000L));
-        Assert.assertEquals("http://10.246.153.111:9020/johnsmith/photos/puppy.jpg" +
+        Assertions.assertEquals("http://10.246.153.111:9020/johnsmith/photos/puppy.jpg" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
                         "&Signature=sEx2C%2Bc0qiY9kXF9KkQfY%2FjelLI%3D" +
                         "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
@@ -57,8 +56,8 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         url = client.getPresignedUrl(getTestBucket(), key, new Date(System.currentTimeMillis() + 100000));
 
         Response response = ClientBuilder.newClient().target(url.toURI()).request().get(Response.class);
-        Assert.assertEquals(200, response.getStatus());
-        Assert.assertEquals(content, response.readEntity(String.class));
+        Assertions.assertEquals(200, response.getStatus());
+        Assertions.assertEquals(content, response.readEntity(String.class));
     }
 
     @Test
@@ -73,7 +72,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                                 .addUserMetadata("reviewedby", "joe@johnsmith.net,jane@johnsmith.net"))
         );
 
-        Assert.assertEquals("http://10.246.153.111:9020/static.johnsmith.net/db-backup.dat.gz" +
+        Assertions.assertEquals("http://10.246.153.111:9020/static.johnsmith.net/db-backup.dat.gz" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
                         "&Signature=llrkH6%2BoAuzr6F71RD0xsyUqOFY%3D" +
                         "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
@@ -89,9 +88,9 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         ClientBuilder.newClient().target(url.toURI())
                 .request("application/x-download").header("x-amz-meta-foo", "bar")
                 .put(Entity.text(content));
-        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Test
@@ -99,7 +98,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         S3Client tempClient = getPresignDummyClient();
         URL url = tempClient.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, "static.johnsmith.net", "db-backup.dat.gz", new Date(1175139620000L)));
-        Assert.assertEquals("http://10.246.153.111:9020/static.johnsmith.net/db-backup.dat.gz" +
+        Assertions.assertEquals("http://10.246.153.111:9020/static.johnsmith.net/db-backup.dat.gz" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
                         "&Signature=Z4JSBg7EHfIGgZeix0YNmy0XQEI%3D" +
                         "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
@@ -119,19 +118,19 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         con.setDoOutput(true);
         con.setDoInput(true);
         con.connect();
-        Assert.assertEquals(200, con.getResponseCode());
+        Assertions.assertEquals(200, con.getResponseCode());
 
-        Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
 
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Test
     public void testPreSignedUrlWithChinese() throws Exception {
         S3Client tempClient = getPresignDummyClient();
         URL url = tempClient.getPresignedUrl("test-bucket", "解析依頼C1B068.txt", new Date(1500998758000L));
-        Assert.assertEquals("http://10.246.153.111:9020/test-bucket/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt?" +
+        Assertions.assertEquals("http://10.246.153.111:9020/test-bucket/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt?" +
                         "AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1500998758" +
                         "&Signature=9JowVXKUdWD43PsmtCa%2BeYkkYL0%3D" +
                         "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
@@ -147,49 +146,49 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                         .withObjectMetadata(
                                 new S3ObjectMetadata().withContentType("image/jpeg")
                                         .withContentMd5("4gJE4saaMU4BqNR0kLY+lw==")));
-        Assert.assertEquals("http://10.246.153.111:9020/johnsmith/photos/puppy.jpg" +
+        Assertions.assertEquals("http://10.246.153.111:9020/johnsmith/photos/puppy.jpg" +
                         "?AWSAccessKeyId=ASIAB51133607AA785B5&Expires=1175139620" +
                         "&Signature=qdJYvXmX12mrlbJoiJ3aV2%2BsDxM%3D" +
                         "&" + S3Constants.AMZ_SECURITY_TOKEN + "=" + SESSION_TOKEN,
                 url.toString());
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testMultipleVdcs() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testMpuAbortInMiddle() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testSetObjectAclRequestAcl() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testSetObjectAcl() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testCreateFilesystemBucket() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testSetBucketAclCanned() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testSetGetBucketAcl() {
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testExtendObjectRetentionPeriod() {
     }

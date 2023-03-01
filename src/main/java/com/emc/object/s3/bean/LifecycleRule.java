@@ -28,8 +28,8 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.Iso8601DateAdapter;
 
-import jakarta.xml.bind.annotation.*;
-import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.Date;
 
 @XmlType(propOrder = {"id", "prefix", "status", "expiration", "noncurrentVersionExpiration"})
@@ -212,6 +212,11 @@ public class LifecycleRule {
         return result;
     }
 
+    @XmlEnum
+    public static enum Status {
+        Enabled, Disabled
+    }
+
     @XmlAccessorType(XmlAccessType.FIELD)
     protected static class Expiration {
         @XmlElement(name = "Days")
@@ -225,10 +230,5 @@ public class LifecycleRule {
     protected static class NoncurrentVersionExpiration {
         @XmlElement(name = "NoncurrentDays")
         public Integer days;
-    }
-
-    @XmlEnum
-    public static enum Status {
-        Enabled, Disabled
     }
 }

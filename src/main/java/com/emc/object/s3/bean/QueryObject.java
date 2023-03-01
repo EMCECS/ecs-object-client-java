@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,7 +52,9 @@ public class QueryObject {
         return objectId;
     }
 
-    public void setObjectId(String objectId) { this.objectId = objectId; }
+    public void setObjectId(String objectId) {
+        this.objectId = objectId;
+    }
 
     @XmlElement(name = "versionId")
     public String getVersionId() {

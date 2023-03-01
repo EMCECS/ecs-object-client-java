@@ -26,12 +26,12 @@
  */
 package com.emc.object.s3.bean;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.Marshaller;
-import jakarta.xml.bind.Unmarshaller;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -106,16 +106,16 @@ public class LifecycleConfigurationTest {
         Unmarshaller unmarshaller = context.createUnmarshaller();
         LifecycleConfiguration unmarshalledObject = (LifecycleConfiguration) unmarshaller.unmarshal(new StringReader(xml));
         for (LifecycleRule rule : object.getRules()) {
-            Assert.assertTrue(unmarshalledObject.getRules().contains(rule));
+            Assertions.assertTrue(unmarshalledObject.getRules().contains(rule));
         }
         for (LifecycleRule rule : unmarshalledObject.getRules()) {
-            Assert.assertTrue(object.getRules().contains(rule));
+            Assertions.assertTrue(object.getRules().contains(rule));
         }
 
         // re-marshall and compare to string
         Marshaller marshaller = context.createMarshaller();
         StringWriter writer = new StringWriter();
         marshaller.marshal(object, writer);
-        Assert.assertEquals(xml, writer.toString());
+        Assertions.assertEquals(xml, writer.toString());
     }
 }

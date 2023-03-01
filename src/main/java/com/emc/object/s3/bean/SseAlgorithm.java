@@ -30,17 +30,17 @@ package com.emc.object.s3.bean;
 public enum SseAlgorithm {
     AES256("AES256");
 
+    private String headerValue;
+
+    SseAlgorithm(String headerValue) {
+        this.headerValue = headerValue;
+    }
+
     public static SseAlgorithm fromHeaderValue(String header) {
         for (SseAlgorithm sseAlgorithm : values()) {
             if (sseAlgorithm.getHeaderValue().equals(header)) return sseAlgorithm;
         }
         return null;
-    }
-
-    private String headerValue;
-
-    SseAlgorithm(String headerValue) {
-        this.headerValue = headerValue;
     }
 
     public String getHeaderValue() {

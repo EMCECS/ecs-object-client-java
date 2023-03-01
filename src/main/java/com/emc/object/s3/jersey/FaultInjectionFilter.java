@@ -27,28 +27,24 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Exception;
-import org.glassfish.jersey.client.InjectionManagerClientProvider;
-import org.glassfish.jersey.internal.inject.InjectionManager;
-import org.glassfish.jersey.internal.inject.Providers;
 
+import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
-import javax.ws.rs.client.ClientResponseContext;
-import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.ext.Provider;
-
 import java.io.IOException;
 import java.util.Random;
 
 @Provider
-public class FaultInjectionFilter implements ClientResponseFilter {
+@Priority(FilterPriorities.PRIORITY_FAULTINJECTION)
+public class FaultInjectionFilter implements ClientRequestFilter {
     public static final String FAULT_INJECTION_ERROR_CODE = "FaultInjection";
     public static final String FAULT_INJECTION_ERROR_MESSAGE = "Fault Injection";
 
     public static final float DEFAULT_FAILURE_RATE = 0.25f;
 
-    private Random random = new Random();
-    private float failureRate;
+    private final Random random = new Random();
+    private final float failureRate;
 
     public FaultInjectionFilter() {
         this(DEFAULT_FAILURE_RATE);
@@ -59,7 +55,7 @@ public class FaultInjectionFilter implements ClientResponseFilter {
     }
 
     @Override
-    public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
+    public void filter(ClientRequestContext requestContext) throws IOException {
         if (random.nextFloat() < failureRate)
             throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
     }
@@ -67,4 +63,5 @@ public class FaultInjectionFilter implements ClientResponseFilter {
     public float getFailureRate() {
         return failureRate;
     }
+
 }

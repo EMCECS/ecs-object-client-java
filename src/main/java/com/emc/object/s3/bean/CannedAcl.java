@@ -35,17 +35,17 @@ public enum CannedAcl {
     BucketOwnerRead("bucket-owner-read"),
     BucketOwnerFullControl("bucket-owner-full-control");
 
+    private String headerValue;
+
+    private CannedAcl(String headerValue) {
+        this.headerValue = headerValue;
+    }
+
     public static CannedAcl fromHeaderValue(String header) {
         for (CannedAcl cannedAcl : values()) {
             if (cannedAcl.getHeaderValue().equals(header)) return cannedAcl;
         }
         return null;
-    }
-
-    private String headerValue;
-
-    private CannedAcl(String headerValue) {
-        this.headerValue = headerValue;
     }
 
     public String getHeaderValue() {

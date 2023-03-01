@@ -1,10 +1,10 @@
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.adapters.XmlAdapter;
+import com.emc.object.util.RestUtil;
+
+import javax.xml.bind.annotation.adapters.XmlAdapter;
 import java.time.ZonedDateTime;
 import java.util.Date;
-
-import com.emc.object.util.RestUtil;
 
 //DateTime Adaptor for AWS Object Lock Retention
 public class Iso8601MillisecondAdapter extends XmlAdapter<String, Date> {

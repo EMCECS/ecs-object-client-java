@@ -23,6 +23,7 @@
         <!-- Turn on for Apache connection management logging -->
         <!--
         <Logger name="org.apache.http.conn" level="debug"/>
+
         -->
 
         <Root level="info">

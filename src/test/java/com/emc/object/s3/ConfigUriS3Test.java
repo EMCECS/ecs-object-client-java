@@ -33,13 +33,12 @@ import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
 import org.glassfish.jersey.client.ClientProperties;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
-
-import static org.junit.Assert.*;
 
 public class ConfigUriS3Test {
     private ConfigUri<S3Config> s3Uri = new ConfigUri<S3Config>(S3Config.class);
@@ -157,14 +156,14 @@ public class ConfigUriS3Test {
         s3Config.setConnectTimeout(dummyInt);
         s3Config.setReadTimeout(dummyInt);
         SmartConfig smartConfig = s3Config.toSmartConfig();
-        assertTrue(!smartConfig.isHealthCheckEnabled());
-        assertTrue(!smartConfig.isHostUpdateEnabled());
-        assertEquals(smartConfig.getProperty(PROPERTY_POLL_INTERVAL), dummyInt);
-        assertEquals(smartConfig.getProperty(PROPERTY_PROXY_URI), dummyString);
-        assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
-        assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
-        assertEquals(smartConfig.getProperty(ClientProperties.CONNECT_TIMEOUT), dummyInt);
-        assertEquals(smartConfig.getProperty(ClientProperties.READ_TIMEOUT), dummyInt);
+        Assertions.assertTrue(!smartConfig.isHealthCheckEnabled());
+        Assertions.assertTrue(!smartConfig.isHostUpdateEnabled());
+        Assertions.assertEquals(smartConfig.getProperty(PROPERTY_POLL_INTERVAL), dummyInt);
+        Assertions.assertEquals(smartConfig.getProperty(PROPERTY_PROXY_URI), dummyString);
+        Assertions.assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
+        Assertions.assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
+        Assertions.assertEquals(smartConfig.getProperty(ClientProperties.CONNECT_TIMEOUT), dummyInt);
+        Assertions.assertEquals(smartConfig.getProperty(ClientProperties.READ_TIMEOUT), dummyInt);
     }
 
     @Test
@@ -177,59 +176,59 @@ public class ConfigUriS3Test {
         s3Config.setProperty(ObjectConfig.PROPERTY_DISABLE_HEALTH_CHECK, "true");
 
         SmartConfig smartConfig = s3Config.toSmartConfig();
-        assertTrue(smartConfig.isHostUpdateEnabled());
-        assertFalse(smartConfig.isHealthCheckEnabled());
+        Assertions.assertTrue(smartConfig.isHostUpdateEnabled());
+        Assertions.assertFalse(smartConfig.isHealthCheckEnabled());
 
         // test setting via URI
         s3Config = s3Uri.parseUri("https://dummy?smartClient=true&properties.com.emc.object.disableHealthCheck=true");
         smartConfig = s3Config.toSmartConfig();
-        assertTrue(smartConfig.isHostUpdateEnabled());
-        assertFalse(smartConfig.isHealthCheckEnabled());
+        Assertions.assertTrue(smartConfig.isHostUpdateEnabled());
+        Assertions.assertFalse(smartConfig.isHealthCheckEnabled());
     }
 
     private void runTests(S3Config s3Config) throws Exception {
         String configUri = s3Uri.generateUri(s3Config);
         S3Config s3Config2 = s3Uri.parseUri(configUri);
-        assertEquals(configUri, s3Uri.generateUri(s3Config2));
+        Assertions.assertEquals(configUri, s3Uri.generateUri(s3Config2));
         compare(s3Config, s3Config2);
     }
 
     private void compare(S3Config s3Config, S3Config s3Config2) {
-        assertEquals(s3Config.getChunkedEncodingSize(), s3Config2.getChunkedEncodingSize());
-        assertEquals(s3Config.getFaultInjectionRate(), s3Config2.getFaultInjectionRate(), 0.0001);
-        assertEquals(s3Config.getIdentity(), s3Config2.getIdentity());
-        assertEquals(s3Config.getInitialRetryDelay(), s3Config2.getInitialRetryDelay());
-        assertEquals(s3Config.getNamespace(), s3Config2.getNamespace());
-        assertEquals(s3Config.getPort(), s3Config2.getPort());
-        assertEquals(s3Config.getProtocol().toString(), s3Config2.getProtocol().toString());
-        assertEquals(s3Config.getRetryBufferSize(), s3Config2.getRetryBufferSize());
-        assertEquals(s3Config.getRetryLimit(), s3Config2.getRetryLimit());
+        Assertions.assertEquals(s3Config.getChunkedEncodingSize(), s3Config2.getChunkedEncodingSize());
+        Assertions.assertEquals(s3Config.getFaultInjectionRate(), s3Config2.getFaultInjectionRate(), 0.0001);
+        Assertions.assertEquals(s3Config.getIdentity(), s3Config2.getIdentity());
+        Assertions.assertEquals(s3Config.getInitialRetryDelay(), s3Config2.getInitialRetryDelay());
+        Assertions.assertEquals(s3Config.getNamespace(), s3Config2.getNamespace());
+        Assertions.assertEquals(s3Config.getPort(), s3Config2.getPort());
+        Assertions.assertEquals(s3Config.getProtocol().toString(), s3Config2.getProtocol().toString());
+        Assertions.assertEquals(s3Config.getRetryBufferSize(), s3Config2.getRetryBufferSize());
+        Assertions.assertEquals(s3Config.getRetryLimit(), s3Config2.getRetryLimit());
         if (s3Config.getRootContext() == null) s3Config.setRootContext(""); // null or empty string is ok
         if (s3Config2.getRootContext() == null) s3Config2.setRootContext("");
-        assertEquals(s3Config.getRootContext(), s3Config2.getRootContext());
-        assertEquals(s3Config.getSecretKey(), s3Config2.getSecretKey());
-        assertEquals(s3Config.getServerClockSkew(), s3Config2.getServerClockSkew());
-        assertEquals(s3Config.getUserAgent(), s3Config2.getUserAgent());
-        assertEquals(s3Config.isChecksumEnabled(), s3Config2.isChecksumEnabled());
-        assertEquals(s3Config.isGeoPinningEnabled(), s3Config2.isGeoPinningEnabled());
-        assertEquals(s3Config.isGeoReadRetryFailover(), s3Config2.isGeoReadRetryFailover());
-        assertEquals(s3Config.isRetryEnabled(), s3Config2.isRetryEnabled());
-        assertEquals(s3Config.isSignNamespace(), s3Config2.isSignNamespace());
-        assertEquals(s3Config.isSmartClient(), s3Config2.isSmartClient());
-        assertEquals(s3Config.isUseVHost(), s3Config2.isUseVHost());
-        assertEquals(s3Config.isSignMetadataSearch(), s3Config2.isSignMetadataSearch());
-        assertEquals(s3Config.getReadTimeout(), s3Config2.getReadTimeout());
-        assertEquals(s3Config.getConnectTimeout(), s3Config2.getConnectTimeout());
+        Assertions.assertEquals(s3Config.getRootContext(), s3Config2.getRootContext());
+        Assertions.assertEquals(s3Config.getSecretKey(), s3Config2.getSecretKey());
+        Assertions.assertEquals(s3Config.getServerClockSkew(), s3Config2.getServerClockSkew());
+        Assertions.assertEquals(s3Config.getUserAgent(), s3Config2.getUserAgent());
+        Assertions.assertEquals(s3Config.isChecksumEnabled(), s3Config2.isChecksumEnabled());
+        Assertions.assertEquals(s3Config.isGeoPinningEnabled(), s3Config2.isGeoPinningEnabled());
+        Assertions.assertEquals(s3Config.isGeoReadRetryFailover(), s3Config2.isGeoReadRetryFailover());
+        Assertions.assertEquals(s3Config.isRetryEnabled(), s3Config2.isRetryEnabled());
+        Assertions.assertEquals(s3Config.isSignNamespace(), s3Config2.isSignNamespace());
+        Assertions.assertEquals(s3Config.isSmartClient(), s3Config2.isSmartClient());
+        Assertions.assertEquals(s3Config.isUseVHost(), s3Config2.isUseVHost());
+        Assertions.assertEquals(s3Config.isSignMetadataSearch(), s3Config2.isSignMetadataSearch());
+        Assertions.assertEquals(s3Config.getReadTimeout(), s3Config2.getReadTimeout());
+        Assertions.assertEquals(s3Config.getConnectTimeout(), s3Config2.getConnectTimeout());
         for (Entry<String, Object> entry : s3Config.getProperties().entrySet()) {
             if (entry.getValue() instanceof String) {
-                assertEquals(entry.getValue(), s3Config2.getProperty(entry.getKey()));
+                Assertions.assertEquals(entry.getValue(), s3Config2.getProperty(entry.getKey()));
             } else if (entry.getValue() instanceof List<?>) {
                 List<?> list = (List<?>) entry.getValue();
                 List<?> list2 = (List<?>) s3Config2.getProperty(entry.getKey());
-                assertTrue(list.containsAll(list2) && list2.containsAll(list));
+                Assertions.assertTrue(list.containsAll(list2) && list2.containsAll(list));
             }
         }
-        assertEquals(s3Config.getVdcs(), s3Config2.getVdcs());
+        Assertions.assertEquals(s3Config.getVdcs(), s3Config2.getVdcs());
     }
 
 }

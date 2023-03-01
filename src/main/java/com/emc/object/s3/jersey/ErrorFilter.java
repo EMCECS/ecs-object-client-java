@@ -29,16 +29,16 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
-
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientResponseContext;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.client.ClientResponseFilter;
 import org.dom4j.Document;
 import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Priority;
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -46,6 +46,7 @@ import java.io.Reader;
 import java.util.Date;
 
 @Provider
+@Priority(FilterPriorities.PRIORITY_ERROR)
 public class ErrorFilter implements ClientResponseFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ErrorFilter.class);
@@ -109,6 +110,7 @@ public class ErrorFilter implements ClientResponseFilter {
         SAXReader saxReader = new SAXReader();
 
         Document d;
+
         try {
             d = saxReader.read(reader);
         } catch (Throwable t) {

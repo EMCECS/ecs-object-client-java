@@ -34,24 +34,21 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
-import com.emc.rest.smart.jersey.OctetStreamXmlProvider;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.rest.smart.jersey.SmartFilter;
 import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.ClientResponse;
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
-
 import java.io.InputStream;
 import java.io.StringReader;
-import java.lang.annotation.Annotation;
 import java.net.URL;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Reference implementation of S3Client.
@@ -127,6 +124,7 @@ import java.util.*;
  *     System.setProperty("http.maxConnections", "" + 32); // if you have 32 threads
  *     S3Client s3Client = new S3JerseyClient(configX, new URLConnectionClientHandler());
  * </pre>
+
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
@@ -162,6 +160,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // creates a standard (non-load-balancing) jersey client
         client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
 
+        // Billy todo cannot register multiple ClientConfig on one Client, the previous ones will be lost.
         if (s3Config.isSmartClient()) {
             // SMART CLIENT SETUP
 
@@ -205,16 +204,15 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
         // jersey filters
         client.register(new ErrorFilter());
+//        if (s3Config.isChecksumEnabled()) client.register(new ChecksumResponseFilter());
+
         if (s3Config.getFaultInjectionRate() > 0.0f)
             client.register(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
-        // Billy
-        // if (s3Config.isChecksumEnabled()) client.register(new ChecksumFilter(s3Config));
+//        if (s3Config.isChecksumEnabled()) {
+//            client.register(new ChecksumRequestFilter(s3Config));
+//        }
         client.register(new AuthorizationFilter(s3Config));
-        /* Billy smartfilter insertion is not needed here.
-        if (smartFilter != null) {
-            client.register(smartFilter);
-        } */
-
+        // SmartFilter ia already inserted when createSmartClient
         if (s3Config.isGeoPinningEnabled()) client.register(new GeoPinningFilter(s3Config));
         client.register(new BucketFilter(s3Config));
         client.register(new NamespaceFilter(s3Config));
@@ -544,7 +542,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
         // enable checksum of the object
-        request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
+        // Billy todo: remove comment
+//        request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
         PutObjectResult result = new PutObjectResult();
         fillResponseEntity(result, executeAndClose(client, request));
         return result;
@@ -758,7 +757,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             return executeRequest(client, request, ObjectLockConfiguration.class);
         } catch (S3Exception e) {
-            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode())) return null;
+            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode()))
+                return null;
             throw e;
         }
     }
@@ -824,10 +824,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
         Response response = executeRequest(client, request);
-        // BILLY todo read response entity !!!
-        // org.glassfish.jersey.message.internal.MessageBodyProviderNotFoundException: MessageBodyReader not found for media type=application/xml, type=class com.emc.object.s3.bean.ListBucketsResult, genericType=class com.emc.object.s3.bean.ListBucketsResult.
-        Object entity = response.getEntity();
         try {
+//            String debug = new Scanner(response.readEntity(InputStream.class)).useDelimiter("\\A").next();
             T responseEntity = response.readEntity(responseType);
             fillResponseEntity(responseEntity, response);
             return responseEntity;
@@ -835,9 +833,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the expected entity.
             // check for that here. it's not into retry loop.
-            String xx = entity.toString();
             try {
-                throw ErrorFilter.parseErrorResponse(new StringReader(entity.toString()), response.getStatus());
+                throw ErrorFilter.parseErrorResponse(new StringReader(response.readEntity(String.class)), response.getStatus());
             } catch (Throwable t) {
                 // it must be a SAXReader DocumentException
                 throw e;

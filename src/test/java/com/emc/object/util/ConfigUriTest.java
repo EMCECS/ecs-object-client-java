@@ -26,8 +26,11 @@
  */
 package com.emc.object.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+
+
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
@@ -46,35 +49,35 @@ public class ConfigUriTest {
 
         DummyConfig dummyConfig = dummyUri.parseUri(uri);
 
-        Assert.assertEquals("https", dummyConfig.getProtocol());
-        Assert.assertEquals("server.com", dummyConfig.getHost());
-        Assert.assertEquals(1234, dummyConfig.getPort());
-        Assert.assertEquals("/pathypathpath", dummyConfig.getPath());
-        Assert.assertEquals("baz", dummyConfig.getStringParam());
-        Assert.assertEquals(new Integer(5), dummyConfig.getIntegerParam());
-        Assert.assertEquals(6, dummyConfig.getLongParam());
-        Assert.assertEquals(new Date(1475100000000L), dummyConfig.getDateParam());
-        Assert.assertEquals(Arrays.asList(new Date(1475200000000L), new Date(1475300000000L), new Date(1475400000000L)),
+        Assertions.assertEquals("https", dummyConfig.getProtocol());
+        Assertions.assertEquals("server.com", dummyConfig.getHost());
+        Assertions.assertEquals(1234, dummyConfig.getPort());
+        Assertions.assertEquals("/pathypathpath", dummyConfig.getPath());
+        Assertions.assertEquals("baz", dummyConfig.getStringParam());
+        Assertions.assertEquals(new Integer(5), dummyConfig.getIntegerParam());
+        Assertions.assertEquals(6, dummyConfig.getLongParam());
+        Assertions.assertEquals(new Date(1475100000000L), dummyConfig.getDateParam());
+        Assertions.assertEquals(Arrays.asList(new Date(1475200000000L), new Date(1475300000000L), new Date(1475400000000L)),
                 dummyConfig.getDateList());
-        Assert.assertEquals(Arrays.asList(7, 8, 9), dummyConfig.getIntList());
-        Assert.assertEquals(Arrays.asList("bing", "bong", "boozle"), dummyConfig.getStringList());
+        Assertions.assertEquals(Arrays.asList(7, 8, 9), dummyConfig.getIntList());
+        Assertions.assertEquals(Arrays.asList("bing", "bong", "boozle"), dummyConfig.getStringList());
 
         Map<String, Foo> fooMap = new HashMap<String, Foo>();
         fooMap.put("foo", Foo.bar);
         fooMap.put("bim", Foo.bam);
         fooMap.put("baz", Foo.boozle);
-        Assert.assertEquals(fooMap, dummyConfig.getFooMap());
+        Assertions.assertEquals(fooMap, dummyConfig.getFooMap());
 
         // make sure generated URI is the same as the original
         // parameter order may be an issue here, so we'll regenerate
         // this is to test round-trip
         uri = dummyUri.generateUri(dummyConfig) + "&blah=blah";
         dummyConfig = dummyUri.parseUri(uri);
-        Assert.assertEquals(uri, dummyUri.generateUri(dummyConfig) + "&blah=blah");
+        Assertions.assertEquals(uri, dummyUri.generateUri(dummyConfig) + "&blah=blah");
 
         try {
             dummyUri.parseUri(uri, null, true);
-            Assert.fail("invalid parameter should fail with strict parsing");
+            Assertions.fail("invalid parameter should fail with strict parsing");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -89,26 +92,26 @@ public class ConfigUriTest {
 
         DummyConfig dummyConfig = dummyUri.parseUri(uri);
 
-        Assert.assertEquals("https", dummyConfig.getProtocol());
-        Assert.assertEquals("server.com", dummyConfig.getHost());
-        Assert.assertEquals(1234, dummyConfig.getPort());
-        Assert.assertEquals("/path", dummyConfig.getPath());
-        Assert.assertEquals("foo Ω bar", dummyConfig.getStringParam());
-        Assert.assertEquals(Arrays.asList("fooΩbar", "foo bar", "foo服务器bar"), dummyConfig.getStringList());
+        Assertions.assertEquals("https", dummyConfig.getProtocol());
+        Assertions.assertEquals("server.com", dummyConfig.getHost());
+        Assertions.assertEquals(1234, dummyConfig.getPort());
+        Assertions.assertEquals("/path", dummyConfig.getPath());
+        Assertions.assertEquals("foo Ω bar", dummyConfig.getStringParam());
+        Assertions.assertEquals(Arrays.asList("fooΩbar", "foo bar", "foo服务器bar"), dummyConfig.getStringList());
 
         // make sure generated URI is the same as the original
         // parameter order may be an issue here, so we'll regenerate
         // this is to test round-trip
         uri = dummyUri.generateUri(dummyConfig);
         dummyConfig = dummyUri.parseUri(uri);
-        Assert.assertEquals(uri, dummyUri.generateUri(dummyConfig));
+        Assertions.assertEquals(uri, dummyUri.generateUri(dummyConfig));
     }
 
     @Test
     public void testBadType() {
         try {
             new ConfigUri<BadPortConfig>(BadPortConfig.class);
-            Assert.fail("wrong port type should fail");
+            Assertions.fail("wrong port type should fail");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -118,7 +121,7 @@ public class ConfigUriTest {
     public void testDuplicateType() {
         try {
             new ConfigUri<TooManyHostConfig>(TooManyHostConfig.class);
-            Assert.fail("two host properties should fail");
+            Assertions.fail("two host properties should fail");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -140,8 +143,8 @@ public class ConfigUriTest {
 
         DummyConfig dummyConfig = dummyUri.parseUri(uri);
 
-        Assert.assertTrue(dummyConfig.isDefaultTrueBool());
-        Assert.assertFalse(dummyConfig.isDefaultFalseBool());
+        Assertions.assertTrue(dummyConfig.isDefaultTrueBool());
+        Assertions.assertFalse(dummyConfig.isDefaultFalseBool());
 
         // test changing defaults
         uri = "https://server.com:1234/pathypathpath?map.foo=bar&dateParam=1475100000000&map.baz=boozle" +
@@ -155,8 +158,8 @@ public class ConfigUriTest {
 
         dummyConfig = dummyUri.parseUri(uri);
 
-        Assert.assertFalse(dummyConfig.isDefaultTrueBool());
-        Assert.assertTrue(dummyConfig.isDefaultFalseBool());
+        Assertions.assertFalse(dummyConfig.isDefaultTrueBool());
+        Assertions.assertTrue(dummyConfig.isDefaultFalseBool());
     }
 
     public static class DummyConfig {

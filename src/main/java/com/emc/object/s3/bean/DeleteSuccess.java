@@ -26,13 +26,18 @@
  */
 package com.emc.object.s3.bean;
 
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "Deleted")
 public class DeleteSuccess extends AbstractDeleteResult {
     private boolean deleteMarker;
     private String deleteMarkerVersionId;
+
+    public DeleteSuccess(boolean deleteMarker, String deleteMarkerVersionId) {
+        this.deleteMarker = deleteMarker;
+        this.deleteMarkerVersionId = deleteMarkerVersionId;
+    }
 
     @XmlElement(name = "DeleteMarker")
     public boolean isDeleteMarker() {
