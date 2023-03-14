@@ -160,15 +160,14 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // creates a standard (non-load-balancing) jersey client
         client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
 
-        // Billy todo cannot register multiple ClientConfig on one Client, the previous ones will be lost.
         if (s3Config.isSmartClient()) {
-            // SMART CLIENT SETUP
+            // S.C. - GEO-PINNING
+            if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
 
             // S.C. - ENDPOINT POLLING
             // create a host list provider based on the S3 ?endpoint call (will use the standard client we just made)
             EcsHostListProvider hostListProvider = new EcsHostListProvider(client, loadBalancer,
                     s3Config.getIdentity(), s3Config.getSecretKey());
-            smartConfig.setHostListProvider(hostListProvider);
 
             if (s3Config.getProperty(S3Config.PROPERTY_POLL_PROTOCOL) != null)
                 hostListProvider.setProtocol(s3Config.getPropAsString(S3Config.PROPERTY_POLL_PROTOCOL));
@@ -189,12 +188,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - VDC CONFIGURATION
             hostListProvider.setVdcs(s3Config.getVdcs());
 
-            // S.C. - GEO-PINNING
-            if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
+            smartConfig.setHostListProvider(hostListProvider);
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            SmartClientFactory.createSmartClient(smartConfig, client);
+            client = SmartClientFactory.createSmartClient(smartConfig, client);
         }
 
         // Smart filter will be removed if it exists and then will be re-added.

@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
@@ -184,36 +184,36 @@ public class ListVersionsResultTest {
         object.setMaxKeys(1000);
         object.setDelimiter("/");
         object.setTruncated(true);
-//Billy todo remove comment        object.setVersions(versions);
+        object.setVersions(versions);
         object.set_commonPrefixes(Arrays.asList(new CommonPrefix("photos/"), new CommonPrefix("videos space/")));
 
         // unmarshall and compare to object
         Unmarshaller unmarshaller = context.createUnmarshaller();
         ListVersionsResult unmarshalledObject = (ListVersionsResult) unmarshaller.unmarshal(new StringReader(xml));
-        Assertions.assertEquals(object.getBucketName(), unmarshalledObject.getBucketName());
-        Assertions.assertEquals(object.getPrefix(), unmarshalledObject.getPrefix());
-        Assertions.assertEquals(object.getKeyMarker(), unmarshalledObject.getKeyMarker());
-        Assertions.assertEquals(object.getVersionIdMarker(), unmarshalledObject.getVersionIdMarker());
-        Assertions.assertEquals(object.getNextKeyMarker(), unmarshalledObject.getNextKeyMarker());
-        Assertions.assertEquals(object.getNextVersionIdMarker(), unmarshalledObject.getNextVersionIdMarker());
-        Assertions.assertEquals(object.getMaxKeys(), unmarshalledObject.getMaxKeys());
-        Assertions.assertEquals(object.getDelimiter(), unmarshalledObject.getDelimiter());
-        Assertions.assertEquals(object.isTruncated(), unmarshalledObject.isTruncated());
-        Assertions.assertEquals(object.getCommonPrefixes(), unmarshalledObject.getCommonPrefixes());
-        Assertions.assertEquals(object.getVersions().size(), unmarshalledObject.getVersions().size());
+        Assert.assertEquals(object.getBucketName(), unmarshalledObject.getBucketName());
+        Assert.assertEquals(object.getPrefix(), unmarshalledObject.getPrefix());
+        Assert.assertEquals(object.getKeyMarker(), unmarshalledObject.getKeyMarker());
+        Assert.assertEquals(object.getVersionIdMarker(), unmarshalledObject.getVersionIdMarker());
+        Assert.assertEquals(object.getNextKeyMarker(), unmarshalledObject.getNextKeyMarker());
+        Assert.assertEquals(object.getNextVersionIdMarker(), unmarshalledObject.getNextVersionIdMarker());
+        Assert.assertEquals(object.getMaxKeys(), unmarshalledObject.getMaxKeys());
+        Assert.assertEquals(object.getDelimiter(), unmarshalledObject.getDelimiter());
+        Assert.assertEquals(object.isTruncated(), unmarshalledObject.isTruncated());
+        Assert.assertEquals(object.getCommonPrefixes(), unmarshalledObject.getCommonPrefixes());
+        Assert.assertEquals(object.getVersions().size(), unmarshalledObject.getVersions().size());
         for (int i = 0; i < object.getVersions().size(); i++) {
             AbstractVersion ver = object.getVersions().get(i);
             AbstractVersion unver = unmarshalledObject.getVersions().get(i);
-            Assertions.assertEquals(ver.getClass(), unver.getClass());
-            Assertions.assertEquals(ver.getKey(), unver.getKey());
-            Assertions.assertEquals(ver.getOwner(), unver.getOwner());
-            Assertions.assertEquals(ver.getLastModified(), unver.getLastModified());
-            Assertions.assertEquals(ver.isLatest(), unver.isLatest());
-            Assertions.assertEquals(ver.getVersionId(), unver.getVersionId());
+            Assert.assertEquals(ver.getClass(), unver.getClass());
+            Assert.assertEquals(ver.getKey(), unver.getKey());
+            Assert.assertEquals(ver.getOwner(), unver.getOwner());
+            Assert.assertEquals(ver.getLastModified(), unver.getLastModified());
+            Assert.assertEquals(ver.isLatest(), unver.isLatest());
+            Assert.assertEquals(ver.getVersionId(), unver.getVersionId());
             if (ver instanceof Version) {
-                Assertions.assertEquals(((Version) ver).getETag(), ((Version) unver).getETag());
-                Assertions.assertEquals(((Version) ver).getSize(), ((Version) unver).getSize());
-                Assertions.assertEquals(((Version) ver).getStorageClass(), ((Version) unver).getStorageClass());
+                Assert.assertEquals(((Version) ver).getETag(), ((Version) unver).getETag());
+                Assert.assertEquals(((Version) ver).getSize(), ((Version) unver).getSize());
+                Assert.assertEquals(((Version) ver).getStorageClass(), ((Version) unver).getStorageClass());
             }
         }
     }

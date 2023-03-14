@@ -27,8 +27,8 @@
 package com.emc.object.util;
 
 import com.emc.rest.util.StreamUtil;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -43,7 +43,7 @@ public class InputStreamSegmentTest {
 
         // read entire stream
         String result = StreamUtil.readAsString(is);
-        Assertions.assertEquals("Hello Middle!", result);
+        Assert.assertEquals("Hello Middle!", result);
     }
 
     @Test
@@ -55,7 +55,7 @@ public class InputStreamSegmentTest {
 
         // read entire stream
         String result = StreamUtil.readAsString(is);
-        Assertions.assertEquals("Hello Middle!", result);
+        Assert.assertEquals("Hello Middle!", result);
     }
 
     @Test
@@ -67,6 +67,6 @@ public class InputStreamSegmentTest {
 
         // read entire stream
         String result = StreamUtil.readAsString(is);
-        Assertions.assertEquals("Hello Middle!", result);
+        Assert.assertEquals("Hello Middle!", result);
     }
 }

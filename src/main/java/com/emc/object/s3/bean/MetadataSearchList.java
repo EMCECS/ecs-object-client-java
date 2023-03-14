@@ -1,9 +1,9 @@
 package com.emc.object.s3.bean;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +18,7 @@ public class MetadataSearchList {
     private List<MetadataSearchKey> indexableKeys = new ArrayList<MetadataSearchKey>();
     private List<MetadataSearchKey> optionalAttributes = new ArrayList<MetadataSearchKey>();
 
-    @JacksonXmlElementWrapper(localName = "IndexableKeys")
+    @XmlElementWrapper(name = "IndexableKeys")
     @XmlElement(name = "Key")
     public List<MetadataSearchKey> getIndexableKeys() {
         return indexableKeys;
@@ -28,7 +28,7 @@ public class MetadataSearchList {
         this.indexableKeys = indexableKeys;
     }
 
-    @JacksonXmlElementWrapper(localName = "OptionalAttributes")
+    @XmlElementWrapper(name = "OptionalAttributes")
     @XmlElement(name = "Attribute")
     public List<MetadataSearchKey> getOptionalAttributes() {
         return optionalAttributes;

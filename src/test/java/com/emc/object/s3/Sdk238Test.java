@@ -27,8 +27,8 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
@@ -45,9 +45,9 @@ public class Sdk238Test {
         client.createBucket(bucket);
         try {
             if (s3Config.isUseVHost()) {
-                Assertions.assertEquals("/", client.getLastUri().getPath());
+                Assert.assertEquals("/", client.getLastUri().getPath());
             } else {
-                Assertions.assertEquals("/" + bucket, client.getLastUri().getPath());
+                Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
             }
         } finally {
             client.deleteBucket(bucket);
@@ -59,6 +59,8 @@ public class Sdk238Test {
 
         TestClient(S3Config s3Config) {
             super(s3Config);
+
+            client.register(captureFilter);
         }
 
         URI getLastUri() {

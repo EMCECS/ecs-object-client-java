@@ -27,12 +27,9 @@
 package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
 import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,8 +47,7 @@ public class ListVersionsResult implements UrlEncodable {
     private boolean truncated;
 
     //    private List<AbstractVersion> versions = new ArrayList<>();
-    private List<Version> versions;
-    private List<DeleteMarker> deletemarkers;
+    private List<AbstractVersion> versions;
     private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,
@@ -159,33 +155,13 @@ public class ListVersionsResult implements UrlEncodable {
         this.truncated = truncated;
     }
 
-//    @XmlElement(name = "Version")
-//    @JsonDeserialize(using = AbstractVersionDeserializer.class)
-//    @JacksonXmlElementWrapper(useWrapping = false)
-//    public List<AbstractVersion> getVersions() {
-//        return versions;
-//    }
-
-
-    // Billy todo: getVersions has conflicts
-    @XmlElement(name = "Version")
-    @JacksonXmlElementWrapper(useWrapping = false)
-    public List<Version> getVersions() {
+    @XmlElementRefs({@XmlElementRef(type = DeleteMarker.class), @XmlElementRef(type = Version.class)})
+    public List<AbstractVersion> getVersions() {
         return versions;
     }
 
-    public void setVersions(List<Version> versions) {
+    public void setVersions(List<AbstractVersion> versions) {
         this.versions = versions;
-    }
-
-    @XmlElement(name = "DeleteMarker")
-    @JacksonXmlElementWrapper(useWrapping = false)
-    public List<DeleteMarker> getDeletemarkers() {
-        return deletemarkers;
-    }
-
-    public void setDeletemarkers(List<DeleteMarker> deletemarkers) {
-        this.deletemarkers = deletemarkers;
     }
 
     @XmlElement(name = "CommonPrefixes")

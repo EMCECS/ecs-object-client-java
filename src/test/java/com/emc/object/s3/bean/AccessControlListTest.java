@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -99,18 +99,18 @@ public class AccessControlListTest {
         // unmarshall and compare to object
         Unmarshaller unmarshaller = context.createUnmarshaller();
         AccessControlList unmarshalledObject = (AccessControlList) unmarshaller.unmarshal(new StringReader(xml));
-        Assertions.assertEquals(object.getOwner(), unmarshalledObject.getOwner());
+        Assert.assertEquals(object.getOwner(), unmarshalledObject.getOwner());
         for (Grant grant : object.getGrants()) {
-            Assertions.assertTrue(unmarshalledObject.getGrants().contains(grant));
+            Assert.assertTrue(unmarshalledObject.getGrants().contains(grant));
         }
         for (Grant grant : unmarshalledObject.getGrants()) {
-            Assertions.assertTrue(object.getGrants().contains(grant));
+            Assert.assertTrue(object.getGrants().contains(grant));
         }
 
         // re-marshall and compare to string
         Marshaller marshaller = context.createMarshaller();
         StringWriter writer = new StringWriter();
         marshaller.marshal(object, writer);
-        Assertions.assertEquals(xml, writer.toString());
+        Assert.assertEquals(xml, writer.toString());
     }
 }

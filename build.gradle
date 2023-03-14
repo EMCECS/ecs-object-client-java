@@ -90,14 +90,13 @@ dependencies {
         exclude module: 'jaxb-api'
     }
     implementation 'org.slf4j:slf4j-api:2.0.6'
-    testImplementation 'org.slf4j:slf4j-api:2.0.6'
-    testImplementation 'org.slf4j:slf4j-simple:2.0.6'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
+    testImplementation 'junit:junit:4.13.2'
+//    testImplementation 'org.slf4j:slf4j-simple:2.0.6'
+//    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+//    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
     testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
-//    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.6'
-//    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0'
+    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.6'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0'
 
     // Billy
     implementation files('smarttest/smart-client-core.jar', 'smarttest/smart-client-ecs.jar', 'smarttest/smart-client-jersey.jar')
@@ -259,10 +258,6 @@ gitPublish {
 tasks.gitPublishPush.dependsOn aggregateDocs
 
 tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
-
-test {
-    useJUnitPlatform()
-}
 
 clean {
     delete aggregatedDocsDir

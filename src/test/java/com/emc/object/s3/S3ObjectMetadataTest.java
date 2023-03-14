@@ -26,9 +26,8 @@
  */
 package com.emc.object.s3;
 
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class S3ObjectMetadataTest {
     @Test
@@ -43,12 +42,12 @@ public class S3ObjectMetadataTest {
                 .addUserMetadata("FIVE", "EIGHT");
 
         // TreeMap will sort the keys and the first insertion case is preserved
-        Assertions.assertArrayEquals(new String[]{"Five", "One"}, metadata.getUserMetadata().keySet().toArray());
-        Assertions.assertEquals("FOUR", metadata.getUserMetadata("one"));
-        Assertions.assertEquals("FOUR", metadata.getUserMetadata("One"));
-        Assertions.assertEquals("FOUR", metadata.getUserMetadata("oNe"));
-        Assertions.assertEquals("EIGHT", metadata.getUserMetadata("five"));
-        Assertions.assertEquals("EIGHT", metadata.getUserMetadata("Five"));
-        Assertions.assertEquals("EIGHT", metadata.getUserMetadata("fIve"));
+        Assert.assertArrayEquals(new String[]{"Five", "One"}, metadata.getUserMetadata().keySet().toArray());
+        Assert.assertEquals("FOUR", metadata.getUserMetadata("one"));
+        Assert.assertEquals("FOUR", metadata.getUserMetadata("One"));
+        Assert.assertEquals("FOUR", metadata.getUserMetadata("oNe"));
+        Assert.assertEquals("EIGHT", metadata.getUserMetadata("five"));
+        Assert.assertEquals("EIGHT", metadata.getUserMetadata("Five"));
+        Assert.assertEquals("EIGHT", metadata.getUserMetadata("fIve"));
     }
 }

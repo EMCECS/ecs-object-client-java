@@ -31,12 +31,8 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlTransient;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 import java.io.IOException;
 import java.util.*;
 
@@ -114,7 +110,7 @@ public class BucketPolicyStatement {
         this.resource = resource;
     }
 
-    @JacksonXmlElementWrapper(localName = "Condition")
+    @XmlElementWrapper(name = "Condition")
     public Map<PolicyConditionOperator, PolicyConditionCriteria> getConditions() {
         return conditions;
     }

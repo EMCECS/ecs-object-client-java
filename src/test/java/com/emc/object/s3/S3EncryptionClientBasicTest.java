@@ -35,12 +35,16 @@ import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.s3.request.DeleteObjectRequest;
+import com.emc.object.s3.request.GetObjectRequest;
+import com.emc.object.s3.request.GetObjectTaggingRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +56,11 @@ import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     private static final Logger log = LoggerFactory.getLogger(S3EncryptionClientBasicTest.class);
@@ -105,7 +113,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     protected void loadKeys() throws Exception {
         Properties keyprops = new Properties();
         InputStream keystream = getClass().getClassLoader().getResourceAsStream("keys.properties");
-        Assertions.assertNotNull(keystream);
+        Assume.assumeNotNull(keystream);
         keyprops.load(keystream);
 
         _masterKey = EncryptionUtil.rsaKeyPairFromBase64(keyprops.getProperty("masterkey.public"), keyprops.getProperty("masterkey.private"));
@@ -126,16 +134,17 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         client.putObject(getTestBucket(), key, content, null);
         S3ObjectMetadata objectMetadata = rclient.getObjectMetadata(getTestBucket(), key);
 
-        Assertions.assertEquals("unencrypted size incorrect", "12",
+        Assert.assertEquals("unencrypted size incorrect", "12",
                 objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE));
-        Assertions.assertEquals(16, objectMetadata.getContentLength().longValue(), "encrypted size incorrect");
-        Assertions.assertEquals("2ef7bde608ce5404e97d5f042f95f89f1c232871",
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1), "unencrypted sha1 incorrect");
-        Assertions.assertEquals("master key ID incorrect", getKeyProvider().getMasterKeyFingerprint(),
+        Assert.assertEquals("encrypted size incorrect", 16, objectMetadata.getContentLength().longValue());
+        Assert.assertEquals("unencrypted sha1 incorrect", "2ef7bde608ce5404e97d5f042f95f89f1c232871",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
+        Assert.assertEquals("master key ID incorrect", getKeyProvider().getMasterKeyFingerprint(),
                 objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID));
-        Assertions.assertNotNull( objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_IV), "IV null");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY), "Object key");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_META_SIG), "Missing metadata signature");
+        Assert.assertNotNull("IV null", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY));
+        Assert.assertNotNull("Missing metadata signature",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_META_SIG));
     }
 
     @Test
@@ -147,33 +156,34 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(metadata));
 
         metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals(2, metadata.getUserMetadata().size());
-        Assertions.assertNotNull(metadata.getUserMetadata(m1));
-        Assertions.assertNotNull(metadata.getUserMetadata(m2));
-        Assertions.assertEquals(v1, metadata.getUserMetadata(m1));
-        Assertions.assertEquals(v2, metadata.getUserMetadata(m2));
+        Assert.assertEquals(2, metadata.getUserMetadata().size());
+        Assert.assertNotNull(metadata.getUserMetadata(m1));
+        Assert.assertNotNull(metadata.getUserMetadata(m2));
+        Assert.assertEquals(v1, metadata.getUserMetadata(m1));
+        Assert.assertEquals(v2, metadata.getUserMetadata(m2));
     }
 
     @Test
     public void testStream() throws Exception {
         String key = "test-file.txt";
         InputStream rawInput = getClass().getClassLoader().getResourceAsStream("uncompressed.txt");
-        Assertions.assertNotNull(rawInput);
+        Assume.assumeNotNull(rawInput);
 
         client.putObject(new PutObjectRequest(getTestBucket(), key, rawInput)
                 .withObjectMetadata(new S3ObjectMetadata().withContentLength(2516125L)));
         S3ObjectMetadata objectMetadata = rclient.getObjectMetadata(getTestBucket(), key);
 
-        Assertions.assertEquals("unencrypted size incorrect", "2516125",
+        Assert.assertEquals("unencrypted size incorrect", "2516125",
                 objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE));
-        Assertions.assertEquals(2516128L, objectMetadata.getContentLength().longValue(), "encrypted size incorrect");
-        Assertions.assertEquals("027e997e6b1dfc97b93eb28dc9a6804096d85873",
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1), "unencrypted sha1 incorrect");
-        Assertions.assertEquals(getKeyProvider().getMasterKeyFingerprint(),
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID), "master key ID incorrect");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_IV), "IV null");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY), "Object key");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_META_SIG), "Missing metadata signature");
+        Assert.assertEquals("encrypted size incorrect", 2516128L, objectMetadata.getContentLength().longValue());
+        Assert.assertEquals("unencrypted sha1 incorrect", "027e997e6b1dfc97b93eb28dc9a6804096d85873",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
+        Assert.assertEquals("master key ID incorrect", getKeyProvider().getMasterKeyFingerprint(),
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY));
+        Assert.assertNotNull("Missing metadata signature",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_META_SIG));
     }
 
     // Test a stream > 4MB.
@@ -190,11 +200,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         // Make sure the checksum matches
         String sha1hex = DigestUtils.sha1Hex(client.readObject(getTestBucket(), key, byte[].class));
 
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1), "Missing SHA1 meta");
-        Assertions.assertEquals(sha1hex,
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1), "SHA1 incorrect");
-        Assertions.assertEquals(size,
-                Integer.parseInt(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE)), "Stream length incorrect");
+        assertNotNull("Missing SHA1 meta", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
+        assertEquals("SHA1 incorrect", sha1hex,
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
+        assertEquals("Stream length incorrect", size,
+                Integer.parseInt(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE)));
     }
 
     @Test
@@ -205,29 +215,29 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         client.putObject(getTestBucket(), key, content, null);
 
         // shouldn't need to rekey as the master key has not changed
-        Assertions.assertFalse(eclient.rekey(getTestBucket(), key));
+        Assert.assertFalse(eclient.rekey(getTestBucket(), key));
 
         // change master key
         getKeyProvider().setMasterKey(getOldKey());
 
         // now actually rekey
-        Assertions.assertTrue(eclient.rekey(getTestBucket(), key));
+        Assert.assertTrue(eclient.rekey(getTestBucket(), key));
 
         // Read back and test
         S3ObjectMetadata objectMetadata = rclient.getObjectMetadata(getTestBucket(), key);
 
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class), "Content differs");
-        Assertions.assertEquals("12",
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE), "unencrypted size incorrect");
-        Assertions.assertEquals(16, objectMetadata.getContentLength().longValue(), "encrypted size incorrect");
-        Assertions.assertEquals("2ef7bde608ce5404e97d5f042f95f89f1c232871",
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1), "unencrypted sha1 incorrect");
-        Assertions.assertEquals(EncryptionUtil.getRsaPublicKeyFingerprint((RSAPublicKey) getOldKey().getPublic()),
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID), "master key ID incorrect");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_IV), "IV null");
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY), "Object key");
-        Assertions.assertNotNull(
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_META_SIG), "Missing metadata signature");
+        assertEquals("Content differs", content, client.readObject(getTestBucket(), key, String.class));
+        assertEquals("unencrypted size incorrect", "12",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE));
+        assertEquals("encrypted size incorrect", 16, objectMetadata.getContentLength().longValue());
+        assertEquals("unencrypted sha1 incorrect", "2ef7bde608ce5404e97d5f042f95f89f1c232871",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
+        assertEquals("master key ID incorrect", EncryptionUtil.getRsaPublicKeyFingerprint((RSAPublicKey) getOldKey().getPublic()),
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID));
+        Assert.assertNotNull("IV null", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_IV));
+        Assert.assertNotNull("Object key", objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY));
+        Assert.assertNotNull("Missing metadata signature",
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_META_SIG));
     }
 
     @Test
@@ -245,25 +255,25 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         client.putObject(request);
 
         // verify custom ACL
-        Assertions.assertTrue(client.getObjectAcl(getTestBucket(), key).getGrants()
+        Assert.assertTrue(client.getObjectAcl(getTestBucket(), key).getGrants()
                 .contains(new Grant(Group.ALL_USERS, Permission.FULL_CONTROL)));
 
         // change master key
         getKeyProvider().setMasterKey(getOldKey());
 
         // now actually rekey
-        Assertions.assertTrue(eclient.rekey(getTestBucket(), key));
+        Assert.assertTrue(eclient.rekey(getTestBucket(), key));
 
         // Read back and test
         S3ObjectMetadata objectMetadata = rclient.getObjectMetadata(getTestBucket(), key);
 
         // verify rekey
-        Assertions.assertEquals(EncryptionUtil.getRsaPublicKeyFingerprint((RSAPublicKey) getOldKey().getPublic()),
-                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID), "master key ID incorrect");
+        assertEquals("master key ID incorrect", EncryptionUtil.getRsaPublicKeyFingerprint((RSAPublicKey) getOldKey().getPublic()),
+                objectMetadata.getUserMetadata(EncryptionConstants.META_ENCRYPTION_KEY_ID));
 
         // verify ACL
         acl = client.getObjectAcl(getTestBucket(), key);
-        Assertions.assertTrue(acl.getGrants().contains(new Grant(Group.ALL_USERS, Permission.FULL_CONTROL)));
+        Assert.assertTrue(acl.getGrants().contains(new Grant(Group.ALL_USERS, Permission.FULL_CONTROL)));
     }
 
     @Test
@@ -278,7 +288,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         try {
             _client.putObject(getTestBucket(), key, data, null);
         } catch (S3Exception e) {
-            Assertions.assertEquals(FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE, e.getErrorCode());
+            Assert.assertEquals(FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE, e.getErrorCode());
         }
     }
 
@@ -296,7 +306,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         for (int i = 0; i < 6; i++) {
             _client.putObject(getTestBucket(), key, data, null);
             S3ObjectMetadata metadata = rclient.getObjectMetadata(getTestBucket(), key);
-            Assertions.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
+            Assert.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
         }
     }
 
@@ -312,7 +322,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         eclient.getS3Config().setRetryLimit(0);
         try {
             eclient.putObject(request);
-            Assertions.fail("no error generated");
+            Assert.fail("no error generated");
         } catch (Exception e) {
             while (e.getCause() != null && e.getCause() != e) {
                 e = (Exception) e.getCause();
@@ -325,234 +335,234 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
         // check mode UMD
         S3ObjectMetadata metadata = rclient.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
+        Assert.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
     }
 
     // the following methods aren't supported in the encryption client
 
-    @Disabled
+    @Ignore
     @Override
     public void testReadObjectStreamRange() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testUpdateObjectWithRange() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSingleMultipartUploadMostSimpleOnePart() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSingleMultipartUploadMostSimple() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSingleMultipartUploadSimple() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testMultiThreadMultipartUploadMostSimple() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testLargeObjectContentLength() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSingleMultipartUploadListParts() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testMultiThreadMultipartUploadListPartsPagination() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testAppendObject() {
     }
 
     // the following methods are unnecessary and/or do not test anything related to encryption
 
-    @Disabled
+    @Ignore
     @Override
     public void testCreateExistingBucket() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testListBuckets() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testListBucketsReq() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testBucketExists() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCreateBucketRequest() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testDeleteBucket() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testDeleteBucketWithObjects() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSetGetBucketAcl() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSetBucketAclCanned() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSetGetBucketCors() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testDeleteBucketCors() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testBucketLifecycle() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testBucketLocation() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testSetBucketVersioning() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testBucketVersions() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testListObjects() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testListAndReadVersions() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testListObjectsWithPrefix() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testListVersionsPagingPrefixDelim() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testPutObjectWithMd5() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testPutObjectWithRetentionPeriod() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testMpuAbortInMiddle() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCopyObjectWithMeta() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCreateObjectWithStream() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCreateObjectWithRetentionPeriod() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCreateObjectWithRetentionPolicy() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testPutObjectPreconditions() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testDeleteObjectPreconditions() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCopyObjectSelf() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testPreSignedPutUrl() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testPreSignedPutNoContentType() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCreateJsonObjectWithStream() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testUpdateMetadata() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testExtendObjectRetentionPeriod() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testPreSignedUrlHeaderOverrides() throws Exception {
     }
@@ -561,12 +571,12 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
     public void testCopyRangeAPI() {
     }
   
-    @Disabled
+    @Ignore
     @Override
     public void testSingleMultipartUploadWithRetention() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCopyObjectWithLegalHoldON() {
     }
@@ -583,44 +593,43 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         // write version 2
         client.putObject(new PutObjectRequest(bucketName, key, "Hello Version 2 !"));
 
-        // Billy remove comment
         // NOTE: encryption client creates 2 versions per PUT, due to secondary metadata update operation
-//        List<AbstractVersion> versions = client.listVersions(bucketName, key).getVersions();
-//        String versionId1a = versions.get(3).getVersionId();
-//        String versionId1b = versions.get(2).getVersionId();
-//        String versionId2a = versions.get(1).getVersionId();
-//        String versionId2b = versions.get(0).getVersionId();
-//
-//        // Only the particular version of the object should get deleted and no other versions of object should be affected
-//        // NOTE: have to delete both versions created by the encryption client
-//        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2a));
-//        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2b));
-//        // NOTE: actually both versions that the encryption client creates should have tagging set
-//        //       but to test, we must use rclient (raw client) because encryption client cannot read the intermediate version
-//        Assertions.assertEquals(2,
-//                rclient.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1a), String.class).getObjectMetadata().getTaggingCount());
-//        Assertions.assertEquals(2,
-//                client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1b), String.class).getObjectMetadata().getTaggingCount());
-//
-//        // Object and associated multiple tags should get deleted
-//        // NOTE: have to delete both versions created by the encryption client
-//        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1a));
-//        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1b));
-//        try {
-//            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1b));
-//            Assertions.fail("Fail was expected. Can NOT get tags from a deleted object");
-//        } catch (S3Exception e) {
-//            Assertions.assertEquals(404, e.getHttpCode());
-//            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
-//        }
+        List<AbstractVersion> versions = client.listVersions(bucketName, key).getVersions();
+        String versionId1a = versions.get(3).getVersionId();
+        String versionId1b = versions.get(2).getVersionId();
+        String versionId2a = versions.get(1).getVersionId();
+        String versionId2b = versions.get(0).getVersionId();
+
+        // Only the particular version of the object should get deleted and no other versions of object should be affected
+        // NOTE: have to delete both versions created by the encryption client
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2a));
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2b));
+        // NOTE: actually both versions that the encryption client creates should have tagging set
+        //       but to test, we must use rclient (raw client) because encryption client cannot read the intermediate version
+        Assert.assertEquals(2,
+                rclient.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1a), String.class).getObjectMetadata().getTaggingCount());
+        Assert.assertEquals(2,
+                client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1b), String.class).getObjectMetadata().getTaggingCount());
+
+        // Object and associated multiple tags should get deleted
+        // NOTE: have to delete both versions created by the encryption client
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1a));
+        client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1b));
+        try {
+            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1b));
+            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+        }
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testCopyObjectWithTaggingAndMeta() {
     }
 
-    @Disabled
+    @Ignore
     @Override
     public void testMultipartUploadWithTagging() {
     }
@@ -659,7 +668,7 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Override
     protected void assertForListVersionsPaging(int size, int requestCount) {
-        Assertions.assertEquals(10, size, "The correct number of versions were NOT returned");
-        Assertions.assertEquals(5, requestCount, "should be 5 pages");
+        Assert.assertEquals("The correct number of versions were NOT returned", 10, size);
+        Assert.assertEquals("should be 5 pages", 5, requestCount);
     }
 }

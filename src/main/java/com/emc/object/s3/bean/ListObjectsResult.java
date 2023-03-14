@@ -27,7 +27,6 @@
 package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlElement;
@@ -138,7 +137,6 @@ public class ListObjectsResult implements UrlEncodable {
     }
 
     @XmlElement(name = "Contents")
-    @JacksonXmlElementWrapper(useWrapping = false)
     public List<S3Object> getObjects() {
         return objects;
     }

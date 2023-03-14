@@ -27,12 +27,8 @@
 package com.emc.object.s3.bean;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,7 +88,7 @@ public class QueryObjectsResult {
         return nextMarker != null && !nextMarker.isEmpty() && !"NO MORE PAGES".equals(nextMarker);
     }
 
-    @JacksonXmlElementWrapper(localName = "ObjectMatches")
+    @XmlElementWrapper(name = "ObjectMatches")
     @XmlElement(name = "object")
     public List<QueryObject> getObjects() {
         return objects;
@@ -139,7 +135,7 @@ public class QueryObjectsResult {
         this.includeOlderVersions = includeOlderVersions;
     }
 
-    @JacksonXmlElementWrapper(localName = "CommonPrefixMatches")
+    @XmlElementWrapper(name = "CommonPrefixMatches")
     @XmlElement(name = "PrefixGroups")
     public List<String> getPrefixGroups() {
         return prefixGroups;

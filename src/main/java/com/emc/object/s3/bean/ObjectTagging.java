@@ -1,8 +1,7 @@
 package com.emc.object.s3.bean;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +12,7 @@ public class ObjectTagging {
 
     private List<ObjectTag> tagSet;
 
-    @JacksonXmlElementWrapper(localName = "TagSet")
+    @XmlElementWrapper(name = "TagSet")
     @XmlElement(name = "Tag")
     public List<ObjectTag> getTagSet() {
         return tagSet;

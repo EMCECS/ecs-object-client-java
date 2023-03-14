@@ -26,9 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +87,7 @@ public class ListBucketsResult {
         this.truncated = truncated;
     }
 
-    @JacksonXmlElementWrapper(localName = "Buckets")
+    @XmlElementWrapper(name = "Buckets")
     @XmlElement(name = "Bucket")
     public List<Bucket> getBuckets() {
         return buckets;

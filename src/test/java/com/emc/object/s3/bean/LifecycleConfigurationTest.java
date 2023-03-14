@@ -26,8 +26,8 @@
  */
 package com.emc.object.s3.bean;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -106,16 +106,16 @@ public class LifecycleConfigurationTest {
         Unmarshaller unmarshaller = context.createUnmarshaller();
         LifecycleConfiguration unmarshalledObject = (LifecycleConfiguration) unmarshaller.unmarshal(new StringReader(xml));
         for (LifecycleRule rule : object.getRules()) {
-            Assertions.assertTrue(unmarshalledObject.getRules().contains(rule));
+            Assert.assertTrue(unmarshalledObject.getRules().contains(rule));
         }
         for (LifecycleRule rule : unmarshalledObject.getRules()) {
-            Assertions.assertTrue(object.getRules().contains(rule));
+            Assert.assertTrue(object.getRules().contains(rule));
         }
 
         // re-marshall and compare to string
         Marshaller marshaller = context.createMarshaller();
         StringWriter writer = new StringWriter();
         marshaller.marshal(object, writer);
-        Assertions.assertEquals(xml, writer.toString());
+        Assert.assertEquals(xml, writer.toString());
     }
 }

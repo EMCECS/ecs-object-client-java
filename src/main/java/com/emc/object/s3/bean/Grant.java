@@ -26,9 +26,6 @@
  */
 package com.emc.object.s3.bean;
 
-import com.emc.object.s3.AbstractGranteeDeserializer;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
@@ -48,7 +45,6 @@ public class Grant implements Comparable<Grant> {
     }
 
     @XmlElement(name = "Grantee")
-    @JsonDeserialize(using = AbstractGranteeDeserializer.class)
     public AbstractGrantee getGrantee() {
         return grantee;
     }

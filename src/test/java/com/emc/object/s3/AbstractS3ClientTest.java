@@ -36,9 +36,8 @@ import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.After;
+import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,7 @@ import java.util.Properties;
 public abstract class AbstractS3ClientTest extends AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractS3ClientTest.class);
 
-    protected static S3Client client;
+    protected S3Client client;
     /**
      * may be null
      */
@@ -61,7 +60,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     protected abstract S3Client createS3Client() throws Exception;
 
     protected final void initClient() throws Exception {
-        client = createS3Client();
+        this.client = createS3Client();
         try {
             this.ecsVersion = client.listDataNodes().getVersionInfo();
         } catch (Exception e) {
@@ -69,22 +68,22 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
-    @BeforeEach
+    @Before
     public void checkIamUser() throws IOException {
         Properties props = TestConfig.getProperties();
         this.isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
     }
 
-    @AfterEach
+    @After
     public void dumpLBStats() {
         if (client != null) {
             LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
             log.info(Arrays.toString(loadBalancer.getHostStats()));
         }
     }
-
-    @AfterAll
-    static void shutdownClient() {
+//    todo: workaround to avoid 'client instance has been closed' error. should figure out a more flexible way.
+//    @After
+    public void shutdownClient() {
         if (client != null) client.destroy();
     }
 
@@ -99,24 +98,24 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         if (client != null && client.bucketExists(bucketName)) {
             boolean objectLockEnabled = isIamUser && client.getObjectLockConfiguration(bucketName) != null;
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
-                ListVersionsResult listVersionsResult = client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url));
-                for (AbstractVersion version : listVersionsResult.getVersions()) {
+                for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
                     DeleteObjectRequest deleteRequest = new DeleteObjectRequest(bucketName, version.getKey()).withVersionId(version.getVersionId());
                     if (objectLockEnabled) {
-                        SetObjectLegalHoldRequest setObjectLegalHoldRequest = new SetObjectLegalHoldRequest(bucketName, version.getKey()).withVersionId(version.getVersionId())
-                                .withLegalHold(new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.OFF));
-                        client.setObjectLegalHold(setObjectLegalHoldRequest);
+                        client.setObjectLegalHold(new SetObjectLegalHoldRequest(bucketName, version.getKey()).withVersionId(version.getVersionId())
+                                .withLegalHold(new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.OFF)));
                         deleteRequest.withBypassGovernanceRetention(true);
                     }
                     client.deleteObject(deleteRequest);
                 }
             } else {
-                ListObjectsResult listObjectsResult = client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url));
-                for (S3Object object : listObjectsResult.getObjects()) {
+                for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url)).getObjects()) {
                     client.deleteObject(bucketName, object.getKey());
                 }
             }
             client.deleteBucket(bucketName);
+
+            // todo: workaround to avoid 'client instance has been closed' error. should figure out a more flexible way.
+            shutdownClient();
         }
     }
 

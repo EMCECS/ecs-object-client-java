@@ -153,8 +153,8 @@ public abstract class AbstractJerseyClient {
                     // attempt to reset InputStream
                     if (entityStream != null) {
                         try {
-                            if (!entityStream.markSupported())
-                                throw new IOException("stream does not support mark/reset");
+//                            if (!entityStream.markSupported())
+//                                throw new IOException("stream does not support mark/reset");
                             entityStream.reset();
                         } catch (IOException e) {
                             log.warn("could not reset entity stream for retry: " + e);

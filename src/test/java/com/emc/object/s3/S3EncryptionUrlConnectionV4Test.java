@@ -5,8 +5,8 @@ import com.emc.object.EncryptionConfig;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.net.URI;
 
@@ -49,7 +49,7 @@ public class S3EncryptionUrlConnectionV4Test extends S3EncryptionClientBasicTest
         for (int i = 0; i < 6; i++) {
             _client.putObject(getTestBucket(), key, data, null);
             S3ObjectMetadata metadata = rclient.getObjectMetadata(getTestBucket(), key);
-            Assertions.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
+            Assert.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
         }
     }
 }

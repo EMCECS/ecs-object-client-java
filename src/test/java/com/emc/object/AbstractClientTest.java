@@ -26,10 +26,10 @@
  */
 package com.emc.object;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
+import com.emc.util.ConcurrentJunitRunner;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,9 +39,7 @@ import java.io.OutputStream;
 import java.util.Random;
 import java.util.UUID;
 
-//@ExtendWith(ConcurrentJunitRunner.class) Billy todo: test ConcurrentJunitRunner
-@Execution(ExecutionMode.CONCURRENT)
-//@Concurrent(threads = 5)
+@RunWith(ConcurrentJunitRunner.class)
 public abstract class AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractClientTest.class);
     private final ThreadLocal<String> testBucket = new ThreadLocal<>();
@@ -79,7 +77,7 @@ public abstract class AbstractClientTest {
         return testBucket.get();
     }
 
-    @BeforeEach
+    @Before
     public final void initTestBucket() throws Exception {
         log.info("initializing client");
         initClient();
@@ -92,7 +90,7 @@ public abstract class AbstractClientTest {
         createBucket(getTestBucket());
     }
 
-    @AfterEach
+    @After
     public final void destroyTestBucket() throws Exception {
         log.info("cleaning up bucket " + getTestBucket());
         cleanUpBucket(getTestBucket());

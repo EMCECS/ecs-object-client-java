@@ -27,9 +27,9 @@
 package com.emc.object.s3.bean;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,8 +40,7 @@ public class ListDataNode {
     private List<String> dataNodes = new ArrayList<String>();
     private String versionInfo;
 
-    @XmlElement(name = "DataNodes")
-    @JacksonXmlElementWrapper(useWrapping = false)
+    @XmlElements(@XmlElement(name = "DataNodes"))
     public List<String> getDataNodes() {
         return dataNodes;
     }

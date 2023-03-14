@@ -27,9 +27,9 @@
 package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import java.util.*;
@@ -51,7 +51,7 @@ public class AccessControlList {
         this.owner = owner;
     }
 
-    @JacksonXmlElementWrapper(localName = "AccessControlList")
+    @XmlElementWrapper(name = "AccessControlList")
     @XmlElement(name = "Grant")
     public Set<Grant> getGrants() {
         return grants;

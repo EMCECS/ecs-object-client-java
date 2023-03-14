@@ -5,13 +5,13 @@ import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.FaultInjectionStream;
-import jdk.nashorn.internal.ir.annotations.Ignore;
+import com.emc.util.ConcurrentJunitRunner;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Random;
 
-@Execution(ExecutionMode.CONCURRENT) // ConcurrentJunitRunner
+@RunWith(ConcurrentJunitRunner.class)
 public class WriteTruncationTest extends AbstractS3ClientTest {
     static final int OBJECT_RETENTION_PERIOD = 15; // 15 seconds
     static final int MOCK_OBJ_SIZE = 5 * 1024 * 1024; // 5MB
@@ -56,7 +56,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         super.cleanUpBucket(bucketName);
     }
 
-    @AfterEach
+    @After
     public void shutdownJvmClient() {
         if (jvmClient != null) jvmClient.destroy();
     }
@@ -158,14 +158,14 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
 
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
-            Assertions.fail("exception in input stream did not throw an exception");
-        } catch (Exception e) {
+            Assert.fail("exception in input stream did not throw an exception");
+        } catch (RuntimeException e) {
             if (exceptionType == ExceptionType.RuntimeException) {
-                Assertions.assertTrue(e.getCause() instanceof RuntimeException);
+                Assert.assertTrue(e.getCause() instanceof RuntimeException);
             } else {
-                Assertions.assertTrue(e.getCause() instanceof IOException);
+                Assert.assertTrue(e.getCause() instanceof IOException);
             }
-            Assertions.assertEquals(message, e.getCause().getMessage());
+            Assert.assertEquals(message, e.getCause().getMessage());
         }
 
         // TODO: sometimes the object is created, but does not show in a list right away - figure out why (is this a bug?)
@@ -174,7 +174,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         } catch (InterruptedException ignored) {
         }
 
-        Assertions.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
+        Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
     }
 
     @Test
@@ -195,15 +195,15 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
             try {
                 s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
                         .withContentLength((long) MOCK_OBJ_SIZE));
-                Assertions.fail("exception in input stream did not throw an exception");
-            } catch (Exception e) {
-                Assertions.assertTrue(e.getCause() instanceof IOException);
-                Assertions.assertEquals(message, e.getCause().getMessage());
+                Assert.fail("exception in input stream did not throw an exception");
+            } catch (RuntimeException e) {
+                Assert.assertTrue(e.getCause() instanceof IOException);
+                Assert.assertEquals(message, e.getCause().getMessage());
 
                 // object should not exist
-                Assertions.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
+                Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
                 // upload should exist, but should have no parts
-                Assertions.assertEquals(0, s3Client.listParts(getTestBucket(), key, uploadId).getParts().size());
+                Assert.assertEquals(0, s3Client.listParts(getTestBucket(), key, uploadId).getParts().size());
             } finally {
                 cleanMpus(getTestBucket());
             }

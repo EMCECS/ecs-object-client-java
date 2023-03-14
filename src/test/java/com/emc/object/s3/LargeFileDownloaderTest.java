@@ -30,9 +30,9 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.util.StreamUtil;
 import com.emc.util.RandomInputStream;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
@@ -60,7 +60,7 @@ public class LargeFileDownloaderTest extends AbstractS3ClientTest {
         return new S3JerseyClient(createS3Config());
     }
 
-    @BeforeEach
+    @Before
     public void createObject() throws Exception {
         sourceFile = File.createTempFile("lfd-source", null);
         sourceFile.deleteOnExit();
@@ -96,7 +96,7 @@ public class LargeFileDownloaderTest extends AbstractS3ClientTest {
         raf.read(readData);
         raf.close();
 
-        Assertions.assertArrayEquals(data, readData);
+        Assert.assertArrayEquals(data, readData);
     }
 
     @Test
@@ -122,18 +122,18 @@ public class LargeFileDownloaderTest extends AbstractS3ClientTest {
         lfd.download();
 
         // verify threads were used (this will be null if single-GET)
-        Assertions.assertNotNull(lfd.getExecutorService());
+        Assert.assertNotNull(lfd.getExecutorService());
 
         // verify progress indicators
-        Assertions.assertEquals(FILE_SIZE, lfd.getBytesTransferred());
-        Assertions.assertEquals(FILE_SIZE, bytesCompleted.get());
-        Assertions.assertEquals(FILE_SIZE, bytesTotal.get());
-        Assertions.assertEquals(FILE_SIZE, bytesTransferred.get());
+        Assert.assertEquals(FILE_SIZE, lfd.getBytesTransferred());
+        Assert.assertEquals(FILE_SIZE, bytesCompleted.get());
+        Assert.assertEquals(FILE_SIZE, bytesTotal.get());
+        Assert.assertEquals(FILE_SIZE, bytesTransferred.get());
 
         // verify content
         DigestInputStream dis = new DigestInputStream(new FileInputStream(destFile), MessageDigest.getInstance("MD5"));
         StreamUtil.copy(dis, new NullStream(), destFile.length());
-        Assertions.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
+        Assert.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
     }
 
     @Test
@@ -158,18 +158,18 @@ public class LargeFileDownloaderTest extends AbstractS3ClientTest {
         lfd.download();
 
         // verify single thread (thread pool should be null)
-        Assertions.assertNull(lfd.getExecutorService());
+        Assert.assertNull(lfd.getExecutorService());
 
         // verify progress indicators
-        Assertions.assertEquals(FILE_SIZE, lfd.getBytesTransferred());
-        Assertions.assertEquals(FILE_SIZE, bytesCompleted.get());
-        Assertions.assertEquals(FILE_SIZE, bytesTotal.get());
-        Assertions.assertEquals(FILE_SIZE, bytesTransferred.get());
+        Assert.assertEquals(FILE_SIZE, lfd.getBytesTransferred());
+        Assert.assertEquals(FILE_SIZE, bytesCompleted.get());
+        Assert.assertEquals(FILE_SIZE, bytesTotal.get());
+        Assert.assertEquals(FILE_SIZE, bytesTransferred.get());
 
         // verify content
         DigestInputStream dis = new DigestInputStream(new FileInputStream(destFile), MessageDigest.getInstance("MD5"));
         StreamUtil.copy(dis, new NullStream(), destFile.length());
-        Assertions.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
+        Assert.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
     }
 
     class NullStream extends OutputStream {

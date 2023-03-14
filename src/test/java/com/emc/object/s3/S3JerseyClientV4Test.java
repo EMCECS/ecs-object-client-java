@@ -3,7 +3,7 @@ package com.emc.object.s3;
 import com.emc.object.Method;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
-import org.junit.jupiter.api.Assertions;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,9 +69,9 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         ClientBuilder.newClient().target(url.toURI())
                 .request("application/x-download").header("x-amz-meta-foo", "bar")
                 .put(Entity.text(content));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Override
@@ -105,12 +105,12 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         con.setDoOutput(true);
         con.setDoInput(true);
         con.connect();
-        Assertions.assertEquals(200, con.getResponseCode());
+        Assert.assertEquals(200, con.getResponseCode());
 
-        Assertions.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+        Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
 
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Override

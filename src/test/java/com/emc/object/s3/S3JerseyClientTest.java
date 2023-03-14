@@ -45,10 +45,10 @@ import com.emc.util.TestConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,20 +87,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testListDataNodes() {
         ListDataNode listDataNode = client.listDataNodes();
-        Assertions.assertNotNull(listDataNode.getVersionInfo());
-        Assertions.assertNotNull(listDataNode.getDataNodes());
-        Assertions.assertFalse(listDataNode.getDataNodes().isEmpty());
+        Assert.assertNotNull(listDataNode.getVersionInfo());
+        Assert.assertNotNull(listDataNode.getDataNodes());
+        Assert.assertFalse(listDataNode.getDataNodes().isEmpty());
     }
 
     @Test
     public void testMultipleVdcs() throws Exception {
         S3Config config = createS3Config();
 
-        Assumptions.assumeFalse(config.isUseVHost());
+        Assume.assumeFalse(config.isUseVHost());
 
-        Assertions.assertDoesNotThrow(() -> {
+        try {
             client.listDataNodes();
-        });
+        } catch (Exception e) {
+            Assume.assumeNoException(e);
+        }
 
         // just going to use the same VDC twice for lack of a geo env.
         List<? extends Host> hosts = config.getVdcs().get(0).getHosts();
@@ -119,51 +121,51 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         vdc1 = tempClient.getS3Config().getVdcs().get(0);
         vdc2 = tempClient.getS3Config().getVdcs().get(1);
 
-        Assertions.assertTrue(vdc1.getHosts().size() > 1);
-        Assertions.assertTrue(vdc2.getHosts().size() > 1);
-        Assertions.assertEquals(vdc1.getHosts().size() + vdc2.getHosts().size(),
+        Assert.assertTrue(vdc1.getHosts().size() > 1);
+        Assert.assertTrue(vdc2.getHosts().size() > 1);
+        Assert.assertEquals(vdc1.getHosts().size() + vdc2.getHosts().size(),
                 tempClient.getLoadBalancer().getAllHosts().size());
     }
 
-    @Disabled // for now since ECS always returns a 201 (AWS returns a 409 outside of the standard US region)
+    @Ignore // for now since ECS always returns a 201 (AWS returns a 409 outside of the standard US region)
     @Test
     public void testCreateExistingBucket() throws Exception {
         try {
             client.createBucket(getTestBucket());
-            Assertions.fail("Fail was expected. Can NOT create a duplicate bucket");
+            Assert.fail("Fail was expected. Can NOT create a duplicate bucket");
         } catch (S3Exception e) {
-            Assertions.assertEquals("wrong error code for create existing bucket", "BucketAlreadyExists", e.getErrorCode());
+            Assert.assertEquals("wrong error code for create existing bucket", "BucketAlreadyExists", e.getErrorCode());
         }
     }
 
     @Test
     public void testListBuckets() throws Exception {
         ListBucketsResult result = client.listBuckets();
-        Assertions.assertNotNull(result);
-        Assertions.assertNotNull(result.getOwner());
-        Assertions.assertNotNull(result.getBuckets());
+        Assert.assertNotNull(result);
+        Assert.assertNotNull(result.getOwner());
+        Assert.assertNotNull(result.getBuckets());
 
         Bucket bucket = new Bucket();
         bucket.setName(getTestBucket());
-        Assertions.assertTrue(result.getBuckets().contains(bucket));
+        Assert.assertTrue(result.getBuckets().contains(bucket));
     }
 
     @Test
     public void testListBucketsReq() {
         ListBucketsRequest request = new ListBucketsRequest();
         ListBucketsResult result = client.listBuckets(request);
-        Assertions.assertNotNull(result);
-        Assertions.assertNotNull(result.getOwner());
-        Assertions.assertNotNull(result.getBuckets());
+        Assert.assertNotNull(result);
+        Assert.assertNotNull(result.getOwner());
+        Assert.assertNotNull(result.getBuckets());
 
         Bucket bucket = new Bucket();
         bucket.setName(getTestBucket());
-        Assertions.assertTrue(result.getBuckets().contains(bucket));
+        Assert.assertTrue(result.getBuckets().contains(bucket));
     }
 
     @Test
     public void testBucketExists() throws Exception {
-        Assertions.assertTrue(client.bucketExists(getTestBucket()), "Bucket " + getTestBucket() + " should exist but does NOT");
+        Assert.assertTrue("Bucket " + getTestBucket() + " should exist but does NOT", client.bucketExists(getTestBucket()));
     }
 
     @Test
@@ -171,13 +173,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String bucketName = getTestBucket() + "-x";
         client.createBucket(new CreateBucketRequest(bucketName));
 
-        Assertions.assertTrue(client.bucketExists(bucketName));
-         client.deleteBucket(bucketName);
+        Assert.assertTrue(client.bucketExists(bucketName));
+        client.deleteBucket(bucketName);
     }
 
     @Test
     public void testCreateFilesystemBucket() {
-        Assumptions.assumeFalse(isIamUser, "FS buckets are not supported with IAM user.");
+        Assume.assumeFalse("FS buckets are not supported with IAM user.", isIamUser);
 
         String bucketName = getTestBucket() + "-y";
 
@@ -206,33 +208,33 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testEnableObjectLockOnExistingBucket() {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
-        Assertions.assertNull(objectLockConfig);
+        Assert.assertNull(objectLockConfig);
         client.enableObjectLock(bucketName);
         objectLockConfig = client.getObjectLockConfiguration(bucketName);
-        Assertions.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
+        Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
     }
 
     @Test
     public void testCreateObjectLockBucket() {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = "s3-client-test-createObjectLockBucket";
         client.createBucket(new CreateBucketRequest(bucketName).withObjectLockEnabled(true));
         ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
-        Assertions.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
+        Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
         client.deleteBucket(bucketName);
     }
 
     @Test
     public void testSetObjectLockConfiguration() {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         ObjectLockConfiguration objectLockConfig = new ObjectLockConfiguration().withObjectLockEnabled(ObjectLockConfiguration.ObjectLockEnabled.Enabled);
@@ -240,26 +242,26 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectLockConfig.setRule(new ObjectLockRule().withDefaultRetention(defaultRetention));
         try {
             client.setObjectLockConfiguration(bucketName, objectLockConfig);
-            Assertions.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
+            Assert.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
         } catch (S3Exception e) {
-            Assertions.assertEquals(409, e.getHttpCode());
-            Assertions.assertEquals("InvalidBucketState", e.getErrorCode());
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("InvalidBucketState", e.getErrorCode());
         }
 
         client.enableObjectLock(bucketName);
         client.setObjectLockConfiguration(bucketName, objectLockConfig);
         ObjectLockConfiguration objectLockConfig_verify = client.getObjectLockConfiguration(bucketName);
 
-        Assertions.assertEquals(objectLockConfig.getObjectLockEnabled(), objectLockConfig_verify.getObjectLockEnabled());
-        Assertions.assertEquals(defaultRetention.getMode(), objectLockConfig_verify.getRule().getDefaultRetention().getMode());
-        Assertions.assertEquals(defaultRetention.getDays(), objectLockConfig_verify.getRule().getDefaultRetention().getDays());
-        Assertions.assertEquals(defaultRetention.getYears(), objectLockConfig_verify.getRule().getDefaultRetention().getYears());
+        Assert.assertEquals(objectLockConfig.getObjectLockEnabled(), objectLockConfig_verify.getObjectLockEnabled());
+        Assert.assertEquals(defaultRetention.getMode(), objectLockConfig_verify.getRule().getDefaultRetention().getMode());
+        Assert.assertEquals(defaultRetention.getDays(), objectLockConfig_verify.getRule().getDefaultRetention().getDays());
+        Assert.assertEquals(defaultRetention.getYears(), objectLockConfig_verify.getRule().getDefaultRetention().getYears());
     }
 
     @Test
     public void testDeleteObjectWithLegalHoldNotAllowed() throws Exception {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_DeleteWithLegalHold";
@@ -270,12 +272,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
 
-        Assertions.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId)).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(new GetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId)).getStatus());
         try {
             client.deleteVersion(bucketName, key, versionId);
-            Assertions.fail("Exception is expected when deleting version objects with Legal Hold ON.");
+            Assert.fail("Exception is expected when deleting version objects with Legal Hold ON.");
         } catch (S3Exception e) {
-            Assertions.assertEquals("AccessDenied", e.getErrorCode());
+            Assert.assertEquals("AccessDenied", e.getErrorCode());
         } finally {
             objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
             client.setObjectLegalHold(new SetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId).withLegalHold(objectLockLegalHold));
@@ -285,8 +287,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testPutObjectLegalHold() throws Exception {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectLegalHold";
@@ -299,21 +301,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(putObjectRequest);
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
         GetObjectLegalHoldRequest getObjectLegalHoldRequest = new GetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId);
-        Assertions.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
-        Assertions.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectMetadata(bucketName, key).getObjectLockLegalHold().getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectMetadata(bucketName, key).getObjectLockLegalHold().getStatus());
 
         //Put Legal Hold on existing object
         objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
         SetObjectLegalHoldRequest request = new SetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId).withLegalHold(objectLockLegalHold);
         client.setObjectLegalHold(request);
-        Assertions.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
-        Assertions.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectMetadata(bucketName, key).getObjectLockLegalHold().getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.OFF, client.getObjectMetadata(bucketName, key).getObjectLockLegalHold().getStatus());
     }
 
     @Test
     public void testPutObjectRetention() throws Exception {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectRetention";
@@ -329,11 +331,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
         GetObjectRetentionRequest request = new GetObjectRetentionRequest(bucketName, key).withVersionId(versionId);
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(request);
-        Assertions.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
-        Assertions.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
+        Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
+        Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(bucketName, key);
-        Assertions.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
-        Assertions.assertEquals(retentionDate, objectMetadata.getObjectLockRetention().getRetainUntilDate());
+        Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
+        Assert.assertEquals(retentionDate, objectMetadata.getObjectLockRetention().getRetainUntilDate());
         Thread.sleep(2000);
 
         //Put Retention on existing object.
@@ -344,18 +346,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withRetention(objectLockRetention);
         client.setObjectRetention(setObjectRetentionRequest);
         objectLockRetention2 = client.getObjectRetention(request);
-        Assertions.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
-        Assertions.assertEquals(retentionDate2, objectLockRetention2.getRetainUntilDate());
+        Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
+        Assert.assertEquals(retentionDate2, objectLockRetention2.getRetainUntilDate());
         objectMetadata = client.getObjectMetadata(bucketName, key);
-        Assertions.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
-        Assertions.assertEquals(retentionDate2, objectMetadata.getObjectLockRetention().getRetainUntilDate());
+        Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
+        Assert.assertEquals(retentionDate2, objectMetadata.getObjectLockRetention().getRetainUntilDate());
         Thread.sleep(2000);
     }
 
     @Test
     public void testDeleteObjectWithBypassGovernance() throws Exception {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testDeleteObjectWithBypassGovernance";
@@ -375,27 +377,27 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         //Expect failure without bypassGovernanceRetention (DeleteObjectsRequest)
         DeleteObjectsResult deleteObjectsResult = client.deleteObjects(deleteObjectsRequest);
-        Assertions.assertTrue(deleteObjectsResult.getResults().get(0) instanceof DeleteError);
+        Assert.assertTrue(deleteObjectsResult.getResults().get(0) instanceof DeleteError);
 
         //Expect failure without bypassGovernanceRetention (DeleteObjectRequest)
         DeleteObjectRequest request = new DeleteObjectRequest(bucketName, key).withVersionId(versionId);
         try {
             client.deleteObject(request);
-            Assertions.fail("expected 403");
+            Assert.fail("expected 403");
         } catch (S3Exception e) {
-            Assertions.assertEquals(403, e.getHttpCode());
+            Assert.assertEquals(403, e.getHttpCode());
         }
 
         //Expect success with bypassGovernanceRetention
         deleteObjectsRequest.setBypassGovernanceRetention(true);
         deleteObjectsResult = client.deleteObjects(deleteObjectsRequest);
-        Assertions.assertTrue(deleteObjectsResult.getResults().get(0) instanceof DeleteSuccess);
+        Assert.assertTrue(deleteObjectsResult.getResults().get(0) instanceof DeleteSuccess);
     }
 
     @Test
     public void testCopyObjectWithLegalHoldON() throws Exception {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key1 = "source-object";
@@ -403,17 +405,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(bucketName, key1, content, null);
-        Assertions.assertEquals(content, client.readObject(bucketName, key1, String.class));
+        Assert.assertEquals(content, client.readObject(bucketName, key1, String.class));
 
         client.enableObjectLock(bucketName);
         ObjectLockLegalHold objectLockLegalHold = new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.ON);
         CopyObjectRequest copyObjectRequest = new CopyObjectRequest(bucketName, key1, bucketName, key2)
                 .withObjectMetadata(new S3ObjectMetadata().withObjectLockLegalHold(objectLockLegalHold));
         client.copyObject(copyObjectRequest);
-        Assertions.assertEquals(content, client.readObject(bucketName, key2, String.class));
+        Assert.assertEquals(content, client.readObject(bucketName, key2, String.class));
         String versionId = client.listVersions(bucketName, key2).getVersions().get(0).getVersionId();
         GetObjectLegalHoldRequest getObjectLegalHoldRequest = new GetObjectLegalHoldRequest(bucketName, key2).withVersionId(versionId);
-        Assertions.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
+        Assert.assertEquals(ObjectLockLegalHold.Status.ON, client.getObjectLegalHold(getObjectLegalHoldRequest).getStatus());
 
         objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
         SetObjectLegalHoldRequest setObjectLegalHoldRequest = new SetObjectLegalHoldRequest(bucketName, key2).withVersionId(versionId).withLegalHold(objectLockLegalHold);
@@ -422,8 +424,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testSingleMultipartUploadWithRetention() throws Exception {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeTrue(isIamUser, "Skip Object Lock related tests for non IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
         String key = "testMpuSimple";
@@ -449,8 +451,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String versionId = client.listVersions(bucketName, key).getVersions().get(0).getVersionId();
         GetObjectRetentionRequest getObjectRetentionRequest = new GetObjectRetentionRequest(bucketName, key).withVersionId(versionId);
         ObjectLockRetention objectLockRetention2 = client.getObjectRetention(getObjectRetentionRequest);
-        Assertions.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
-        Assertions.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
+        Assert.assertEquals(objectLockRetention.getMode(), objectLockRetention2.getMode());
+        Assert.assertEquals(retentionDate, objectLockRetention2.getRetainUntilDate());
         Thread.sleep(2000);
     }
 
@@ -465,8 +467,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         try {
             BucketInfo info = client.getBucketInfo(bucketName);
-            Assertions.assertEquals(bucketName, info.getBucketName());
-            Assertions.assertEquals(new Long(retentionPeriod), info.getRetentionPeriod());
+            Assert.assertEquals(bucketName, info.getBucketName());
+            Assert.assertEquals(new Long(retentionPeriod), info.getRetentionPeriod());
         } finally {
             client.deleteBucket(bucketName);
         }
@@ -477,17 +479,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Thread.sleep(1000); // discover all hosts
 
         String bucketName = getTestBucket() + "-x";
-        Assertions.assertFalse(client.bucketExists(bucketName), "bucket should not exist " + bucketName);
+        Assert.assertFalse("bucket should not exist " + bucketName, client.bucketExists(bucketName));
 
         client.createBucket(bucketName);
-        Assertions.assertTrue(client.bucketExists(bucketName), "failed to create bucket " + bucketName);
+        Assert.assertTrue("failed to create bucket " + bucketName, client.bucketExists(bucketName));
 
         // write and delete an object
         client.putObject(bucketName, "foo", "bar", null);
         client.deleteObject(bucketName, "foo");
 
         client.deleteBucket(bucketName);
-        Assertions.assertFalse(client.bucketExists(bucketName), "failed to delete bucket " + bucketName);
+        Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
     }
 
 
@@ -496,9 +498,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         createTestObjects("prefix/", 5);
         try {
             client.deleteBucket(getTestBucket());
-            Assertions.fail("Test succeeds. Fail was expected. Can NOT delete bucket with existing objects");
+            Assert.fail("Test succeeds. Fail was expected. Can NOT delete bucket with existing objects");
         } catch (S3Exception e) {
-            Assertions.assertEquals("wrong error code for delete non-empty bucket", "BucketNotEmpty", e.getErrorCode());
+            Assert.assertEquals("wrong error code for delete non-empty bucket", "BucketNotEmpty", e.getErrorCode());
         }
     }
 
@@ -545,11 +547,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketCors(getTestBucket(), cc);
 
         CorsConfiguration ccVerify = client.getBucketCors(getTestBucket());
-        Assertions.assertNotNull(ccVerify, "CorsConfiguration should NOT be null but is");
-        Assertions.assertEquals(cc.getCorsRules().size(), ccVerify.getCorsRules().size());
+        Assert.assertNotNull("CorsConfiguration should NOT be null but is", ccVerify);
+        Assert.assertEquals(cc.getCorsRules().size(), ccVerify.getCorsRules().size());
 
         for (CorsRule rule : cc.getCorsRules()) {
-            Assertions.assertTrue(ccVerify.getCorsRules().contains(rule));
+            Assert.assertTrue(ccVerify.getCorsRules().contains(rule));
         }
     }
 
@@ -561,11 +563,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         CorsConfiguration cc = new CorsConfiguration().withCorsRules(cr0);
         client.setBucketCors(getTestBucket(), cc);
 
-        Assertions.assertNotNull(client.getBucketCors(getTestBucket()));
+        Assert.assertNotNull(client.getBucketCors(getTestBucket()));
 
         client.deleteBucketCors(getTestBucket());
 
-        Assertions.assertNull(client.getBucketCors(getTestBucket()));
+        Assert.assertNull(client.getBucketCors(getTestBucket()));
     }
 
     @Test
@@ -580,11 +582,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketLifecycle(getTestBucket(), lc);
 
         LifecycleConfiguration lc2 = client.getBucketLifecycle(getTestBucket());
-        Assertions.assertNotNull(lc2);
-        Assertions.assertEquals(lc.getRules().size(), lc2.getRules().size());
+        Assert.assertNotNull(lc2);
+        Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
 
         for (LifecycleRule rule : lc.getRules()) {
-            Assertions.assertTrue(lc2.getRules().contains(rule));
+            Assert.assertTrue(lc2.getRules().contains(rule));
         }
 
         lc.withRules(new LifecycleRule("archive-expires-180", "archive/", LifecycleRule.Status.Enabled)
@@ -594,11 +596,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketLifecycle(getTestBucket(), lc);
 
         lc2 = client.getBucketLifecycle(getTestBucket());
-        Assertions.assertNotNull(lc2);
-        Assertions.assertEquals(lc.getRules().size(), lc2.getRules().size());
+        Assert.assertNotNull(lc2);
+        Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
 
         for (LifecycleRule rule : lc.getRules()) {
-            Assertions.assertTrue(lc2.getRules().contains(rule));
+            Assert.assertTrue(lc2.getRules().contains(rule));
         }
 
         lc.withRules(new LifecycleRule("armageddon", "", LifecycleRule.Status.Enabled).withExpirationDate(end.getTime()));
@@ -606,15 +608,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketLifecycle(getTestBucket(), lc);
 
         lc2 = client.getBucketLifecycle(getTestBucket());
-        Assertions.assertNotNull(lc2);
-        Assertions.assertEquals(lc.getRules().size(), lc2.getRules().size());
+        Assert.assertNotNull(lc2);
+        Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
 
         for (LifecycleRule rule : lc.getRules()) {
-            Assertions.assertTrue(lc2.getRules().contains(rule));
+            Assert.assertTrue(lc2.getRules().contains(rule));
         }
 
         client.deleteBucketLifecycle(getTestBucket());
-        Assertions.assertNull(client.getBucketLifecycle(getTestBucket()));
+        Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
     }
 
     @Test // Note: affected by STORAGE-22520
@@ -633,15 +635,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         client.setBucketPolicy(getTestBucket(), bucketPolicy);
 
-        Assertions.assertEquals(bucketPolicy, client.getBucketPolicy(getTestBucket()));
+        Assert.assertEquals(bucketPolicy, client.getBucketPolicy(getTestBucket()));
 
         client.deleteBucketPolicy(getTestBucket());
         try {
             client.getBucketPolicy(getTestBucket());
-            Assertions.fail("get-policy should have thrown an exception after deleting policy");
+            Assert.fail("get-policy should have thrown an exception after deleting policy");
         } catch (S3Exception e) {
-            Assertions.assertEquals(404, e.getHttpCode());
-            Assertions.assertEquals("NoSuchBucketPolicy", e.getErrorCode());
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchBucketPolicy", e.getErrorCode());
         }
     }
 
@@ -649,18 +651,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testListObjects() throws Exception {
         String key = "foo", content = "Hello List!";
         client.putObject(getTestBucket(), key, content, null);
-        client.putObject(getTestBucket(), key + "+", content, null);
 
         ListObjectsResult result = client.listObjects(getTestBucket());
-        Assertions.assertNotNull(result, "ListObjectsResult was null, but should NOT have been");
+        Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
 
         List<S3Object> resultObjects = result.getObjects();
-        Assertions.assertNotNull(resultObjects, "List<S3Object> was null, but should NOT have been");
-        Assertions.assertEquals(1, resultObjects.size());
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(1, resultObjects.size());
 
         S3Object object = resultObjects.get(0);
-        Assertions.assertEquals(key, object.getKey());
-        Assertions.assertEquals((long) content.length(), object.getSize().longValue());
+        Assert.assertEquals(key, object.getKey());
+        Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
     @Test
@@ -670,20 +671,20 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // test different prefix
         ListObjectsResult result = client.listObjects(getTestBucket(), "wrongPrefix/");
-        Assertions.assertNotNull(result, "ListObjectsResult was null and should NOT be");
-        Assertions.assertEquals(0, result.getObjects().size());
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals(0, result.getObjects().size());
 
         result = client.listObjects(getTestBucket(), prefix);
-        Assertions.assertNotNull(result, "ListObjectsResult was null and should NOT be");
-        Assertions.assertEquals(1, result.getObjects().size(), "The correct number of objects were NOT returned");
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals("The correct number of objects were NOT returned", 1, result.getObjects().size());
 
         List<S3Object> resultObjects = result.getObjects();
-        Assertions.assertNotNull(resultObjects, "List<S3Object> was null, but should NOT have been");
-        Assertions.assertEquals(1, resultObjects.size());
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(1, resultObjects.size());
 
         S3Object object = resultObjects.get(0);
-        Assertions.assertEquals(prefix + key, object.getKey());
-        Assertions.assertEquals((long) content.length(), object.getSize().longValue());
+        Assert.assertEquals(prefix + key, object.getKey());
+        Assert.assertEquals((long) content.length(), object.getSize().longValue());
     }
 
     @Test // bug-ref: STORAGE-6791
@@ -697,21 +698,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withPrefix(prefix)
                 .withDelimiter(delim).withMaxKeys(3).withEncodingType(EncodingType.url));
-        Assertions.assertNotNull(result, "ListObjectsResult was null and should NOT be");
-        Assertions.assertEquals(3, result.getObjects().size(), "The correct number of objects were NOT returned");
-        Assertions.assertTrue(result.isTruncated());
-        Assertions.assertEquals("/", result.getDelimiter());
-        Assertions.assertEquals(prefix, result.getPrefix());
-        Assertions.assertEquals(prefix + key + 1, result.getObjects().get(0).getKey());
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals("The correct number of objects were NOT returned", 3, result.getObjects().size());
+        Assert.assertTrue(result.isTruncated());
+        Assert.assertEquals("/", result.getDelimiter());
+        Assert.assertEquals(prefix, result.getPrefix());
+        Assert.assertEquals(prefix + key + 1, result.getObjects().get(0).getKey());
 
         // get next page
         result = client.listMoreObjects(result);
-        Assertions.assertNotNull(result, "ListObjectsResult was null and should NOT be");
-        Assertions.assertEquals(2, result.getObjects().size(), "The correct number of objects were NOT returned");
-        Assertions.assertFalse(result.isTruncated());
-        Assertions.assertEquals("/", result.getDelimiter());
-        Assertions.assertEquals(prefix, result.getPrefix());
-        Assertions.assertEquals(prefix + key + 4, result.getObjects().get(0).getKey());
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals("The correct number of objects were NOT returned", 2, result.getObjects().size());
+        Assert.assertFalse(result.isTruncated());
+        Assert.assertEquals("/", result.getDelimiter());
+        Assert.assertEquals(prefix, result.getPrefix());
+        Assert.assertEquals(prefix + key + 4, result.getObjects().get(0).getKey());
     }
 
     @Test
@@ -730,8 +731,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             requestCount++;
         } while (result.isTruncated());
 
-        Assertions.assertEquals(numObjects, objects.size(), "The correct number of objects were NOT returned");
-        Assertions.assertEquals(4, requestCount, "should be 4 pages");
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, objects.size());
+        Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
     @Test
@@ -751,8 +752,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             requestCount++;
         } while (result.isTruncated());
 
-        Assertions.assertEquals(numObjects, objects.size(), "The correct number of objects were NOT returned");
-        Assertions.assertEquals(4, requestCount, "should be 4 pages");
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, objects.size());
+        Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
     @Test
@@ -773,8 +774,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             requestCount++;
         } while (result.isTruncated());
 
-        Assertions.assertEquals(numObjects, objects.size(), "The correct number of objects were NOT returned");
-        Assertions.assertEquals( 4, requestCount, "should be 4 pages");
+        Assert.assertEquals("The correct number of objects were NOT returned", numObjects, objects.size());
+        Assert.assertEquals("should be 4 pages", 4, requestCount);
     }
 
     @Test
@@ -785,14 +786,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             ListObjectsRequest request = new ListObjectsRequest(getTestBucket()).withEncodingType(EncodingType.url);
             ListObjectsResult result = client.listObjects(request);
-            Assertions.assertNotNull(result, "ListObjectsResult was null, but should NOT have been");
+            Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
 
             List<S3Object> resultObjects = result.getObjects();
-            Assertions.assertNotNull(resultObjects, "List<S3Object> was null, but should NOT have been");
-            Assertions.assertEquals(1, resultObjects.size());
+            Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+            Assert.assertEquals(1, resultObjects.size());
 
             S3Object object = resultObjects.get(0);
-            Assertions.assertEquals(key, object.getKey());
+            Assert.assertEquals(key, object.getKey());
 
         } finally {
             client.deleteObject(getTestBucket(), key);
@@ -808,15 +809,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsRequest request = new ListObjectsRequest(getTestBucket()).withEncodingType(EncodingType.url);
         ListObjectsResult result = client.listObjects(request);
-        Assertions.assertNotNull(result, "ListObjectsResult was null, but should NOT have been");
+        Assert.assertNotNull("ListObjectsResult was null, but should NOT have been", result);
 
         List<S3Object> resultObjects = result.getObjects();
-        Assertions.assertNotNull(resultObjects, "List<S3Object> was null, but should NOT have been");
-        Assertions.assertEquals(3, resultObjects.size());
+        Assert.assertNotNull("List<S3Object> was null, but should NOT have been", resultObjects);
+        Assert.assertEquals(3, resultObjects.size());
 
-        Assertions.assertEquals(key1, resultObjects.get(0).getKey());
-        Assertions.assertEquals(key2, resultObjects.get(1).getKey());
-        Assertions.assertEquals(key3, resultObjects.get(2).getKey());
+        Assert.assertEquals(key1, resultObjects.get(0).getKey());
+        Assert.assertEquals(key2, resultObjects.get(1).getKey());
+        Assert.assertEquals(key3, resultObjects.get(2).getKey());
     }
 
     @Test
@@ -833,34 +834,33 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // test different prefix
         ListVersionsResult result = client.listVersions(getTestBucket(), "wrongPrefix/");
-        Assertions.assertNotNull(result, "ListObjectsResult was null and should NOT be");
-        Assertions.assertEquals(0, result.getVersions().size());
+        Assert.assertNotNull("ListObjectsResult was null and should NOT be", result);
+        Assert.assertEquals(0, result.getVersions().size());
 
         result = client.listVersions(getTestBucket(), "prefix/");
-        Assertions.assertNotNull(result.getVersions());
-        Assertions.assertNotNull(result.getBucketName());
+        Assert.assertNotNull(result.getVersions());
+        Assert.assertNotNull(result.getBucketName());
 
-        // Billy todo remove comment
-//        List<AbstractVersion> versions = result.getVersions();
-//        Assertions.assertNotNull(versions);
-//        Assertions.assertEquals(3, versions.size());
-//
-//        // should be version, delete-marker, version
-//        Assertions.assertTrue(versions.get(0) instanceof Version);
-//        Assertions.assertTrue(versions.get(1) instanceof DeleteMarker);
-//        Assertions.assertTrue(versions.get(2) instanceof Version);
-//
-//        for (AbstractVersion version : versions) {
-//            Assertions.assertEquals(key, version.getKey());
-//            Assertions.assertNotNull(version.getLastModified());
-//            Assertions.assertNotNull(version.getOwner());
-//            Assertions.assertNotNull(version.getVersionId());
-//            if (version instanceof Version) {
-//                Assertions.assertEquals((long) content.length(), ((Version) version).getSize().longValue());
-//                Assertions.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
-//                Assertions.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
-//            }
-//        }
+        List<AbstractVersion> versions = result.getVersions();
+        Assert.assertNotNull(versions);
+        Assert.assertEquals(3, versions.size());
+
+        // should be version, delete-marker, version
+        Assert.assertTrue(versions.get(0) instanceof Version);
+        Assert.assertTrue(versions.get(1) instanceof DeleteMarker);
+        Assert.assertTrue(versions.get(2) instanceof Version);
+
+        for (AbstractVersion version : versions) {
+            Assert.assertEquals(key, version.getKey());
+            Assert.assertNotNull(version.getLastModified());
+            Assert.assertNotNull(version.getOwner());
+            Assert.assertNotNull(version.getVersionId());
+            if (version instanceof Version) {
+                Assert.assertEquals((long) content.length(), ((Version) version).getSize().longValue());
+                Assert.assertEquals("b13f87dd03c70083eb3e98ca37372361", ((Version) version).getRawETag());
+                Assert.assertEquals(content, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
+            }
+        }
     }
 
     @Test
@@ -895,8 +895,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     protected void assertForListVersionsPaging(int size, int requestCount) {
-        Assertions.assertEquals(6, size, "The correct number of versions were NOT returned");
-        Assertions.assertEquals(3, requestCount, "should be 3 pages");
+        Assert.assertEquals("The correct number of versions were NOT returned", 6, size);
+        Assert.assertEquals("should be 3 pages", 3, requestCount);
     }
 
     @Test
@@ -921,10 +921,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withDelimiter("/").withMaxKeys(4);
         ListVersionsResult result = client.listVersions(request);
 
-        Assertions.assertEquals(3, result.getVersions().size());
-        Assertions.assertEquals(1, result.getCommonPrefixes().size());
-        Assertions.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
-        Assertions.assertFalse(result.isTruncated());
+        Assert.assertEquals(3, result.getVersions().size());
+        Assert.assertEquals(1, result.getCommonPrefixes().size());
+        Assert.assertEquals("prefix/prefix2/", result.getCommonPrefixes().get(0));
+        Assert.assertFalse(result.isTruncated());
     }
 
     protected void createTestObjects(String prefix, int numObjects) {
@@ -945,10 +945,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content1 = "Hello Object!", content2 = "Hello Object 2!!";
 
         client.putObject(getTestBucket(), key1, content1, "text/plain");
-        Assertions.assertEquals(content1, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content1, client.readObject(getTestBucket(), key1, String.class));
 
         client.putObject(getTestBucket(), key2, content2, "text/plain");
-        Assertions.assertEquals(content2, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content2, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -970,7 +970,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         contentPart = "really long noun!";
         client.putObject(getTestBucket(), key, range, (Object) contentPart);
 
-        Assertions.assertEquals(content.substring(0, offset) + contentPart, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content.substring(0, offset) + contentPart, client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -987,38 +987,38 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // test if-modified pass
         GetObjectRequest request = new GetObjectRequest(getTestBucket(), key);
         request.withIfModifiedSince(cal.getTime());
-        Assertions.assertNotNull(client.getObject(request, String.class));
+        Assert.assertNotNull(client.getObject(request, String.class));
 
         // test if-unmodified fail
         request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
-        Assertions.assertNull(client.getObject(request, String.class));
+        Assert.assertNull(client.getObject(request, String.class));
 
         // test if-modified fail
         cal.add(Calendar.MINUTE, 10); // 5 minutes from now
         request.withIfUnmodifiedSince(null).withIfModifiedSince(cal.getTime());
-        Assertions.assertNull(client.getObject(request, String.class));
+        Assert.assertNull(client.getObject(request, String.class));
 
         // test if-unmodified pass
         request.withIfModifiedSince(null).withIfUnmodifiedSince(cal.getTime());
-        Assertions.assertNotNull(client.getObject(request, String.class));
+        Assert.assertNotNull(client.getObject(request, String.class));
 
         // test if-match pass
         request.withIfUnmodifiedSince(null).withIfMatch(etag);
-        Assertions.assertNotNull(client.getObject(request, String.class));
+        Assert.assertNotNull(client.getObject(request, String.class));
 
         // test if-none-match fail
         request.withIfMatch(null).withIfNoneMatch(etag);
-        Assertions.assertNull(client.getObject(request, String.class));
+        Assert.assertNull(client.getObject(request, String.class));
 
         etag = "d41d8cd98f00b204e9800998ecf8427e";
 
         // test if-none-match pass
         request.withIfNoneMatch(etag);
-        Assertions.assertNotNull(client.getObject(request, String.class));
+        Assert.assertNotNull(client.getObject(request, String.class));
 
         // test if-match fail
         request.withIfNoneMatch(null).withIfMatch(etag);
-        Assertions.assertNull(client.getObject(request, String.class));
+        Assert.assertNull(client.getObject(request, String.class));
     }
 
     @Test // NOTE: affected by STORAGE-22521
@@ -1038,9 +1038,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfUnmodifiedSince(cal.getTime());
         try {
             client.putObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-modified pass
@@ -1052,9 +1052,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfModifiedSince(cal.getTime());
         try {
             client.putObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-unmodified pass
@@ -1069,9 +1069,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfMatch(null).withIfNoneMatch(etag);
         try {
             client.putObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         etag = "d41d8cd98f00b204e9800998ecf8427e";
@@ -1084,9 +1084,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfNoneMatch(null).withIfMatch(etag);
         try {
             client.putObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-match * (if key exists, i.e. update only) pass
@@ -1097,9 +1097,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfMatch(null).withIfNoneMatch("*");
         try {
             client.putObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         request.setKey("bogus-key");
@@ -1108,9 +1108,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfNoneMatch(null).withIfMatch("*");
         try {
             client.putObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-none-match * pass
@@ -1120,7 +1120,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testDeleteObjectPreconditions() {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.7.1") >= 0, "ECS version must be at least 3.7.1");
+        Assume.assumeTrue("ECS version must be at least 3.7.1", ecsVersion != null && ecsVersion.compareTo("3.7.1") >= 0);
         String key = "testDeletePreconditions";
         String content = "hello Delete preconditions!";
 
@@ -1137,18 +1137,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfUnmodifiedSince(cal.getTime());
         try {
             client.deleteObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-unmodified and if-match(correct etag) fail
         request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag);
         try {
             client.deleteObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-unmodified pass
@@ -1161,18 +1161,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withIfUnmodifiedSince(cal.getTime()).withIfMatch(etag2);
         try {
             client.deleteObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-match(non-matching etag) fail
         request.withIfUnmodifiedSince(null).withIfMatch(etag2);
         try {
             client.deleteObject(request);
-            Assertions.fail("expected 412");
+            Assert.fail("expected 412");
         } catch (S3Exception e) {
-            Assertions.assertEquals(412, e.getHttpCode());
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         //test if-match(correct etag) pass
@@ -1200,17 +1200,17 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         random.nextBytes(data);
         // FYI, this will set a content-length
         client.putObject(getTestBucket(), "hello-bytes-small", data, null);
-        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-small", byte[].class));
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-small", byte[].class));
 
         data = new byte[32 * 1024 - 1];
         random.nextBytes(data);
         client.putObject(getTestBucket(), "hello-bytes-less", data, null);
-        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-less", byte[].class));
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-less", byte[].class));
 
         data = new byte[32 * 1024 + 1];
         random.nextBytes(data);
         client.putObject(getTestBucket(), "hello-bytes-more", data, null);
-        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-more", byte[].class));
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "hello-bytes-more", byte[].class));
     }
 
     @Test
@@ -1221,11 +1221,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // FYI, this will set a content-length
         client.putObject(getTestBucket(), "byte-array-test", new ByteArrayInputStream(data), null);
-        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), "byte-array-test", byte[].class));
+        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), "byte-array-test", byte[].class));
 
         // ... and this will use chunked-encoding
         client.putObject(getTestBucket(), "random-array-test", new RandomInputStream(100), null);
-        Assertions.assertEquals(new Long(100), client.getObjectMetadata(getTestBucket(), "random-array-test").getContentLength());
+        Assert.assertEquals(new Long(100), client.getObjectMetadata(getTestBucket(), "random-array-test").getContentLength());
     }
 
     @Test
@@ -1235,7 +1235,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         InputStream stream = new RandomInputStream(size);
 
         client.putObject(getTestBucket(), "json-stream-test", stream, "application/json");
-        Assertions.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
+        Assert.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
     }
 
     @Test
@@ -1243,14 +1243,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String key = "string-test";
         String content = "Hello Strings!";
         client.putObject(getTestBucket(), key, content, "text/plain");
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
     public void testCreateObjectWithRequest() {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), "/objectPrefix/testObject1", "object content");
         PutObjectResult result = client.putObject(request);
-        Assertions.assertNotNull(result);
+        Assert.assertNotNull(result);
     }
 
     @Test
@@ -1266,7 +1266,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         //request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.FALSE);
 
         PutObjectResult result = client.putObject(request);
-        Assertions.assertNotNull(result);
+        Assert.assertNotNull(result);
     }
 
     @Test
@@ -1286,12 +1286,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.setUserMetadata(userMeta);
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals(ct, objectMetadata.getContentType());
-        Assertions.assertEquals(cc, objectMetadata.getCacheControl());
-        Assertions.assertEquals(cd, objectMetadata.getContentDisposition());
-        Assertions.assertEquals(ce, objectMetadata.getContentEncoding());
-        Assertions.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
-        Assertions.assertEquals(userMeta, objectMetadata.getUserMetadata());
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
     @Test
@@ -1301,8 +1301,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -1313,13 +1313,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.setRetentionPeriod(4L);
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals((Long) 4L, objectMetadata.getRetentionPeriod());
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals((Long) 4L, objectMetadata.getRetentionPeriod());
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         try {
             client.putObject(getTestBucket(), key, "evil update!", null);
-            Assertions.fail("object in retention allowed update");
+            Assert.fail("object in retention allowed update");
         } catch (S3Exception e) {
-            Assertions.assertEquals("ObjectUnderRetention", e.getErrorCode());
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
         }
 
         Thread.sleep(10000); // allow retention to expire
@@ -1347,13 +1347,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), key, bigData, null);
 
         GetObjectResult<byte[]> result = client.getObject(new GetObjectRequest(getTestBucket(), key), byte[].class);
-        Assertions.assertEquals(new Long(size), result.getObjectMetadata().getContentLength(), "bad content-length");
+        Assert.assertEquals("bad content-length", new Long(size), result.getObjectMetadata().getContentLength());
     }
 
     @Test
     public void testBucketLocation() throws Exception {
         LocationConstraint lc = client.getBucketLocation(getTestBucket());
-        Assertions.assertNotNull(lc);
+        Assert.assertNotNull(lc);
         log.debug("Bucket location: " + lc.getRegion());
     }
 
@@ -1365,7 +1365,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.setBucketVersioning(getTestBucket(), vc);
 
         VersioningConfiguration vcResult = client.getBucketVersioning(getTestBucket());
-        Assertions.assertEquals(vc.getStatus(), vcResult.getStatus(), "status is wrong");
+        Assert.assertEquals("status is wrong", vc.getStatus(), vcResult.getStatus());
     }
 
     @Test
@@ -1417,18 +1417,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ListPartsResult lpr = client.listParts(getTestBucket(), key, uploadId);
 
         List<MultipartPart> mpp = lpr.getParts();
-        Assertions.assertEquals(3, mpp.size());
+        Assert.assertEquals(3, mpp.size());
 
         for (MultipartPart part : mpp) {
             //this does NOT assume that the list comes back in sequential order
             if (part.getPartNumber() == 1) {
-                Assertions.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
+                Assert.assertEquals(mp1.getRawETag(), mpp.get(0).getRawETag());
             } else if (part.getPartNumber() == 2) {
-                Assertions.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
+                Assert.assertEquals(mp2.getRawETag(), mpp.get(1).getRawETag());
             } else if (part.getPartNumber() == 3) {
-                Assertions.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
+                Assert.assertEquals(mp3.getRawETag(), mpp.get(2).getRawETag());
             } else {
-                Assertions.fail("Unknown Part number: " + part.getPartNumber());
+                Assert.fail("Unknown Part number: " + part.getPartNumber());
             }
         }
 
@@ -1484,12 +1484,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 if (listPartsResult != null) listPartsRequest.setMarker(listPartsResult.getNextPartNumberMarker());
                 listPartsResult = client.listParts(listPartsRequest);
                 allParts.addAll(listPartsResult.getParts());
-                Assertions.assertEquals(2, listPartsResult.getParts().size());
-                Assertions.assertEquals(2, listPartsResult.getMaxParts().intValue());
+                Assert.assertEquals(2, listPartsResult.getParts().size());
+                Assert.assertEquals(2, listPartsResult.getMaxParts().intValue());
             } while (listPartsResult.isTruncated());
 
             // verify the right number of parts is returned altogether
-            Assertions.assertEquals(file.length() / partSize + 1, allParts.size());
+            Assert.assertEquals(file.length() / partSize + 1, allParts.size());
 
             // complete MP upload
             client.completeMultipartUpload(new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId).withParts(parts));
@@ -1536,11 +1536,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         executor.shutdown();
         executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
 
-        Assertions.assertEquals(futures.size(), successCount.intValue(), "at least one thread failed");
+        Assert.assertEquals("at least one thread failed", futures.size(), successCount.intValue());
 
         ListPartsResult lpr = client.listParts(getTestBucket(), key, uploadId);
         List<MultipartPart> mpp = lpr.getParts();
-        Assertions.assertEquals(successCount.intValue(), mpp.size(), "at least one part failed according to listParts");
+        Assert.assertEquals("at least one part failed according to listParts", successCount.intValue(), mpp.size());
 
         CompleteMultipartUploadRequest completionRequest = new CompleteMultipartUploadRequest(getTestBucket(), key, uploadId);
         SortedSet<MultipartPartETag> parts = new TreeSet<MultipartPartETag>();
@@ -1619,8 +1619,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     @Test
@@ -1629,7 +1629,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, new byte[0]);
         client.putObject(request);
 
-        Assertions.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -1638,7 +1638,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, "");
         client.putObject(request);
 
-        Assertions.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -1648,7 +1648,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         file.deleteOnExit();
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, file);
         client.putObject(request);
-        Assertions.assertEquals("", client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals("", client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -1660,8 +1660,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     @Test
@@ -1673,8 +1673,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     @Test
@@ -1686,8 +1686,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     @Test
@@ -1699,8 +1699,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
 
@@ -1713,8 +1713,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     /**
@@ -1729,8 +1729,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     /**
@@ -1745,8 +1745,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         ListObjectsResult result = client.listObjects(getTestBucket());
         List<S3Object> objList = result.getObjects();
-        Assertions.assertEquals(1, objList.size(), "Failed to retrieve the object that was PUT");
-        Assertions.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
+        Assert.assertEquals("Failed to retrieve the object that was PUT", 1, objList.size());
+        Assert.assertEquals("FAIL - name key is different", key, objList.get(0).getKey());
     }
 
     @Test
@@ -1760,10 +1760,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(request);
 
         GetObjectResult<String> result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
-        Assertions.assertEquals(content, result.getObject());
+        Assert.assertEquals(content, result.getObject());
 
         // apparently S3 does not return the Content-MD5 header; it's only used during a PUT object, so use ETag
-        Assertions.assertEquals(md5B64, Base64.encodeBase64String(Hex.decodeHex(result.getObjectMetadata().getETag().toCharArray())));
+        Assert.assertEquals(md5B64, Base64.encodeBase64String(Hex.decodeHex(result.getObjectMetadata().getETag().toCharArray())));
     }
 
     @Test
@@ -1774,12 +1774,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         request.withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(2L));
         client.putObject(request);
 
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         try {
             client.putObject(getTestBucket(), key, "evil update!", null);
-            Assertions.fail("object in retention allowed update");
+            Assert.fail("object in retention allowed update");
         } catch (S3Exception e) {
-            Assertions.assertEquals("ObjectUnderRetention", e.getErrorCode());
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
         }
 
         Thread.sleep(5000); // allow retention to expire
@@ -1807,8 +1807,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String appendContent = " World!";
         long offset = client.appendObject(getTestBucket(), key, appendContent);
 
-        Assertions.assertEquals(content + appendContent, client.readObject(getTestBucket(), key, String.class));
-        Assertions.assertEquals(content.length(), offset);
+        Assert.assertEquals(content + appendContent, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content.length(), offset);
     }
 
     @Test
@@ -1818,11 +1818,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1832,11 +1832,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1846,11 +1846,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
 
@@ -1861,11 +1861,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1875,11 +1875,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1889,11 +1889,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1903,11 +1903,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1917,11 +1917,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1931,11 +1931,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1945,11 +1945,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String content = "Hello Copy!";
 
         client.putObject(getTestBucket(), key1, content, null);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
 
         client.copyObject(getTestBucket(), key1, getTestBucket(), key2);
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
-        Assertions.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key1, String.class));
+        Assert.assertEquals(content, client.readObject(getTestBucket(), key2, String.class));
     }
 
     @Test
@@ -1959,7 +1959,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         client.putObject(getTestBucket(), key, content, null);
         GetObjectResult<String> result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
-        Assertions.assertEquals(content, result.getObject());
+        Assert.assertEquals(content, result.getObject());
         Date originalModified = result.getObjectMetadata().getLastModified();
 
         // wait a tick so mtime is different
@@ -1968,8 +1968,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         CopyObjectRequest request = new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key);
         client.copyObject(request.withObjectMetadata(new S3ObjectMetadata()));
         result = client.getObject(new GetObjectRequest(getTestBucket(), key), String.class);
-        Assertions.assertEquals(content, result.getObject());
-        Assertions.assertTrue(result.getObjectMetadata().getLastModified().after(originalModified), "modified date has not changed");
+        Assert.assertEquals(content, result.getObject());
+        Assert.assertTrue("modified date has not changed", result.getObjectMetadata().getLastModified().after(originalModified));
     }
 
     @Test // bug-ref: blocked by STORAGE-12050
@@ -1991,22 +1991,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.setUserMetadata(userMeta);
         client.putObject(new PutObjectRequest(getTestBucket(), key1, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key1);
-        Assertions.assertEquals(ct, objectMetadata.getContentType());
-        Assertions.assertEquals(cc, objectMetadata.getCacheControl());
-        Assertions.assertEquals(cd, objectMetadata.getContentDisposition());
-        Assertions.assertEquals(ce, objectMetadata.getContentEncoding());
-        Assertions.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
-        Assertions.assertEquals(userMeta, objectMetadata.getUserMetadata());
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
 
         // test copy meta
         client.copyObject(new CopyObjectRequest(getTestBucket(), key1, getTestBucket(), key2));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key2);
-        Assertions.assertEquals(ct, objectMetadata.getContentType());
-        Assertions.assertEquals(cc, objectMetadata.getCacheControl());
-        Assertions.assertEquals(cd, objectMetadata.getContentDisposition());
-        Assertions.assertEquals(ce, objectMetadata.getContentEncoding());
-        Assertions.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
-        Assertions.assertEquals(userMeta, objectMetadata.getUserMetadata());
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
 
         // test replace meta
         ct = "application/octet-stream";
@@ -2021,12 +2021,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.setUserMetadata(userMeta);
         client.copyObject(new CopyObjectRequest(getTestBucket(), key1, getTestBucket(), key3).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key3);
-        Assertions.assertEquals(ct, objectMetadata.getContentType());
-        Assertions.assertEquals(cc, objectMetadata.getCacheControl());
-        Assertions.assertEquals(cd, objectMetadata.getContentDisposition());
-        Assertions.assertEquals(ce, objectMetadata.getContentEncoding());
-        Assertions.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
-        Assertions.assertEquals(userMeta, objectMetadata.getUserMetadata());
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
     @Test // bug-ref: blocked by STORAGE-29721
@@ -2048,12 +2048,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.setUserMetadata(userMeta);
         client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals(ct, objectMetadata.getContentType());
-        Assertions.assertEquals(cc, objectMetadata.getCacheControl());
-        Assertions.assertEquals(cd, objectMetadata.getContentDisposition());
-        Assertions.assertEquals(ce, objectMetadata.getContentEncoding());
-        Assertions.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
-        Assertions.assertEquals(userMeta, objectMetadata.getUserMetadata());
+        Assert.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
 
         // test update meta
         ct = "application/octet-stream";
@@ -2068,14 +2068,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata.setUserMetadata(userMeta);
         client.copyObject(new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key).withObjectMetadata(objectMetadata));
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals(ct, objectMetadata.getContentType());
+        Assert.assertEquals(ct, objectMetadata.getContentType());
         // TODO: below assertions are blocked by STORAGE-29721,
         //  uncomment them if STORAGE-29721 is fixed
-        //Assertions.assertEquals(cc, objectMetadata.getCacheControl());
-        //Assertions.assertEquals(cd, objectMetadata.getContentDisposition());
-        //Assertions.assertEquals(ce, objectMetadata.getContentEncoding());
-        //Assertions.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
-        Assertions.assertEquals(userMeta, objectMetadata.getUserMetadata());
+        //Assert.assertEquals(cc, objectMetadata.getCacheControl());
+        //Assert.assertEquals(cd, objectMetadata.getContentDisposition());
+        //Assert.assertEquals(ce, objectMetadata.getContentEncoding());
+        //Assert.assertEquals(expires.getTime(), objectMetadata.getHttpExpires());
+        Assert.assertEquals(userMeta, objectMetadata.getUserMetadata());
     }
 
     @Test
@@ -2087,7 +2087,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(request);
 
         String readContent = client.readObject(getTestBucket(), key, String.class);
-        Assertions.assertEquals("Wring object content", content, readContent);
+        Assert.assertEquals("Wring object content", content, readContent);
     }
 
     @Test
@@ -2111,24 +2111,24 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             // read then write to second bucket
             data = client.readObject(getTestBucket(), key1, byte[].class);
             client.putObject(bucket2, key1, data, null);
-            Assertions.assertEquals(data.length, client.readObject(bucket2, key1, byte[].class).length);
+            Assert.assertEquals(data.length, client.readObject(bucket2, key1, byte[].class).length);
 
             data = client.readObject(getTestBucket(), key2, byte[].class);
             client.putObject(bucket2, key2, data, null);
-            Assertions.assertEquals(data.length, client.readObject(bucket2, key2, byte[].class).length);
+            Assert.assertEquals(data.length, client.readObject(bucket2, key2, byte[].class).length);
 
             // stream to third bucket
             InputStream inputStream = client.readObjectStream(getTestBucket(), key1, null);
             PutObjectRequest request = new PutObjectRequest(bucket3, key1, inputStream);
             request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size1));
             client.putObject(request);
-            Assertions.assertEquals(size1, client.readObject(bucket3, key1, byte[].class).length);
+            Assert.assertEquals(size1, client.readObject(bucket3, key1, byte[].class).length);
 
             inputStream = client.readObjectStream(getTestBucket(), key2, null);
             request = new PutObjectRequest(bucket3, key2, inputStream);
             request.setObjectMetadata(new S3ObjectMetadata().withContentLength(size2));
             client.putObject(request);
-            Assertions.assertEquals(size2, client.readObject(bucket3, key2, byte[].class).length);
+            Assert.assertEquals(size2, client.readObject(bucket3, key2, byte[].class).length);
         } finally {
             cleanUpBucket(bucket2);
             cleanUpBucket(bucket3);
@@ -2183,65 +2183,64 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // update object (will create version)
         client.putObject(getTestBucket(), key, content2, "text/plain");
 
-        Assertions.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
+        Assert.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
 
-        // Billy todo: remove comment
         // list versions
-//        List<AbstractVersion> versions = client.listVersions(getTestBucket(), null).getVersions();
-//        Assertions.assertEquals(2, versions.size());
-//        String firstVersionId = null;
-//        for (AbstractVersion version : versions) {
-//            Assertions.assertTrue(version instanceof Version);
-//            Assertions.assertEquals(key, version.getKey());
-//            Assertions.assertNotNull(version.getVersionId());
-//            Assertions.assertNotNull(version.getLastModified());
-//            Assertions.assertNotNull(version.getOwner());
-//            Assertions.assertEquals(content1.length(), (long) ((Version) version).getSize());
-//            Assertions.assertNotNull(((Version) version).getETag());
-//            Assertions.assertNotNull(((Version) version).getStorageClass());
-//            if (version.isLatest()) {
-//                Assertions.assertEquals(content2, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
-//            } else {
-//                Assertions.assertEquals(content1, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
-//                firstVersionId = version.getVersionId();
-//            }
-//        }
-//
-//        // restore version (copy old version)
-//        client.copyObject(new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key).withSourceVersionId(firstVersionId));
-//        Assertions.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
-//
-//        versions = client.listVersions(getTestBucket(), null).getVersions();
-//        Assertions.assertEquals(3, versions.size());
-//        String thirdVersionId = null;
-//        for (AbstractVersion version : versions) {
-//            if (version.isLatest()) thirdVersionId = version.getVersionId();
-//        }
-//
-//        // delete object (creates a delete marker)
-//        client.deleteObject(getTestBucket(), key);
-//
-//        versions = client.listVersions(getTestBucket(), null).getVersions();
-//        Assertions.assertEquals(4, versions.size());
-//        String fourthVersionId = null;
-//        for (AbstractVersion version : versions) {
-//            if (version.isLatest()) fourthVersionId = version.getVersionId();
-//        }
-//
-//        // delete explicit versions, which should revert back to prior version
-//        client.deleteVersion(getTestBucket(), key, fourthVersionId);
-//
-//        versions = client.listVersions(getTestBucket(), null).getVersions();
-//        Assertions.assertEquals(3, versions.size());
-//        for (AbstractVersion version : versions) {
-//            if (version.isLatest()) Assertions.assertEquals(thirdVersionId, version.getVersionId());
-//        }
-//        Assertions.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
-//
-//        client.deleteVersion(getTestBucket(), key, thirdVersionId);
-//
-//        Assertions.assertEquals(2, client.listVersions(getTestBucket(), null).getVersions().size());
-//        Assertions.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
+        List<AbstractVersion> versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(2, versions.size());
+        String firstVersionId = null;
+        for (AbstractVersion version : versions) {
+            Assert.assertTrue(version instanceof Version);
+            Assert.assertEquals(key, version.getKey());
+            Assert.assertNotNull(version.getVersionId());
+            Assert.assertNotNull(version.getLastModified());
+            Assert.assertNotNull(version.getOwner());
+            Assert.assertEquals(content1.length(), (long) ((Version) version).getSize());
+            Assert.assertNotNull(((Version) version).getETag());
+            Assert.assertNotNull(((Version) version).getStorageClass());
+            if (version.isLatest()) {
+                Assert.assertEquals(content2, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
+            } else {
+                Assert.assertEquals(content1, client.readObject(getTestBucket(), key, version.getVersionId(), String.class));
+                firstVersionId = version.getVersionId();
+            }
+        }
+
+        // restore version (copy old version)
+        client.copyObject(new CopyObjectRequest(getTestBucket(), key, getTestBucket(), key).withSourceVersionId(firstVersionId));
+        Assert.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
+
+        versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(3, versions.size());
+        String thirdVersionId = null;
+        for (AbstractVersion version : versions) {
+            if (version.isLatest()) thirdVersionId = version.getVersionId();
+        }
+
+        // delete object (creates a delete marker)
+        client.deleteObject(getTestBucket(), key);
+
+        versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(4, versions.size());
+        String fourthVersionId = null;
+        for (AbstractVersion version : versions) {
+            if (version.isLatest()) fourthVersionId = version.getVersionId();
+        }
+
+        // delete explicit versions, which should revert back to prior version
+        client.deleteVersion(getTestBucket(), key, fourthVersionId);
+
+        versions = client.listVersions(getTestBucket(), null).getVersions();
+        Assert.assertEquals(3, versions.size());
+        for (AbstractVersion version : versions) {
+            if (version.isLatest()) Assert.assertEquals(thirdVersionId, version.getVersionId());
+        }
+        Assert.assertEquals(content1, client.readObject(getTestBucket(), key, String.class));
+
+        client.deleteVersion(getTestBucket(), key, thirdVersionId);
+
+        Assert.assertEquals(2, client.listVersions(getTestBucket(), null).getVersions().size());
+        Assert.assertEquals(content2, client.readObject(getTestBucket(), key, String.class));
     }
 
     @Test
@@ -2256,7 +2255,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withKeys(testObject1, testObject2);
         DeleteObjectsResult results = client.deleteObjects(request);
         List<AbstractDeleteResult> resultList = results.getResults();
-        Assertions.assertEquals(2, resultList.size());
+        Assert.assertEquals(2, resultList.size());
         for (AbstractDeleteResult result : resultList) {
             if (result instanceof DeleteError) {
                 this.inspectDeleteError((DeleteError) result);
@@ -2267,11 +2266,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     protected void inspectDeleteError(DeleteError deleteResult) {
-        Assertions.assertNotNull(deleteResult);
+        Assert.assertNotNull(deleteResult);
     }
 
     protected void inspectDeleteSuccess(DeleteSuccess deleteResult) {
-        Assertions.assertNotNull(deleteResult);
+        Assert.assertNotNull(deleteResult);
     }
 
     @Test
@@ -2279,15 +2278,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String key = "string-test-DeleteObjectRequest";
         String content = "Hello Strings!";
         client.putObject(getTestBucket(), key, content, "text/plain");
-        Assertions.assertEquals(1, client.listObjects(getTestBucket()).getObjects().size());
+        Assert.assertEquals(1, client.listObjects(getTestBucket()).getObjects().size());
 
         DeleteObjectRequest request = new DeleteObjectRequest(getTestBucket(), key);
         client.deleteObject(request);
         try {
             client.getObjectMetadata(getTestBucket(), key);
-            Assertions.fail("expected 404 Not Found");
+            Assert.fail("expected 404 Not Found");
         } catch (S3Exception e) {
-            Assertions.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals(404, e.getHttpCode());
         }
     }
 
@@ -2310,9 +2309,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.deleteObject(getTestBucket(), key);
         String v2 = client.putObject(new PutObjectRequest(getTestBucket(), key, content2)).getVersionId();
 
-        Assertions.assertEquals(mValue,
+        Assert.assertEquals(mValue,
                 client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), key).withVersionId(v1)).getUserMetadata(mKey));
-        Assertions.assertNull(client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), key).withVersionId(v2)).getUserMetadata(mKey));
+        Assert.assertNull(client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), key).withVersionId(v2)).getUserMetadata(mKey));
     }
 
     @Test
@@ -2322,11 +2321,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectMetadata(getTestBucket(), testObject);
         } catch (S3Exception e) {
-            Assertions.assertEquals(404, e.getHttpCode(), "Wrong HTTP status");
-            Assertions.assertEquals("Wrong ErrorCode", "NoSuchKey", e.getErrorCode());
+            Assert.assertEquals("Wrong HTTP status", 404, e.getHttpCode());
+            Assert.assertEquals("Wrong ErrorCode", "NoSuchKey", e.getErrorCode());
 
             // Should not chain a SAX error
-            Assertions.assertNull(e.getCause(), "Should not be chained exception");
+            Assert.assertNull("Should not be chained exception", e.getCause());
         }
     }
 
@@ -2341,7 +2340,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     protected void validateMetadataValues(S3ObjectMetadata objectMetadata) {
-        Assertions.assertNotNull(objectMetadata);
+        Assert.assertNotNull(objectMetadata);
     }
 
     @Test
@@ -2350,12 +2349,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), key, "Hello ACLs!", "text/plain");
 
         AccessControlList acl = client.getObjectAcl(getTestBucket(), key);
-        Assertions.assertNotNull(acl.getOwner());
-        Assertions.assertNotNull(acl.getGrants());
-        Assertions.assertTrue(acl.getGrants().size() > 0);
+        Assert.assertNotNull(acl.getOwner());
+        Assert.assertNotNull(acl.getGrants());
+        Assert.assertTrue(acl.getGrants().size() > 0);
         for (Grant grant : acl.getGrants()) {
-            Assertions.assertNotNull(grant.getGrantee());
-            Assertions.assertNotNull(grant.getPermission());
+            Assert.assertNotNull(grant.getGrantee());
+            Assert.assertNotNull(grant.getPermission());
         }
     }
 
@@ -2370,12 +2369,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String versionId = client.listVersions(getTestBucket(), null).getVersions().get(0).getVersionId();
 
         AccessControlList acl = client.getObjectAcl(new GetObjectAclRequest(getTestBucket(), key).withVersionId(versionId));
-        Assertions.assertNotNull(acl.getOwner());
-        Assertions.assertNotNull(acl.getGrants());
-        Assertions.assertTrue(acl.getGrants().size() > 0);
+        Assert.assertNotNull(acl.getOwner());
+        Assert.assertNotNull(acl.getGrants());
+        Assert.assertTrue(acl.getGrants().size() > 0);
         for (Grant grant : acl.getGrants()) {
-            Assertions.assertNotNull(grant.getGrantee());
-            Assertions.assertNotNull(grant.getPermission());
+            Assert.assertNotNull(grant.getGrantee());
+            Assert.assertNotNull(grant.getPermission());
         }
     }
 
@@ -2437,18 +2436,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Long retentionPeriod = 2L;
         Long newRetentionPeriod = 5L;
 
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6") >= 0, "ECS test bed needs to be 3.6 or later, current version: " + ecsVersion);
+        Assume.assumeTrue("ECS test bed needs to be 3.6 or later, current version: " + ecsVersion, ecsVersion != null && ecsVersion.compareTo("3.6") >= 0);
 
         String bucket = getTestBucket();
         PutObjectRequest request = new PutObjectRequest(bucket, key, content);
         request.withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(retentionPeriod));
         client.putObject(request);
-        Assertions.assertEquals(content, client.readObject(bucket, key, String.class));
-        Assertions.assertEquals(retentionPeriod, client.getObject(bucket, key).getObjectMetadata().getRetentionPeriod());
+        Assert.assertEquals(content, client.readObject(bucket, key, String.class));
+        Assert.assertEquals(retentionPeriod, client.getObject(bucket, key).getObjectMetadata().getRetentionPeriod());
 
         client.extendRetentionPeriod(bucket, key, newRetentionPeriod);
         //Verify retention period has been extended as expected.
-        Assertions.assertEquals(newRetentionPeriod, client.getObject(bucket, key).getObjectMetadata().getRetentionPeriod());
+        Assert.assertEquals(newRetentionPeriod, client.getObject(bucket, key).getObjectMetadata().getRetentionPeriod());
 
         Thread.sleep(5000); // allow retention to expire
     }
@@ -2460,7 +2459,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         s3Config.setUseV2Signer(true);
         S3Client tempClient = new S3JerseyClient(s3Config);
         URL url = tempClient.getPresignedUrl("johnsmith", "photos/puppy.jpg", new Date(1175139620000L));
-        Assertions.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
+        Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D",
                 url.toString());
     }
@@ -2480,7 +2479,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                                 .addUserMetadata("filechecksum", "0x02661779")
                                 .addUserMetadata("reviewedby", "joe@johnsmith.net,jane@johnsmith.net"))
         );
-        Assertions.assertEquals("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz" +
+        Assert.assertEquals("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz" +
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=kPVlidlScN00QlwJMeLd9YWmpOw%3D",
                 url.toString());
 
@@ -2496,9 +2495,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             ClientBuilder.newClient().target(url.toURI())
                     .request("application/x-download").header("x-amz-meta-foo", "bar")
                     .put(Entity.text(content));
-            Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+            Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
             S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-            Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
+            Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
         }
     }
 
@@ -2509,7 +2508,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3Client tempClient = new S3JerseyClient(s3Config);
         URL url = tempClient.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, "static.johnsmith.net", "db-backup.dat.gz", new Date(1175139620000L)));
-        Assertions.assertEquals("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz" +
+        Assert.assertEquals("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz" +
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NnodSmujyUFr7%2Bryb8r42yY1UmM%3D",
                 url.toString());
 
@@ -2530,12 +2529,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         con.setDoOutput(true);
         con.setDoInput(true);
         con.connect();
-        Assertions.assertEquals(200, con.getResponseCode());
+        Assert.assertEquals(200, con.getResponseCode());
 
-        Assertions.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+        Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
 
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Test
@@ -2545,7 +2544,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         s3Config.setUseV2Signer(true);
         S3Client tempClient = new S3JerseyClient(s3Config);
         URL url = tempClient.getPresignedUrl("test-bucket", "解析依頼C1B068.txt", new Date(1500998758000L));
-        Assertions.assertEquals("https://test-bucket.s3.amazonaws.com/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt" +
+        Assert.assertEquals("https://test-bucket.s3.amazonaws.com/%E8%A7%A3%E6%9E%90%E4%BE%9D%E9%A0%BCC1B068.txt" +
                         "?AWSAccessKeyId=stu&Expires=1500998758&Signature=AjZv1TlZgGqlbNsLiYKFkV6gaqg%3D",
                 url.toString());
     }
@@ -2563,7 +2562,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                         .withObjectMetadata(
                                 new S3ObjectMetadata().withContentType("image/jpeg")
                                         .withContentMd5("4gJE4saaMU4BqNR0kLY+lw==")));
-        Assertions.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
+        Assert.assertEquals("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg" +
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=FhNeBaxibG7JkmvMbJD7J11zAMU%3D",
                 url.toString());
     }
@@ -2581,13 +2580,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
 
         Response response = ClientBuilder.newClient().target(url.toURI()).request().get();
-        Assertions.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
+        Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 
     @Test
     public void testVPoolHeader() throws Exception {
         String nonDefaultVpoolID = TestConfig.getProperties().getProperty(TestProperties.NON_DEFAULT_VPOOL);
-        Assertions.assertNotNull(nonDefaultVpoolID);
+        Assume.assumeNotNull(nonDefaultVpoolID);
 
         String bucketName = "looney-bucket-rg";
 
@@ -2668,9 +2667,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                     errorMessage = se.getErrorCode() + ": " + se.getMessage();
             }
         }
-        Assertions.assertNull(errorMessage, errorMessage);
+        Assert.assertNull(errorMessage, errorMessage);
 
-        Assertions.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
+        Assert.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
     }
 
     @Test
@@ -2678,8 +2677,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String marker = "foo/bar/blah%blah&blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
-        Assertions.assertEquals(marker, result.getMarker());
-        Assertions.assertEquals(EncodingType.url, result.getEncodingType());
+        Assert.assertEquals(marker, result.getMarker());
+        Assert.assertEquals(EncodingType.url, result.getEncodingType());
     }
 
     @Test
@@ -2696,11 +2695,11 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         do {
             if (result == null) result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMaxKeys(page));
             else result = client.listMoreObjects(result);
-            Assertions.assertNotNull(result);
+            Assert.assertNotNull(result);
             if (result.isTruncated()) {
-                Assertions.assertEquals(page, result.getObjects().size());
-                Assertions.assertNotNull(result.getNextMarker());
-                Assertions.assertNotEquals(nextMarker, result.getNextMarker());
+                Assert.assertEquals(page, result.getObjects().size());
+                Assert.assertNotNull(result.getNextMarker());
+                Assert.assertNotEquals(nextMarker, result.getNextMarker());
                 nextMarker = result.getNextMarker();
             }
             for (S3Object object : result.getObjects()) {
@@ -2708,7 +2707,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             }
         } while (result.isTruncated());
 
-        Assertions.assertEquals(total, allKeys.size());
+        Assert.assertEquals(total, allKeys.size());
     }
 
     @Test
@@ -2716,7 +2715,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String marker = "foo/bar/blah\u001dblah\u0008blah";
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
-        Assertions.assertEquals(marker, result.getMarker());
+        Assert.assertEquals(marker, result.getMarker());
     }
 
     @Test
@@ -2725,12 +2724,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String host = s3Config.getVdcs().get(0).getHosts().get(0).getName();
 
         PingResponse response = client.pingNode(host);
-        Assertions.assertNotNull(response);
-        Assertions.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
 
         response = client.pingNode(s3Config.getProtocol(), host, s3Config.getPort());
-        Assertions.assertNotNull(response);
-        Assertions.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
     }
 
     @Test
@@ -2751,17 +2750,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
             s3Client.pingNode("8.8.4.4");
-            Assertions.fail("response was not expected; choose an IP that is not in use");
+            Assert.fail("response was not expected; choose an IP that is not in use");
         });
 
         try {
             future.get(CONNECTION_TIMEOUT_MILLIS + 100, TimeUnit.MILLISECONDS); // give an extra 100ms leeway
         } catch (TimeoutException e) {
-            Assertions.fail("connection did not timeout");
+            Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {
-            Assertions.assertTrue(e.getCause() instanceof ProcessingException);
-
-            Assertions.assertTrue(e.getMessage().contains("timed out"));
+            Assert.assertTrue(e.getCause() instanceof ProcessingException);
+            Assert.assertTrue(e.getMessage().contains("timed out"));
         }
     }
 
@@ -2804,7 +2802,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // roughly half should fail
         log.info("requests: " + requests + ", failures: " + failures.get());
-        Assertions.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
+        Assert.assertTrue(Math.abs(Math.round(faultRate * (float) requests) - failures.get()) <= requests / 10); // within 10%
     }
 
     @Test
@@ -2815,13 +2813,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // for some stupid reason, Jersey always uses chunked transfer with "identity" content-encoding
         request.withObjectMetadata(new S3ObjectMetadata().withContentEncoding("identity"));
         client.putObject(request);
-        Assertions.assertNotNull(client.getObjectMetadata(getTestBucket(), key));
+        Assert.assertNotNull(client.getObjectMetadata(getTestBucket(), key));
     }
 
     @Test
     public void testCopyRangeAPI() {
-        Assumptions.assumeTrue(ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0, "ECS version must be at least 3.6.2");
-        Assumptions.assumeFalse(isIamUser, "Copy range API is not supported with IAM user.");
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeFalse("Copy range API is not supported with IAM user.", isIamUser);
 
         String bucketName = getTestBucket(),
                 key1 = "TestObject_source_1",
@@ -2852,7 +2850,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withContentMd5(getContentMD5(CR))
                 .withCopyRange(CR);
         client.copyRange(CRR0);
-        Assertions.assertEquals(key1 + key2, new BufferedReader(
+        Assert.assertEquals(key1 + key2, new BufferedReader(
                 new InputStreamReader(client.readObjectStream(bucketName, keyTargetGood, Range.fromOffset(0)), StandardCharsets.UTF_8))
                 .lines().collect(Collectors.joining("\n")));
 
@@ -2868,10 +2866,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR1);
         } catch (S3Exception e) {
-            Assertions.assertEquals(409, e.getHttpCode());
-            Assertions.assertEquals("ObjectUnderRetention", e.getErrorCode());
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
             // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
-            Assertions.assertEquals("retention", client.readObject(bucketName, keyTargetWithRetention, String.class));
+            Assert.assertEquals("retention", client.readObject(bucketName, keyTargetWithRetention, String.class));
         }
 
         // 2. More than 250 ranges per segment
@@ -2891,14 +2889,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR2);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
             // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
             try {
                 client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2916,13 +2914,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR3);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2941,13 +2939,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR4);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("InvalidCopySource", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidCopySource", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSourceNotFound);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2966,13 +2964,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR5);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("InvalidCopyRange", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidCopyRange", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSourceInvalid);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2991,13 +2989,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR6);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("InvalidArgument", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidArgument", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetETagInvalid);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -3023,13 +3021,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR7);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("Invalid or no customer provided encryption key", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("Invalid or no customer provided encryption key", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSSEInvalid);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -3048,21 +3046,21 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.copyRange(CRR8);
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("InvalidArgument", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidArgument", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSSENoKey);
-                Assertions.fail("expected 404 Not Found");
+                Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
-                Assertions.assertEquals(404, es.getHttpCode());
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {
-        Assertions.assertEquals(acl1.getOwner(), acl2.getOwner());
-        Assertions.assertEquals(acl1.getGrants(), acl2.getGrants());
+        Assert.assertEquals(acl1.getOwner(), acl2.getOwner());
+        Assert.assertEquals(acl1.getGrants(), acl2.getGrants());
     }
 
     @Test
@@ -3099,49 +3097,49 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // GET the Tag of a non-existent object
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, "object-key-not-exist"));
-            Assertions.fail("Fail was expected. Can NOT get tags of a non-existent object");
+            Assert.fail("Fail was expected. Can NOT get tags of a non-existent object");
         } catch (S3Exception e) {
-            Assertions.assertEquals(404, e.getHttpCode());
-            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // should be able to update tags for a particular version of an object, 1 ~ 10
         client.putObjectTagging(putObjectTaggingRequestSingleTag.withVersionId(versionId));
-        Assertions.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId)).getTagSet().size());
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId)).getTagSet().size());
         client.putObjectTagging(putObjectTaggingRequestMultipleTags.withVersionId(versionId));
-        Assertions.assertEquals(10, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId)).getTagSet().size());
+        Assert.assertEquals(10, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId)).getTagSet().size());
 
         // should not be able to add more than 10 tags per object
         try {
             client.putObjectTagging(putObjectTaggingRequestExceededTags.withVersionId(versionId));
-            Assertions.fail("Fail was expected. Can NOT add more than 10 tags per object");
+            Assert.fail("Fail was expected. Can NOT add more than 10 tags per object");
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("invalid content length", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("invalid content length", e.getErrorCode());
         }
 
         // should not be able to accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @
         try {
             client.putObjectTagging(putObjectTaggingRequestMarshalTag);
-            Assertions.fail("Fail was expected. Can NOT accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @");
+            Assert.fail("Fail was expected. Can NOT accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @");
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("UnexpectedContent", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("UnexpectedContent", e.getErrorCode());
         }
 
         // should not be able to have too large key or value.
         try {
             client.putObjectTagging(putObjectTaggingRequestLargeKey);
-            Assertions.fail("Fail was expected. Can NOT accept key with >128 Unicode characters in length, and value with > 256 Unicode characters in length");
+            Assert.fail("Fail was expected. Can NOT accept key with >128 Unicode characters in length, and value with > 256 Unicode characters in length");
         } catch (S3Exception e) {
-            Assertions.assertEquals(400, e.getHttpCode());
-            Assertions.assertEquals("UnexpectedContent", e.getErrorCode());
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("UnexpectedContent", e.getErrorCode());
         }
 
         // GET the tag of an object where the tag was previously deleted.
         client.deleteObjectTagging(new DeleteObjectTaggingRequest(bucketName, key).withVersionId(versionId));
         t = client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId));
-        Assertions.assertNull(t.getTagSet());
+        Assert.assertNull(t.getTagSet());
 
     }
 
@@ -3159,16 +3157,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         // Only the particular version of the object should get deleted and no other versions of object should be affected
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId2));
-        Assertions.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
+        Assert.assertEquals(2, client.getObject(new GetObjectRequest(bucketName, key).withVersionId(versionId1), String.class).getObjectMetadata().getTaggingCount());
 
         // Object and associated multiple tags should get deleted
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1));
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1));
-            Assertions.fail("Fail was expected. Can NOT get tags from a deleted object");
+            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
-            Assertions.assertEquals(404, e.getHttpCode());
-            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
     }
@@ -3187,14 +3185,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withObjectMetadata(metadata)
                 .withObjectTagging(new ObjectTagging().withTagSet(Collections.singletonList(new ObjectTag("k11", "v11")))));
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2));
-        Assertions.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
 
         // Should be able to overwrite tags without affecting metadata
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key4)
                 .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k22", "v22"), new ObjectTag("k33", "v33")))));
-        Assertions.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key4)).getTagSet().size());
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key4)).getTagSet().size());
         // make sure user metadata didn't change
-        Assertions.assertEquals(1, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key4)).getUserMetadata().size());
+        Assert.assertEquals(1, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key4)).getUserMetadata().size());
 
         // Versioned object should be copied and user should be able to get the same along with tags
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
@@ -3202,7 +3200,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withObjectTagging(new ObjectTagging().withTagSet(Arrays.asList(new ObjectTag("k11", "v11"), new ObjectTag("k12", "v12")))));
         String versionId = client.listVersions(bucketName, key1).getVersions().get(0).getVersionId();
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key3).withSourceVersionId(versionId));
-        Assertions.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3)).getTagSet().size());
+        Assert.assertEquals(2, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key3)).getTagSet().size());
     }
 
     @Test
@@ -3222,9 +3220,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.copyObject(new CopyObjectRequest(bucketName, key1, bucketName, key2)
                 .withObjectMetadata(metadata));
         // make sure tagging didn't change
-        Assertions.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key2)).getTagSet().size());
         // make sure user metadata did change
-        Assertions.assertEquals(2, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key2)).getUserMetadata().size());
+        Assert.assertEquals(2, client.getObjectMetadata(new GetObjectMetadataRequest(bucketName, key2)).getUserMetadata().size());
     }
 
     @Test
@@ -3257,16 +3255,16 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId).withParts(parts));
 
         // should be able to get the tag count
-        Assertions.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key)).getTagSet().size());
+        Assert.assertEquals(1, client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key)).getTagSet().size());
 
         // should be able to return proper error when object is deleted
         client.deleteObject(bucketName, key);
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key));
-            Assertions.fail("Fail was expected. Can NOT get tags from a deleted object");
+            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
-            Assertions.assertEquals(404, e.getHttpCode());
-            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
     }
 

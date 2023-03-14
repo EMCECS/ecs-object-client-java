@@ -29,15 +29,12 @@ package com.emc.object.s3;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.ListBucketsRequest;
 import com.emc.object.util.RestUtil;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class ClockSkewTest extends AbstractS3ClientTest {
     @Override
@@ -67,7 +64,7 @@ public class ClockSkewTest extends AbstractS3ClientTest {
             };
             client.listBuckets(request);
         } catch (S3Exception e) {
-            Assertions.assertEquals(403, e.getHttpCode());
+            Assert.assertEquals(403, e.getHttpCode());
         }
     }
 }

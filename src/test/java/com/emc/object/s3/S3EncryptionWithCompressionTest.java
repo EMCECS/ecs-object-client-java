@@ -37,15 +37,17 @@ import com.emc.object.util.RunningChecksum;
 import com.emc.rest.util.StreamUtil;
 import com.emc.util.RandomInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import org.junit.Assume;
+import org.junit.Ignore;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class S3EncryptionWithCompressionTest extends S3EncryptionClientBasicTest {
     @Override
@@ -54,7 +56,6 @@ public class S3EncryptionWithCompressionTest extends S3EncryptionClientBasicTest
     }
 
     @Override
-    @Test
     public void testEncodeMeta() throws Exception {
         String key = "hello.txt";
         String content = "Hello World!";
@@ -70,37 +71,36 @@ public class S3EncryptionWithCompressionTest extends S3EncryptionClientBasicTest
         dos.close();
         byte[] deflatedData = baos.toByteArray();
 
-        Assertions.assertEquals(32, objectMetadata.getContentLength().longValue());
+        assertEquals(32, objectMetadata.getContentLength().longValue());
 
-        Assertions.assertEquals(DigestUtils.sha1Hex(content.getBytes("UTF-8")),
-                encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1), "original digest incorrect");
-        Assertions.assertEquals(12,
-                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SIZE)), "Uncompressed size incorrect");
-        Assertions.assertEquals("-66.7%",
-                encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_RATIO), "Compression ratio incorrect");
-        Assertions.assertEquals(deflatedData.length,
-                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_SIZE)), "Compressed size incorrect");
+        assertEquals("original digest incorrect", DigestUtils.sha1Hex(content.getBytes("UTF-8")),
+                encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1));
+        assertEquals("Uncompressed size incorrect", 12,
+                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SIZE)));
+        assertEquals("Compression ratio incorrect", "-66.7%",
+                encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_RATIO));
+        assertEquals("Compressed size incorrect", deflatedData.length,
+                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_SIZE)));
 
-        Assertions.assertEquals("Unencrypted digest incorrect", DigestUtils.sha1Hex(deflatedData),
+        assertEquals("Unencrypted digest incorrect", DigestUtils.sha1Hex(deflatedData),
                 encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
-        Assertions.assertEquals(deflatedData.length,
-                Long.parseLong(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE)), "Unencrypted size incorrect");
-        Assertions.assertNotNull(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_IV), "Missing IV");
-        Assertions.assertEquals(getKeyProvider().getMasterKeyFingerprint(),
-                encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_KEY_ID), "Incorrect master encryption key ID");
-        Assertions.assertNotNull(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY), "Missing object key");
-        Assertions.assertNotNull(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_META_SIG), "Missing metadata signature");
+        assertEquals("Unencrypted size incorrect", deflatedData.length,
+                Long.parseLong(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE)));
+        assertNotNull("Missing IV", encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_IV));
+        assertEquals("Incorrect master encryption key ID", getKeyProvider().getMasterKeyFingerprint(),
+                encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_KEY_ID));
+        assertNotNull("Missing object key", encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY));
+        assertNotNull("Missing metadata signature", encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_META_SIG));
 
-        Assertions.assertEquals("COMP:Deflate/5,ENC:AES/CBC/PKCS5Padding",
-                encodedMetadata.get(CodecChain.META_TRANSFORM_MODE), "Transform config string incorrect");
+        assertEquals("Transform config string incorrect", "COMP:Deflate/5,ENC:AES/CBC/PKCS5Padding",
+                encodedMetadata.get(CodecChain.META_TRANSFORM_MODE));
     }
 
     @Override
-    @Test
     public void testStream() throws Exception {
         String key = "test-file.txt";
         InputStream rawInput = getClass().getClassLoader().getResourceAsStream("uncompressed.txt");
-        Assertions.assertNotNull(rawInput);
+        Assume.assumeNotNull(rawInput);
 
         client.putObject(new PutObjectRequest(getTestBucket(), key, rawInput)
                 .withObjectMetadata(new S3ObjectMetadata().withContentLength(2516125L)));
@@ -114,33 +114,32 @@ public class S3EncryptionWithCompressionTest extends S3EncryptionClientBasicTest
         dos.close();
         byte[] deflatedData = baos.toByteArray();
 
-        Assertions.assertEquals(223552, objectMetadata.getContentLength().longValue());
+        assertEquals(223552, objectMetadata.getContentLength().longValue());
 
-        Assertions.assertEquals("027e997e6b1dfc97b93eb28dc9a6804096d85873",
-                encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1), "original digest incorrect");
-        Assertions.assertEquals(2516125,
-                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SIZE)), "Uncompressed size incorrect");
-        Assertions.assertEquals("91.1%",
-                encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_RATIO), "Compression ratio incorrect");
-        Assertions.assertEquals( deflatedData.length,
-                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_SIZE)), "Compressed size incorrect");
+        assertEquals("original digest incorrect", "027e997e6b1dfc97b93eb28dc9a6804096d85873",
+                encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1));
+        assertEquals("Uncompressed size incorrect", 2516125,
+                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_UNCOMP_SIZE)));
+        assertEquals("Compression ratio incorrect", "91.1%",
+                encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_RATIO));
+        assertEquals("Compressed size incorrect", deflatedData.length,
+                Long.parseLong(encodedMetadata.get(CompressionConstants.META_COMPRESSION_COMP_SIZE)));
 
-        Assertions.assertEquals(DigestUtils.sha1Hex(deflatedData),
-                encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1), "Unencrypted digest incorrect");
-        Assertions.assertEquals(deflatedData.length,
-                Long.parseLong(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE)), "Unencrypted size incorrect");
-        Assertions.assertNotNull(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_IV), "Missing IV");
-        Assertions.assertEquals(getKeyProvider().getMasterKeyFingerprint(),
-                encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_KEY_ID), "Incorrect master encryption key ID");
-        Assertions.assertNotNull(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY), "Missing object key");
-        Assertions.assertNotNull(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_META_SIG), "Missing metadata signature");
+        assertEquals("Unencrypted digest incorrect", DigestUtils.sha1Hex(deflatedData),
+                encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SHA1));
+        assertEquals("Unencrypted size incorrect", deflatedData.length,
+                Long.parseLong(encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_UNENC_SIZE)));
+        assertNotNull("Missing IV", encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_IV));
+        assertEquals("Incorrect master encryption key ID", getKeyProvider().getMasterKeyFingerprint(),
+                encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_KEY_ID));
+        assertNotNull("Missing object key", encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_OBJECT_KEY));
+        assertNotNull("Missing metadata signature", encodedMetadata.get(EncryptionConstants.META_ENCRYPTION_META_SIG));
 
-        Assertions.assertEquals("COMP:Deflate/5,ENC:AES/CBC/PKCS5Padding",
-                encodedMetadata.get(CodecChain.META_TRANSFORM_MODE), "Transform config string incorrect");
+        assertEquals("Transform config string incorrect", "COMP:Deflate/5,ENC:AES/CBC/PKCS5Padding",
+                encodedMetadata.get(CodecChain.META_TRANSFORM_MODE));
     }
 
     @Override
-    @Test
     public void testLargeStream() throws Exception {
         String key = "big-stream.obj";
         int size = 5 * 1024 * 1024 + 13;
@@ -154,16 +153,15 @@ public class S3EncryptionWithCompressionTest extends S3EncryptionClientBasicTest
         // Make sure the checksum matches
         String sha1hex = cis.getChecksum().getHexValue();
 
-        Assertions.assertNotNull(objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1), "Missing SHA1 meta");
-        Assertions.assertEquals(sha1hex,
-                objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1), "SHA1 incorrect");
-        Assertions.assertEquals(size,
-                Integer.parseInt(objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SIZE)), "Stream length incorrect");
+        assertNotNull("Missing SHA1 meta", objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1));
+        assertEquals("SHA1 incorrect", sha1hex,
+                objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SHA1));
+        assertEquals("Stream length incorrect", size,
+                Integer.parseInt(objectMetadata.getUserMetadata(CompressionConstants.META_COMPRESSION_UNCOMP_SIZE)));
     }
 
-    @Disabled
+    @Ignore
     @Override
-    @Test
     public void testRekey() throws Exception {
     }
 }

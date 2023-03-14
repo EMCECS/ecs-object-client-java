@@ -2,8 +2,8 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.ErrorFilter;
 import com.emc.object.util.RestUtil;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Response;
@@ -32,11 +32,11 @@ public class ErrorFilterTest {
 
         try {
             client.target("http://127.0.0.1/foo").request().head();
-            Assertions.fail("test error generator failed to short-circuit");
+            Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
-            Assertions.assertEquals(statusCode, e.getHttpCode());
-            Assertions.assertEquals(errorCode, e.getErrorCode());
-            Assertions.assertEquals(message, e.getMessage());
+            Assert.assertEquals(statusCode, e.getHttpCode());
+            Assert.assertEquals(errorCode, e.getErrorCode());
+            Assert.assertEquals(message, e.getMessage());
         }
     }
 
@@ -59,11 +59,11 @@ public class ErrorFilterTest {
 
         try {
             client.target("http://127.0.0.1/foo").request().head();
-            Assertions.fail("test error generator failed to short-circuit");
+            Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
-            Assertions.assertEquals(statusCode, e.getHttpCode());
-            Assertions.assertEquals(errorCode, e.getErrorCode());
-            Assertions.assertEquals(message, e.getMessage());
+            Assert.assertEquals(statusCode, e.getHttpCode());
+            Assert.assertEquals(errorCode, e.getErrorCode());
+            Assert.assertEquals(message, e.getMessage());
         }
         client.close();
     }
