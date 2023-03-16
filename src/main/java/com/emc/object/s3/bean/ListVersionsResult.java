@@ -45,9 +45,7 @@ public class ListVersionsResult implements UrlEncodable {
     private String nextKeyMarker;
     private String nextVersionIdMarker;
     private boolean truncated;
-
-    //    private List<AbstractVersion> versions = new ArrayList<>();
-    private List<AbstractVersion> versions;
+    private List<AbstractVersion> versions = new ArrayList<>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,

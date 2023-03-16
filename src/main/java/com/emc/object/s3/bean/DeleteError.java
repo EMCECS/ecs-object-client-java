@@ -34,11 +34,6 @@ public class DeleteError extends AbstractDeleteResult {
     private String code;
     private String message;
 
-    public DeleteError(String code, String message) {
-        this.code = code;
-        this.message = message;
-    }
-
     @XmlElement(name = "Code")
     public String getCode() {
         return code;

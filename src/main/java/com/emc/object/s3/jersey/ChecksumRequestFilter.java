@@ -1,9 +1,10 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.*;
+import com.emc.object.util.ChecksumAlgorithm;
+import com.emc.object.util.ChecksummedOutputStream;
 import com.emc.object.util.RestUtil;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.digest.DigestUtils;
+import com.emc.object.util.RunningChecksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,11 +12,12 @@ import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
-import java.io.BufferedOutputStream;
+import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 @Provider
@@ -26,7 +28,6 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
 
     private S3Config s3Config;
     private S3Signer signer;
-    ThreadLocal<MessageDigest> MD5_DIGEST = ThreadLocal.withInitial(DigestUtils::getMd5Digest);
 
     public ChecksumRequestFilter(S3Config s3Config) {
         this.s3Config = s3Config;
@@ -40,39 +41,73 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
     public void filter(ClientRequestContext requestContext) throws IOException {
         Boolean verifyWrite = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
         if (verifyWrite != null && verifyWrite) {
-            // todo wrap stream to calculate write checksum
+            // wrap stream to calculate write checksum
+            try {
+                requestContext.setEntityStream(new ChecksummedOutputStream(requestContext.getEntityStream(), new RunningChecksum(ChecksumAlgorithm.MD5)));
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("fatal: MD5 algorithm not found");
+            }
         }
 
         Boolean generateMd5 = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
         if (generateMd5 != null && generateMd5) {
             // wrap stream to generate Content-MD5 header
-            OutputStream outputStream = requestContext.getEntityStream();
-            outputStream = new BufferedOutputStream(outputStream);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            baos.writeTo(outputStream);
+            try {
+                RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                OutputStream finalStream = requestContext.getEntityStream();
+                requestContext.setEntityStream(new CloseNotifyOutputStream(buffer));
+                requestContext.setEntityStream(new ChecksummedOutputStream(requestContext.getEntityStream(), checksum));
 
-            final MessageDigest md5Digest = MD5_DIGEST.get();
-            md5Digest.reset();
-            final byte[] contentMd5Bytes = md5Digest.digest(baos.toByteArray());
-            final String contentMd5EncodedHash = new String(Base64.encodeBase64(contentMd5Bytes));
+                // add Content-MD5 (before anything is written to the final stream)
+                requestContext.getHeaders().add(RestUtil.HEADER_CONTENT_MD5, DatatypeConverter.printBase64Binary(checksum.getByteValue()));
 
-            // set the Content-MD5 header in the request
-            requestContext.getHeaders().add(RestUtil.HEADER_CONTENT_MD5, contentMd5EncodedHash);
+                // need to re-sign request because Content-MD5 is included in the signature!
+                if (s3Config.getIdentity() != null) {
+                    Map<String, String> parameters = RestUtil.getQueryParameterMap(requestContext.getUri().getRawQuery());
 
+                    String resource = VHostUtil.getResourceString(s3Config,
+                            (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                            (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                            RestUtil.getEncodedPath(requestContext.getUri()));
+
+                    signer.sign(requestContext,
+                            resource,
+                            parameters,
+                            requestContext.getHeaders());
+                }
+
+                // write the complete buffered data
+//                finalStream.write(buffer.toByteArray());
+
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("fatal: MD5 algorithm not found");
+            }
         }
 
-        if (s3Config.getIdentity() != null) {
-            Map<String, String> parameters = RestUtil.getQueryParameterMap(requestContext.getUri().getRawQuery());
 
-            String resource = VHostUtil.getResourceString(s3Config,
-                    (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE),
-                    (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
-                    RestUtil.getEncodedPath(requestContext.getUri()));
 
-            signer.sign(requestContext,
-                    resource,
-                    parameters,
-                    requestContext.getHeaders());
+    }
+
+    private class CloseNotifyOutputStream extends FilterOutputStream {
+        CloseNotifyOutputStream(OutputStream out) {
+            super(out);
+        }
+
+        @Override
+        public void write(byte[] b) throws IOException {
+            write(b, 0, b.length);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            out.write(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            super.close();
         }
     }
+
 }

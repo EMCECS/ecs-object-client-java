@@ -34,11 +34,6 @@ public class DeleteSuccess extends AbstractDeleteResult {
     private boolean deleteMarker;
     private String deleteMarkerVersionId;
 
-    public DeleteSuccess(boolean deleteMarker, String deleteMarkerVersionId) {
-        this.deleteMarker = deleteMarker;
-        this.deleteMarkerVersionId = deleteMarkerVersionId;
-    }
-
     @XmlElement(name = "DeleteMarker")
     public boolean isDeleteMarker() {
         return deleteMarker;

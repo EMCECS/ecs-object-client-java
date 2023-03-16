@@ -36,7 +36,8 @@ import java.util.List;
 public class DeleteObjectsResult {
     private List<AbstractDeleteResult> results = new ArrayList<AbstractDeleteResult>();
 
-    @XmlElementRefs({@XmlElementRef(type = DeleteSuccess.class), @XmlElementRef(type = DeleteError.class)})    public List<AbstractDeleteResult> getResults() {
+    @XmlElementRefs({@XmlElementRef(type = DeleteSuccess.class), @XmlElementRef(type = DeleteError.class)})
+    public List<AbstractDeleteResult> getResults() {
         return results;
     }
 

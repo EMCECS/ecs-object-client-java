@@ -1,9 +1,6 @@
 package com.emc.object.s3.jersey;
 
-import com.emc.object.util.ChecksumAlgorithm;
-import com.emc.object.util.ChecksumValueImpl;
-import com.emc.object.util.ChecksummedInputStream;
-import com.emc.object.util.RestUtil;
+import com.emc.object.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,13 +30,12 @@ public class ChecksumResponseFilter implements ClientResponseFilter {
         String contentMd5 = RestUtil.getFirstAsString(responseContext.getHeaders(), RestUtil.EMC_CONTENT_MD5);
         if (contentMd5 != null) md5Header = contentMd5;
 
-        // Billy remove comment
-//        Boolean verifyWrite = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
-//        if (verifyWrite != null && verifyWrite && md5Header != null) {
-//            // verify write checksum
+        Boolean verifyWrite = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
+        if (verifyWrite != null && verifyWrite && md5Header != null) {
+            // verify write checksum
 //            if (!adapter.getChecksum().getHexValue().equals(md5Header))
 //                throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getHexValue(), md5Header);
-//        }
+        }
 
         Boolean verifyRead = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
         if (verifyRead != null && verifyRead && md5Header != null) {
@@ -51,6 +47,8 @@ public class ChecksumResponseFilter implements ClientResponseFilter {
                 throw new RuntimeException("fatal: MD5 algorithm not found");
             }
         }
+
+
 
     }
 }

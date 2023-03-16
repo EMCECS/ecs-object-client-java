@@ -195,20 +195,18 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             client = SmartClientFactory.createSmartClient(smartConfig, client);
         }
 
-        // Smart filter will be removed if it exists and then will be re-added.
         // Because host header could be replaced by smart client, which could make v4 signing fail,
         // so need to make sure auth filter is after the smart filter.
         // And also need to make sure that geoPinning filter is before smart filter.
 
         // jersey filters
         client.register(new ErrorFilter());
-//        if (s3Config.isChecksumEnabled()) client.register(new ChecksumResponseFilter());
-
+        if (s3Config.isChecksumEnabled()) {
+            client.register(new ChecksumRequestFilter(s3Config));
+//            client.register(new ChecksumResponseFilter());
+        }
         if (s3Config.getFaultInjectionRate() > 0.0f)
             client.register(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
-//        if (s3Config.isChecksumEnabled()) {
-//            client.register(new ChecksumRequestFilter(s3Config));
-//        }
         client.register(new AuthorizationFilter(s3Config));
         // SmartFilter ia already inserted when createSmartClient
         if (s3Config.isGeoPinningEnabled()) client.register(new GeoPinningFilter(s3Config));
@@ -540,8 +538,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public PutObjectResult putObject(PutObjectRequest request) {
         // enable checksum of the object
-        // Billy todo: remove comment
-//        request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
+        request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
         PutObjectResult result = new PutObjectResult();
         fillResponseEntity(result, executeAndClose(client, request));
         return result;

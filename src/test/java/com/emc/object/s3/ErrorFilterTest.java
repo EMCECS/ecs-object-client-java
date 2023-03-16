@@ -1,12 +1,15 @@
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.ErrorFilter;
+import com.emc.object.s3.jersey.FilterPriorities;
 import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.jersey.OctetStreamXmlProvider;
+import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Priority;
 import javax.ws.rs.client.*;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -28,14 +31,17 @@ public class ErrorFilterTest {
         Client client = ClientBuilder.newClient();
         // order of execution is reversed from this order
         client.register(new TestErrorGenerator(statusCode, xml));
-        client.register(new ErrorFilter());
+//        client.register(new ErrorFilter());
+//        client.register(WebApplicationExceptionMapper.class);
+        client.register(OctetStreamXmlProvider.class);
+        client.register(JacksonJaxbXMLProvider.class);
 
         try {
             client.target("http://127.0.0.1/foo").request().head();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
-            Assert.assertEquals(statusCode, e.getHttpCode());
-            Assert.assertEquals(errorCode, e.getErrorCode());
+            Assert.assertEquals(statusCode,  ((S3Exception) e.getCause()).getHttpCode());
+            Assert.assertEquals(errorCode, ((S3Exception) e.getCause()).getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
     }
@@ -55,7 +61,7 @@ public class ErrorFilterTest {
         Client client = ClientBuilder.newClient();
         // order of execution is reversed from this order
         client.register(new TestErrorGenerator(statusCode, xml));
-        client.register(new ErrorFilter());
+//        client.register(new ErrorFilter());
 
         try {
             client.target("http://127.0.0.1/foo").request().head();
@@ -68,7 +74,9 @@ public class ErrorFilterTest {
         client.close();
     }
 
-    static class TestErrorGenerator implements ClientRequestFilter, ClientResponseFilter {
+    @Provider
+    @Priority(FilterPriorities.PRIORITY_ERROR - 1)
+    static class TestErrorGenerator implements ClientResponseFilter {
         private final int statusCode;
         private final String errorBody;
 
@@ -78,14 +86,10 @@ public class ErrorFilterTest {
         }
 
         @Override
-        public void filter(ClientRequestContext requestContext) {
-            requestContext.getHeaders().putSingle("Date", RestUtil.headerFormat(new Date()));
-        }
-
-        @Override
         public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) {
             InputStream dataStream = new ByteArrayInputStream(errorBody.getBytes(StandardCharsets.UTF_8));
-            responseContext.setStatusInfo(Response.Status.fromStatusCode(statusCode));
+            responseContext.setStatus(statusCode);
+            responseContext.getHeaders().putSingle("Date", RestUtil.headerFormat(new Date()));
             responseContext.setEntityStream(dataStream);
         }
     }

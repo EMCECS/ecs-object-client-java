@@ -29,23 +29,14 @@ package com.emc.object.s3.bean;
 import com.emc.object.util.RestUtil;
 
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
-import javax.xml.bind.annotation.XmlType;
 
-@XmlType(name = "Version")
+@XmlRootElement(name = "Version")
 public class Version extends AbstractVersion {
     private String eTag;
     private Long size;
     private StorageClass storageClass;
-
-    public Version() {
-    }
-
-    public Version(String eTag, Long size, StorageClass storageClass) {
-        this.eTag = eTag;
-        this.size = size;
-        this.storageClass = storageClass;
-    }
 
     @XmlElement(name = "ETag")
     public String getETag() {
