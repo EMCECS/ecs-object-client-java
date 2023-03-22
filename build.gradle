@@ -62,7 +62,7 @@ repositories {
 }
 
 dependencies {
-    // Billy
+    implementation files('smarttest/smart-client-core.jar', 'smarttest/smart-client-ecs.jar', 'smarttest/smart-client-jersey.jar')
 //    implementation 'com.emc.ecs:smart-client-ecs:3.0.2'
     implementation 'org.glassfish.jersey.core:jersey-client:2.38'
     implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.38'
@@ -91,15 +91,10 @@ dependencies {
     }
     implementation 'org.slf4j:slf4j-api:2.0.6'
     testImplementation 'junit:junit:4.13.2'
-//    testImplementation 'org.slf4j:slf4j-simple:2.0.6'
-//    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-//    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.2'
     testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.6'
     testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0'
-
-    // Billy
-    implementation files('smarttest/smart-client-core.jar', 'smarttest/smart-client-ecs.jar', 'smarttest/smart-client-jersey.jar')
+    testImplementation 'com.github.tomakehurst:wiremock:2.27.2'
 
 }
 

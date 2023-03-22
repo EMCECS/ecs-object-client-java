@@ -1,19 +1,21 @@
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.FilterPriorities;
-import com.emc.object.util.RestUtil;
+import com.emc.object.s3.jersey.ErrorFilter;
 import com.emc.rest.smart.jersey.OctetStreamXmlProvider;
 import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import org.glassfish.jersey.message.internal.ByteArrayProvider;
+import org.glassfish.jersey.message.internal.FileProvider;
+import org.glassfish.jersey.message.internal.InputStreamProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Priority;
-import javax.ws.rs.client.*;
-import javax.ws.rs.ext.Provider;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 
 public class ErrorFilterTest {
     @Test
@@ -29,17 +31,20 @@ public class ErrorFilterTest {
                 "</Error>";
 
         Client client = ClientBuilder.newClient();
-        // order of execution is reversed from this order
-        client.register(new TestErrorGenerator(statusCode, xml));
-//        client.register(new ErrorFilter());
-//        client.register(WebApplicationExceptionMapper.class);
-        client.register(OctetStreamXmlProvider.class);
-        client.register(JacksonJaxbXMLProvider.class);
+        client.register(new ErrorFilter());
+
+        WireMockServer wireMockServer = new WireMockServer(options().port(8080));
+        wireMockServer.start();
+        stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
+                .withStatus(statusCode)
+                .withStatusMessage(message)
+                .withHeader("Content-Type", "application/xml")
+                .withBody(xml.getBytes(StandardCharsets.UTF_8))));
 
         try {
             client.target("http://127.0.0.1/foo").request().head();
             Assert.fail("test error generator failed to short-circuit");
-        } catch (S3Exception e) {
+        } catch (RuntimeException e) {
             Assert.assertEquals(statusCode,  ((S3Exception) e.getCause()).getHttpCode());
             Assert.assertEquals(errorCode, ((S3Exception) e.getCause()).getErrorCode());
             Assert.assertEquals(message, e.getMessage());
@@ -59,38 +64,31 @@ public class ErrorFilterTest {
                 "</Error>";
 
         Client client = ClientBuilder.newClient();
-        // order of execution is reversed from this order
-        client.register(new TestErrorGenerator(statusCode, xml));
-//        client.register(new ErrorFilter());
+        client.register(new ErrorFilter());
+        client.register(OctetStreamXmlProvider.class);
+        client.register(JacksonJaxbXMLProvider.class);
+        client.register(ByteArrayProvider.class);
+        client.register(FileProvider.class);
+        client.register(InputStreamProvider.class);
+
+        WireMockServer wireMockServer = new WireMockServer(options().port(8080));
+        wireMockServer.start();
+        stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
+                .withStatus(statusCode)
+                .withStatusMessage(message)
+                .withHeader("Content-Type", "application/xml")
+                .withBody(xml.getBytes(StandardCharsets.UTF_8))));
 
         try {
-            client.target("http://127.0.0.1/foo").request().head();
+            client.target("http://127.0.0.1:8080/foo").request().head();
             Assert.fail("test error generator failed to short-circuit");
-        } catch (S3Exception e) {
-            Assert.assertEquals(statusCode, e.getHttpCode());
-            Assert.assertEquals(errorCode, e.getErrorCode());
+        } catch (RuntimeException e) {
+            Assert.assertEquals(statusCode, ((S3Exception) e.getCause()).getHttpCode());
+            Assert.assertEquals(errorCode, ((S3Exception) e.getCause()).getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
         client.close();
+        wireMockServer.stop();
     }
 
-    @Provider
-    @Priority(FilterPriorities.PRIORITY_ERROR - 1)
-    static class TestErrorGenerator implements ClientResponseFilter {
-        private final int statusCode;
-        private final String errorBody;
-
-        TestErrorGenerator(int statusCode, String errorBody) {
-            this.statusCode = statusCode;
-            this.errorBody = errorBody;
-        }
-
-        @Override
-        public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) {
-            InputStream dataStream = new ByteArrayInputStream(errorBody.getBytes(StandardCharsets.UTF_8));
-            responseContext.setStatus(statusCode);
-            responseContext.getHeaders().putSingle("Date", RestUtil.headerFormat(new Date()));
-            responseContext.setEntityStream(dataStream);
-        }
-    }
 }

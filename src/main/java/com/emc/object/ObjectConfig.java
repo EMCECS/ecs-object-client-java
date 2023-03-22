@@ -54,7 +54,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final String PROPERTY_PROXY_USER = "com.emc.object.proxyUser";
     public static final String PROPERTY_PROXY_PASS = "com.emc.object.proxyPass";
 
-    // Billy
     public static final String PROPERTY_RETRY_COUNT = "com.emc.object.retryCount";
     protected boolean retryEnabled = true;
 
@@ -66,7 +65,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
     public static final int DEFAULT_READ_TIMEOUT = 0; // default is infinity
 
-    // Billy
     public static final int DEFAULT_INITIAL_RETRY_DELAY = 1000; // ms
     public static final int DEFAULT_RETRY_LIMIT = 3;
     public static final int DEFAULT_RETRY_BUFFER_SIZE = 2 * 1024 * 1024;

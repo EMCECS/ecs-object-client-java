@@ -119,31 +119,9 @@ public class S3EncryptionClient extends S3JerseyClient {
                 : new CodecChain(encryptionConfig.getEncryptionSpec());
         encodeChain.setProperties(encryptionConfig.getCodecProperties());
 
-        // insert codec filter into chain before the authorization filter
-        // as usual, Jersey makes this quite hard
+        // insert codec filter into chain before the authorization filter, checksum filter
+        client.register(new CodecFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
 
-        // first, make a list of the filters
-        /* Billy
-        List<ClientFilter> filters = new ArrayList<ClientFilter>();
-        ClientHandler handler = client.getHeadHandler();
-        while (handler instanceof ClientFilter) {
-            ClientFilter filter = (ClientFilter) handler;
-            if (filter instanceof AuthorizationFilter) {
-                // insert codec filter before checksum filter
-                filters.add(new CodecFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
-            }
-            filters.add(filter);
-            handler = filter.getNext();
-        }
-
-        // then re-create the filter list (must reverse the list because filters are inserted back to front)
-        Collections.reverse(filters);
-        client.removeAllFilters();
-        for (ClientFilter filter : filters) {
-            client.addFilter(filter);
-        }
-
-         */
     }
 
     /**

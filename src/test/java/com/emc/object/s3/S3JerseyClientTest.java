@@ -2785,8 +2785,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
                     try {
                         clientF.pingNode(hosts.get(i.get() % hosts.size()).getName());
-                    } catch (S3Exception e) {
-                        if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
+                    } catch (ProcessingException e) {
+                        if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(((S3Exception) e.getCause()).getErrorCode()))
                             failures.incrementAndGet();
                         else throw e;
                     }

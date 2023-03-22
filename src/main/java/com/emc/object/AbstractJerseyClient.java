@@ -119,6 +119,7 @@ public abstract class AbstractJerseyClient {
             InputStream entityStream = null;
             if (entity instanceof InputStream)
                 entityStream = (InputStream) entity;
+
             while (true) {
 
                 try {
@@ -126,9 +127,9 @@ public abstract class AbstractJerseyClient {
                     if (entityStream != null && entityStream.markSupported())
                         entityStream.mark(objectConfig.getRetryBufferSize());
 
-                    Response response = Objects.isNull(entity) ? builder.method(method.name())
+                    return Objects.isNull(entity)
+                            ? builder.method(method.name())
                             : builder.method(method.name(), Entity.entity(entity, contentType));
-                    return response;
 
                 } catch (RuntimeException orig) {
                     Throwable t = orig;
@@ -153,8 +154,6 @@ public abstract class AbstractJerseyClient {
                     // attempt to reset InputStream
                     if (entityStream != null) {
                         try {
-//                            if (!entityStream.markSupported())
-//                                throw new IOException("stream does not support mark/reset");
                             entityStream.reset();
                         } catch (IOException e) {
                             log.warn("could not reset entity stream for retry: " + e);

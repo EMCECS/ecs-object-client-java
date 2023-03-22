@@ -62,6 +62,11 @@ public abstract class AbstractClientTest {
     protected abstract void cleanUpBucket(String bucketName) throws Exception;
 
     /**
+     * Ditto for deleting the test bucket/directory and all of its contents
+     */
+    protected abstract void cleanUpTestBucket(String bucketName) throws Exception;
+
+    /**
      * Override to provide a different bucket prefix for each subclass.
      */
     protected String getTestBucketPrefix() {
@@ -93,7 +98,7 @@ public abstract class AbstractClientTest {
     @After
     public final void destroyTestBucket() throws Exception {
         log.info("cleaning up bucket " + getTestBucket());
-        cleanUpBucket(getTestBucket());
+        cleanUpTestBucket(getTestBucket());
     }
 
     protected File createRandomTempFile(int size) throws Exception {

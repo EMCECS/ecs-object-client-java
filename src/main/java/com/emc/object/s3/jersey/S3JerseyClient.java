@@ -203,7 +203,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.register(new ErrorFilter());
         if (s3Config.isChecksumEnabled()) {
             client.register(new ChecksumRequestFilter(s3Config));
-//            client.register(new ChecksumResponseFilter());
+            client.register(new ChecksumResponseFilter());
         }
         if (s3Config.getFaultInjectionRate() > 0.0f)
             client.register(new FaultInjectionFilter(s3Config.getFaultInjectionRate()));
@@ -820,7 +820,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
         Response response = executeRequest(client, request);
         try {
-//            String debug = new Scanner(response.readEntity(InputStream.class)).useDelimiter("\\A").next();
+//            String responseEntityDebug = new Scanner(response.readEntity(InputStream.class)).useDelimiter("\\A").next();
             T responseEntity = response.readEntity(responseType);
             fillResponseEntity(responseEntity, response);
             return responseEntity;

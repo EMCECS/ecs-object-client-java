@@ -8,7 +8,7 @@
 
     <Loggers>
         <Logger name="org.apache.http.wire" level="info"/>
-        <Logger name="org.glassfish.jersey" level="debug"/>
+<!--        <Logger name="org.glassfish.jersey" level="debug"/>-->
 <!--        <Logger name="com.emc.rest.smart" level="debug"/>-->
 
         <!-- signature debugging -->

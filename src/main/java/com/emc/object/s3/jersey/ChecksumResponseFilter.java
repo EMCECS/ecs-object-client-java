@@ -1,8 +1,6 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
@@ -16,8 +14,6 @@ import java.security.NoSuchAlgorithmException;
 @Priority(FilterPriorities.PRIORITY_CHECKSUM_RESPONSE)
 public class ChecksumResponseFilter implements ClientResponseFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(ChecksumResponseFilter.class);
-
     @Override
     public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
         // pull etag from response headers
@@ -30,7 +26,7 @@ public class ChecksumResponseFilter implements ClientResponseFilter {
         String contentMd5 = RestUtil.getFirstAsString(responseContext.getHeaders(), RestUtil.EMC_CONTENT_MD5);
         if (contentMd5 != null) md5Header = contentMd5;
 
-        Boolean verifyWrite = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
+        Boolean verifyWrite = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
         if (verifyWrite != null && verifyWrite && md5Header != null) {
             // verify write checksum
 //            if (!adapter.getChecksum().getHexValue().equals(md5Header))

@@ -81,8 +81,7 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
             log.info(Arrays.toString(loadBalancer.getHostStats()));
         }
     }
-//    todo: workaround to avoid 'client instance has been closed' error. should figure out a more flexible way.
-//    @After
+
     public void shutdownClient() {
         if (client != null) client.destroy();
     }
@@ -114,9 +113,13 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
             }
             client.deleteBucket(bucketName);
 
-            // todo: workaround to avoid 'client instance has been closed' error. should figure out a more flexible way.
-            shutdownClient();
         }
+    }
+
+    @Override
+    protected void cleanUpTestBucket(String bucketName) {
+        cleanUpBucket(bucketName);
+        shutdownClient();
     }
 
     /**
