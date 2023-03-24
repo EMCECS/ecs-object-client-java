@@ -43,7 +43,9 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
         if (verifyWrite != null && verifyWrite) {
             // wrap stream to calculate write checksum
             try {
-                requestContext.setEntityStream(new ChecksummedOutputStream(requestContext.getEntityStream(), new RunningChecksum(ChecksumAlgorithm.MD5)));
+                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                requestContext.setEntityStream(new ChecksummedOutputStream(requestContext.getEntityStream(), checksum));
+                requestContext.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE, checksum);
                 requestContextThreadLocal.set(requestContext);
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("fatal: MD5 algorithm not found");

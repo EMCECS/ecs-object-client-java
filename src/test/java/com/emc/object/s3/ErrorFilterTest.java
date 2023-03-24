@@ -1,12 +1,7 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.ErrorFilter;
-import com.emc.rest.smart.jersey.OctetStreamXmlProvider;
-import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import org.glassfish.jersey.message.internal.ByteArrayProvider;
-import org.glassfish.jersey.message.internal.FileProvider;
-import org.glassfish.jersey.message.internal.InputStreamProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,7 +37,7 @@ public class ErrorFilterTest {
                 .withBody(xml.getBytes(StandardCharsets.UTF_8))));
 
         try {
-            client.target("http://127.0.0.1/foo").request().head();
+            client.target("http://127.0.0.1:8080/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (RuntimeException e) {
             Assert.assertEquals(statusCode,  ((S3Exception) e.getCause()).getHttpCode());
@@ -65,11 +60,6 @@ public class ErrorFilterTest {
 
         Client client = ClientBuilder.newClient();
         client.register(new ErrorFilter());
-        client.register(OctetStreamXmlProvider.class);
-        client.register(JacksonJaxbXMLProvider.class);
-        client.register(ByteArrayProvider.class);
-        client.register(FileProvider.class);
-        client.register(InputStreamProvider.class);
 
         WireMockServer wireMockServer = new WireMockServer(options().port(8080));
         wireMockServer.start();
@@ -80,7 +70,7 @@ public class ErrorFilterTest {
                 .withBody(xml.getBytes(StandardCharsets.UTF_8))));
 
         try {
-            client.target("http://127.0.0.1:8080/foo").request().head();
+            client.target("http://127.0.0.1:8080/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (RuntimeException e) {
             Assert.assertEquals(statusCode, ((S3Exception) e.getCause()).getHttpCode());

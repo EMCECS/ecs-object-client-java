@@ -90,7 +90,7 @@ public class GeoPinningFilter implements ClientRequestFilter {
                 }
             }
 
-            request.getConfiguration().getProperties().put(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
+            request.setProperty(GeoPinningRule.PROP_GEO_PINNED_VDC, healthyVdcs.get(geoPinIndex));
         }
 
     }

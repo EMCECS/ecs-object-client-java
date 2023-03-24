@@ -36,30 +36,23 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
-import javax.ws.rs.client.ClientResponseContext;
-import javax.ws.rs.client.ClientResponseFilter;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 @Provider
-@Priority(FilterPriorities.PRIORITY_CODEC)
-public class CodecFilter implements ClientRequestFilter, ClientResponseFilter {
+@Priority(FilterPriorities.PRIORITY_CODEC_REQUEST)
+public class CodecRequestFilter implements ClientRequestFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(CodecRequestFilter.class);
 
-    private CodecChain encodeChain;
+    private final CodecChain encodeChain;
     private Map<String, Object> codecProperties;
-    Map<String, String> metaBackup;
 
-    public CodecFilter(CodecChain encodeChain) {
+    public CodecRequestFilter(CodecChain encodeChain) {
         this.encodeChain = encodeChain;
     }
 
@@ -83,7 +76,7 @@ public class CodecFilter implements ClientRequestFilter, ClientResponseFilter {
             }
 
             // backup original metadata in case of an error
-            metaBackup = new HashMap<String, String>(userMeta);
+            requestContext.setProperty(RestUtil.PROPERTY_META_BACKUP, new HashMap<String, String>(userMeta));
 
             // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
             // a "dangling" output stream and connect it in the adapter
@@ -100,61 +93,6 @@ public class CodecFilter implements ClientRequestFilter, ClientResponseFilter {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
-        Boolean encode = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
-        Map<String, String> userMeta = (Map<String, String>) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_USER_METADATA);
-
-        // throw exception if RuntimeException
-        if (responseContext.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
-            if (encode != null && encode) {
-                // restore metadata from backup
-                userMeta.clear();
-                userMeta.putAll(metaBackup);
-            }
-//            throw e;
-        }
-        // make sure we clear the content-length override for this thread if we set it
-        if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
-
-        // get user metadata from response headers
-        MultivaluedMap<String, String> headers = responseContext.getHeaders();
-        Map<String, String> storedMeta = S3ObjectMetadata.getUserMetadata(headers);
-        Set<String> keysToRemove = new HashSet<String>(storedMeta.keySet());
-
-        // get encode specs from user metadata
-        String[] encodeSpecs = CodecChain.getEncodeSpecs(storedMeta);
-        if (encodeSpecs != null) {
-
-            // create codec chain
-            CodecChain decodeChain = new CodecChain(encodeSpecs).withProperties(codecProperties);
-
-            // do we need to decode the entity?
-            Boolean decode = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_DECODE_ENTITY);
-            if (decode != null && decode) {
-
-                // wrap input stream with decryptor (this will remove any encode metadata from storedMeta)
-                responseContext.setEntityStream(decodeChain.getDecodeStream(responseContext.getEntityStream(), storedMeta));
-            } else {
-
-                // need to remove any encode metadata so we can update the headers
-                decodeChain.removeEncodeMetadata(storedMeta, decodeChain.getEncodeMetadataList(storedMeta));
-            }
-
-            // should we keep the encode headers?
-            Boolean keepHeaders = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS);
-            if (keepHeaders == null || !keepHeaders) {
-
-                // remove encode metadata from headers (storedMeta now contains only user-defined metadata)
-                keysToRemove.removeAll(storedMeta.keySet()); // all metadata - user-defined metadata
-                for (String key : keysToRemove) {
-                    headers.remove(S3ObjectMetadata.getHeaderName(key));
-                }
-            }
-        }
-    }
-
     public Map<String, Object> getCodecProperties() {
         return codecProperties;
     }
@@ -163,7 +101,7 @@ public class CodecFilter implements ClientRequestFilter, ClientResponseFilter {
         this.codecProperties = codecProperties;
     }
 
-    public CodecFilter withCodecProperties(Map<String, Object> codecProperties) {
+    public CodecRequestFilter withCodecProperties(Map<String, Object> codecProperties) {
         setCodecProperties(codecProperties);
         return this;
     }

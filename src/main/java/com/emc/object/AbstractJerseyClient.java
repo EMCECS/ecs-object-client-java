@@ -39,7 +39,9 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Variant;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -68,6 +70,8 @@ public abstract class AbstractJerseyClient {
     protected Response executeRequest(Client client, ObjectRequest request) {
         try {
             String contentType = null;
+            //TODO: should enable contentEncoding feature to EntityRequest. Make a simple workaround fix for test case here.
+            String contentEncoding = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_ENCODING);;
             Object entity = null;
             Method method = request.getMethod();
             if (method.isRequiresEntity()) {
@@ -129,7 +133,7 @@ public abstract class AbstractJerseyClient {
 
                     return Objects.isNull(entity)
                             ? builder.method(method.name())
-                            : builder.method(method.name(), Entity.entity(entity, contentType));
+                            : builder.method(method.name(), Entity.entity(entity, new Variant(MediaType.valueOf(contentType), (String) null, contentEncoding)));
 
                 } catch (RuntimeException orig) {
                     Throwable t = orig;

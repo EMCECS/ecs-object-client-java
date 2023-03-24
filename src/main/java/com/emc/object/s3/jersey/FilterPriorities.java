@@ -9,14 +9,14 @@ public class FilterPriorities {
     public static final int PRIORITY_BUCKET = 1100;
     public static final int PRIORITY_GEOPINNING = 1200;
 //    public static final int PRIORITY_SMART = 1400;
-    public static final int PRIORITY_CODEC = 1500;
-    public static final int PRIORITY_CHECKSUM_REQUEST = 1800;
-
+    public static final int PRIORITY_CODEC_REQUEST = 1500;
     public static final int PRIORITY_AUTHORIZATION = Priorities.AUTHORIZATION; //2000
+    public static final int PRIORITY_CHECKSUM_REQUEST = 2500;
+    public static final int PRIORITY_FAULTINJECTION = 2800;
 
     // providers used during response processing (using descending manner)
+    public static final int PRIORITY_CODEC_RESPONSE = 1500;
     public static final int PRIORITY_CHECKSUM_RESPONSE = Priorities.ENTITY_CODER; //4000
-    public static final int PRIORITY_FAULTINJECTION = Priorities.USER; //5000
     public static final int PRIORITY_ERROR = Priorities.USER; //5000
 
 

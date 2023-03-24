@@ -120,7 +120,8 @@ public class S3EncryptionClient extends S3JerseyClient {
         encodeChain.setProperties(encryptionConfig.getCodecProperties());
 
         // insert codec filter into chain before the authorization filter, checksum filter
-        client.register(new CodecFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
+        client.register(new CodecRequestFilter(encodeChain).withCodecProperties(encryptionConfig.getCodecProperties()));
+        client.register(new CodecResponseFilter().withCodecProperties(encryptionConfig.getCodecProperties()));
 
     }
 

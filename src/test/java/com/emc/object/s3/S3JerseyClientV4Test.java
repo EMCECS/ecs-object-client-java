@@ -63,11 +63,11 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         String key = "pre-signed-put-test", content = "This is my test object content";
         url = client.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
-                        .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
+                        .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                 .addUserMetadata("foo", "bar"))
         );
         ClientBuilder.newClient().target(url.toURI())
-                .request("application/x-download").header("x-amz-meta-foo", "bar")
+                .request("text/plain").header("x-amz-meta-foo", "bar")
                 .put(Entity.text(content));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);

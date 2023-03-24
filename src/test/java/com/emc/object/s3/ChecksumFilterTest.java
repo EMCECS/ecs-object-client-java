@@ -34,6 +34,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
@@ -67,8 +68,9 @@ public class ChecksumFilterTest {
             resource.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
             resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
             Assert.fail("bad MD5 should throw exception");
-        } catch (ChecksumError e) {
+        } catch (ProcessingException e) {
             // expected
+            Assert.assertTrue(e.getCause() instanceof ChecksumError);
         }
     }
 
@@ -79,11 +81,6 @@ public class ChecksumFilterTest {
         @Override
         public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
             byte[] content = (byte[]) requestContext.getEntity();
-            // make sure entity is actually written (so digest stream will get real MD5)
-//            OutputStream out = requestContext.getAdapter().adapt(cr, new ByteArrayOutputStream());
-//            out.write((byte[]) requestContext.getEntity());
-//            out.close();
-
             // set content MD5 header in response (bad or real)
             String MD5 = badMd5 ? "abcdef0123456789abcdef0123456789" : DigestUtils.md5Hex(content);
             // return mock response with headers and no data

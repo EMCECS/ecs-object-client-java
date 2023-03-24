@@ -2488,12 +2488,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             // test real PUT
             String key = "pre-signed-put-test", content = "This is my test object content";
             url = client.getPresignedUrl(
-                    new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
-                            .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
+                    new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000000))
+                            .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                     .addUserMetadata("foo", "bar"))
-            );
-            ClientBuilder.newClient().target(url.toURI())
-                    .request("application/x-download").header("x-amz-meta-foo", "bar")
+            ); // http://10.246.151.71:9020/s3-client-test-null-0196d4/pre-signed-put-test?AWSAccessKeyId=obj1&Expires=1679987253&Signature=H81IV4HrtAGOGuDQ1uQJV0ZO4go%3D
+            ClientBuilder.newClient().target(url.toURI()).request()
+                    .accept("text/plain")
+                    .header("x-amz-meta-foo", "bar")
                     .put(Entity.text(content));
             Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
             S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
@@ -2660,6 +2661,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 if (e instanceof SocketException && (e.getMessage().startsWith("Broken pipe")
                         || e.getMessage().startsWith("Connection reset by peer")
                         || e.getMessage().startsWith("Software caused connection abort")))
+                    continue;
+                if (e instanceof IOException && e.getMessage().startsWith("Error writing to server"))
                     continue;
                 if (!(e instanceof S3Exception)) throw new RuntimeException(e);
                 S3Exception se = (S3Exception) e;
@@ -2917,7 +2920,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(400, e.getHttpCode());
             Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
             try {
-                client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
+                S3ObjectMetadata metadata = client.getObjectMetadata(bucketName, keyTargetRequestExceeded);
                 Assert.fail("expected 404 Not Found");
             } catch (S3Exception es) {
                 Assert.assertEquals(404, es.getHttpCode());

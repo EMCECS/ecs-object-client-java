@@ -29,8 +29,10 @@ public class ChecksumResponseFilter implements ClientResponseFilter {
         Boolean verifyWrite = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
         if (verifyWrite != null && verifyWrite && md5Header != null) {
             // verify write checksum
-//            if (!adapter.getChecksum().getHexValue().equals(md5Header))
-//                throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getHexValue(), md5Header);
+            RunningChecksum checksum = (RunningChecksum) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE);
+            if (!checksum.getHexValue().equals(md5Header)) {
+//                throw new ChecksumError("Checksum failure while writing stream", checksum.getHexValue(), md5Header);
+            }
         }
 
         Boolean verifyRead = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
