@@ -34,7 +34,6 @@ import java.util.List;
 
 @XmlRootElement(name = "ListAllMyBucketsResult")
 public class ListBucketsResult {
-
     private CanonicalUser owner;
     private Integer maxBuckets;
     private String marker;

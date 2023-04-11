@@ -52,9 +52,7 @@ public class QueryObject {
         return objectId;
     }
 
-    public void setObjectId(String objectId) {
-        this.objectId = objectId;
-    }
+    public void setObjectId(String objectId) { this.objectId = objectId; }
 
     @XmlElement(name = "versionId")
     public String getVersionId() {

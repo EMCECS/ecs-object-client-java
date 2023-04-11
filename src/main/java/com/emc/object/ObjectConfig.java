@@ -32,7 +32,9 @@ import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.params.CoreConnectionPNames;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,17 +224,16 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         smartConfig.setProxyPass(getPropAsString(PROPERTY_PROXY_PASS));
 
         for (String prop : properties.keySet()) {
-            smartConfig.withProperty(prop, properties.get(prop));
+            smartConfig.setProperty(prop, properties.get(prop));
         }
 
         // CONNECT_TIMEOUT
         smartConfig.setProperty(ClientProperties.CONNECT_TIMEOUT, connectTimeout);
         // apache client uses a different property
-        smartConfig.setProperty(CoreConnectionPNames.CONNECTION_TIMEOUT, connectTimeout);
+        smartConfig.setProperty(ApacheClientProperties.REQUEST_CONFIG, RequestConfig.custom().setConnectTimeout(connectTimeout).build());
 
         // READ_TIMEOUT
         smartConfig.setProperty(ClientProperties.READ_TIMEOUT, readTimeout);
-
 
         return smartConfig;
     }

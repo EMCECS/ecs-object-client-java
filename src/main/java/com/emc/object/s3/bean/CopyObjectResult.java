@@ -58,12 +58,12 @@ public class CopyObjectResult extends PutObjectResult {
         return eTag;
     }
 
-    public void setETag(String eTag) {
-        this.eTag = eTag;
-    }
-
     @XmlTransient
     public String getRawETag() {
         return RestUtil.stripQuotes(eTag);
+    }
+
+    public void setETag(String eTag) {
+        this.eTag = eTag;
     }
 }

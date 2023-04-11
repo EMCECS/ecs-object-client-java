@@ -26,13 +26,10 @@
  */
 package com.emc.object.s3.bean;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 @XmlRootElement(name = "BucketQueryResult", namespace = "")
 @XmlType(propOrder = {"bucketName", "marker", "nextMarker", "maxKeys", "objects", "prefixGroups"}, namespace = "")
 public class QueryObjectsResult {
@@ -127,9 +124,7 @@ public class QueryObjectsResult {
     }
 
     @XmlTransient
-    public boolean getIncludeOlderVersions() {
-        return includeOlderVersions;
-    }
+    public boolean getIncludeOlderVersions() { return includeOlderVersions; }
 
     public void setIncludeOlderVersions(boolean includeOlderVersions) {
         this.includeOlderVersions = includeOlderVersions;

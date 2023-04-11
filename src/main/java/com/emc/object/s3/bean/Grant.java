@@ -31,17 +31,15 @@ import javax.xml.bind.annotation.XmlType;
 
 @XmlType(propOrder = {"grantee", "permission"})
 public class Grant implements Comparable<Grant> {
-
     private AbstractGrantee grantee;
-
     private Permission permission;
+
+    public Grant() {
+    }
 
     public Grant(AbstractGrantee grantee, Permission permission) {
         this.grantee = grantee;
         this.permission = permission;
-    }
-
-    public Grant() {
     }
 
     @XmlElement(name = "Grantee")

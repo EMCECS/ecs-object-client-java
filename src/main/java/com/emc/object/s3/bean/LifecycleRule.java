@@ -212,11 +212,6 @@ public class LifecycleRule {
         return result;
     }
 
-    @XmlEnum
-    public static enum Status {
-        Enabled, Disabled
-    }
-
     @XmlAccessorType(XmlAccessType.FIELD)
     protected static class Expiration {
         @XmlElement(name = "Days")
@@ -230,5 +225,10 @@ public class LifecycleRule {
     protected static class NoncurrentVersionExpiration {
         @XmlElement(name = "NoncurrentDays")
         public Integer days;
+    }
+
+    @XmlEnum
+    public static enum Status {
+        Enabled, Disabled
     }
 }

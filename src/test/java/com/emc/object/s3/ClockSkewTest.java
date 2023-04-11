@@ -32,6 +32,7 @@ import com.emc.object.util.RestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.ProcessingException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -63,8 +64,8 @@ public class ClockSkewTest extends AbstractS3ClientTest {
                 }
             };
             client.listBuckets(request);
-        } catch (S3Exception e) {
-            Assert.assertEquals(403, e.getHttpCode());
+        } catch (ProcessingException e) {
+            Assert.assertEquals(403, ((S3Exception) e.getCause()).getHttpCode());
         }
     }
 }

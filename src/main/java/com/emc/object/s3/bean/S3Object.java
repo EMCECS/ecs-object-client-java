@@ -77,13 +77,13 @@ public class S3Object {
         return eTag;
     }
 
-    public void setETag(String eTag) {
-        this.eTag = eTag;
-    }
-
     @XmlTransient
     public String getRawETag() {
         return RestUtil.stripQuotes(eTag);
+    }
+
+    public void setETag(String eTag) {
+        this.eTag = eTag;
     }
 
     @XmlElement(name = "Size")

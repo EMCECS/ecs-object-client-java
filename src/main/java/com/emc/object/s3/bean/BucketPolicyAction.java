@@ -107,18 +107,18 @@ public enum BucketPolicyAction {
     @XmlEnumValue("s3:PutObjectVersionTagging")
     PutObjectVersionTagging("s3:PutObjectVersionTagging");
 
-    private String actionName;
-
-    BucketPolicyAction(String actionName) {
-        this.actionName = actionName;
-    }
-
     @JsonCreator
     public static BucketPolicyAction fromValue(String value) {
         for (BucketPolicyAction instance : values()) {
             if (value.equals(instance.getActionName())) return instance;
         }
         return null;
+    }
+
+    private String actionName;
+
+    BucketPolicyAction(String actionName) {
+        this.actionName = actionName;
     }
 
     @JsonValue

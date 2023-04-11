@@ -36,12 +36,18 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 @Provider
 @Priority(FilterPriorities.PRIORITY_CODEC_REQUEST)
@@ -78,9 +84,8 @@ public class CodecRequestFilter implements ClientRequestFilter {
             // backup original metadata in case of an error
             requestContext.setProperty(RestUtil.PROPERTY_META_BACKUP, new HashMap<String, String>(userMeta));
 
-            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
-            // a "dangling" output stream and connect it in the adapter
-            // NOTE: we can't alter the headers in the adapt() method because they've already been a) signed and b) sent
+            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use a "dangling" output stream
+            // NOTE: we can't alter the headers because they've already been a) signed and b) sent
             DanglingOutputStream danglingStream = new DanglingOutputStream();
             OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
 

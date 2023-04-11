@@ -29,7 +29,7 @@ public class ObjectTagging {
 
     public Map<String, String> toStringMap() {
         Map<String, String> map = new HashMap<>();
-        for (ObjectTag tag : this.tagSet) {
+        for (ObjectTag tag: this.tagSet) {
             map.putIfAbsent(tag.getKey(), tag.getValue());
         }
         return map;

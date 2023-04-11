@@ -43,13 +43,13 @@ public class VersioningConfiguration {
         this.status = status;
     }
 
-    public VersioningConfiguration withStatus(Status status) {
-        setStatus(status);
-        return this;
-    }
-
     @XmlEnum
     public static enum Status {
         Enabled, Suspended
+    }
+
+    public VersioningConfiguration withStatus(Status status) {
+        setStatus(status);
+        return this;
     }
 }

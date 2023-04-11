@@ -1,7 +1,5 @@
 package com.emc.object.s3.bean;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -11,7 +9,6 @@ import java.util.List;
 /**
  * List of search metadata associated with a bucket.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 @XmlRootElement(name = "MetadataSearchList")
 public class MetadataSearchList {
 

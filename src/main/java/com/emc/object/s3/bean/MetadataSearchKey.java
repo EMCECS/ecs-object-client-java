@@ -11,8 +11,7 @@ public class MetadataSearchKey {
     private String name;
     private MetadataSearchDatatype datatype;
 
-    public MetadataSearchKey() {
-    }
+    public MetadataSearchKey() {}
 
     public MetadataSearchKey(String name, MetadataSearchDatatype datatype) {
         this.name = name;
@@ -33,7 +32,5 @@ public class MetadataSearchKey {
         return datatype;
     }
 
-    public void setDatatype(MetadataSearchDatatype datatype) {
-        this.datatype = datatype;
-    }
+    public void setDatatype(MetadataSearchDatatype datatype) { this.datatype = datatype; }
 }

@@ -45,8 +45,7 @@ public class BucketPolicyStatement {
     private String resource;
     private Map<PolicyConditionOperator, PolicyConditionCriteria> conditions = new TreeMap<PolicyConditionOperator, PolicyConditionCriteria>();
 
-    public BucketPolicyStatement() {
-    }
+    public BucketPolicyStatement() {}
 
     @XmlElement(name = "Sid")
     public String getSid() {
@@ -58,13 +57,9 @@ public class BucketPolicyStatement {
     }
 
     @XmlElement(name = "Effect")
-    public Effect getEffect() {
-        return effect;
-    }
+    public Effect getEffect() { return effect; }
 
-    public void setEffect(Effect effect) {
-        this.effect = effect;
-    }
+    public void setEffect(Effect effect) { this.effect = effect; }
 
     @XmlTransient
     public String getPrincipal() {
@@ -72,25 +67,21 @@ public class BucketPolicyStatement {
         return principal;
     }
 
-    public void setPrincipal(String principal) {
-        if ("*".equals(principal)) this.principal = "\"*\""; // backward-compatible for "*"
-        else this.principal = principal;
-    }
-
     @XmlElement(name = "Principal")
     @JsonRawValue()
     @JsonDeserialize(using = RawDeserializer.class)
-    public String getRawPrincipal() {
-        return principal;
+    public String getRawPrincipal() { return principal; }
+
+    public void setPrincipal(String principal) {
+        if ("*".equals(principal)) this.principal = "\"*\""; // backward-compatible for "*"
+        else this.principal = principal;
     }
 
     /**
      * If you want to set the principal to something other than "*", you'll need to set a raw JSON value here.
      * I.e. <code>"{\"AWS\":[\"arn:ecs:iam::ns:user/my-user\",\"arn:ecs:iam::ns:user/other-user\"]}"</code>
      */
-    public void setRawPrincipal(String principal) {
-        this.principal = principal;
-    }
+    public void setRawPrincipal(String principal) { this.principal = principal; }
 
     @XmlElement(name = "Action")
     public List<BucketPolicyAction> getActions() {

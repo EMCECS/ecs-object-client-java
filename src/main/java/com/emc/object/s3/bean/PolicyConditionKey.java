@@ -85,18 +85,18 @@ public enum PolicyConditionKey {
     @XmlEnumValue("s3:object-lock-remaining-retention-days")
     ObjectLockRemainingRetentionDays("s3:object-lock-remaining-retention-days");
 
-    private String conditionKey;
-
-    PolicyConditionKey(String conditionKey) {
-        this.conditionKey = conditionKey;
-    }
-
     @JsonCreator
     public static PolicyConditionKey fromValue(String value) {
         for (PolicyConditionKey instance : values()) {
             if (value.equals(instance.getConditionKey())) return instance;
         }
         return null;
+    }
+
+    private String conditionKey;
+
+    PolicyConditionKey(String conditionKey) {
+        this.conditionKey = conditionKey;
     }
 
     @JsonValue

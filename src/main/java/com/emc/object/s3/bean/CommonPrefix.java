@@ -31,7 +31,6 @@ import com.emc.object.util.RestUtil;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlElement;
 
-
 public class CommonPrefix {
     private String prefix;
 

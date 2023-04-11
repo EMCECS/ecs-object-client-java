@@ -11,9 +11,7 @@ public class ObjectLockLegalHold {
     private Status status;
 
     @XmlElement(name = "Status")
-    public Status getStatus() {
-        return status;
-    }
+    public Status getStatus() { return status; }
 
     public void setStatus(Status status) {
         this.status = status;

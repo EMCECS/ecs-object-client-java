@@ -16,8 +16,8 @@ public class FilterPriorities {
 
     // providers used during response processing (using descending manner)
     public static final int PRIORITY_CODEC_RESPONSE = 1500;
-    public static final int PRIORITY_CHECKSUM_RESPONSE = Priorities.ENTITY_CODER; //4000
-    public static final int PRIORITY_ERROR = Priorities.USER; //5000
+    public static final int PRIORITY_CHECKSUM_RESPONSE = 2500;
+    public static final int PRIORITY_ERROR = 3000;
 
 
     private FilterPriorities() {}

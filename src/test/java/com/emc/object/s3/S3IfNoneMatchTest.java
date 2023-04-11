@@ -6,6 +6,8 @@ import com.emc.object.s3.request.PutObjectRequest;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.ProcessingException;
+
 public class S3IfNoneMatchTest extends AbstractS3ClientTest {
     @Override
     protected String getTestBucketPrefix() {
@@ -44,7 +46,7 @@ public class S3IfNoneMatchTest extends AbstractS3ClientTest {
         // try to overwrite with IfNoneMatch*
         try {
             client.putObject(ifNoneMatchRequest);
-        } catch (S3Exception e){
+        } catch (ProcessingException e){
             Assert.assertEquals("error not matched","At least one of the preconditions you specified did not hold.", e.getMessage());
             System.out.printf("error");
         }

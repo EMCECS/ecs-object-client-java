@@ -34,7 +34,7 @@ public class SetObjectLegalHoldRequest extends S3ObjectRequest implements Entity
 
     @Override
     public Object getEntity() {
-        return this.legalHold;
+        return legalHold;
     }
 
     @Override

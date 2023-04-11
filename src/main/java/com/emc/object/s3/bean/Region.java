@@ -37,17 +37,17 @@ public enum Region {
     AP_NORTHEAST_1("us-west-1"),
     SA_EAST_1("us-west-1");
 
-    private String constraint;
-
-    private Region(String constraint) {
-        this.constraint = constraint;
-    }
-
     public static Region fromConstraint(String constraint) {
         for (Region region : values()) {
             if (region.getConstraint().equals(constraint)) return region;
         }
         return null;
+    }
+
+    private String constraint;
+
+    private Region(String constraint) {
+        this.constraint = constraint;
     }
 
     public String getConstraint() {

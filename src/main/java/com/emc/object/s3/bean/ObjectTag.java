@@ -11,15 +11,14 @@ public class ObjectTag {
     private String key;
     private String value;
 
-    public ObjectTag() {
-    }
+    public ObjectTag() {}
 
     public ObjectTag(String key, String value) {
         this.key = key;
         this.value = value;
     }
 
-    @XmlElement(name = "Key") // todo required = true
+    @XmlElement(name = "Key", required = true)
     public String getKey() {
         return key;
     }
@@ -28,7 +27,7 @@ public class ObjectTag {
         this.key = key;
     }
 
-    @XmlElement(name = "Value") // todo required = true
+    @XmlElement(name = "Value", required = true)
     public String getValue() {
         return value;
     }

@@ -7,12 +7,17 @@ import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.FaultInjectionStream;
 import com.emc.util.ConcurrentJunitRunner;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -29,8 +34,9 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
 
     @Override
     protected S3Client createS3Client() throws Exception {
+        Client urlConnectionClient = ClientBuilder.newClient(new ClientConfig().connectorProvider(new HttpUrlConnectorProvider()));
         S3Config s3Config = createS3Config().withRetryEnabled(false);
-        this.jvmClient = new S3JerseyClient(s3Config);
+        this.jvmClient = new S3JerseyClient(s3Config, urlConnectionClient);
         return new S3JerseyClient(createS3Config().withRetryEnabled(false));
     }
 
@@ -159,7 +165,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
-        } catch (RuntimeException e) {
+        } catch (ProcessingException e) {
             if (exceptionType == ExceptionType.RuntimeException) {
                 Assert.assertTrue(e.getCause() instanceof RuntimeException);
             } else {

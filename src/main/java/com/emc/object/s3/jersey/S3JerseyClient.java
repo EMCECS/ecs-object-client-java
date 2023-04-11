@@ -161,8 +161,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
 
         if (s3Config.isSmartClient()) {
-            // S.C. - GEO-PINNING
-            if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
 
             // S.C. - ENDPOINT POLLING
             // create a host list provider based on the S3 ?endpoint call (will use the standard client we just made)
@@ -188,11 +186,14 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             // S.C. - VDC CONFIGURATION
             hostListProvider.setVdcs(s3Config.getVdcs());
 
+            // S.C. - GEO-PINNING
+            if (s3Config.isGeoPinningEnabled()) loadBalancer.withVetoRules(new GeoPinningRule());
+
             smartConfig.setHostListProvider(hostListProvider);
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            client = SmartClientFactory.createSmartClient(smartConfig, client);
+            client = SmartClientFactory.createSmartClient(smartConfig);
         }
 
         // Because host header could be replaced by smart client, which could make v4 signing fail,
@@ -284,8 +285,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null));
             return true;
-        } catch (S3Exception e) {
-            switch (e.getHttpCode()) {
+        } catch (ProcessingException e) {
+            switch (((S3Exception)e.getCause()).getHttpCode()) {
                 case RestUtil.STATUS_REDIRECT:
                 case RestUtil.STATUS_UNAUTHORIZED:
                     return true;
@@ -353,8 +354,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "cors");
         try {
             return executeRequest(client, request, CorsConfiguration.class);
-        } catch (S3Exception e) {
-            if ("NoSuchCORSConfiguration".equals(e.getErrorCode())) return null;
+        } catch (ProcessingException e) {
+            if ("NoSuchCORSConfiguration".equals(((S3Exception)e.getCause()).getErrorCode())) return null;
             throw e;
         }
     }
@@ -376,8 +377,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "lifecycle");
         try {
             return executeRequest(client, request, LifecycleConfiguration.class);
-        } catch (S3Exception e) {
-            if ("NoSuchBucketPolicy".equals(e.getErrorCode()) || "NoSuchLifecycleConfiguration".equals(e.getErrorCode()))
+        } catch (ProcessingException e) {
+            if ("NoSuchBucketPolicy".equals(((S3Exception)e.getCause()).getErrorCode()) || "NoSuchLifecycleConfiguration".equals(((S3Exception)e.getCause()).getErrorCode()))
                 return null;
             throw e;
         }
@@ -596,9 +597,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             fillResponseEntity(result, response);
             result.setObject(response.readEntity(objectType));
             return result;
-        } catch (S3Exception e) {
+        } catch (ProcessingException e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (e.getHttpCode() == 304 || e.getHttpCode() == 412) return null;
+            if (((S3Exception)e.getCause()).getHttpCode() == 304 || ((S3Exception)e.getCause()).getHttpCode() == 412) return null;
             throw e;
         }
     }
@@ -648,9 +649,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3ObjectMetadata getObjectMetadata(GetObjectMetadataRequest request) {
         try {
             return S3ObjectMetadata.fromHeaders(executeAndClose(client, request).getHeaders());
-        } catch (S3Exception e) {
+        } catch (ProcessingException e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (e.getHttpCode() == 304 || e.getHttpCode() == 412) return null;
+            if (((S3Exception)e.getCause()).getHttpCode() == 304 || ((S3Exception)e.getCause()).getHttpCode() == 412) return null;
             throw e;
         }
     }

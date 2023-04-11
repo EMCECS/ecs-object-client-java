@@ -4,8 +4,6 @@ import com.emc.codec.CodecChain;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
@@ -21,9 +19,7 @@ import java.util.Set;
 
 @Provider
 @Priority(FilterPriorities.PRIORITY_CODEC_RESPONSE)
-public class CodecResponseFilter  implements ClientResponseFilter {
-
-    private static final Logger log = LoggerFactory.getLogger(CodecResponseFilter.class);
+public class CodecResponseFilter implements ClientResponseFilter {
 
     private Map<String, Object> codecProperties;
 
@@ -38,8 +34,9 @@ public class CodecResponseFilter  implements ClientResponseFilter {
                 // restore metadata from backup
                 userMeta.clear();
                 userMeta.putAll((Map<String, String>) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_META_BACKUP));
+                SizeOverrideWriter.setEntitySize(null);
             }
-            // throw exception
+            throw new IOException(responseContext.getStatusInfo().getReasonPhrase());
         }
         // make sure we clear the content-length override for this thread if we set it
         if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
