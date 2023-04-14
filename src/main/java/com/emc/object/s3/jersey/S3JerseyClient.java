@@ -214,6 +214,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.register(new BucketFilter(s3Config));
         client.register(new NamespaceFilter(s3Config));
 
+        // jersey interceptors
+        client.register(new StreamExceptionWriteInterceptor());
+        client.register(new StreamExceptionReadInterceptor());
     }
 
     @Override
@@ -286,7 +289,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null));
             return true;
         } catch (ProcessingException e) {
-            switch (((S3Exception)e.getCause()).getHttpCode()) {
+            switch (((S3Exception) e.getCause()).getHttpCode()) {
                 case RestUtil.STATUS_REDIRECT:
                 case RestUtil.STATUS_UNAUTHORIZED:
                     return true;
@@ -355,7 +358,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             return executeRequest(client, request, CorsConfiguration.class);
         } catch (ProcessingException e) {
-            if ("NoSuchCORSConfiguration".equals(((S3Exception)e.getCause()).getErrorCode())) return null;
+            if ("NoSuchCORSConfiguration".equals(((S3Exception) e.getCause()).getErrorCode())) return null;
             throw e;
         }
     }
@@ -378,7 +381,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             return executeRequest(client, request, LifecycleConfiguration.class);
         } catch (ProcessingException e) {
-            if ("NoSuchBucketPolicy".equals(((S3Exception)e.getCause()).getErrorCode()) || "NoSuchLifecycleConfiguration".equals(((S3Exception)e.getCause()).getErrorCode()))
+            if ("NoSuchBucketPolicy".equals(((S3Exception) e.getCause()).getErrorCode()) || "NoSuchLifecycleConfiguration".equals(((S3Exception) e.getCause()).getErrorCode()))
                 return null;
             throw e;
         }
@@ -595,11 +598,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             GetObjectResult<T> result = new GetObjectResult<T>();
             Response response = executeRequest(client, request);
             fillResponseEntity(result, response);
+
             result.setObject(response.readEntity(objectType));
             return result;
         } catch (ProcessingException e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (((S3Exception)e.getCause()).getHttpCode() == 304 || ((S3Exception)e.getCause()).getHttpCode() == 412) return null;
+            if (((S3Exception) e.getCause()).getHttpCode() == 304 || ((S3Exception) e.getCause()).getHttpCode() == 412) return null;
             throw e;
         }
     }
@@ -651,7 +655,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             return S3ObjectMetadata.fromHeaders(executeAndClose(client, request).getHeaders());
         } catch (ProcessingException e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (((S3Exception)e.getCause()).getHttpCode() == 304 || ((S3Exception)e.getCause()).getHttpCode() == 412) return null;
+            if (((S3Exception) e.getCause()).getHttpCode() == 304 || ((S3Exception) e.getCause()).getHttpCode() == 412) return null;
             throw e;
         }
     }

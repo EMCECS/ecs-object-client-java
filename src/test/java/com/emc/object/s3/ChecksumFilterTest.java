@@ -28,15 +28,18 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.ChecksumRequestFilter;
 import com.emc.object.s3.jersey.ChecksumResponseFilter;
+import com.emc.object.s3.jersey.FilterPriorities;
 import com.emc.object.util.ChecksumError;
 import com.emc.object.util.RestUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Priority;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Random;
@@ -75,6 +78,8 @@ public class ChecksumFilterTest {
     }
 
     // assumes byte[] entity
+    @Provider
+    @Priority(FilterPriorities.PRIORITY_CHECKSUM_RESPONSE + 1)
     class MockClientHandler implements ClientResponseFilter {
         boolean badMd5 = false;
 
