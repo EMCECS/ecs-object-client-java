@@ -17,7 +17,7 @@ public class FilterPriorities {
     public static final int PRIORITY_STREAM_WRITE_INTERCEPTOR = 2800;
 
     // providers used during response processing (using descending manner)
-    public static final int PRIORITY_CHECKSUM_RESPONSE = 4800;
+    public static final int PRIORITY_CHECKSUM_RESPONSE = 4500;
     public static final int PRIORITY_CODEC_RESPONSE = 4000;
     public static final int PRIORITY_ERROR = 3600;
     public static final int PRIORITY_STREAM_READ_INTERCEPTOR = 3200;

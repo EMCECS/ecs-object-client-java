@@ -24,10 +24,10 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
 
     private static S3Config s3Config;
     private static S3Signer signer;
-    private static RunningChecksum checksum;
+    private static final ThreadLocal<RunningChecksum> threadChecksum = new ThreadLocal<>();
     private static final ThreadLocal<ClientRequestContext> requestContextThreadLocal = new ThreadLocal<>();
-    private static ByteArrayOutputStream buffer;
-    private static OutputStream finalStream;
+    private static final ThreadLocal<ByteArrayOutputStream> threadBuffer = new ThreadLocal<>();
+    private static final ThreadLocal<OutputStream> threadFinalStream = new ThreadLocal<>();
 
     public ChecksumRequestFilter(S3Config s3Config) {
         this.s3Config = s3Config;
@@ -43,10 +43,10 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
         if (verifyWrite != null && verifyWrite) {
             // wrap stream to calculate write checksum
             try {
-                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
                 requestContext.setEntityStream(new ChecksummedOutputStream(requestContext.getEntityStream(), checksum));
+                threadChecksum.set(checksum);
                 requestContext.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE, checksum.getHexValue());
-//                requestContextThreadLocal.set(requestContext);
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("fatal: MD5 algorithm not found");
             }
@@ -55,13 +55,16 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
         Boolean generateMd5 = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
         if (generateMd5 != null && generateMd5) {
             // wrap stream to generate Content-MD5 header
-            buffer = new ByteArrayOutputStream();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             OutputStream out = requestContext.getEntityStream();
-            finalStream = out;
+            OutputStream finalStream = out;
+            threadFinalStream.set(finalStream);
             try {
-                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
                 out = new CloseNotifyOutputStream(buffer);
                 out = new ChecksummedOutputStream(out, checksum);
+                threadChecksum.set(checksum);
+                threadBuffer.set(buffer);
                 requestContext.setEntityStream(out);
                 requestContextThreadLocal.set(requestContext);
             } catch (NoSuchAlgorithmException e) {
@@ -90,6 +93,7 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
         public void close() throws IOException {
             super.close();
             ClientRequestContext clientRequestContext = requestContextThreadLocal.get();
+            RunningChecksum checksum = threadChecksum.get();
             // add Content-MD5 (before anything is written to the final stream)
             clientRequestContext.getHeaders().add(RestUtil.HEADER_CONTENT_MD5, DatatypeConverter.printBase64Binary(checksum.getByteValue()));
 
@@ -109,6 +113,8 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
             }
 
             // write the complete buffered data
+            OutputStream finalStream = threadFinalStream.get();
+            ByteArrayOutputStream buffer = threadBuffer.get();
             finalStream.write(buffer.toByteArray());
         }
     }
