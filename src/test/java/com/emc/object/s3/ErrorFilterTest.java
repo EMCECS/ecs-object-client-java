@@ -2,12 +2,12 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.ErrorFilter;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
 import java.nio.charset.StandardCharsets;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -26,7 +26,7 @@ public class ErrorFilterTest {
                 "<RequestId>0af69b4a:17a531ff169:46673:155</RequestId>" +
                 "</Error>";
 
-        Client client = ClientBuilder.newClient();
+        JerseyClient client = JerseyClientBuilder.createClient();
         client.register(new ErrorFilter());
 
         // as ConnectException could not be passed by ClientResponseFilter in Jersey 2.x,
@@ -63,7 +63,7 @@ public class ErrorFilterTest {
                 "<RequestId>0af69b4a:17a531ff169:46673:155</RequestId>" +
                 "</Error>";
 
-        Client client = ClientBuilder.newClient();
+        JerseyClient client = JerseyClientBuilder.createClient();
         client.register(new ErrorFilter());
 
         // as above

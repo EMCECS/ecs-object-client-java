@@ -8,10 +8,10 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.client.JerseyClient;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.ws.rs.client.Client;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Properties;
@@ -67,7 +67,7 @@ public class ExtendedConfigTest {
 
         // verify settings in raw apache client
         // first find the handler in the chain
-        Client jerseyClient = s3Client.getClient();
+        JerseyClient jerseyClient = s3Client.getClient();
 
         // get the connection manager
         PoolingHttpClientConnectionManager apacheConnMgr = (PoolingHttpClientConnectionManager) jerseyClient.getConfiguration().getProperty(ApacheClientProperties.CONNECTION_MANAGER);
@@ -82,7 +82,7 @@ public class ExtendedConfigTest {
             super(s3Config);
         }
 
-        Client getClient() {
+        JerseyClient getClient() {
             return client;
         }
     }

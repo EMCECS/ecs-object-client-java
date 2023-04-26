@@ -163,8 +163,9 @@ public class ConfigUriS3Test {
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_URI), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
-        assertEquals(smartConfig.getProperty(ClientProperties.CONNECT_TIMEOUT), dummyInt);
-        assertEquals(smartConfig.getProperty(ClientProperties.READ_TIMEOUT), dummyInt);
+        // TIMEOUT properties have been moved into ClientConfig.
+//        assertEquals(smartConfig.getProperty(ClientProperties.CONNECT_TIMEOUT), dummyInt);
+//        assertEquals(smartConfig.getProperty(ClientProperties.READ_TIMEOUT), dummyInt);
     }
 
     @Test

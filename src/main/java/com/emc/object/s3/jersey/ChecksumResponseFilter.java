@@ -1,6 +1,7 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.util.*;
+import com.sun.xml.bind.v2.TODO;
 
 import javax.annotation.Priority;
 import javax.ws.rs.client.ClientRequestContext;
@@ -31,7 +32,7 @@ public class ChecksumResponseFilter implements ClientResponseFilter {
             // verify write checksum
             String checksumHexValue = (String) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE);
             if (!checksumHexValue.equals(md5Header)) {
-                // TODO throw new ChecksumError("Checksum failure while writing stream", checksumHexValue, md5Header);
+//                throw new ChecksumError("Checksum failure while writing stream", checksumHexValue, md5Header);
             }
         }
 

@@ -36,12 +36,14 @@ import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.rest.smart.jersey.SmartFilter;
+import org.apache.http.client.config.RequestConfig;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyInvocation;
+import org.glassfish.jersey.client.JerseyWebTarget;
 
 import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -129,7 +131,7 @@ import java.util.Map;
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     protected S3Config s3Config;
-    protected Client client;
+    protected JerseyClient client;
     protected LoadBalancer loadBalancer;
     protected S3Signer signer;
 
@@ -143,7 +145,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that handler, you should
      * set the "http.maxConnections" system property to match your thread count (default is only 5).
      */
-    public S3JerseyClient(S3Config config, Client clientHandler) {
+    public S3JerseyClient(S3Config config, JerseyClient clientHandler) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
         if (s3Config.isUseV2Signer())
@@ -193,8 +195,15 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            client = SmartClientFactory.createSmartClient(smartConfig);
+            client = SmartClientFactory.createSmartClient(smartConfig, client);
         }
+
+        // CONNECT_TIMEOUT
+        client.property(ClientProperties.CONNECT_TIMEOUT, config.getConnectTimeout());
+        // apache client uses a different property
+        client.property(ApacheClientProperties.REQUEST_CONFIG, RequestConfig.custom().setSocketTimeout(config.getConnectTimeout()).setConnectTimeout(config.getConnectTimeout()).build());
+        // READ_TIMEOUT
+        client.property(ClientProperties.READ_TIMEOUT, config.getReadTimeout());
 
         // Because host header could be replaced by smart client, which could make v4 signing fail,
         // so need to make sure auth filter is after the smart filter.
@@ -268,8 +277,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     @Override
     public PingResponse pingNode(Protocol protocol, String host, int port) {
         String portStr = (port > 0) ? ":" + port : "";
-        WebTarget webTarget = client.target(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
-        Invocation.Builder invocationBuilder = webTarget.property(SmartFilter.BYPASS_LOAD_BALANCER, true).request();
+        JerseyWebTarget webTarget = client.target(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
+        JerseyInvocation.Builder invocationBuilder = webTarget.property(SmartFilter.BYPASS_LOAD_BALANCER, true).request();
         return invocationBuilder.get(PingResponse.class);
     }
 
@@ -822,7 +831,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
-    protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
+    protected <T> T executeRequest(JerseyClient client, ObjectRequest request, Class<T> responseType) {
         Response response = executeRequest(client, request);
         try {
 //            String responseEntityDebug = new Scanner(response.readEntity(InputStream.class)).useDelimiter("\\A").next();
@@ -839,6 +848,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
                 // it must be a SAXReader DocumentException
                 throw e;
             }
+        } finally {
+            response.close();
         }
 
     }

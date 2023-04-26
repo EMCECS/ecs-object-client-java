@@ -35,8 +35,8 @@ import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
+import org.glassfish.jersey.client.JerseyClient;
 
-import javax.ws.rs.client.Client;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Map;
@@ -109,7 +109,7 @@ public class S3EncryptionClient extends S3JerseyClient {
         this(s3Config, null, encryptionConfig);
     }
 
-    public S3EncryptionClient(S3Config s3Config, Client clientHandler, EncryptionConfig encryptionConfig) {
+    public S3EncryptionClient(S3Config s3Config, JerseyClient clientHandler, EncryptionConfig encryptionConfig) {
         super(s3Config, clientHandler);
         this.encryptionConfig = encryptionConfig;
 

@@ -227,14 +227,6 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
             smartConfig.setProperty(prop, properties.get(prop));
         }
 
-        // CONNECT_TIMEOUT
-        smartConfig.setProperty(ClientProperties.CONNECT_TIMEOUT, connectTimeout);
-        // apache client uses a different property
-        smartConfig.setProperty(ApacheClientProperties.REQUEST_CONFIG, RequestConfig.custom().setConnectTimeout(connectTimeout).build());
-
-        // READ_TIMEOUT
-        smartConfig.setProperty(ClientProperties.READ_TIMEOUT, readTimeout);
-
         return smartConfig;
     }
 

@@ -5,9 +5,9 @@ import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.TestProperties;
 import com.emc.util.TestConfig;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.*;
 
-import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
 import java.net.HttpURLConnection;
@@ -55,7 +55,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
 
         url = client.getPresignedUrl(getTestBucket(), key, new Date(System.currentTimeMillis() + 100000));
 
-        Response response = ClientBuilder.newClient().target(url.toURI()).request().get(Response.class);
+        Response response = JerseyClientBuilder.createClient().target(url.toURI()).request().get(Response.class);
         Assert.assertEquals(200, response.getStatus());
         Assert.assertEquals(content, response.readEntity(String.class));
     }
@@ -85,7 +85,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                 .addUserMetadata("foo", "bar"))
         );
-        ClientBuilder.newClient().target(url.toURI())
+        JerseyClientBuilder.createClient().target(url.toURI())
                 .request("application/x-download").header("x-amz-meta-foo", "bar")
                 .put(Entity.text(content));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));

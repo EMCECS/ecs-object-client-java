@@ -45,6 +45,7 @@ import com.emc.util.TestConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Ignore;
@@ -53,7 +54,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBContext;
@@ -2491,7 +2491,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                             .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                     .addUserMetadata("foo", "bar"))
             ); // http://10.246.151.71:9020/s3-client-test-null-0196d4/pre-signed-put-test?AWSAccessKeyId=obj1&Expires=1679987253&Signature=H81IV4HrtAGOGuDQ1uQJV0ZO4go%3D
-            ClientBuilder.newClient().target(url.toURI()).request()
+            JerseyClientBuilder.createClient().target(url.toURI()).request()
                     .accept("text/plain")
                     .header("x-amz-meta-foo", "bar")
                     .put(Entity.text(content));
@@ -2579,7 +2579,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         URL url = client.getPresignedUrl(new PresignedUrlRequest(Method.GET, getTestBucket(), key, expiration.getTime())
                 .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
 
-        Response response = ClientBuilder.newClient().target(url.toURI()).request().get();
+        Response response = JerseyClientBuilder.createClient().target(url.toURI()).request().get();
         Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 

@@ -3,11 +3,11 @@ package com.emc.object.s3;
 import com.emc.object.Method;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PresignedUrlRequest;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -66,7 +66,7 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                 .addUserMetadata("foo", "bar"))
         );
-        ClientBuilder.newClient().target(url.toURI())
+        JerseyClientBuilder.createClient().target(url.toURI())
                 .request("text/plain").header("x-amz-meta-foo", "bar")
                 .put(Entity.text(content));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));

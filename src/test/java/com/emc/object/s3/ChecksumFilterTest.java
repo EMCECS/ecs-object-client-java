@@ -32,6 +32,9 @@ import com.emc.object.s3.jersey.FilterPriorities;
 import com.emc.object.util.ChecksumError;
 import com.emc.object.util.RestUtil;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
+import org.glassfish.jersey.client.JerseyWebTarget;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -52,14 +55,14 @@ public class ChecksumFilterTest {
 
         MockClientHandler mockHandler = new MockClientHandler();
 
-        Client client = ClientBuilder.newClient();
+        JerseyClient client = JerseyClientBuilder.createClient();
         client.register(mockHandler);
         client.register(new ChecksumRequestFilter(new S3Config()));
         client.register(new ChecksumResponseFilter());
 
         // positive test
         mockHandler.setBadMd5(false);
-        WebTarget resource = client.target("http://foo.com");
+        JerseyWebTarget resource = client.target("http://foo.com");
         resource.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
         Response response = resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
         Assert.assertNotNull(response);

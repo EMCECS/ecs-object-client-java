@@ -29,16 +29,12 @@ package com.emc.object;
 import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.RequestEntityProcessing;
+import org.glassfish.jersey.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Variant;
@@ -60,14 +56,12 @@ public abstract class AbstractJerseyClient {
         this.objectConfig = objectConfig;
     }
 
-    protected Response executeAndClose(Client client, ObjectRequest request) {
-        Response response = executeRequest(client, request);
-        response.close();
-        return response;
+    protected Response executeAndClose(JerseyClient client, ObjectRequest request) {
+        return executeRequest(client, request);
     }
 
     @SuppressWarnings("unchecked")
-    protected Response executeRequest(Client client, ObjectRequest request) {
+    protected Response executeRequest(JerseyClient client, ObjectRequest request) {
         String contentType = null;
         //TODO: should enable contentEncoding feature to EntityRequest. Make a simple workaround fix for test case here.
         String contentEncoding = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_ENCODING);
@@ -115,7 +109,7 @@ public abstract class AbstractJerseyClient {
 
         }
 
-        Invocation.Builder builder = buildRequest(client, request);
+        JerseyInvocation.Builder builder = buildRequest(client, request);
 
         // retry
         int retryCount = 0;
@@ -184,10 +178,11 @@ public abstract class AbstractJerseyClient {
         }
     }
 
-    protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
+    protected <T> T executeRequest(JerseyClient client, ObjectRequest request, Class<T> responseType) {
         Response response = executeRequest(client, request);
         T responseEntity = response.readEntity(responseType);
         fillResponseEntity(responseEntity, response);
+        response.close();
         return responseEntity;
     }
 
@@ -196,9 +191,9 @@ public abstract class AbstractJerseyClient {
             ((ObjectResponse) responseEntity).setHeaders(response.getStringHeaders());
     }
 
-    protected Invocation.Builder buildRequest(Client client, ObjectRequest request) {
+    protected JerseyInvocation.Builder buildRequest(JerseyClient client, ObjectRequest request) {
         URI uri = objectConfig.resolvePath(request.getPath(), request.getRawQueryString());
-        WebTarget webTarget = client.target(uri);
+        JerseyWebTarget webTarget = client.target(uri);
 
         // set properties
         for (Map.Entry<String, Object> entry : request.getProperties().entrySet()) {
@@ -210,7 +205,7 @@ public abstract class AbstractJerseyClient {
         if (namespace != null)
             webTarget.property(RestUtil.PROPERTY_NAMESPACE, namespace);
 
-        Invocation.Builder builder = webTarget.request();
+        JerseyInvocation.Builder builder = webTarget.request();
 
         // set headers
         for (String name : request.getHeaders().keySet()) {
