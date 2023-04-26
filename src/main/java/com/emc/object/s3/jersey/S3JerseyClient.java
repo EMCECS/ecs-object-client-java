@@ -765,8 +765,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "object-lock");
         try {
             return executeRequest(client, request, ObjectLockConfiguration.class);
-        } catch (S3Exception e) {
-            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode()))
+        } catch (ProcessingException e) {
+            if (((S3Exception) e.getCause()).getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(((S3Exception) e.getCause()).getErrorCode()))
                 return null;
             throw e;
         }
@@ -787,8 +787,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public ObjectLockLegalHold getObjectLegalHold(GetObjectLegalHoldRequest request) {
         try {
             return executeRequest(client, request, ObjectLockLegalHold.class);
-        } catch (S3Exception e) {
-            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
+        } catch (ProcessingException e) {
+            if (((S3Exception) e.getCause()).getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(((S3Exception) e.getCause()).getErrorCode())) return null;
             throw e;
         }
     }
@@ -802,8 +802,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request) {
         try {
             return executeRequest(client, request, ObjectLockRetention.class);
-        } catch (S3Exception e) {
-            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
+        } catch (ProcessingException e) {
+            if (((S3Exception) e.getCause()).getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(((S3Exception) e.getCause()).getErrorCode())) return null;
             throw e;
         }
     }

@@ -243,9 +243,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.setObjectLockConfiguration(bucketName, objectLockConfig);
             Assert.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
-        } catch (S3Exception e) {
-            Assert.assertEquals(409, e.getHttpCode());
-            Assert.assertEquals("InvalidBucketState", e.getErrorCode());
+        } catch (ProcessingException e) {
+            Assert.assertEquals(409, ((S3Exception) e.getCause()).getHttpCode());
+            Assert.assertEquals("InvalidBucketState", ((S3Exception) e.getCause()).getErrorCode());
         }
 
         client.enableObjectLock(bucketName);
@@ -276,8 +276,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteVersion(bucketName, key, versionId);
             Assert.fail("Exception is expected when deleting version objects with Legal Hold ON.");
-        } catch (S3Exception e) {
-            Assert.assertEquals("AccessDenied", e.getErrorCode());
+        } catch (ProcessingException e) {
+            Assert.assertEquals("AccessDenied", ((S3Exception) e.getCause()).getErrorCode());
         } finally {
             objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
             client.setObjectLegalHold(new SetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId).withLegalHold(objectLockLegalHold));
@@ -384,8 +384,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteObject(request);
             Assert.fail("expected 403");
-        } catch (S3Exception e) {
-            Assert.assertEquals(403, e.getHttpCode());
+        } catch (ProcessingException e) {
+            Assert.assertEquals(403, ((S3Exception) e.getCause()).getHttpCode());
         }
 
         //Expect success with bypassGovernanceRetention
