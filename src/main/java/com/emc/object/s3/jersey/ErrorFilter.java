@@ -53,7 +53,6 @@ public class ErrorFilter implements ClientResponseFilter {
 
     @Override
     public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
-
         if (response.getStatus() > 299) {
 
             // check for clock skew (can save hours of troubleshooting)

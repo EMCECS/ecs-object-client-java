@@ -67,6 +67,7 @@ public class ChecksumFilterTest {
         Response response = resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
         Assert.assertNotNull(response);
         Assert.assertEquals(200, response.getStatus());
+        response.close();
 
         try {
             mockHandler.setBadMd5(true);
@@ -75,12 +76,11 @@ public class ChecksumFilterTest {
             resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
             Assert.fail("bad MD5 should throw exception");
         } catch (ProcessingException e) {
-            // expected
             Assert.assertTrue(e.getCause() instanceof ChecksumError);
         }
+        client.close();
     }
 
-    // assumes byte[] entity
     @Provider
     @Priority(FilterPriorities.PRIORITY_CHECKSUM_RESPONSE + 1)
     class MockClientHandler implements ClientResponseFilter {

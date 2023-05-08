@@ -182,7 +182,7 @@ public abstract class AbstractJerseyClient {
         Response response = executeRequest(client, request);
         T responseEntity = response.readEntity(responseType);
         fillResponseEntity(responseEntity, response);
-        response.close();
+        response.close(); // in Jersey 2.x, we should always release resources actively.
         return responseEntity;
     }
 

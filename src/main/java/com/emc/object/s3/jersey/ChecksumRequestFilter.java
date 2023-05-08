@@ -40,20 +40,8 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
         Boolean verifyWrite = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
-        if (verifyWrite != null && verifyWrite) {
-            // wrap stream to calculate write checksum
-            try {
-                RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
-                requestContext.setEntityStream(new ChecksummedOutputStream(requestContext.getEntityStream(), checksum));
-                threadChecksum.set(checksum);
-                requestContext.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE, checksum.getHexValue());
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("fatal: MD5 algorithm not found");
-            }
-        }
-
         Boolean generateMd5 = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
-        if (generateMd5 != null && generateMd5) {
+        if ((verifyWrite != null && verifyWrite) || (generateMd5 != null && generateMd5)){
             // wrap stream to generate Content-MD5 header
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             OutputStream out = requestContext.getEntityStream();
@@ -61,7 +49,11 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
             threadFinalStream.set(finalStream);
             try {
                 RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
-                out = new CloseNotifyOutputStream(buffer);
+                if ((generateMd5 != null && generateMd5)) {
+                    out = new CloseNotifyOutputStream(buffer, true);
+                } else {
+                    out = new CloseNotifyOutputStream(buffer, false);
+                }
                 out = new ChecksummedOutputStream(out, checksum);
                 threadChecksum.set(checksum);
                 threadBuffer.set(buffer);
@@ -75,8 +67,10 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
     }
 
     private static class CloseNotifyOutputStream extends FilterOutputStream {
-        CloseNotifyOutputStream(OutputStream out) {
+        boolean generateContentMd5;
+        CloseNotifyOutputStream(OutputStream out, boolean generateContentMd5) {
             super(out);
+            this.generateContentMd5 = generateContentMd5;
         }
 
         @Override
@@ -94,22 +88,20 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
             super.close();
             ClientRequestContext clientRequestContext = requestContextThreadLocal.get();
             RunningChecksum checksum = threadChecksum.get();
-            // add Content-MD5 (before anything is written to the final stream)
-            clientRequestContext.getHeaders().add(RestUtil.HEADER_CONTENT_MD5, DatatypeConverter.printBase64Binary(checksum.getByteValue()));
-
-            // need to re-sign request because Content-MD5 is included in the signature!
-            if (s3Config.getIdentity() != null) {
-                Map<String, String> parameters = RestUtil.getQueryParameterMap(clientRequestContext.getUri().getRawQuery());
-
-                String resource = VHostUtil.getResourceString(s3Config,
-                        (String) clientRequestContext.getProperty(RestUtil.PROPERTY_NAMESPACE),
-                        (String) clientRequestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
-                        RestUtil.getEncodedPath(clientRequestContext.getUri()));
-
-                signer.sign(clientRequestContext,
-                        resource,
-                        parameters,
-                        clientRequestContext.getHeaders());
+            if (generateContentMd5) {
+                // add Content-MD5 (before anything is written to the final stream)
+                clientRequestContext.getHeaders().add(RestUtil.HEADER_CONTENT_MD5, DatatypeConverter.printBase64Binary(checksum.getByteValue()));
+                // need to re-sign request because Content-MD5 is included in the signature!
+                if (s3Config.getIdentity() != null) {
+                    Map<String, String> parameters = RestUtil.getQueryParameterMap(clientRequestContext.getUri().getRawQuery());
+                    String resource = VHostUtil.getResourceString(s3Config,
+                            (String) clientRequestContext.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                            (String) clientRequestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                            RestUtil.getEncodedPath(clientRequestContext.getUri()));
+                    signer.sign(clientRequestContext, resource, parameters, clientRequestContext.getHeaders());
+                }
+            } else {
+                clientRequestContext.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE, checksum.getHexValue());
             }
 
             // write the complete buffered data
