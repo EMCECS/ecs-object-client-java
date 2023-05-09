@@ -27,8 +27,7 @@
 package com.emc.object.s3;
 
 import com.emc.object.ObjectConfig;
-import com.emc.object.s3.jersey.GeoPinningRule;
-import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.s3.jersey.*;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.HostStats;
@@ -36,11 +35,20 @@ import com.emc.rest.smart.HostVetoRule;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
+import org.glassfish.jersey.client.*;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
+import javax.annotation.Priority;
+import javax.ws.rs.client.*;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.*;
+
+import static com.emc.object.ObjectConfig.PROPERTY_RETRY_COUNT;
 
 public class GeoPinningTest extends AbstractS3ClientTest {
     private List<Vdc> vdcs;
@@ -141,52 +149,50 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         testBucketDistribution(bucket3, bHash3 % vdcs.size());
     }
 
-//    @Test
-//    public void testReadRetryFailoverInFilter() throws Exception {
-//        S3Config s3ConfigF = new S3Config(createS3Config());
-//        s3ConfigF.setGeoReadRetryFailover(true);
-//        GeoPinningFilter filter = new GeoPinningFilter(s3ConfigF);
-//
-//        String bucket = "foo";
-//        String key = "my/object/key";
-//        int geoIndex = 0xbb8619 % vdcs.size();
-//        DummyClient client = new DummyClient();
-//        client.addFilter(filter);
-//
-//        // test no retry
-//        ClientRequest request = new ClientRequestImpl(new URI("http://s3.company.com"), null);
-//        request.setMethod("GET");
-//        request.getProperties().put(S3Constants.PROPERTY_BUCKET_NAME, bucket);
-//        request.getProperties().put(S3Constants.PROPERTY_OBJECT_KEY, key);
-//        client.handle(request);
-//
-//        Assert.assertEquals(vdcs.get(geoIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-//
-//        // test 1st retry
-//        int retries = 1;
-//        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-//        client.handle(request);
-//
-//        int retryIndex = (geoIndex + retries) % vdcs.size();
-//        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-//
-//        // test 2nd retry
-//        retries++;
-//        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-//        client.handle(request);
-//
-//        retryIndex = (geoIndex + retries) % vdcs.size();
-//        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-//
-//        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
-//        retries++;
-//        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-//        client.handle(request);
-//
-//        retryIndex = (geoIndex + retries) % vdcs.size();
-//        Assert.assertEquals(geoIndex, retryIndex);
-//        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-//    }
+    @Test
+    public void testReadRetryFailoverInFilter() throws Exception {
+        S3Config s3ConfigF = new S3Config(createS3Config());
+        s3ConfigF.setGeoReadRetryFailover(true);
+
+        String bucket = "foo";
+        String key = "my/object/key";
+        int geoIndex = 0xbb8619 % vdcs.size();
+
+        JerseyClient client = JerseyClientBuilder.createClient();
+        MockClientHandler mockFilter = new MockClientHandler();
+        client.register(new GeoPinningFilter(s3ConfigF));
+        client.register(mockFilter);
+
+        JerseyWebTarget target = client.target("http://company.com")
+                .property(S3Constants.PROPERTY_BUCKET_NAME, bucket)
+                .property(S3Constants.PROPERTY_OBJECT_KEY, key);
+
+        // test no retry
+        mockFilter.setRetryRequest(false);
+        mockFilter.setIndex(geoIndex);
+        target.request().get();
+
+        // test 1st retry
+        int retries = 1;
+        int retryIndex = (geoIndex + retries) % vdcs.size();
+        mockFilter.setRetryRequest(true);
+        mockFilter.setIndex(retryIndex);
+        target.property(PROPERTY_RETRY_COUNT, retries).request().get();
+
+        // test 2nd retry
+        retries++;
+        retryIndex = (geoIndex + retries) % vdcs.size();
+        mockFilter.setRetryRequest(true);
+        mockFilter.setIndex(retryIndex);
+        target.property(PROPERTY_RETRY_COUNT, retries).request().get();
+
+        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
+        retries++;
+        retryIndex = (geoIndex + retries) % vdcs.size();
+        mockFilter.setRetryRequest(true);
+        mockFilter.setIndex(retryIndex);
+        target.property(PROPERTY_RETRY_COUNT, retries).request().get();
+    }
 
     protected void testKeyDistribution(String key, int vdcIndex) {
         LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
@@ -242,55 +248,30 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
     }
 
-//    private static class DummyClient extends Filterable {
-//        public DummyClient() {
-//            super(cr -> new ClientResponse(200, new InBoundHeaders(), new ByteArrayInputStream(new byte[0]), new DummyWorkers()));
-//        }
-//
-//        public ClientResponse handle(ClientRequest request) {
-//            return getHeadHandler().handle(request);
-//        }
-//    }
-//
-//    private static class DummyWorkers implements MessageBodyWorkers {
-//        @Override
-//        public Map<MediaType, List<MessageBodyReader>> getReaders(MediaType mediaType) {
-//            return null;
-//        }
-//
-//        @Override
-//        public Map<MediaType, List<MessageBodyWriter>> getWriters(MediaType mediaType) {
-//            return null;
-//        }
-//
-//        @Override
-//        public String readersToString(Map<MediaType, List<MessageBodyReader>> readers) {
-//            return null;
-//        }
-//
-//        @Override
-//        public String writersToString(Map<MediaType, List<MessageBodyWriter>> writers) {
-//            return null;
-//        }
-//
-//        @Override
-//        public <T> MessageBodyReader<T> getMessageBodyReader(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-//            return null;
-//        }
-//
-//        @Override
-//        public <T> MessageBodyWriter<T> getMessageBodyWriter(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-//            return null;
-//        }
-//
-//        @Override
-//        public <T> List<MediaType> getMessageBodyWriterMediaTypes(Class<T> type, Type genericType, Annotation[] annotations) {
-//            return null;
-//        }
-//
-//        @Override
-//        public <T> MediaType getMessageBodyWriterMediaType(Class<T> type, Type genericType, Annotation[] annotations, List<MediaType> acceptableMediaTypes) {
-//            return null;
-//        }
-//    }
+    @Provider
+    @Priority(FilterPriorities.PRIORITY_CHECKSUM_RESPONSE + 1)
+    class MockClientHandler implements ClientResponseFilter {
+
+        boolean isRetryRequest = false;
+        int index;
+
+        @Override
+        public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
+            // return mock response with headers and no data
+            responseContext.setStatus(Response.Status.OK.getStatusCode());
+            responseContext.setEntityStream(new ByteArrayInputStream(new byte[0]));
+            // move the assertEquals in the ClientResponseFilter
+            Assert.assertEquals(vdcs.get(index), requestContext.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC));
+        }
+
+        public void setRetryRequest(boolean retryRequest) {
+            this.isRetryRequest = retryRequest;
+        }
+
+        public void setIndex(int index) {
+            this.index = index;
+        }
+
+    }
+    
 }

@@ -2,10 +2,14 @@ package com.emc.object.s3.jersey;
 
 import java.io.IOException;
 import java.io.InputStream;
+import javax.annotation.Priority;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Provider;
 
+@Provider
+@Priority(FilterPriorities.PRIORITY_RETRY)
 public class RetryFilter implements ClientRequestFilter, ClientResponseFilter {
     private static final int MAX_RETRIES = 3;
 

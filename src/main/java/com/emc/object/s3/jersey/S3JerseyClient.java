@@ -226,6 +226,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // jersey interceptors
         client.register(new StreamExceptionWriteInterceptor());
         client.register(new StreamExceptionReadInterceptor());
+
+//        client.register(new RetryFilter());
     }
 
     @Override
