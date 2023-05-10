@@ -91,6 +91,17 @@ public abstract class AbstractClientTest {
     }
 
     @After
+    public void cleanup() throws Exception {
+        destroyTestBucket();
+        shutdownClient();
+    }
+
+    /**
+     * Test classes should implement a method to shut down the client.  This is called after all other cleanup is
+     * finished.  This method could be empty if it is unnecessary.
+     */
+    protected abstract void shutdownClient();
+
     public final void destroyTestBucket() throws Exception {
         log.info("cleaning up bucket " + getTestBucket());
         cleanUpBucket(getTestBucket());
