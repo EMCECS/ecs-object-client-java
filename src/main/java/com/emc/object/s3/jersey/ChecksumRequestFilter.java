@@ -26,8 +26,6 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
     private static S3Signer signer;
     private static final ThreadLocal<RunningChecksum> threadChecksum = new ThreadLocal<>();
     private static final ThreadLocal<ClientRequestContext> requestContextThreadLocal = new ThreadLocal<>();
-    private static final ThreadLocal<ByteArrayOutputStream> threadBuffer = new ThreadLocal<>();
-    private static final ThreadLocal<OutputStream> threadFinalStream = new ThreadLocal<>();
 
     public ChecksumRequestFilter(S3Config s3Config) {
         this.s3Config = s3Config;
@@ -41,14 +39,14 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
     public void filter(ClientRequestContext requestContext) throws IOException {
         Boolean verifyWrite = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
         Boolean generateMd5 = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
+        RunningChecksum checksum;
+        OutputStream out;
+
         if ((verifyWrite != null && verifyWrite) || (generateMd5 != null && generateMd5)){
             // wrap stream to generate Content-MD5 header
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            OutputStream out = requestContext.getEntityStream();
-            OutputStream finalStream = out;
-            threadFinalStream.set(finalStream);
             try {
-                RunningChecksum checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
                 if ((generateMd5 != null && generateMd5)) {
                     out = new CloseNotifyOutputStream(buffer, true);
                 } else {
@@ -56,14 +54,13 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
                 }
                 out = new ChecksummedOutputStream(out, checksum);
                 threadChecksum.set(checksum);
-                threadBuffer.set(buffer);
                 requestContext.setEntityStream(out);
+                requestContext.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE, checksum.getHexValue());
                 requestContextThreadLocal.set(requestContext);
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("fatal: MD5 algorithm not found");
             }
         }
-
     }
 
     private static class CloseNotifyOutputStream extends FilterOutputStream {
@@ -100,14 +97,7 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
                             RestUtil.getEncodedPath(clientRequestContext.getUri()));
                     signer.sign(clientRequestContext, resource, parameters, clientRequestContext.getHeaders());
                 }
-            } else {
-                clientRequestContext.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM_VALUE, checksum.getHexValue());
             }
-
-            // write the complete buffered data
-            OutputStream finalStream = threadFinalStream.get();
-            ByteArrayOutputStream buffer = threadBuffer.get();
-            finalStream.write(buffer.toByteArray());
         }
     }
 

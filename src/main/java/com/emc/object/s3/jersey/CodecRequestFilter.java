@@ -78,16 +78,8 @@ public class CodecRequestFilter implements ClientRequestFilter {
             // backup original metadata in case of an error
             requestContext.setProperty(RestUtil.PROPERTY_META_BACKUP, new HashMap<String, String>(userMeta));
 
-            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use a "dangling" output stream
-            // NOTE: we can't alter the headers because they've already been a) signed and b) sent
-            DanglingOutputStream danglingStream = new DanglingOutputStream();
-            OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
-
-            // add pre-stream encode metadata
+            OutputStream encodeStream = encodeChain.getEncodeStream(requestContext.getEntityStream(), userMeta);
             requestContext.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
-
-            // wrap output stream with encryptor
-            danglingStream.setOutputStream(requestContext.getEntityStream());
             requestContext.setEntityStream(encodeStream);
         }
     }
@@ -105,30 +97,4 @@ public class CodecRequestFilter implements ClientRequestFilter {
         return this;
     }
 
-    private static class DanglingOutputStream extends FilterOutputStream {
-        private static final OutputStream BOGUS_STREAM = new OutputStream() {
-            @Override
-            public void write(int b) throws IOException {
-                throw new RuntimeException("you didn't connect a dangling output stream!");
-            }
-        };
-
-        DanglingOutputStream() {
-            super(BOGUS_STREAM);
-        }
-
-        void setOutputStream(OutputStream out) {
-            this.out = out;
-        }
-
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            out.write(b, off, len);
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            throw new UnsupportedOperationException("single-byte write called!");
-        }
-    }
 }

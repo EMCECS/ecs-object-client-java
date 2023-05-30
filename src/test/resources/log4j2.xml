@@ -8,8 +8,8 @@
 
     <Loggers>
         <Logger name="org.apache.http.wire" level="info"/>
-        <Logger name="org.glassfish.jersey" level="debug"/>
-        <Logger name="com.emc.rest.smart" level="debug"/>
+        <Logger name="org.glassfish.jersey" level="info"/>
+        <Logger name="com.emc.rest.smart" level="info"/>
 
         <!-- signature debugging -->
         <!--
@@ -17,14 +17,14 @@
         -->
 
         <!-- request debugging -->
-<!--        &lt;!&ndash;-->
+        <!--
         <Logger name="org.apache.http.headers" level="debug"/>
-<!--        &ndash;&gt;-->
+        -->
 
         <!-- Turn on for Apache connection management logging -->
-<!--        &lt;!&ndash;-->
+        <!--
         <Logger name="org.apache.http.conn" level="debug"/>
-<!--        &ndash;&gt;-->
+        -->
 
         <Root level="info">
             <AppenderRef ref="mainAppender"/>
