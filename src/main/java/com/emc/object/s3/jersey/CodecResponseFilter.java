@@ -36,6 +36,8 @@ public class CodecResponseFilter implements ClientResponseFilter {
                 userMeta.clear();
                 userMeta.putAll((Map<String, String>) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_META_BACKUP));
             }
+            if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
+            return;
         }
         // make sure we clear the content-length override for this thread if we set it
         if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);

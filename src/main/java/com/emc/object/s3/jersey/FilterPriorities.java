@@ -8,10 +8,7 @@ public class FilterPriorities {
     public static final int PRIORITY_NAMESPACE = 1000;
     public static final int PRIORITY_BUCKET = 1100;
     public static final int PRIORITY_GEOPINNING = 1200;
-    // public static final int PRIORITY_SMART = 1400;
-
-     public static final int PRIORITY_RETRY = 1500;
-
+    // Priority of SmartFilter is 1400
     public static final int PRIORITY_CODEC_REQUEST = 1800;
     public static final int PRIORITY_AUTHORIZATION = Priorities.AUTHORIZATION; //2000
     public static final int PRIORITY_CHECKSUM_REQUEST = 2400;
