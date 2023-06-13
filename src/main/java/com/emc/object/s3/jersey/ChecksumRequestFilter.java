@@ -8,8 +8,6 @@ import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.DatatypeConverter;
-import java.io.ByteArrayOutputStream;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;

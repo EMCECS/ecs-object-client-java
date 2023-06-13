@@ -243,9 +243,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.setObjectLockConfiguration(bucketName, objectLockConfig);
             Assert.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(409, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("InvalidBucketState", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("InvalidBucketState", e.getErrorCode());
         }
 
         client.enableObjectLock(bucketName);
@@ -276,8 +276,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteVersion(bucketName, key, versionId);
             Assert.fail("Exception is expected when deleting version objects with Legal Hold ON.");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("AccessDenied", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("AccessDenied", e.getErrorCode());
         } finally {
             objectLockLegalHold.setStatus(ObjectLockLegalHold.Status.OFF);
             client.setObjectLegalHold(new SetObjectLegalHoldRequest(bucketName, key).withVersionId(versionId).withLegalHold(objectLockLegalHold));
@@ -384,8 +384,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteObject(request);
             Assert.fail("expected 403");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(403, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(403, e.getHttpCode());
         }
 
         //Expect success with bypassGovernanceRetention
@@ -499,8 +499,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.deleteBucket(getTestBucket());
             Assert.fail("Test succeeds. Fail was expected. Can NOT delete bucket with existing objects");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("wrong error code for delete non-empty bucket", "BucketNotEmpty", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("wrong error code for delete non-empty bucket", "BucketNotEmpty", e.getErrorCode());
         }
     }
 
@@ -641,9 +641,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getBucketPolicy(getTestBucket());
             Assert.fail("get-policy should have thrown an exception after deleting policy");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchBucketPolicy", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchBucketPolicy", e.getErrorCode());
         }
     }
 
@@ -1038,8 +1038,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("expected 412");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(412, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-modified pass
@@ -1052,8 +1052,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("expected 412");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(412, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-unmodified pass
@@ -1069,8 +1069,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("expected 412");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(412, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         etag = "d41d8cd98f00b204e9800998ecf8427e";
@@ -1084,8 +1084,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("expected 412");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(412, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-match * (if key exists, i.e. update only) pass
@@ -1097,8 +1097,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("expected 412");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(412, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         request.setKey("bogus-key");
@@ -1108,8 +1108,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(request);
             Assert.fail("expected 412");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(412, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(412, e.getHttpCode());
         }
 
         // test if-none-match * pass
@@ -1317,8 +1317,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(getTestBucket(), key, "evil update!", null);
             Assert.fail("object in retention allowed update");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("ObjectUnderRetention", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
         }
 
         Thread.sleep(10000); // allow retention to expire
@@ -1777,8 +1777,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObject(getTestBucket(), key, "evil update!", null);
             Assert.fail("object in retention allowed update");
-        } catch (ProcessingException e) {
-            Assert.assertEquals("ObjectUnderRetention", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
         }
 
         Thread.sleep(5000); // allow retention to expire
@@ -2284,8 +2284,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectMetadata(getTestBucket(), key);
             Assert.fail("expected 404 Not Found");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
         }
     }
 
@@ -2319,12 +2319,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         try {
             client.getObjectMetadata(getTestBucket(), testObject);
-        } catch (ProcessingException e) {
-            Assert.assertEquals("Wrong HTTP status", 404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("Wrong ErrorCode", "NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals("Wrong HTTP status", 404, e.getHttpCode());
+            Assert.assertEquals("Wrong ErrorCode", "NoSuchKey", e.getErrorCode());
 
             // Should not chain a SAX error
-            Assert.assertNull("Should not be chained exception", e.getCause().getCause());
+            Assert.assertNull("Should not be chained exception", e.getCause());
         }
     }
 
@@ -2787,8 +2787,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
                     try {
                         clientF.pingNode(hosts.get(i.get() % hosts.size()).getName());
-                    } catch (ProcessingException e) {
-                        if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(((S3Exception) e.getCause()).getErrorCode()))
+                    } catch (S3Exception e) {
+                        if (FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE.equals(e.getErrorCode()))
                             failures.incrementAndGet();
                         else throw e;
                     }
@@ -2867,9 +2867,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CR);
         try {
             client.copyRange(CRR1);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(409, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("ObjectUnderRetention", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("ObjectUnderRetention", e.getErrorCode());
             // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
             Assert.assertEquals("retention", client.readObject(bucketName, keyTargetWithRetention, String.class));
         }
@@ -2890,15 +2890,15 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRTooManyRanges);
         try {
             client.copyRange(CRR2);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("MaxMessageLengthExceeded", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
             // The operation shall appear atomic to the user.  Upon success, the object shall be fully created.  Upon failure, no object will be visible.  During the process, no partial object will be accessible.
             try {
                 client.getObjectMetadata(bucketName, keyTargetRangesExceeded);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2915,14 +2915,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRExceeded);
         try {
             client.copyRange(CRR3);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("MaxMessageLengthExceeded", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("MaxMessageLengthExceeded", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetRequestExceeded);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2940,14 +2940,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRSourceNotExist);
         try {
             client.copyRange(CRR4);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("InvalidCopySource", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidCopySource", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSourceNotFound);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2965,14 +2965,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRSourceInvalidRange);
         try {
             client.copyRange(CRR5);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("InvalidCopyRange", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidCopyRange", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSourceInvalid);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -2990,14 +2990,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRSourceInvalidEtag);
         try {
             client.copyRange(CRR6);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("InvalidArgument", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidArgument", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetETagInvalid);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -3022,14 +3022,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRSSE);
         try {
             client.copyRange(CRR7);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("Invalid or no customer provided encryption key", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("Invalid or no customer provided encryption key", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSSEInvalid);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -3047,14 +3047,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withCopyRange(CRNoKey);
         try {
             client.copyRange(CRR8);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("InvalidArgument", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidArgument", e.getErrorCode());
             try {
                 client.getObjectMetadata(bucketName, keyTargetSSENoKey);
                 Assert.fail("expected 404 Not Found");
-            } catch (ProcessingException es) {
-                Assert.assertEquals(404, ((S3Exception)es.getCause()).getHttpCode());
+            } catch (S3Exception es) {
+                Assert.assertEquals(404, es.getHttpCode());
             }
         }
 
@@ -3100,9 +3100,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, "object-key-not-exist"));
             Assert.fail("Fail was expected. Can NOT get tags of a non-existent object");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // should be able to update tags for a particular version of an object, 1 ~ 10
@@ -3115,27 +3115,27 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.putObjectTagging(putObjectTaggingRequestExceededTags.withVersionId(versionId));
             Assert.fail("Fail was expected. Can NOT add more than 10 tags per object");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("invalid content length", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("invalid content length", e.getErrorCode());
         }
 
         // should not be able to accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @
         try {
             client.putObjectTagging(putObjectTaggingRequestMarshalTag);
             Assert.fail("Fail was expected. Can NOT accept characters other than letters (a-z, A-Z), numbers (0-9), and spaces representable in UTF-8, and the following characters: + - = . _ : / @");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("UnexpectedContent", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("UnexpectedContent", e.getErrorCode());
         }
 
         // should not be able to have too large key or value.
         try {
             client.putObjectTagging(putObjectTaggingRequestLargeKey);
             Assert.fail("Fail was expected. Can NOT accept key with >128 Unicode characters in length, and value with > 256 Unicode characters in length");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("UnexpectedContent", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("UnexpectedContent", e.getErrorCode());
         }
 
         // GET the tag of an object where the tag was previously deleted.
@@ -3166,9 +3166,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1));
             Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
     }
@@ -3264,9 +3264,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key));
             Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
     }
 

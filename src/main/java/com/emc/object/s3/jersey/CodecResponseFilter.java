@@ -28,17 +28,7 @@ public class CodecResponseFilter implements ClientResponseFilter {
     @Override
     public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
         Boolean encode = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
-        Map<String, String> userMeta = (Map<String, String>) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_USER_METADATA);
 
-        if (responseContext.getStatusInfo().getFamily() != Response.Status.Family.SUCCESSFUL) {
-            if (encode != null && encode) {
-                // restore metadata from backup
-                userMeta.clear();
-                userMeta.putAll((Map<String, String>) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_META_BACKUP));
-            }
-            if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
-            return;
-        }
         // make sure we clear the content-length override for this thread if we set it
         if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
 

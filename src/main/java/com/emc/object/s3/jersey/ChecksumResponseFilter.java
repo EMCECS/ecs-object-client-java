@@ -47,7 +47,5 @@ public class ChecksumResponseFilter implements ClientResponseFilter {
             }
         }
 
-
-
     }
 }

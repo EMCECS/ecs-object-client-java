@@ -142,9 +142,11 @@ public abstract class AbstractJerseyClient {
                         throw orig;
 
                     // retry all IO exceptions
-                } else if (!(t instanceof IOException)) throw orig;
+                } else if (!(t instanceof IOException))
+                    throw orig;
 
-                if (!objectConfig.isRetryEnabled()) throw orig;
+                if (!objectConfig.isRetryEnabled())
+                    throw orig;
 
                 // only retry retryLimit times
                 if (++retryCount > objectConfig.getRetryLimit()) throw orig;

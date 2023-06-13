@@ -27,12 +27,15 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Exception;
+import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
 import javax.annotation.Priority;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
-import java.io.IOException;
+import java.util.Map;
 import java.util.Random;
 
 @Provider
@@ -55,9 +58,19 @@ public class FaultInjectionFilter implements ClientRequestFilter {
     }
 
     @Override
-    public void filter(ClientRequestContext requestContext) throws IOException {
-        if (random.nextFloat() < failureRate)
+    public void filter(ClientRequestContext requestContext) throws WebApplicationException {
+        if (random.nextFloat() < failureRate) {
+            Boolean encode = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
+            Map<String, String> userMeta = (Map<String, String>) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_USER_METADATA);
+
+            if (encode != null && encode) {
+                // restore metadata from backup
+                userMeta.clear();
+                userMeta.putAll((Map<String, String>) requestContext.getProperty(RestUtil.PROPERTY_META_BACKUP));
+            }
+            SizeOverrideWriter.setEntitySize(null);
             throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
+        }
     }
 
     public float getFailureRate() {

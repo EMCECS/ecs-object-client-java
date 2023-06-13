@@ -7,7 +7,6 @@ import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.ws.rs.ProcessingException;
 import java.nio.charset.StandardCharsets;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -44,9 +43,9 @@ public class ErrorFilterTest {
             // Then ErrorFilter will have nothing to parse. So we got to use get().
             client.target("http://127.0.0.1:8080/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
-        } catch (RuntimeException e) {
-            Assert.assertEquals(statusCode,  ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals(errorCode, ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(statusCode,  e.getHttpCode());
+            Assert.assertEquals(errorCode, e.getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
     }
@@ -79,9 +78,9 @@ public class ErrorFilterTest {
             // as above
             client.target("http://127.0.0.1:8080/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(statusCode, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals(errorCode, ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(statusCode, e.getHttpCode());
+            Assert.assertEquals(errorCode, e.getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
         client.close();

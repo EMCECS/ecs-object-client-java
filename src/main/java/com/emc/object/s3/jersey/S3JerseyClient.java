@@ -43,7 +43,6 @@ import org.glassfish.jersey.client.JerseyClient;
 import org.glassfish.jersey.client.JerseyInvocation;
 import org.glassfish.jersey.client.JerseyWebTarget;
 
-import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -226,6 +225,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // jersey interceptors
         client.register(new StreamExceptionWriteInterceptor());
         client.register(new StreamExceptionReadInterceptor());
+
+        client.register(ApplicationExceptionMapper.class);
     }
 
     @Override
@@ -297,8 +298,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null));
             return true;
-        } catch (ProcessingException e) {
-            switch (((S3Exception) e.getCause()).getHttpCode()) {
+        } catch (S3Exception e) {
+            switch (e.getHttpCode()) {
                 case RestUtil.STATUS_REDIRECT:
                 case RestUtil.STATUS_UNAUTHORIZED:
                     return true;
@@ -366,8 +367,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "cors");
         try {
             return executeRequest(client, request, CorsConfiguration.class);
-        } catch (ProcessingException e) {
-            if ("NoSuchCORSConfiguration".equals(((S3Exception) e.getCause()).getErrorCode())) return null;
+        } catch (S3Exception e) {
+            if ("NoSuchCORSConfiguration".equals(e.getErrorCode())) return null;
             throw e;
         }
     }
@@ -389,8 +390,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "lifecycle");
         try {
             return executeRequest(client, request, LifecycleConfiguration.class);
-        } catch (ProcessingException e) {
-            if ("NoSuchBucketPolicy".equals(((S3Exception) e.getCause()).getErrorCode()) || "NoSuchLifecycleConfiguration".equals(((S3Exception) e.getCause()).getErrorCode()))
+        } catch (S3Exception e) {
+            if ("NoSuchBucketPolicy".equals(e.getErrorCode()) || "NoSuchLifecycleConfiguration".equals(e.getErrorCode()))
                 return null;
             throw e;
         }
@@ -610,9 +611,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             result.setObject(response.readEntity(objectType));
             return result;
-        } catch (ProcessingException e) {
+        } catch (S3Exception e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (((S3Exception) e.getCause()).getHttpCode() == 304 || ((S3Exception) e.getCause()).getHttpCode() == 412) return null;
+            if (e.getHttpCode() == 304 || e.getHttpCode() == 412) return null;
             throw e;
         }
     }
@@ -662,9 +663,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public S3ObjectMetadata getObjectMetadata(GetObjectMetadataRequest request) {
         try {
             return S3ObjectMetadata.fromHeaders(executeAndClose(client, request).getHeaders());
-        } catch (ProcessingException e) {
+        } catch (S3Exception e) {
             // a 304 or 412 means If-* headers were used and a condition failed
-            if (((S3Exception) e.getCause()).getHttpCode() == 304 || ((S3Exception) e.getCause()).getHttpCode() == 412) return null;
+            if (e.getHttpCode() == 304 || e.getHttpCode() == 412) return null;
             throw e;
         }
     }
@@ -765,8 +766,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "object-lock");
         try {
             return executeRequest(client, request, ObjectLockConfiguration.class);
-        } catch (ProcessingException e) {
-            if (((S3Exception) e.getCause()).getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(((S3Exception) e.getCause()).getErrorCode()))
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode()))
                 return null;
             throw e;
         }
@@ -787,8 +788,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public ObjectLockLegalHold getObjectLegalHold(GetObjectLegalHoldRequest request) {
         try {
             return executeRequest(client, request, ObjectLockLegalHold.class);
-        } catch (ProcessingException e) {
-            if (((S3Exception) e.getCause()).getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(((S3Exception) e.getCause()).getErrorCode())) return null;
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
             throw e;
         }
     }
@@ -802,8 +803,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public ObjectLockRetention getObjectRetention(GetObjectRetentionRequest request) {
         try {
             return executeRequest(client, request, ObjectLockRetention.class);
-        } catch (ProcessingException e) {
-            if (((S3Exception) e.getCause()).getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(((S3Exception) e.getCause()).getErrorCode())) return null;
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "NoSuchObjectLockConfiguration".equals(e.getErrorCode())) return null;
             throw e;
         }
     }
@@ -838,7 +839,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             T responseEntity = response.readEntity(responseType);
             fillResponseEntity(responseEntity, response);
             return responseEntity;
-        } catch (ProcessingException e) {
+        } catch (S3Exception e) {
 
             // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the expected entity.
             // check for that here. it's not into retry loop.

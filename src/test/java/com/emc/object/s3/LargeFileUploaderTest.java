@@ -47,7 +47,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.ws.rs.ProcessingException;
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.security.DigestInputStream;
@@ -289,8 +288,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         try {
             client.getObjectMetadata(bucket, key);
             Assert.fail("Object should not exist because MPU upload is incomplete");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
         }
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
@@ -327,8 +326,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         try {
             client.getObjectMetadata(bucket, key);
             Assert.fail("Object should not exist because MPU upload is incomplete");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
         }
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
@@ -429,16 +428,16 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         try {
             lfu.doMultipartUpload();
             Assert.fail("one of the ETags in uploadedParts is wrong - should abort the upload and throw an exception");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(400, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("InvalidPart", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(400, e.getHttpCode());
+            Assert.assertEquals("InvalidPart", e.getErrorCode());
         }
         try {
             client.listParts(bucket, key, uploadId);
             Assert.fail("UploadId should not exist because MPU is aborted");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchUpload", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchUpload", e.getErrorCode());
         }
     }
 
@@ -507,9 +506,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             try {
                 client.listParts(bucket, key, uploadId);
                 Assert.fail("UploadId should not exist because MPU is aborted");
-            } catch (ProcessingException e) {
-                Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-                Assert.assertEquals("NoSuchUpload", ((S3Exception) e.getCause()).getErrorCode());
+            } catch (S3Exception e) {
+                Assert.assertEquals(404, e.getHttpCode());
+                Assert.assertEquals("NoSuchUpload", e.getErrorCode());
             }
         }
     }
@@ -583,9 +582,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // object should not exist
         try {
             Assert.assertNull(client.getObjectMetadata(bucket, key));
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // check resume context accuracy
@@ -689,9 +688,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // object should not exist
         try {
             Assert.assertNull(client.getObjectMetadata(bucket, key));
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // upload should not exist
