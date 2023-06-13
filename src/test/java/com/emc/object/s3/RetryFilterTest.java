@@ -65,7 +65,7 @@ public class RetryFilterTest extends AbstractS3ClientTest {
             client.putObject(request);
             Assert.fail("Retried more than retryLimit times");
         } catch (S3Exception e) {
-            Assert.assertEquals("Wrong exception thrown", flagMessage, e.getCause().getMessage());
+            Assert.assertEquals("Wrong exception thrown", flagMessage, e.getMessage());
         }
 
         s3Config.setRetryLimit(retryLimit + 1);
@@ -133,7 +133,7 @@ public class RetryFilterTest extends AbstractS3ClientTest {
                     }).withObjectMetadata(metadata);
             client.putObject(request);
             Assert.fail("RuntimeException was retried and should not be");
-        } catch (S3Exception e) {
+        } catch (RuntimeException e) {
             Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
         }
     }
@@ -167,7 +167,7 @@ public class RetryFilterTest extends AbstractS3ClientTest {
             client.putObject(request);
             Assert.fail("500 error did not bubble an exception");
         } catch (S3Exception e) {
-            Assert.assertEquals("Wrong exception message", flagMessage, e.getCause().getMessage());
+            Assert.assertEquals("Wrong exception message", flagMessage, e.getMessage());
             Assert.assertEquals("Wrong http code", 500, e.getHttpCode());
         }
 

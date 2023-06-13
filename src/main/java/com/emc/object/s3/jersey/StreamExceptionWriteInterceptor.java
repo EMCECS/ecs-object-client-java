@@ -26,7 +26,7 @@ public class StreamExceptionWriteInterceptor implements WriterInterceptor {
             Map<String, String> userMeta = (Map<String, String>) context.getProperty(RestUtil.PROPERTY_USER_METADATA);
 
             if (encode != null && encode) {
-                // restore metadata from backup
+                // restore metadata from ba
                 userMeta.clear();
                 userMeta.putAll((Map<String, String>) context.getProperty(RestUtil.PROPERTY_META_BACKUP));
             }
