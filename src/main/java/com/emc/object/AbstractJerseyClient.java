@@ -139,7 +139,7 @@ public abstract class AbstractJerseyClient {
 
                     // retry all 50x errors except 501 (not implemented)
                     if (se.getHttpCode() < 500 || se.getHttpCode() == 501)
-                        throw orig;
+                        throw se;
 
                     // retry all IO exceptions
                 } else if (!(t instanceof IOException))

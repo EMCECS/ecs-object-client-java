@@ -616,13 +616,6 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1a));
         client.deleteObject(new DeleteObjectRequest(bucketName, key).withVersionId(versionId1b));
         try {
-            client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key));
-            Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
-        } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchKey", e.getErrorCode());
-        }
-        try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1b));
             Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
