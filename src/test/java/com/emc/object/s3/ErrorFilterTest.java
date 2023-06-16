@@ -48,6 +48,8 @@ public class ErrorFilterTest {
             Assert.assertEquals(errorCode, e.getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }
+        client.close();
+        wireMockServer.stop();
     }
 
     @Test
@@ -68,7 +70,7 @@ public class ErrorFilterTest {
         // as above
         WireMockServer wireMockServer = new WireMockServer(options().port(8080));
         wireMockServer.start();
-        stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
+        stubFor(any(urlEqualTo("/bar")).willReturn(aResponse()
                 .withStatus(statusCode)
                 .withStatusMessage(message)
                 .withHeader("Content-Type", "application/xml")
@@ -76,7 +78,7 @@ public class ErrorFilterTest {
 
         try {
             // as above
-            client.target("http://127.0.0.1:8080/foo").request().get();
+            client.target("http://127.0.0.1:8080/bar").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
             Assert.assertEquals(statusCode, e.getHttpCode());

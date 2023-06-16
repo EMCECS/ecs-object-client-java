@@ -2859,7 +2859,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // 1. key Target with retention
         String keyTargetWithRetention = "TestObject_target_1";
         PutObjectRequest requestRetention = new PutObjectRequest(bucketName, keyTargetWithRetention, "retention")
-                .withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(2L));
+                .withObjectMetadata(new S3ObjectMetadata().withRetentionPeriod(1L));
         client.putObject(requestRetention);
         CopyRangeRequest CRR1 = new CopyRangeRequest(bucketName, keyTargetWithRetention)
                 .withMultiPartCopy("true")
