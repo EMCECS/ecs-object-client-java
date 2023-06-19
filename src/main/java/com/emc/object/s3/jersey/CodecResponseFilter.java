@@ -27,15 +27,10 @@ public class CodecResponseFilter implements ClientResponseFilter {
 
     @Override
     public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
-        Boolean encode = (Boolean) requestContext.getConfiguration().getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
-
-        // make sure we clear the content-length override for this thread if we set it
-        if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
-
         // get user metadata from response headers
         MultivaluedMap<String, String> headers = responseContext.getHeaders();
         Map<String, String> storedMeta = S3ObjectMetadata.getUserMetadata(headers);
-        Set<String> keysToRemove = new HashSet<String>(storedMeta.keySet());
+        Set<String> keysToRemove = new HashSet<>(storedMeta.keySet());
 
         // get encode specs from user metadata
         String[] encodeSpecs = CodecChain.getEncodeSpecs(storedMeta);

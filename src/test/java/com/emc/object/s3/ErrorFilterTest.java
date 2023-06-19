@@ -30,8 +30,9 @@ public class ErrorFilterTest {
 
         // as ConnectException could not be passed by ClientResponseFilter in Jersey 2.x,
         // basically we cannot generate a specific error by defining any customized filter to test the functionality of ErrorFilter.
-        WireMockServer wireMockServer = new WireMockServer(options().port(8080));
+        WireMockServer wireMockServer = new WireMockServer(options().dynamicPort().dynamicHttpsPort());
         wireMockServer.start();
+        int httpPort = wireMockServer.port();
         stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
                 .withStatus(statusCode)
                 .withStatusMessage(message)
@@ -41,7 +42,7 @@ public class ErrorFilterTest {
         try {
             // Note that head() is not working here, cause Jersey 2.x would swallow the response body.
             // Then ErrorFilter will have nothing to parse. So we got to use get().
-            client.target("http://127.0.0.1:8080/foo").request().get();
+            client.target("http://127.0.0.1:" + httpPort + "/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
             Assert.assertEquals(statusCode,  e.getHttpCode());
@@ -68,8 +69,9 @@ public class ErrorFilterTest {
         client.register(new ErrorFilter());
 
         // as above
-        WireMockServer wireMockServer = new WireMockServer(options().port(8080));
+        WireMockServer wireMockServer = new WireMockServer(options().dynamicPort().dynamicHttpsPort());
         wireMockServer.start();
+        int httpPort = wireMockServer.port();
         stubFor(any(urlEqualTo("/bar")).willReturn(aResponse()
                 .withStatus(statusCode)
                 .withStatusMessage(message)
@@ -78,7 +80,7 @@ public class ErrorFilterTest {
 
         try {
             // as above
-            client.target("http://127.0.0.1:8080/bar").request().get();
+            client.target("http://127.0.0.1:" + httpPort + "/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
             Assert.assertEquals(statusCode, e.getHttpCode());

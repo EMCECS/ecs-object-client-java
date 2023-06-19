@@ -10,7 +10,6 @@ import javax.ws.rs.ext.Provider;
 import javax.ws.rs.ext.WriterInterceptor;
 import javax.ws.rs.ext.WriterInterceptorContext;
 import java.io.IOException;
-import java.util.Map;
 
 @Provider
 public class StreamExceptionWriteInterceptor implements WriterInterceptor {
@@ -19,20 +18,7 @@ public class StreamExceptionWriteInterceptor implements WriterInterceptor {
 
     @Override
     public void aroundWriteTo(WriterInterceptorContext context) throws IOException, WebApplicationException {
-        try {
-            context.proceed();
-        } catch (Exception e) {
-            Boolean encode = context.getProperty(RestUtil.PROPERTY_META_BACKUP) != null;
-            Map<String, String> userMeta = (Map<String, String>) context.getProperty(RestUtil.PROPERTY_USER_METADATA);
-
-            if (encode != null && encode) {
-                // restore metadata from ba
-                userMeta.clear();
-                userMeta.putAll((Map<String, String>) context.getProperty(RestUtil.PROPERTY_META_BACKUP));
-            }
-            SizeOverrideWriter.setEntitySize(null);
-            throw e;
-        }
+        context.proceed();
     }
 
 }

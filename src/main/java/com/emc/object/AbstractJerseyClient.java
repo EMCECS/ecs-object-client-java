@@ -145,6 +145,13 @@ public abstract class AbstractJerseyClient {
                 } else if (!(t instanceof IOException))
                     throw orig;
 
+                // clean usermetadata in PutObject encryption requests
+                if ((boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY)) {
+                    Map<String, String> userMeta = (Map<String, String>) request.getProperties().get(RestUtil.PROPERTY_USER_METADATA);
+                    if (userMeta != null)
+                        userMeta.clear();
+                }
+
                 if (!objectConfig.isRetryEnabled())
                     throw orig;
 

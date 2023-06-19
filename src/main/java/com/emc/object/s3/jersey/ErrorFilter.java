@@ -57,17 +57,6 @@ public class ErrorFilter implements ClientResponseFilter {
     public void filter(ClientRequestContext request, ClientResponseContext response) throws IOException {
         if (response.getStatus() > 299) {
 
-            // clean UMD in request context
-            Boolean encode = (Boolean) request.getConfiguration().getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
-            Map<String, String> userMeta = (Map<String, String>) request.getConfiguration().getProperty(RestUtil.PROPERTY_USER_METADATA);
-
-            if (encode != null && encode) {
-                // restore metadata from backup
-                userMeta.clear();
-                userMeta.putAll((Map<String, String>) request.getProperty(RestUtil.PROPERTY_META_BACKUP));
-            }
-            SizeOverrideWriter.setEntitySize(null);
-
             // check for clock skew (can save hours of troubleshooting)
             if (response.getStatus() == 403) {
                 Date clientTime = RestUtil.amzHeaderParse(RestUtil.getFirstAsString(request.getHeaders(), S3Constants.AMZ_DATE));
