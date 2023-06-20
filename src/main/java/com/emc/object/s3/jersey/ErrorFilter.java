@@ -29,6 +29,7 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import org.dom4j.Document;
 import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
@@ -44,6 +45,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Date;
+import java.util.Map;
 
 @Provider
 @Priority(FilterPriorities.PRIORITY_ERROR)

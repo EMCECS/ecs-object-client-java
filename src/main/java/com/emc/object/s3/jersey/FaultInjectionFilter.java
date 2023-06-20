@@ -29,10 +29,10 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Exception;
 
 import javax.annotation.Priority;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.ext.Provider;
-import java.io.IOException;
 import java.util.Random;
 
 @Provider
@@ -55,9 +55,10 @@ public class FaultInjectionFilter implements ClientRequestFilter {
     }
 
     @Override
-    public void filter(ClientRequestContext requestContext) throws IOException {
-        if (random.nextFloat() < failureRate)
+    public void filter(ClientRequestContext requestContext) throws WebApplicationException {
+        if (random.nextFloat() < failureRate) {
             throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
+        }
     }
 
     public float getFailureRate() {

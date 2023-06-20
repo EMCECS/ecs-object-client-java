@@ -48,7 +48,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.ProcessingException;
 import java.io.ByteArrayInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -288,8 +287,8 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
         try {
             _client.putObject(getTestBucket(), key, data, null);
-        } catch (ProcessingException e) {
-            Assert.assertEquals(FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE, ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(FaultInjectionFilter.FAULT_INJECTION_ERROR_CODE, e.getErrorCode());
         }
     }
 
@@ -619,9 +618,9 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         try {
             client.getObjectTagging(new GetObjectTaggingRequest(bucketName, key).withVersionId(versionId1b));
             Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
-        } catch (ProcessingException e) {
-            Assert.assertEquals(404, ((S3Exception) e.getCause()).getHttpCode());
-            Assert.assertEquals("NoSuchKey", ((S3Exception) e.getCause()).getErrorCode());
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("NoSuchKey", e.getErrorCode());
         }
     }
 

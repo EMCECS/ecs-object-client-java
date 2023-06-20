@@ -17,9 +17,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -167,7 +164,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
-        } catch (ProcessingException e) {
+        } catch (Exception e) {
             // get RC
             Throwable t = e;
             while (t.getCause() != null && t.getCause() != t) t = t.getCause();
@@ -207,7 +204,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
                 s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
                         .withContentLength((long) MOCK_OBJ_SIZE));
                 Assert.fail("exception in input stream did not throw an exception");
-            } catch (ProcessingException e) {
+            } catch (Exception e) {
                 // get RC
                 Throwable t = e;
                 while (t.getCause() != null && t.getCause() != t) t = t.getCause();

@@ -139,12 +139,21 @@ public abstract class AbstractJerseyClient {
 
                     // retry all 50x errors except 501 (not implemented)
                     if (se.getHttpCode() < 500 || se.getHttpCode() == 501)
-                        throw orig;
+                        throw se;
 
                     // retry all IO exceptions
-                } else if (!(t instanceof IOException)) throw orig;
+                } else if (!(t instanceof IOException))
+                    throw orig;
 
-                if (!objectConfig.isRetryEnabled()) throw orig;
+                // clean usermetadata in PutObject encryption requests
+                Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
+                if (encode != null && encode) {
+                    Map<String, String> userMeta = (Map<String, String>) request.getProperties().get(RestUtil.PROPERTY_USER_METADATA);
+                    userMeta.clear();
+                }
+
+                if (!objectConfig.isRetryEnabled())
+                    throw orig;
 
                 // only retry retryLimit times
                 if (++retryCount > objectConfig.getRetryLimit()) throw orig;

@@ -75,9 +75,11 @@ public class CodecRequestFilter implements ClientRequestFilter {
             }
 
             // backup original metadata in case of an error
-            requestContext.setProperty(RestUtil.PROPERTY_META_BACKUP, new HashMap<String, String>(userMeta));
+            requestContext.setProperty(RestUtil.PROPERTY_META_BACKUP, new HashMap<>(userMeta));
 
             OutputStream encodeStream = encodeChain.getEncodeStream(requestContext.getEntityStream(), userMeta);
+            requestContext.setProperty(RestUtil.PROPERTY_USER_METADATA, new HashMap<>(userMeta));
+
             requestContext.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
             requestContext.setEntityStream(encodeStream);
         }

@@ -9,17 +9,15 @@ public class FilterPriorities {
     public static final int PRIORITY_BUCKET = 1100;
     public static final int PRIORITY_GEOPINNING = 1200;
     // Priority of SmartFilter is 1400
+    public static final int PRIORITY_CHECKSUM_REQUEST = 1600;
     public static final int PRIORITY_CODEC_REQUEST = 1800;
     public static final int PRIORITY_AUTHORIZATION = Priorities.AUTHORIZATION; //2000
-    public static final int PRIORITY_CHECKSUM_REQUEST = 2400;
-    public static final int PRIORITY_FAULTINJECTION = 2500;
-    public static final int PRIORITY_STREAM_WRITE_INTERCEPTOR = 2800;
+    public static final int PRIORITY_FAULTINJECTION = 2400;
 
     // providers used during response processing (using descending manner)
     public static final int PRIORITY_CHECKSUM_RESPONSE = 4500;
     public static final int PRIORITY_CODEC_RESPONSE = 4000;
     public static final int PRIORITY_ERROR = 3600;
-    public static final int PRIORITY_STREAM_READ_INTERCEPTOR = 3200;
 
     private FilterPriorities() {}
 
