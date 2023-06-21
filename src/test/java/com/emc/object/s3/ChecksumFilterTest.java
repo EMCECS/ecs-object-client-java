@@ -74,8 +74,8 @@ public class ChecksumFilterTest {
             resource.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
             resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
             Assert.fail("bad MD5 should throw exception");
-        } catch (S3Exception e) {
-            Assert.assertTrue(e.getCause() instanceof ChecksumError);
+        } catch (ChecksumError e) {
+            // expected
         }
         client.close();
     }

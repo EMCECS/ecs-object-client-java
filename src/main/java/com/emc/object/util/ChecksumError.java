@@ -26,7 +26,9 @@
  */
 package com.emc.object.util;
 
-public class ChecksumError extends RuntimeException {
+import javax.ws.rs.WebApplicationException;
+
+public class ChecksumError extends WebApplicationException {
     private static final String MESSAGE = "(expected: %s, actual: %s)";
 
     private String expectedValue;
