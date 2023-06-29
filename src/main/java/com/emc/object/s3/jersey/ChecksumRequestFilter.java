@@ -17,8 +17,8 @@ import java.util.Map;
 @Priority(FilterPriorities.PRIORITY_CHECKSUM_REQUEST)
 public class ChecksumRequestFilter implements ClientRequestFilter {
 
-    private static S3Config s3Config;
-    private static S3Signer signer;
+    private S3Config s3Config;
+    private S3Signer signer;
     private final ThreadLocal<ClientRequestContext> requestContextThreadLocal = new ThreadLocal<>();
     private final ThreadLocal<OutputStream> bufferThreadLocal = new ThreadLocal<>();
 
