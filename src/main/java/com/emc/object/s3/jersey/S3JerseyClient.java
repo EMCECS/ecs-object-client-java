@@ -204,7 +204,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         // READ_TIMEOUT
         client.property(ClientProperties.READ_TIMEOUT, config.getReadTimeout());
 
-        // Because host header could be replaced by smart client, which could make v4 signing fail,
+        // Because host header could be replaced by smart client, whFch could make v4 signing fail,
         // so need to make sure auth filter is after the smart filter.
         // And also need to make sure that geoPinning filter is before smart filter.
 

@@ -2512,7 +2512,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NnodSmujyUFr7%2Bryb8r42yY1UmM%3D",
                 url.toString());
 
-        s3Config = super.createS3Config();
         // test real PUT
         // only way is to use HttpURLConnection directly
         String key = "pre-signed-put-test-2";

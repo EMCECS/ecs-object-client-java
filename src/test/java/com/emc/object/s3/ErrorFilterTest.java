@@ -72,7 +72,7 @@ public class ErrorFilterTest {
         WireMockServer wireMockServer = new WireMockServer(options().dynamicPort().dynamicHttpsPort());
         wireMockServer.start();
         int httpPort = wireMockServer.port();
-        wireMockServer.stubFor(any(urlEqualTo("/bar")).willReturn(aResponse()
+        wireMockServer.stubFor(any(urlEqualTo("/foo")).willReturn(aResponse()
                 .withStatus(statusCode)
                 .withStatusMessage(message)
                 .withHeader("Content-Type", "application/xml")
