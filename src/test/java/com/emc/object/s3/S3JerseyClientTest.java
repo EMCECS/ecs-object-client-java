@@ -3167,7 +3167,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+            Assert.assertEquals("NoSuchVersion", e.getErrorCode());
         }
 
     }
