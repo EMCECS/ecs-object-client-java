@@ -847,8 +847,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
                 // it must be a SAXReader DocumentException
                 throw e;
             }
-        } finally { // in Jersey 2.x, we should always release resources actively.
-            response.close();
         }
     }
 

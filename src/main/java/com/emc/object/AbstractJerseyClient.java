@@ -57,7 +57,9 @@ public abstract class AbstractJerseyClient {
     }
 
     protected Response executeAndClose(JerseyClient client, ObjectRequest request) {
-        return executeRequest(client, request);
+        Response response = executeRequest(client, request);
+        response.close();
+        return response;
     }
 
     @SuppressWarnings("unchecked")
@@ -128,6 +130,8 @@ public abstract class AbstractJerseyClient {
                         : builder.method(method.name(), Entity.entity(entity, new Variant(MediaType.valueOf(contentType), (String) null, contentEncoding)));
 
             } catch (RuntimeException orig) {
+                // TODO: handle a sudden broken connection
+
                 Throwable t = orig;
 
                 // in this case, the exception was wrapped by Jersey
