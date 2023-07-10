@@ -336,7 +336,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(bucketName, key);
         Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
         Assert.assertEquals(retentionDate, objectMetadata.getObjectLockRetention().getRetainUntilDate());
-        Thread.sleep(2000);
+        Thread.sleep(3000);
 
         //Put Retention on existing object.
         Date retentionDate2 = new Date(System.currentTimeMillis() + 2000);
