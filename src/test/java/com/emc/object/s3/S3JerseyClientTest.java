@@ -2817,7 +2817,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testCopyRangeAPI() throws Exception {
+    public void testCopyRangeAPI() {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeFalse("Copy range API is not supported with IAM user.", isIamUser);
 
@@ -3055,7 +3055,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 Assert.assertEquals(404, es.getHttpCode());
             }
         }
-        Thread.sleep(2000);
     }
 
     protected void assertAclEquals(AccessControlList acl1, AccessControlList acl2) {

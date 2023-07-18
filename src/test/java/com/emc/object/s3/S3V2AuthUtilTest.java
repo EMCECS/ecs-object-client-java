@@ -128,6 +128,7 @@ public class S3V2AuthUtilTest {
         S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
+        // In Jersey 2.x, use ClientRequestFilter to sign the request
         JerseyClient client1 = JerseyClientBuilder.createClient();
         client1.register((ClientRequestFilter) requestContext -> {
             requestContext.setUri(URI.create(uri));

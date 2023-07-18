@@ -24,19 +24,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-//import com.github.jk1.license.render.InventoryHtmlReportRenderer
+import com.github.jk1.license.render.InventoryHtmlReportRenderer
 
 plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-//    id 'net.saliman.cobertura' version '4.0.0'
-//    id 'com.github.jk1.dependency-license-report' version '1.17'
+    id 'net.saliman.cobertura' version '4.0.0'
+    id 'com.github.jk1.dependency-license-report' version '1.17'
     id 'distribution'
     id 'signing'
     id 'maven'
-//    id 'org.ajoberstar.git-publish' version '3.0.1'
-//    id 'nebula.release' version '15.3.1'
+    id 'org.ajoberstar.git-publish' version '3.0.1'
+    id 'nebula.release' version '15.3.1'
 }
 
 group 'com.emc.ecs'
@@ -62,8 +62,8 @@ repositories {
 }
 
 dependencies {
+    // TODO: implementation 'com.emc.ecs:smart-client-ecs:3.0.2'
     implementation files('smarttest/smart-client-core.jar', 'smarttest/smart-client-ecs.jar', 'smarttest/smart-client-jersey.jar')
-//    implementation 'com.emc.ecs:smart-client-ecs:3.0.2'
     implementation 'org.glassfish.jersey.core:jersey-client:2.38'
     implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.38'
     implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.38'
@@ -182,9 +182,9 @@ artifacts {
     jars sourcesJar
 }
 
-//licenseReport {
-//    renderers = [new InventoryHtmlReportRenderer()]
-//}
+licenseReport {
+    renderers = [new InventoryHtmlReportRenderer()]
+}
 
 distributions {
     main {
@@ -196,9 +196,9 @@ distributions {
             from('.') {
                 include '*.txt'
             }
-//            into('3rd-party-licenses') {
-//                from generateLicenseReport
-//            }
+            into('3rd-party-licenses') {
+                from generateLicenseReport
+            }
             into('lib') {
                 from configurations.runtimeClasspath
             }
@@ -242,17 +242,17 @@ task aggregateDocs {
 }
 tasks.aggregateDocs.dependsOn javadoc
 
-//gitPublish {
-//    repoUri = githubRemoteUrl
-//    branch = 'gh-pages'
-//    contents {
-//        from aggregatedDocsDir
-//    }
-//    preserve { include '**/*' }
-//}
-//tasks.gitPublishPush.dependsOn aggregateDocs
+gitPublish {
+    repoUri = githubRemoteUrl
+    branch = 'gh-pages'
+    contents {
+        from aggregatedDocsDir
+    }
+    preserve { include '**/*' }
+}
+tasks.gitPublishPush.dependsOn aggregateDocs
 
-//tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
+tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
 
 clean {
     delete aggregatedDocsDir
@@ -278,12 +278,12 @@ gradle.taskGraph.whenReady { taskGraph ->
         uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
         uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
     }
-//    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
-//        if (!rootProject.hasProperty('gitUsername'))
-//            rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
-//        if (!rootProject.hasProperty('gitPassword'))
-//            rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
-//        System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
-//        System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
-//    }
+    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
+        if (!rootProject.hasProperty('gitUsername'))
+            rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
+        if (!rootProject.hasProperty('gitPassword'))
+            rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
+        System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
+        System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
+    }
 }
