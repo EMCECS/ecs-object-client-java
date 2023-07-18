@@ -43,8 +43,8 @@ public class FaultInjectionFilter implements ClientRequestFilter {
 
     public static final float DEFAULT_FAILURE_RATE = 0.25f;
 
-    private final Random random = new Random();
-    private final float failureRate;
+    private Random random = new Random();
+    private float failureRate;
 
     public FaultInjectionFilter() {
         this(DEFAULT_FAILURE_RATE);
@@ -64,5 +64,4 @@ public class FaultInjectionFilter implements ClientRequestFilter {
     public float getFailureRate() {
         return failureRate;
     }
-
 }

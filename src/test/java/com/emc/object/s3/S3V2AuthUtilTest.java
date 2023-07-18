@@ -50,8 +50,8 @@ public class S3V2AuthUtilTest {
 
     private static final String METHOD_1 = "GET";
     private static final String RESOURCE_1 = "/johnsmith/photos/puppy.jpg";
-    private static final Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
-    private static final MultivaluedMap<String, Object> HEADERS_1 = new MultivaluedHashMap<>();
+    private static Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
+    private static MultivaluedMap<String, Object> HEADERS_1 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_1 = "GET\n" +
             "\n" +
             "\n" +
@@ -61,8 +61,8 @@ public class S3V2AuthUtilTest {
 
     private static final String METHOD_2 = "PUT";
     private static final String RESOURCE_2 = "/static.johnsmith.net/db-backup.dat.gz";
-    private static final Map<String, String> PARAMETERS_2 = new HashMap<String, String>();
-    private static final MultivaluedMap<String, Object> HEADERS_2 = new MultivaluedHashMap<String, Object>();
+    private static Map<String, String> PARAMETERS_2 = new HashMap<String, String>();
+    private static MultivaluedMap<String, Object> HEADERS_2 = new MultivaluedHashMap<String, Object>();
     private static final String SIGN_STRING_2 = "PUT\n" +
             "4gJE4saaMU4BqNR0kLY+lw==\n" +
             "application/x-download\n" +
@@ -76,8 +76,8 @@ public class S3V2AuthUtilTest {
 
     private static final String METHOD_3 = "GET";
     private static final String RESOURCE_3 = "/johnsmith/";
-    private static final Map<String, String> PARAMETERS_3 = new HashMap<String, String>();
-    private static final MultivaluedMap<String, Object> HEADERS_3 = new MultivaluedHashMap<String, Object>();
+    private static Map<String, String> PARAMETERS_3 = new HashMap<String, String>();
+    private static MultivaluedMap<String, Object> HEADERS_3 = new MultivaluedHashMap<String, Object>();
     private static final String SIGN_STRING_3 = "GET\n" +
             "\n" +
             "\n" +
@@ -87,8 +87,8 @@ public class S3V2AuthUtilTest {
 
     private static final String METHOD_4 = "GET";
     private static final String RESOURCE_4 = "/johnsmith/";
-    private static final Map<String, String> PARAMETERS_4 = new HashMap<String, String>();
-    private static final MultivaluedMap<String, Object> HEADERS_4 = new MultivaluedHashMap<>();
+    private static Map<String, String> PARAMETERS_4 = new HashMap<String, String>();
+    private static MultivaluedMap<String, Object> HEADERS_4 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_4 = "GET\n" +
             "\n" +
             "\n" +

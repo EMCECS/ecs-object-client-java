@@ -45,7 +45,7 @@ public class ErrorFilterTest {
             client.target("http://127.0.0.1:" + httpPort + "/foo").request().get();
             Assert.fail("test error generator failed to short-circuit");
         } catch (S3Exception e) {
-            Assert.assertEquals(statusCode,  e.getHttpCode());
+            Assert.assertEquals(statusCode, e.getHttpCode());
             Assert.assertEquals(errorCode, e.getErrorCode());
             Assert.assertEquals(message, e.getMessage());
         }

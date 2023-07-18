@@ -54,10 +54,10 @@ public class S3V4AuthUtilTest {
             "c4afb1cc5771d871763a393e44b703571b55cc28424d1a5e86da6ed3c154a4b9";
     private static final String EXPECTED_SIGNATURE =
             "5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7";
-    private static final Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
-    private static final MultivaluedMap<String, Object> HEADERS_1 = new MultivaluedHashMap<String, Object>();
+    private static Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
+    private static MultivaluedMap<String, Object> HEADERS_1 = new MultivaluedHashMap<String, Object>();
 
-    private static final String payload = "{\n" +
+    private static String payload = "{\n" +
             "\"service_id\": \"09cac1c6-1b0a-11e6-b6ba-3e1d05defe78\",\n" +
             "\"plan_id\": \"09cac5b8-1b0a-11e6-b6ba-3e1d05defe78\",\n" +
             "\"organization_guid\": \"sup\",\n" +
@@ -66,7 +66,7 @@ public class S3V4AuthUtilTest {
             "\"parameters\": {}\n" +
             "}";
 
-    private static final PutObjectRequest request = new PutObjectRequest("testBucket", "testKey", payload);
+    private static PutObjectRequest request = new PutObjectRequest("testBucket", "testKey", payload);
 
     @BeforeClass
     public static void setup() {
@@ -133,7 +133,7 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
         S3SignerV4 signer = new S3SignerV4(s3Config);
         byte[] signingKey = signer.getSigningKey(V4_DATE, S3Constants.AWS_SERVICE_IAM);
-        Assert.assertEquals(EXPECTED_SIGNING_KEY, S3Signer.hexEncode(signingKey));
+        Assert.assertEquals(EXPECTED_SIGNING_KEY, signer.hexEncode(signingKey));
     }
 
     @Test
@@ -143,8 +143,9 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
+        String stringToSign = EXPECTED_STRING_TO_SIGN;
         byte[] signingKey = signer.getSigningKey(V4_DATE, S3Constants.AWS_SERVICE_IAM);
-        Assert.assertEquals(EXPECTED_SIGNATURE, signer.getSignature(EXPECTED_STRING_TO_SIGN, signingKey));
+        Assert.assertEquals(EXPECTED_SIGNATURE, signer.getSignature(stringToSign, signingKey));
     }
 
     @Test

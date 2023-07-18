@@ -47,7 +47,6 @@ public class ListObjectsResult implements UrlEncodable {
     private boolean truncated;
     private List<S3Object> objects = new ArrayList<>();
     private List<CommonPrefix> _commonPrefixes = new ArrayList<>();
-    private boolean isServerSideEncrypted;
 
     //This method is called after all the properties (except IDREF) are unmarshalled for this object,
     //but before this object is set to the parent object.
@@ -152,15 +151,6 @@ public class ListObjectsResult implements UrlEncodable {
 
     protected void set_commonPrefixes(List<CommonPrefix> _commonPrefixes) {
         this._commonPrefixes = _commonPrefixes;
-    }
-
-    @XmlElement(name = "ServerSideEncryptionEnabled")
-    public boolean isServerSideEncrypted() {
-        return isServerSideEncrypted;
-    }
-
-    public void setServerSideEncrypted(boolean serverSideEncrypted) {
-        isServerSideEncrypted = serverSideEncrypted;
     }
 
     @XmlTransient

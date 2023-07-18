@@ -99,6 +99,5 @@ public class ChecksumFilterTest {
         public void setBadMd5(boolean badMd5) {
             this.badMd5 = badMd5;
         }
-
     }
 }

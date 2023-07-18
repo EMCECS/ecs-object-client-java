@@ -40,7 +40,6 @@ public class S3Object {
     private Long size;
     private StorageClass storageClass;
     private CanonicalUser owner;
-    private boolean isFanoutObject;
 
     //NOTE: This method should only be called from the parent afterUnmarshal method.  This will not work as a direct
     //      implementation of afterUnmarshal because the encodingType element comes at the very end of the XML packet,
@@ -111,14 +110,5 @@ public class S3Object {
 
     public void setOwner(CanonicalUser owner) {
         this.owner = owner;
-    }
-
-    @XmlElement(name = "IsFanoutObject")
-    public boolean isFanoutObject() {
-        return isFanoutObject;
-    }
-
-    public void setFanoutObject(boolean fanoutObject) {
-        this.isFanoutObject = fanoutObject;
     }
 }
