@@ -111,7 +111,6 @@ public class ErrorFilter implements ClientResponseFilter {
         SAXReader saxReader = new SAXReader();
 
         Document d;
-
         try {
             d = saxReader.read(reader);
         } catch (Throwable t) {

@@ -224,7 +224,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         smartConfig.setProxyPass(getPropAsString(PROPERTY_PROXY_PASS));
 
         for (String prop : properties.keySet()) {
-            smartConfig.setProperty(prop, properties.get(prop));
+            smartConfig.withProperty(prop, properties.get(prop));
         }
 
         return smartConfig;

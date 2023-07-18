@@ -112,7 +112,6 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
                 }
             }
             client.deleteBucket(bucketName);
-
         }
     }
 

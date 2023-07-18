@@ -2,6 +2,7 @@ package com.emc.object.s3.request;
 
 import com.emc.object.EntityRequest;
 import com.emc.object.Method;
+import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.bean.CopyRange;
 import com.emc.object.util.RestUtil;
 

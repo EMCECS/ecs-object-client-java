@@ -124,11 +124,11 @@ public class QueryObjectsResult {
     }
 
     @XmlTransient
-    public boolean getIncludeOlderVersions() { return includeOlderVersions; }
-
-    public void setIncludeOlderVersions(boolean includeOlderVersions) {
-        this.includeOlderVersions = includeOlderVersions;
+    public boolean getIncludeOlderVersions() {
+        return includeOlderVersions;
     }
+
+    public void setIncludeOlderVersions(boolean includeOlderVersions) { this.includeOlderVersions = includeOlderVersions; }
 
     @XmlElementWrapper(name = "CommonPrefixMatches")
     @XmlElement(name = "PrefixGroups")

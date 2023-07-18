@@ -46,10 +46,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.glassfish.jersey.client.JerseyClientBuilder;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -946,6 +943,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         client.putObject(getTestBucket(), key1, content1, "text/plain");
         Assert.assertEquals(content1, client.readObject(getTestBucket(), key1, String.class));
+
         client.putObject(getTestBucket(), key2, content2, "text/plain");
         Assert.assertEquals(content2, client.readObject(getTestBucket(), key2, String.class));
     }
@@ -2487,7 +2485,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             // test real PUT
             String key = "pre-signed-put-test", content = "This is my test object content";
             url = client.getPresignedUrl(
-                    new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000000))
+                    new PresignedUrlRequest(Method.PUT, getTestBucket(), key, new Date(System.currentTimeMillis() + 100000))
                             .withObjectMetadata(new S3ObjectMetadata().withContentType("text/plain")
                                     .addUserMetadata("foo", "bar"))
             ); // http://10.246.151.71:9020/s3-client-test-null-0196d4/pre-signed-put-test?AWSAccessKeyId=obj1&Expires=1679987253&Signature=H81IV4HrtAGOGuDQ1uQJV0ZO4go%3D
@@ -2512,6 +2510,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                         "?AWSAccessKeyId=AKIAIOSFODNN7EXAMPLE&Expires=1175139620&Signature=NnodSmujyUFr7%2Bryb8r42yY1UmM%3D",
                 url.toString());
 
+        s3Config = super.createS3Config();
         // test real PUT
         // only way is to use HttpURLConnection directly
         String key = "pre-signed-put-test-2";

@@ -30,6 +30,7 @@ import com.emc.object.EncryptionConfig;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 
 import java.net.URI;
 
@@ -49,9 +50,9 @@ public class S3EncryptionUrlConnectionTest extends S3EncryptionClientBasicTest {
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        rclient = new S3JerseyClient(config);
+        rclient = new S3JerseyClient(config, JerseyClientBuilder.createClient());
         EncryptionConfig eConfig = createEncryptionConfig();
-        eclient = new S3EncryptionClient(config, eConfig);
+        eclient = new S3EncryptionClient(config, JerseyClientBuilder.createClient(), eConfig);
         encodeSpec = eConfig.getEncryptionSpec();
         if (eConfig.isCompressionEnabled()) encodeSpec = eConfig.getCompressionSpec() + "," + encodeSpec;
         return eclient;

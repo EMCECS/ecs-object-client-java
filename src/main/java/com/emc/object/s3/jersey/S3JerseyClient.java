@@ -47,9 +47,7 @@ import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URL;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Reference implementation of S3Client.
@@ -125,7 +123,6 @@ import java.util.Map;
  *     System.setProperty("http.maxConnections", "" + 32); // if you have 32 threads
  *     S3Client s3Client = new S3JerseyClient(configX, new URLConnectionClientHandler());
  * </pre>
-
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
@@ -323,7 +320,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public BucketInfo getBucketInfo(String bucketName) {
         BucketInfo result = new BucketInfo();
         result.setBucketName(bucketName);
-        fillResponseEntity(result, executeAndClose(client, new GenericBucketRequest(Method.GET, bucketName, null)));
+        fillResponseEntity(result, executeAndClose(client, new GenericBucketRequest(Method.HEAD, bucketName, null)));
         return result;
     }
 
@@ -765,8 +762,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         try {
             return executeRequest(client, request, ObjectLockConfiguration.class);
         } catch (S3Exception e) {
-            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode()))
-                return null;
+            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode())) return null;
             throw e;
         }
     }
@@ -839,12 +835,12 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             return responseEntity;
         } catch (S3Exception e) {
 
-            // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the expected entity.
-            // check for that here. it's not into retry loop.
+            // some S3 responses return a 200 right away, but may fail and include an error XML package instead of the
+            // expected entity. check for that here.
             try {
                 throw ErrorFilter.parseErrorResponse(new StringReader(response.readEntity(String.class)), response.getStatus());
             } catch (Throwable t) {
-                // it must be a SAXReader DocumentException
+                // must be a reader error
                 throw e;
             }
         }

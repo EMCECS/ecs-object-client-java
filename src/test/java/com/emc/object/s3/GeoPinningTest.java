@@ -99,7 +99,6 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testGeoPinningAlgorithm() {
-
         String guid = "Hello GeoPinning";
         int hashNum = 0xa3fce8;
 
@@ -273,5 +272,4 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
 
     }
-    
 }

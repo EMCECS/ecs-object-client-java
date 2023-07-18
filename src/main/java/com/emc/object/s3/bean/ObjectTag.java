@@ -3,6 +3,8 @@ package com.emc.object.s3.bean;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @XmlRootElement(name = "Tag")
 @XmlType(propOrder = {"key", "value"})
