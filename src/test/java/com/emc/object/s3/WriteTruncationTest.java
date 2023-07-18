@@ -15,6 +15,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.ws.rs.ProcessingException;
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -161,16 +162,16 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             // get RC
-            Throwable t = e;
-            while (t.getCause() != null && t.getCause() != t) t = t.getCause();
+//            Throwable t = e;
+//            while (t.getCause() != null && t.getCause() != t) t = t.getCause();
             if (exceptionType == ExceptionType.RuntimeException) {
-                Assert.assertTrue(t instanceof RuntimeException);
+                Assert.assertTrue(e.getCause() instanceof RuntimeException);
             } else {
-                Assert.assertTrue(t instanceof IOException);
+                Assert.assertTrue(e.getCause() instanceof IOException);
             }
-            Assert.assertEquals(message, t.getMessage());
+            Assert.assertEquals(message, e.getCause().getMessage());
         }
 
         // TODO: sometimes the object is created, but does not show in a list right away - figure out why (is this a bug?)
@@ -201,12 +202,12 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
                 s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
                         .withContentLength((long) MOCK_OBJ_SIZE));
                 Assert.fail("exception in input stream did not throw an exception");
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 // get RC
-                Throwable t = e;
-                while (t.getCause() != null && t.getCause() != t) t = t.getCause();
-                Assert.assertTrue(t instanceof IOException);
-                Assert.assertEquals(message, t.getMessage());
+//                Throwable t = e;
+//                while (t.getCause() != null && t.getCause() != t) t = t.getCause();
+                Assert.assertTrue(e.getCause() instanceof IOException);
+                Assert.assertEquals(message, e.getCause().getMessage());
 
                 // object should not exist
                 Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
