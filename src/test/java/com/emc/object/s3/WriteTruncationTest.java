@@ -8,6 +8,7 @@ import com.emc.object.util.FaultInjectionStream;
 import com.emc.util.ConcurrentJunitRunner;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.glassfish.jersey.client.JerseyClientBuilder;
+import org.glassfish.jersey.client.spi.ConnectorProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;

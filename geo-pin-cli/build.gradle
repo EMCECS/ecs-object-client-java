@@ -27,7 +27,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '6.1.0'
+//    id 'com.github.johnrengelman.shadow' version '6.1.0'
 }
 
 group 'com.emc.ecs'
@@ -48,14 +48,14 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 }
 
-shadowJar {
-    destinationDir file("${buildDir}/shadow")
-    classifier ''
-    manifest {
-        attributes 'Implementation-Version': project.version
-    }
-}
+//shadowJar {
+//    destinationDir file("${buildDir}/shadow")
+//    classifier ''
+//    manifest {
+//        attributes 'Implementation-Version': project.version
+//    }
+//}
 
 artifacts {
-    tools shadowJar // tells root project to include in tools/ dir of distribution
+//    tools shadowJar // tells root project to include in tools/ dir of distribution
 }
