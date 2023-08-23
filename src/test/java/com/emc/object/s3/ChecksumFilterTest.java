@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Priority;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
@@ -74,8 +75,9 @@ public class ChecksumFilterTest {
             resource.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
             resource.request().put(Entity.entity(data, RestUtil.DEFAULT_CONTENT_TYPE));
             Assert.fail("bad MD5 should throw exception");
-        } catch (ChecksumError e) {
+        } catch (ProcessingException e) {
             // expected
+            Assert.assertTrue(e.getCause() instanceof ChecksumError);
         }
         client.close();
     }

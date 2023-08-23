@@ -2657,7 +2657,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 // some versions of ECS reset the socket of ongoing uploads after an abort
                 if (e instanceof SocketException && (e.getMessage().startsWith("Broken pipe")
                         || e.getMessage().startsWith("Connection reset by peer")
-                        || e.getMessage().startsWith("Software caused connection abort")))
+                        || e.getMessage().startsWith("An established connection was aborted by the software in your host machine")))
                     continue;
                 if (e instanceof IOException && e.getMessage().startsWith("Error writing to server"))
                     continue;
