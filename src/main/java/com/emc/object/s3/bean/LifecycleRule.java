@@ -186,6 +186,10 @@ public class LifecycleRule {
         return abortIncompleteMultipartUpload;
     }
 
+    protected void setAbortIncompleteMultipartUpload(AbortIncompleteMultipartUpload abortIncompleteMultipartUpload) {
+        this.abortIncompleteMultipartUpload = abortIncompleteMultipartUpload;
+    }
+
     @XmlTransient
     public Integer getAbortIncompleteMultipartUploadDays() {
         return (abortIncompleteMultipartUpload == null) ? null : abortIncompleteMultipartUpload.days;
