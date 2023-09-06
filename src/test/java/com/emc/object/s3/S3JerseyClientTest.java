@@ -611,6 +611,18 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertTrue(lc2.getRules().contains(rule));
         }
 
+        lc.withRules(new LifecycleRule("abort-incomplete-mpu", "", LifecycleRule.Status.Enabled).withAbortIncompleteMultipartUploadDays(1));
+
+        client.setBucketLifecycle(getTestBucket(), lc);
+
+        lc2 = client.getBucketLifecycle(getTestBucket());
+        Assert.assertNotNull(lc2);
+        Assert.assertEquals(lc.getRules().size(), lc2.getRules().size());
+
+        for (LifecycleRule rule : lc.getRules()) {
+            Assert.assertTrue(lc2.getRules().contains(rule));
+        }
+
         client.deleteBucketLifecycle(getTestBucket());
         Assert.assertNull(client.getBucketLifecycle(getTestBucket()));
     }

@@ -32,13 +32,14 @@ import javax.xml.bind.annotation.*;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.util.Date;
 
-@XmlType(propOrder = {"id", "prefix", "status", "expiration", "noncurrentVersionExpiration"})
+@XmlType(propOrder = {"id", "prefix", "status", "expiration", "noncurrentVersionExpiration", "abortIncompleteMultipartUpload"})
 public class LifecycleRule {
     private String id;
     private String prefix;
     private Status status;
     private Expiration expiration;
     private NoncurrentVersionExpiration noncurrentVersionExpiration;
+    private AbortIncompleteMultipartUpload abortIncompleteMultipartUpload;
 
     public LifecycleRule() {
         this(null, null, null);
@@ -97,6 +98,11 @@ public class LifecycleRule {
 
     public LifecycleRule withNoncurrentVersionExpirationDays(Integer days) {
         setNoncurrentVersionExpirationDays(days);
+        return this;
+    }
+
+    public LifecycleRule withAbortIncompleteMultipartUploadDays(Integer days) {
+        setAbortIncompleteMultipartUploadDays(days);
         return this;
     }
 
@@ -175,6 +181,25 @@ public class LifecycleRule {
         this.noncurrentVersionExpiration.days = noncurrentDays;
     }
 
+    @XmlElement(name = "AbortIncompleteMultipartUpload")
+    protected AbortIncompleteMultipartUpload getAbortIncompleteMultipartUpload() {
+        return abortIncompleteMultipartUpload;
+    }
+
+    protected void setAbortIncompleteMultipartUpload(AbortIncompleteMultipartUpload abortIncompleteMultipartUpload) {
+        this.abortIncompleteMultipartUpload = abortIncompleteMultipartUpload;
+    }
+
+    @XmlTransient
+    public Integer getAbortIncompleteMultipartUploadDays() {
+        return (abortIncompleteMultipartUpload == null) ? null : abortIncompleteMultipartUpload.days;
+    }
+
+    public void setAbortIncompleteMultipartUploadDays(Integer daysAfterInitiation) {
+        this.abortIncompleteMultipartUpload = new AbortIncompleteMultipartUpload();
+        this.abortIncompleteMultipartUpload.days = daysAfterInitiation;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -191,6 +216,8 @@ public class LifecycleRule {
         if (getExpirationDays() != null ? !getExpirationDays().equals(that.getExpirationDays()) : that.getExpirationDays() != null)
             return false;
         if (getNoncurrentVersionExpirationDays() != null ? !getNoncurrentVersionExpirationDays().equals(that.getNoncurrentVersionExpirationDays()) : that.getNoncurrentVersionExpirationDays() != null)
+            return false;
+        if (getAbortIncompleteMultipartUploadDays() != null ? !getAbortIncompleteMultipartUploadDays().equals(that.getAbortIncompleteMultipartUploadDays()) : that.getAbortIncompleteMultipartUploadDays() != null)
             return false;
         if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) return false;
         if (status != that.status) return false;
@@ -209,6 +236,8 @@ public class LifecycleRule {
         result = 31 * result + (getExpirationDays() != null ? getExpirationDays().hashCode() : 0);
         result = 31 * result + (getExpirationDate() != null ? getExpirationDate().hashCode() : 0);
         result = 31 * result + (getNoncurrentVersionExpirationDays() != null ? getNoncurrentVersionExpirationDays().hashCode() : 0);
+        result = 31 * result + (getAbortIncompleteMultipartUploadDays() != null ? getAbortIncompleteMultipartUploadDays().hashCode() : 0);
+
         return result;
     }
 
@@ -224,6 +253,12 @@ public class LifecycleRule {
     @XmlAccessorType(XmlAccessType.FIELD)
     protected static class NoncurrentVersionExpiration {
         @XmlElement(name = "NoncurrentDays")
+        public Integer days;
+    }
+
+    @XmlAccessorType(XmlAccessType.FIELD)
+    protected static class AbortIncompleteMultipartUpload {
+        @XmlElement(name = "DaysAfterInitiation")
         public Integer days;
     }
 

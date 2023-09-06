@@ -83,6 +83,14 @@ public class LifecycleConfigurationTest {
                 "<Prefix>notvalid/</Prefix>" +
                 "<Status>Disabled</Status>" +
                 "</Rule>" +
+                "<Rule>" +
+                "<ID>abort-incomplete-mpu</ID>" +
+                "<Prefix>abortmpu/</Prefix>" +
+                "<Status>Enabled</Status>" +
+                "<AbortIncompleteMultipartUpload>" +
+                "<DaysAfterInitiation>1</DaysAfterInitiation>" +
+                "</AbortIncompleteMultipartUpload>" +
+                "</Rule>" +
                 "<Rule/>" +
                 "</LifecycleConfiguration>";
 
@@ -97,6 +105,7 @@ public class LifecycleConfigurationTest {
                 .withExpirationDays(365)
                 .withNoncurrentVersionExpirationDays(180));
         rules.add(new LifecycleRule("not valid rule", "notvalid/", LifecycleRule.Status.Disabled));
+        rules.add(new LifecycleRule("abort-incomplete-mpu", "abortmpu/", LifecycleRule.Status.Enabled).withAbortIncompleteMultipartUploadDays(1));
         rules.add(new LifecycleRule());
 
         LifecycleConfiguration object = new LifecycleConfiguration();
