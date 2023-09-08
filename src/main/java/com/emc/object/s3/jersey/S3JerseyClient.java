@@ -333,6 +333,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void deleteBucket(DeleteBucketRequest request) {
+        executeAndClose(client, request);
+    }
+
+    @Override
+    public BucketDeletionStatus getBucketDeletionStatus(String bucketName) {
+        return executeRequest(client, new GetBucketDeletionStatusRequest(bucketName), BucketDeletionStatus.class);
+    }
+
+    @Override
     public void setBucketAcl(String bucketName, AccessControlList acl) {
         setBucketAcl(new SetBucketAclRequest(bucketName).withAcl(acl));
     }

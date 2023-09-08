@@ -501,6 +501,65 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testDeleteBucketWithBackgroundTasks() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.8", ecsVersion != null && ecsVersion.compareTo("3.8") >= 0);
+
+        String bucketName = getTestBucket() + "-empty";
+        String bucketNameNotBeingDeleted = getTestBucket() + "-notBeingDeleted";
+
+        client.createBucket(bucketName);
+        client.putObject(bucketName, "foo", "bar", null);
+        client.putObject(bucketName, "foo1", "bar1", null);
+        client.putObject(bucketName, "foo2", "bar2", null);
+        client.putObject(bucketName, "foo3", "bar3", null);
+
+        client.createBucket(bucketNameNotBeingDeleted);
+        client.putObject(bucketNameNotBeingDeleted, "foo", "bar", null);
+
+        client.deleteBucket(new DeleteBucketRequest(bucketName, true));
+        BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
+        Assert.assertTrue("Status of empty bucket background tasks is not allowed", status.getStatus().equals("PENDING") || status.getStatus().equals("IN_PROGRESS"));
+
+        if (status.getStatus().equals("PENDING")) {
+            Assert.assertEquals("created date should be the same as lastUpdated date in EmptyBucketStatus.", status.getCreated(), status.getLastUpdated());
+        } else if (status.getStatus().equals("IN_PROGRESS")) {
+            Assert.assertTrue("lastUpdated date should be larger than created date in EmptyBucketStatus.", status.getLastUpdated().compareTo(status.getCreated()) > 0);
+        } else {
+            Assert.fail("The status should not be one of [POST_PROCESSING|DONE|FAILED|ABORTED|NOT_FOUND|ABORT_IN_PROGRESS] at the moment.");
+        }
+
+        // other entries are shown default in the response.
+
+        try {
+            client.deleteBucket(bucketName);
+            Assert.fail("It is not allowed to delete a bucket whose background deletion tasks are in progress.");
+        } catch (S3Exception e) {
+            Assert.assertEquals(403, e.getHttpCode());
+            Assert.assertEquals("EmptyBucketInProgress", e.getErrorCode());
+        }
+        try {
+            client.putObject(bucketName, "bar", "foo", null);
+            Assert.fail("It is not allowed to update a bucket whose background deletion tasks are in progress.");
+        } catch (S3Exception e) {
+            Assert.assertEquals(403, e.getHttpCode());
+            Assert.assertEquals("EmptyBucketInProgress", e.getErrorCode());
+        }
+        // wait until background tasks are DONE.
+        Thread.sleep(120000);
+        try {
+            client.getBucketDeletionStatus(bucketName);
+            Assert.fail("GET EmptyBucketStatus should throw exception when the bucket is deleted.");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("The specified bucket does not exist", e.getMessage());
+        }
+        Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
+
+        BucketDeletionStatus statusNotBeingDeleted = client.getBucketDeletionStatus(bucketNameNotBeingDeleted);
+        Assert.assertEquals("EmptyBucketStatus should not be found", "NOT_FOUND", statusNotBeingDeleted.getStatus());
+    }
+
+    @Test
     public void testSetGetBucketAcl() throws Exception {
         // need to get canonical user ID from bucket ACL (for IAM users, this is different from the access key)
         String identity = client.getBucketAcl(getTestBucket()).getOwner().getId();

@@ -78,7 +78,7 @@ public final class RestUtil {
     public static final String EMC_METADATA_SEARCH = EMC_PREFIX + "metadata-search";
     public static final String EMC_COPY_MODE = EMC_PREFIX + "copy-mode";
     public final static String EMC_MULTIPART_COPY = EMC_PREFIX + "multipart-copy";
-
+    public final static String EMC_EMPTY_BUCKET = EMC_PREFIX + "empty-bucket";
     public static final String TYPE_APPLICATION_OCTET_STREAM = "application/octet-stream";
     public static final String TYPE_APPLICATION_XML = "application/xml";
     public static final String TYPE_APPLICATION_JSON = "application/json";
