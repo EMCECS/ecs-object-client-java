@@ -7,7 +7,7 @@ public class WriteTruncationV4Test extends WriteTruncationTest {
     @Override
     protected S3Client createS3Client() throws Exception {
         S3Config s3Config = createS3Config().withRetryEnabled(false).withUseV2Signer(false);
-        this.jvmClient = new S3JerseyClient(s3Config, JerseyClientBuilder.createClient());
+        this.jvmClient = new S3JerseyClient(s3Config, "HTTPURLCONNECTION");
         return new S3JerseyClient(createS3Config().withRetryEnabled(false));
     }
 

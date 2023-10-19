@@ -27,9 +27,9 @@ public class S3EncryptionUrlConnectionV4Test extends S3EncryptionClientBasicTest
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        rclient = new S3JerseyClient(config, JerseyClientBuilder.createClient());
+        rclient = new S3JerseyClient(config, "HTTPURLCONNECTION");
         EncryptionConfig eConfig = createEncryptionConfig();
-        eclient = new S3EncryptionClient(config, JerseyClientBuilder.createClient(), eConfig);
+        eclient = new S3EncryptionClient(config, "HTTPURLCONNECTION", eConfig);
         encodeSpec = eConfig.getEncryptionSpec();
         if (eConfig.isCompressionEnabled()) encodeSpec = eConfig.getCompressionSpec() + "," + encodeSpec;
         return eclient;

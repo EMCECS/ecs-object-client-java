@@ -141,7 +141,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that handler, you should
      * set the "http.maxConnections" system property to match your thread count (default is only 5).
      */
-    public S3JerseyClient(S3Config config, JerseyClient clientHandler) {
+    public S3JerseyClient(S3Config config, String clientTransportConnector) {
         super(new S3Config(config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
         s3Config = (S3Config) super.getObjectConfig();
         if (s3Config.isUseV2Signer())
@@ -156,7 +156,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         smartConfig.setProperty(ClientProperties.CHUNKED_ENCODING_SIZE, s3Config.getChunkedEncodingSize());
 
         // creates a standard (non-load-balancing) jersey client
-        client = SmartClientFactory.createStandardClient(smartConfig, clientHandler);
+        if (clientTransportConnector == null) {
+            client = SmartClientFactory.createStandardClient(smartConfig);
+        } else {
+            client = SmartClientFactory.createStandardClient(smartConfig, clientTransportConnector);
+        }
 
         if (s3Config.isSmartClient()) {
 

@@ -28,7 +28,7 @@ public class S3JerseyUrlConnectionV4Test extends S3JerseyClientV4Test {
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        return new S3JerseyClient(config, JerseyClientBuilder.createClient());
+        return new S3JerseyClient(config, "HTTPURLCONNECTION");
     }
 
     @Ignore // only run this test against a co-located ECS!

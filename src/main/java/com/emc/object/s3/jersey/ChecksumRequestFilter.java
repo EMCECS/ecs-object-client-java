@@ -19,8 +19,8 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
 
     private S3Config s3Config;
     private S3Signer signer;
-    private final ThreadLocal<ClientRequestContext> requestContextThreadLocal = new ThreadLocal<>();
-    private final ThreadLocal<OutputStream> bufferThreadLocal = new ThreadLocal<>();
+    private ThreadLocal<ClientRequestContext> requestContextThreadLocal = new ThreadLocal<>();
+    private ThreadLocal<OutputStream> bufferThreadLocal = new ThreadLocal<>();
 
     public ChecksumRequestFilter(S3Config s3Config) {
         this.s3Config = s3Config;

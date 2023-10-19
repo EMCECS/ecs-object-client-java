@@ -64,13 +64,13 @@ repositories {
 dependencies {
     // TODO: implementation 'com.emc.ecs:smart-client-ecs:3.0.2'
     implementation files('smarttest/smart-client-core.jar', 'smarttest/smart-client-ecs.jar', 'smarttest/smart-client-jersey.jar')
-    implementation 'org.glassfish.jersey.core:jersey-client:2.38'
-    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.38'
-    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.38'
-    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.38'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.40'
     implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-xml-provider:2.14.2'
-    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.38'
-    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.38'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.40'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.40'
 
     implementation 'javax.xml.bind:jaxb-api:2.3.1'
     implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.8'

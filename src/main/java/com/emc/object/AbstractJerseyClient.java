@@ -205,6 +205,9 @@ public abstract class AbstractJerseyClient {
     }
 
     protected JerseyInvocation.Builder buildRequest(JerseyClient client, ObjectRequest request) {
+
+        System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
+
         URI uri = objectConfig.resolvePath(request.getPath(), request.getRawQueryString());
         JerseyWebTarget webTarget = client.target(uri);
 
