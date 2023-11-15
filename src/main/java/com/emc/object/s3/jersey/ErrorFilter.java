@@ -45,7 +45,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Date;
-import java.util.Map;
 
 @Provider
 @Priority(FilterPriorities.PRIORITY_ERROR)

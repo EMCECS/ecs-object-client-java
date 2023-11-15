@@ -1,7 +1,6 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

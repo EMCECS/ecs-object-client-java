@@ -27,6 +27,7 @@
 package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Exception;
+import com.emc.object.util.RestUtil;
 
 import javax.annotation.Priority;
 import javax.ws.rs.WebApplicationException;
