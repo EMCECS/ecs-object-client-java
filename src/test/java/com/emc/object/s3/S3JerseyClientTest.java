@@ -1274,7 +1274,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         expires.add(Calendar.DATE, 1);
         expires.set(Calendar.MILLISECOND, 0);
         Map<String, String> userMeta = new HashMap<String, String>();
-        userMeta.put("meta=?", "value1");
+        userMeta.put("meta1", "value1");
         userMeta.put("meta2", "value2");
 
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withContentType(ct);
