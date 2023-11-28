@@ -92,8 +92,6 @@ public class ChecksumRequestFilter implements ClientRequestFilter {
             if (generateContentMd5 != null && generateContentMd5) {
                 // add Content-MD5 (before anything is written to the final stream)
                 clientRequestContext.getHeaders().add(RestUtil.HEADER_CONTENT_MD5, DatatypeConverter.printBase64Binary(checksum.getByteValue()));
-                clientRequestContext.getHeaders().add("xxx", DatatypeConverter.printBase64Binary(checksum.getByteValue()));
-
 
                 // need to re-sign request because Content-MD5 is included in the signature!
                 if (s3Config.getIdentity() != null) {

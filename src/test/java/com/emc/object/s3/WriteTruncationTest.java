@@ -162,10 +162,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
-        } catch (RuntimeException e) {
-            // get RC
-//            Throwable t = e;
-//            while (t.getCause() != null && t.getCause() != t) t = t.getCause();
+        } catch (Exception e) {
             if (exceptionType == ExceptionType.RuntimeException) {
                 Assert.assertTrue(e.getCause() instanceof RuntimeException);
             } else {

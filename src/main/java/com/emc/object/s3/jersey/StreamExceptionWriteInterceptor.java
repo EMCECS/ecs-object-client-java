@@ -1,6 +1,5 @@
 package com.emc.object.s3.jersey;
 
-import com.emc.object.util.RestUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

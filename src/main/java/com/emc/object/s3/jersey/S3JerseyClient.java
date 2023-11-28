@@ -136,8 +136,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     /**
-     * Provide a specific Jersey ClientHandler implementation (default is ApacheHttpClient4Handler). If you experience
-     * performance problems, you might try using URLConnectionClientHandler, but note that it will not support the
+     * Provide a specific Jersey ClientHandler implementation (default is ApacheHttpClient). If you experience
+     * performance problems, you might try using URLConnectionClient, but note that it will not support the
      * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that handler, you should
      * set the "http.maxConnections" system property to match your thread count (default is only 5).
      */

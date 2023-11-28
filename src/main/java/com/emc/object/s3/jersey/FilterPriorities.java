@@ -13,7 +13,6 @@ public class FilterPriorities {
     public static final int PRIORITY_CODEC_REQUEST = 1800;
     public static final int PRIORITY_AUTHORIZATION = Priorities.AUTHORIZATION; //2000
     public static final int PRIORITY_FAULTINJECTION = 2400;
-
     // providers used during response processing (using descending manner)
     public static final int PRIORITY_CHECKSUM_RESPONSE = 4500;
     public static final int PRIORITY_CODEC_RESPONSE = 4000;
