@@ -504,31 +504,25 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testDeleteBucketWithBackgroundTasks() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.8", ecsVersion != null && ecsVersion.compareTo("3.8") >= 0);
 
-        String bucketName = getTestBucket() + "-empty";
+        String bucketName = getTestBucket() + "-delete";
         String bucketNameNotBeingDeleted = getTestBucket() + "-notBeingDeleted";
 
         client.createBucket(bucketName);
         client.putObject(bucketName, "foo", "bar", null);
-        client.putObject(bucketName, "foo1", "bar1", null);
-        client.putObject(bucketName, "foo2", "bar2", null);
-        client.putObject(bucketName, "foo3", "bar3", null);
-
         client.createBucket(bucketNameNotBeingDeleted);
         client.putObject(bucketNameNotBeingDeleted, "foo", "bar", null);
 
+        // check the status of a bucket without any deletion tasks.
+        BucketDeletionStatus statusNotBeingDeleted = client.getBucketDeletionStatus(bucketNameNotBeingDeleted);
+        Assert.assertEquals("EmptyBucketStatus should not be found", "NOT_FOUND", statusNotBeingDeleted.getStatus());
+        client.deleteBucket(new DeleteBucketRequest(bucketNameNotBeingDeleted, true));
+
+        // delete a bucket which is empty or not, the first status should always be PENDING.
         client.deleteBucket(new DeleteBucketRequest(bucketName, true));
         BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
-        Assert.assertTrue("Status of empty bucket background tasks is not allowed", status.getStatus().equals("PENDING") || status.getStatus().equals("IN_PROGRESS"));
-
-        if (status.getStatus().equals("PENDING")) {
-            Assert.assertEquals("created date should be the same as lastUpdated date in EmptyBucketStatus.", status.getCreated(), status.getLastUpdated());
-        } else if (status.getStatus().equals("IN_PROGRESS")) {
-            Assert.assertTrue("lastUpdated date should be larger than created date in EmptyBucketStatus.", status.getLastUpdated().compareTo(status.getCreated()) > 0);
-        } else {
-            Assert.fail("The status should not be one of [POST_PROCESSING|DONE|FAILED|ABORTED|NOT_FOUND|ABORT_IN_PROGRESS] at the moment.");
-        }
-
-        // other entries are shown default in the response.
+        // check the status and dates of the bucket delete task, other entries are not given.
+        Assert.assertEquals("The initial status of a bucket which is being deleting should be PENDING.", status.getStatus(), "PENDING");
+        Assert.assertEquals("created date should be the same as lastUpdated date in EmptyBucketStatus.", status.getCreated(), status.getLastUpdated());
 
         try {
             client.deleteBucket(bucketName);
@@ -544,20 +538,50 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(403, e.getHttpCode());
             Assert.assertEquals("EmptyBucketInProgress", e.getErrorCode());
         }
-        // wait until background tasks are DONE.
-        Thread.sleep(120000);
+
+        // Empty bucket execution frequency is 1 min, so 2 min would be enough.
+        // Wait until deletion background tasks are DONE.
+        Thread.sleep(2 * 60 * 1000);
+
         try {
             client.getBucketDeletionStatus(bucketName);
-            Assert.fail("GET EmptyBucketStatus should throw exception when the bucket is deleted.");
+            Assert.fail("GET EmptyBucketStatus when the bucket is deleted should give 404.");
         } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
             Assert.assertEquals("The specified bucket does not exist", e.getMessage());
         }
-        Assert.assertFalse("failed to delete bucket " + bucketName, client.bucketExists(bucketName));
 
-        BucketDeletionStatus statusNotBeingDeleted = client.getBucketDeletionStatus(bucketNameNotBeingDeleted);
-        Assert.assertEquals("EmptyBucketStatus should not be found", "NOT_FOUND", statusNotBeingDeleted.getStatus());
+        Assert.assertFalse("Failed to delete bucket" + bucketName, client.bucketExists(bucketName));
     }
+
+    @Test
+    public void testDeleteBucketInRetentionWithBackgroundTasks() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.8", ecsVersion != null && ecsVersion.compareTo("3.8") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
+
+        String bucketName = getTestBucket() + "-InRetention";
+        client.createBucket(bucketName);
+        String key = "testObject_PutObjectRetention";
+        client.enableObjectLock(bucketName);
+        // ensure the retention period is longer than the bucket deletion background tasks.
+        Date retentionDate = new Date(System.currentTimeMillis() + 150000);
+        ObjectLockRetention objectLockRetention = new ObjectLockRetention()
+                .withMode(ObjectLockRetentionMode.COMPLIANCE)
+                .withRetainUntilDate(retentionDate);
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, "test Put Object Retention")
+                .withObjectMetadata(new S3ObjectMetadata().withObjectLockRetention(objectLockRetention));
+        client.putObject(putObjectRequest);
+
+        client.deleteBucket(new DeleteBucketRequest(bucketName, true));
+        // Empty bucket execution frequency is 1 min, so 2 min would be enough.
+        // Wait until deletion background tasks are DONE.
+        Thread.sleep(2 * 60 * 1000);
+
+        BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
+        // check the status and dates of the bucket delete task, other entries are not given.
+        Assert.assertEquals("The EmptyBucketStatus status of a bucket which is still in retention should be FAILED.", status.getStatus(), "FAILED");
+    }
+
 
     @Test
     public void testSetGetBucketAcl() throws Exception {
