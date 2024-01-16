@@ -34,26 +34,70 @@ public class BucketDeletionStatus {
      */
     private String status;
 
+    /**
+     * Timestamp when the operation was created
+     * @valid Date in ISO 8601 format
+     */
     private Date created;
 
+    /**
+     * Timestamp of the last time the operation status was updated
+     * @valid Date in ISO 8601 format
+     */
     private Date lastUpdated;
 
+    /**
+     * Number of entries deleted
+     * @valid none
+     */
     private Long entriesDeleted;
 
+    /**
+     * Number of entries unable to delete due to retention
+     * @valid none
+     */
     private Long failedToDeleteRetention;
 
+    /**
+     * Number of entries failed to delete due to permission
+     * @valid none
+     */
     private Long failedToDeletePermission;
 
+    /**
+     * Number of entries failed to delete due to failed dangling cleanup
+     * @valid none
+     */
     private Long failedToDeleteDangling;
 
+    /**
+     * Number of entries failed to delete due to other reasons
+     * @valid none
+     */
     private Long failedToDeleteOther;
 
+    /**
+     * Approximate count of objects in the bucket before deletion
+     * @valid none
+     */
     private Long approximateObjectCount;
 
+    /**
+     * Approximate total size of the bucket before deletion
+     * @valid none
+     */
     private Double approximateTotalSize;
 
+    /**
+     * Unit of the approximate bucket total size
+     * @valid none
+     */
     private String approximateTotalSizeUnitString;
 
+    /**
+     * Optional additional information about the status
+     * @valid none
+     */
     private String message;
 
     @XmlElement(name="Status")
