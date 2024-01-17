@@ -8,9 +8,6 @@ import java.util.Map;
 
 public class DeleteBucketRequest extends GenericBucketRequest {
 
-    /**
-     * trigger to use the new bucket deletion feature (only supported on ECS version 3.8 or above)
-     */
     private boolean recursivelyDeleteAllData;
     public DeleteBucketRequest(String bucketName, boolean recursivelyDeleteAllData) {
         super(Method.DELETE, bucketName, null);
@@ -29,11 +26,8 @@ public class DeleteBucketRequest extends GenericBucketRequest {
         return headers;
     }
 
-    public boolean isRecursivelyDeleteAllData() {
-        return recursivelyDeleteAllData;
-    }
-
     /**
+     * It is the trigger to use the new bucket deletion feature.
      * The current delete operation is a synchronous operation, when recursivelyDeleteAllData is default set to false..
      * When recursivelyDeleteAllData comes to true, the request becomes asynchronous and will return immediately.
      * The bucket will be marked as "delete in progress". The bucket will be read-only through S3 and will not allow reads/writes through NFS (for FS bucket).
@@ -41,7 +35,14 @@ public class DeleteBucketRequest extends GenericBucketRequest {
      * Once all tasks have completed the bucket will be deleted from the system.
      * It must be noted that the issue of object lock and governance must not be overlooked for such an operation.
      * It must be noted that the operation will delete all objects and data in the bucket and it cannot be undone.
-     * @param recursivelyDeleteAllData trigger to use the new bucket deletion feature (only supported on ECS version 3.8 or above)
+     * It is only supported on ECS version 3.8 or above.
+     */
+    public boolean isRecursivelyDeleteAllData() {
+        return recursivelyDeleteAllData;
+    }
+
+    /**
+     * {@link DeleteBucketRequest#isRecursivelyDeleteAllData}
      */
     public void setRecursivelyDeleteAllData(boolean recursivelyDeleteAllData) {
         this.recursivelyDeleteAllData = recursivelyDeleteAllData;

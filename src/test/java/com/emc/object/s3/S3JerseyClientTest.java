@@ -522,7 +522,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
         // check the status and dates of the bucket delete task, other entries are not given.
         Assert.assertEquals("The initial status of a bucket which is being deleting should be PENDING.", status.getStatus(), "PENDING");
-        Assert.assertEquals("created date should be the same as lastUpdated date in EmptyBucketStatus.", status.getCreated(), status.getLastUpdated());
+        Assert.assertEquals("created date should be the same as lastUpdated date.", status.getCreated(), status.getLastUpdated());
 
         try {
             client.deleteBucket(bucketName);
@@ -539,9 +539,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals("EmptyBucketInProgress", e.getErrorCode());
         }
 
-        // Empty bucket execution frequency is 1 min, so 2 min would be enough.
-        // Wait until deletion background tasks are DONE.
-        Thread.sleep(2 * 60 * 1000);
+        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough.
+        Thread.sleep(3 * 60 * 1000);
 
         try {
             client.getBucketDeletionStatus(bucketName);
@@ -559,27 +558,35 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assume.assumeTrue("ECS version must be at least 3.8", ecsVersion != null && ecsVersion.compareTo("3.8") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
-        String bucketName = getTestBucket() + "-InRetention";
+        String bucketName = getTestBucket() + "-InRetentionWithAcl";
         client.createBucket(bucketName);
-        String key = "testObject_PutObjectRetention";
+
+        // create a object in retention
+        String keyInRetention = "testObjectRetention";
         client.enableObjectLock(bucketName);
         // ensure the retention period is longer than the bucket deletion background tasks.
-        Date retentionDate = new Date(System.currentTimeMillis() + 150000);
+        Date retentionDate = new Date(System.currentTimeMillis() + 3 * 60 * 1000);
         ObjectLockRetention objectLockRetention = new ObjectLockRetention()
                 .withMode(ObjectLockRetentionMode.COMPLIANCE)
                 .withRetainUntilDate(retentionDate);
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, key, "test Put Object Retention")
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, keyInRetention, "test Put Object Retention")
                 .withObjectMetadata(new S3ObjectMetadata().withObjectLockRetention(objectLockRetention));
         client.putObject(putObjectRequest);
 
+        // create a normal object
+        client.putObject(bucketName, "foo", "bar", null);
+
         client.deleteBucket(new DeleteBucketRequest(bucketName, true));
-        // Empty bucket execution frequency is 1 min, so 2 min would be enough.
-        // Wait until deletion background tasks are DONE.
-        Thread.sleep(2 * 60 * 1000);
+        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough.
+        Thread.sleep(3 * 60 * 1000);
 
         BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
-        // check the status and dates of the bucket delete task, other entries are not given.
-        Assert.assertEquals("The EmptyBucketStatus status of a bucket which is still in retention should be FAILED.", status.getStatus(), "FAILED");
+        // check the fields of the bucket deletion status
+        Assert.assertEquals("Operation should be FAILED when the bucket cannot be deleted completely.", status.getStatus(), "FAILED");
+        Assert.assertEquals("1 object without retention should be cleaned.", status.getEntriesDeleted().intValue(), 1);
+        Assert.assertEquals("1 object with retention should be remaining.", status.getFailedToDeleteRetention().intValue(), 1);
+        Assert.assertEquals("0 object should be cleaned for other reasons.", status.getFailedToDeleteOther().intValue(), 0);
+        Assert.assertTrue("created date should be before lastUpdated date.", status.getCreated().before(status.getLastUpdated()));
     }
 
 
