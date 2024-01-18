@@ -192,7 +192,7 @@ public class BucketDeletionStatus {
      * Approximate count of objects in the bucket before deletion
      * @valid none
      */
-    @XmlElement(name = "ApproxObjectCount")
+    @XmlElement(name = "")
     public Long getApproximateObjectCount() {
         return approximateObjectCount;
     }
@@ -209,7 +209,7 @@ public class BucketDeletionStatus {
      * Approximate total size of the bucket before deletion
      * @valid none
      */
-    @XmlElement(name = "ApproxTotalSize")
+    @XmlElement(name = "ApproximateTotalSize")
     public Double getApproximateTotalSize() {
         return approximateTotalSize;
     }
@@ -226,7 +226,7 @@ public class BucketDeletionStatus {
      * Unit of the approximate bucket total size
      * @valid none
      */
-    @XmlElement(name = "ApproxTotalSizeUnitString")
+    @XmlElement(name = "ApproximateTotalSizeUnitString")
     public String getApproximateTotalSizeUnitString() {
         return approximateTotalSizeUnitString;
     }

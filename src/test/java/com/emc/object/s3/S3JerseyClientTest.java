@@ -573,7 +573,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 .withObjectMetadata(new S3ObjectMetadata().withObjectLockRetention(objectLockRetention));
         client.putObject(putObjectRequest);
 
-        // create a normal object
+        // create a additional normal object
         client.putObject(bucketName, "foo", "bar", null);
 
         client.deleteBucket(new DeleteBucketRequest(bucketName, true));
