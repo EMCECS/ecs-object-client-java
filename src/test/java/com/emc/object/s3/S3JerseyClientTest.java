@@ -517,7 +517,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assert.assertEquals("EmptyBucketStatus should not be found", "NOT_FOUND", statusNotBeingDeleted.getStatus());
         client.deleteBucket(new DeleteBucketRequest(bucketNameNotBeingDeleted, true));
 
-        // delete a bucket which is empty or not, the first status should always be PENDING.
         client.deleteBucket(new DeleteBucketRequest(bucketName, true));
         BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
         // check the status and dates of the bucket delete task, other entries are not given.
@@ -539,7 +538,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals("EmptyBucketInProgress", e.getErrorCode());
         }
 
-        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough.
+        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough for this test to finish.
         Thread.sleep(3 * 60 * 1000);
 
         try {
@@ -549,7 +548,58 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals(404, e.getHttpCode());
             Assert.assertEquals("The specified bucket does not exist", e.getMessage());
         }
+        Assert.assertFalse("Failed to delete bucket" + bucketName, client.bucketExists(bucketName));
+    }
 
+    @Test
+    public void testDeleteBucketWithMPUWithBackgroundTasks() throws Exception {
+        Assume.assumeTrue("ECS version must be at least 3.8", ecsVersion != null && ecsVersion.compareTo("3.8") >= 0);
+
+        String bucketName = getTestBucket() + "-mpu";
+        client.createBucket(bucketName);
+
+        String key = "mpu-abort-test";
+        int partSize = 2 * 1024 * 1024;
+        byte[] data = new byte[9 * 1024 * 1024];
+        new Random().nextBytes(data);
+        // init MPU
+        String uploadId = client.initiateMultipartUpload(bucketName, key);
+        // upload parts in background threads
+        ExecutorService service = Executors.newFixedThreadPool(5);
+        List<Future> futures = new ArrayList<Future>();
+        int partNum = 1;
+        for (int offset = 0; offset < data.length; offset += partSize) {
+            int length = data.length - offset;
+            if (length > partSize) length = partSize;
+            final UploadPartRequest request = new UploadPartRequest(bucketName, key, uploadId, partNum++,
+                    Arrays.copyOfRange(data, offset, offset + length));
+            futures.add(service.submit(() -> {
+                client.uploadPart(request);
+            }));
+        }
+        // abort while threads are uploading
+        client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+
+        // start bucket deletion tasks
+        client.deleteBucket(new DeleteBucketRequest(bucketName, true));
+
+        // let MPU threads finish
+        futures.forEach(future -> {
+            try {
+                future.get();
+            } catch (Exception ignored) {
+            }
+        });
+
+        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough for this test to finish.
+        Thread.sleep(3 * 60 * 1000);
+        try {
+            client.getBucketDeletionStatus(bucketName);
+            Assert.fail("GET EmptyBucketStatus when the bucket is deleted should give 404.");
+        } catch (S3Exception e) {
+            Assert.assertEquals(404, e.getHttpCode());
+            Assert.assertEquals("The specified bucket does not exist", e.getMessage());
+        }
         Assert.assertFalse("Failed to delete bucket" + bucketName, client.bucketExists(bucketName));
     }
 
@@ -577,8 +627,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         client.putObject(bucketName, "foo", "bar", null);
 
         client.deleteBucket(new DeleteBucketRequest(bucketName, true));
-        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough.
-        Thread.sleep(3 * 60 * 1000);
+        // Empty bucket execution frequency is 1 min, so 2 min wait would be enough for this test to go "FAILED".
+        Thread.sleep(2 * 60 * 1000);
 
         BucketDeletionStatus status = client.getBucketDeletionStatus(bucketName);
         // check the fields of the bucket deletion status
