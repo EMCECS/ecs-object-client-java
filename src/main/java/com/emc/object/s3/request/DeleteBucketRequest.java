@@ -48,4 +48,9 @@ public class DeleteBucketRequest extends GenericBucketRequest {
         this.recursivelyDeleteAllData = recursivelyDeleteAllData;
     }
 
+    public DeleteBucketRequest withRecursivelyDeleteAllData(boolean recursivelyDeleteAllData) {
+        setRecursivelyDeleteAllData(recursivelyDeleteAllData);
+        return this;
+    }
+
 }

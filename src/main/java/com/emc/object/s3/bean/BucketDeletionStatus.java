@@ -64,11 +64,10 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getStatus}
      */
-    public BucketDeletionStatus setStatus(String status) {
+    public void setStatus(String status) {
         this.status = status;
-        return this;
     }
-
+    
     /**
      * Timestamp when the operation was created
      * @valid Date in ISO 8601 format
@@ -81,9 +80,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getCreated}
      */
-    public BucketDeletionStatus setCreated(Date created) {
+    public void setCreated(Date created) {
         this.created = created;
-        return this;
     }
 
     /**
@@ -98,9 +96,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getLastUpdated}
      */
-    public BucketDeletionStatus setLastUpdated(Date lastUpdated) {
+    public void setLastUpdated(Date lastUpdated) {
         this.lastUpdated = lastUpdated;
-        return this;
     }
 
     /**
@@ -115,9 +112,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getEntriesDeleted}
      */
-    public BucketDeletionStatus setEntriesDeleted(Long entriesDeleted) {
+    public void setEntriesDeleted(Long entriesDeleted) {
         this.entriesDeleted = entriesDeleted;
-        return this;
     }
 
     /**
@@ -132,9 +128,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getFailedToDeleteRetention}
      */
-    public BucketDeletionStatus setFailedToDeleteRetention(Long failedToDeleteRetention) {
+    public void setFailedToDeleteRetention(Long failedToDeleteRetention) {
         this.failedToDeleteRetention = failedToDeleteRetention;
-        return this;
     }
 
     /**
@@ -149,9 +144,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getFailedToDeletePermission}
      */
-    public BucketDeletionStatus setFailedToDeletePermission(Long failedToDeletePermission) {
+    public void setFailedToDeletePermission(Long failedToDeletePermission) {
         this.failedToDeletePermission = failedToDeletePermission;
-        return this;
     }
 
     /**
@@ -166,9 +160,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getFailedToDeleteDangling}
      */
-    public BucketDeletionStatus setFailedToDeleteDangling(Long failedToDeleteDangling) {
+    public void setFailedToDeleteDangling(Long failedToDeleteDangling) {
         this.failedToDeleteDangling = failedToDeleteDangling;
-        return this;
     }
 
     /**
@@ -183,9 +176,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getFailedToDeleteOther}
      */
-    public BucketDeletionStatus setFailedToDeleteOther(Long failedToDeleteOther) {
+    public void setFailedToDeleteOther(Long failedToDeleteOther) {
         this.failedToDeleteOther = failedToDeleteOther;
-        return this;
     }
 
     /**
@@ -200,9 +192,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getApproximateObjectCount}
      */
-    public BucketDeletionStatus setApproximateObjectCount(Long approximateObjectCount) {
+    public void setApproximateObjectCount(Long approximateObjectCount) {
         this.approximateObjectCount = approximateObjectCount;
-        return this;
     }
 
     /**
@@ -217,9 +208,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getApproximateTotalSize}
      */
-    public BucketDeletionStatus setApproximateTotalSize(Double approximateTotalSize) {
+    public void setApproximateTotalSize(Double approximateTotalSize) {
         this.approximateTotalSize = approximateTotalSize;
-        return this;
     }
 
     /**
@@ -234,9 +224,8 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getApproximateTotalSizeUnitString}
      */
-    public BucketDeletionStatus setApproximateTotalSizeUnitString(String approximateTotalSizeUnitString) {
+    public void setApproximateTotalSizeUnitString(String approximateTotalSizeUnitString) {
         this.approximateTotalSizeUnitString = approximateTotalSizeUnitString;
-        return this;
     }
 
     /**
@@ -251,8 +240,67 @@ public class BucketDeletionStatus {
     /**
      * {@link BucketDeletionStatus#getMessage}
      */
-    public BucketDeletionStatus setMessage(String message) {
+    public void setMessage(String message) {
         this.message = message;
+    }
+
+    public BucketDeletionStatus withStatus(String status) {
+        setStatus(status);
+        return this;
+    }
+
+    public BucketDeletionStatus withCreated(Date created) {
+        setCreated(created);
+        return this;
+    }
+
+    public BucketDeletionStatus withLastUpdated(Date lastUpdated) {
+        setLastUpdated(lastUpdated);
+        return this;
+    }
+
+    public BucketDeletionStatus withEntriesDeleted(Long entriesDeleted) {
+        setEntriesDeleted(entriesDeleted);
+        return this;
+    }
+
+    public BucketDeletionStatus withFailedToDeleteRetention(Long failedToDeleteRetention) {
+        setFailedToDeleteRetention(failedToDeleteRetention);
+        return this;
+    }
+
+    public BucketDeletionStatus withFailedToDeletePermission(Long failedToDeletePermission) {
+        setFailedToDeletePermission(failedToDeletePermission);
+        return this;
+    }
+
+    public BucketDeletionStatus withFailedToDeleteDangling(Long failedToDeleteDangling) {
+        setFailedToDeleteDangling(failedToDeleteDangling);
+        return this;
+    }
+
+    public BucketDeletionStatus withFailedToDeleteOther(Long failedToDeleteOther) {
+        setFailedToDeleteOther(failedToDeleteOther);
+        return this;
+    }
+
+    public BucketDeletionStatus withApproximateObjectCount(Long approximateObjectCount) {
+        setApproximateObjectCount(approximateObjectCount);
+        return this;
+    }
+
+    public BucketDeletionStatus withApproximateTotalSize(Double approximateTotalSize) {
+        setApproximateTotalSize(approximateTotalSize);
+        return this;
+    }
+
+    public BucketDeletionStatus withApproximateTotalSizeUnitString(String approximateTotalSizeUnitString) {
+        setApproximateTotalSizeUnitString(approximateTotalSizeUnitString);
+        return this;
+    }
+
+    public BucketDeletionStatus withMessage(String message) {
+        setMessage(message);
         return this;
     }
 
