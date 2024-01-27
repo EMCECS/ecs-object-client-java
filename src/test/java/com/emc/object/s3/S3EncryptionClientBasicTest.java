@@ -429,6 +429,11 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
 
     @Ignore
     @Override
+    public void testDeleteBucketWithBackgroundTasks() {
+    }
+
+    @Ignore
+    @Override
     public void testSetGetBucketAcl() {
     }
 

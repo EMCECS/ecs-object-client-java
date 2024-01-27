@@ -111,6 +111,16 @@ public interface S3Client {
     void deleteBucket(String bucketName);
 
     /**
+     * Deletes <code>bucketName</code>. The bucket could contain objects and versions before it can be deleted
+     */
+    void deleteBucket(DeleteBucketRequest request);
+
+    /**
+     * Gets status of background bucket cleanup tasks for <code>bucketName</code> if present
+     */
+    BucketDeletionStatus getBucketDeletionStatus(String bucketName);
+
+    /**
      * Sets the specified ACL on <code>bucketName</code>
      *
      * @see AccessControlList
