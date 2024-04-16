@@ -7,7 +7,7 @@ Current APIs:
 
 - S3
 
-Targeted for Java 8+
+Targeted for Java 8, 11
 
 **As of the client version 3.2, read timeout is disabled by default to avoid conflicts in updating.**
 
