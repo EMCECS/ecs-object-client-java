@@ -81,6 +81,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     private final String bucket;
     private final String key;
 
+    private final String srcBucket;
+    private final String srcKey;
+
     private final InputStream stream;
     private final LargeFileMultipartSource multipartSource;
 
@@ -125,6 +128,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.stream = stream;
         this.fullSize = size;
         this.multipartSource = null;
+        this.srcBucket = null;
+        this.srcKey = null;
     }
 
     /**
@@ -138,6 +143,24 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.bucket = bucket;
         this.key = key;
         this.multipartSource = multipartSource;
+        this.stream = null;
+        this.srcBucket = null;
+        this.srcKey = null;
+    }
+
+    /**
+     * Creates a new LargeFileUpload instance using the specified <code>s3Client</code> to copy
+     * from <code>srcBucket/srcKey</code> to <code>dstBucket/dstKey</code> without streaming
+     * data between the client and ECS server.
+     */
+    public LargeFileUploader(S3Client s3Client, String srcBucket, String srcKey, String dstBucket, String dstKey, long size) {
+        this.s3Client = s3Client;
+        this.bucket = dstBucket;
+        this.key = dstKey;
+        this.srcBucket = srcBucket;
+        this.srcKey = srcKey;
+        this.fullSize = size;
+        this.multipartSource = null;
         this.stream = null;
     }
 
@@ -426,7 +449,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
                     // no existing part to use, so upload this part
                 } else {
-                    futures.add(executorService.submit(new UploadPartTask(resumeContext.getUploadId(), partNumber, offset, length)));
+                    if (srcKey != null && srcBucket != null) {
+                        futures.add(executorService.submit(new CopyPartTask(resumeContext.getUploadId(), partNumber, offset, length)));
+                    }else {
+                        futures.add(executorService.submit(new UploadPartTask(resumeContext.getUploadId(), partNumber, offset, length)));
+                    }
                 }
             }
 
@@ -565,6 +592,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             // must read stream sequentially
             executorService = null;
             threads = 1;
+        } else if (srcKey != null && srcBucket != null) {
+            if (resumeContext != null) resumeContext.setVerifyPartsFoundInTarget(false);
+            executorService = null;
         } else {
             throw new IllegalArgumentException("must specify a file, stream, or multipartSource to read");
         }
@@ -832,6 +862,38 @@ public class LargeFileUploader implements Runnable, ProgressListener {
     public LargeFileUploader withAbortMpuOnFailure(boolean abortMpuOnFailure) {
         setAbortMpuOnFailure(abortMpuOnFailure);
         return this;
+    }
+
+    private class CopyPartTask implements Callable<MultipartPartETag> {
+        private final String uploadId;
+        private final int partNumber;
+        private final long offset;
+        private final long length;
+        public CopyPartTask(String uploadId, int partNumber, long offset, long length) {
+            this.uploadId = uploadId;
+            this.partNumber = partNumber;
+            this.offset = offset;
+            this.length = length;
+        }
+
+        @Override
+        public MultipartPartETag call() {
+            if (!active.get()) {
+                // we were paused or aborted, so should not start any more tasks
+                throw new CancellationException();
+            } else {
+                log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
+                        bucket, key, uploadId, partNumber, offset, length);
+                CopyPartRequest copyPartRequest = new CopyPartRequest(srcBucket, srcKey, bucket, key, resumeContext.getUploadId(), partNumber)
+                        .withSourceRange(new Range(offset, offset + length - 1));
+                try {
+                    CopyPartResult result = s3Client.copyPart(copyPartRequest);
+                    return new MultipartPartETag(result.getPartNumber(), result.getETag());
+                } catch (S3Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
     private class UploadPartTask implements Callable<MultipartPartETag> {
