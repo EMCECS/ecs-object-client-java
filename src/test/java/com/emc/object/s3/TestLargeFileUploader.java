@@ -45,6 +45,9 @@ public class TestLargeFileUploader extends LargeFileUploader {
         super(s3Client, bucket, key, multipartSource);
     }
 
+    public TestLargeFileUploader(S3Client s3Client, String srcBucket, String srcKey, String dstBucket, String dstKey){
+        super(s3Client, srcBucket, srcKey, dstBucket, dstKey);
+    }
     @Override
     protected long getMinPartSize() {
         return 100 * 1024; // 100 KiB for testing

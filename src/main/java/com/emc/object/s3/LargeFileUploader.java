@@ -83,6 +83,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
     private final String srcBucket;
     private final String srcKey;
+    private String sourceVersionId;
 
     private final InputStream stream;
     private final LargeFileMultipartSource multipartSource;
@@ -153,13 +154,12 @@ public class LargeFileUploader implements Runnable, ProgressListener {
      * from <code>srcBucket/srcKey</code> to <code>dstBucket/dstKey</code> without streaming
      * data between the client and ECS server.
      */
-    public LargeFileUploader(S3Client s3Client, String srcBucket, String srcKey, String dstBucket, String dstKey, long size) {
+    public LargeFileUploader(S3Client s3Client, String srcBucket, String srcKey, String dstBucket, String dstKey) {
         this.s3Client = s3Client;
         this.bucket = dstBucket;
         this.key = dstKey;
         this.srcBucket = srcBucket;
         this.srcKey = srcKey;
-        this.fullSize = size;
         this.multipartSource = null;
         this.stream = null;
     }
@@ -305,6 +305,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
 
         if (fullSize >= mpuThreshold)
             doMultipartUpload();
+        else if (srcKey != null && srcBucket != null)
+            doSingleCopy();
         else
             doSinglePut();
     }
@@ -314,6 +316,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         if (multipartSource != null) {
             is = multipartSource.getCompleteDataStream();
         } else {
+            if (stream == null)
+                throw new IOException("null source stream");
             // only close the source stream if configured to do so
             is = new FilterInputStream(stream) {
                 @Override
@@ -357,6 +361,17 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         } catch (IOException e) {
             throw new RuntimeException("Error opening file", e);
         }
+    }
+
+    public void doSingleCopy() {
+        configure();
+        if (srcKey == null || srcBucket == null)
+            throw new IllegalArgumentException("must specify source bucket and key for the copy");
+        CopyObjectRequest copyObjectRequest = new CopyObjectRequest(srcBucket, srcKey, bucket, key)
+                .withSourceVersionId(sourceVersionId).withObjectMetadata(objectMetadata)
+                .withAcl(acl).withCannedAcl(cannedAcl);
+        CopyObjectResult result = s3Client.copyObject(copyObjectRequest);
+        eTag = result.getRawETag();
     }
 
     /*
@@ -593,8 +608,9 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             executorService = null;
             threads = 1;
         } else if (srcKey != null && srcBucket != null) {
+            // If resuming from copied parts, no need to verify the parts found in target
             if (resumeContext != null) resumeContext.setVerifyPartsFoundInTarget(false);
-            executorService = null;
+            fullSize = s3Client.getObjectMetadata(new GetObjectMetadataRequest(srcBucket, srcKey).withVersionId(sourceVersionId)).getContentLength();
         } else {
             throw new IllegalArgumentException("must specify a file, stream, or multipartSource to read");
         }
@@ -803,6 +819,14 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         this.abortMpuOnFailure = abortMpuOnFailure;
     }
 
+    public String getSourceVersionId() {
+        return sourceVersionId;
+    }
+
+    public void setSourceVersionId(String sourceVersionId) {
+        this.sourceVersionId = sourceVersionId;
+    }
+
     public LargeFileUploader withObjectMetadata(S3ObjectMetadata objectMetadata) {
         setObjectMetadata(objectMetadata);
         return this;
@@ -864,6 +888,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return this;
     }
 
+    public LargeFileUploader withSourceVersionId(String sourceVersionId) {
+        setSourceVersionId(sourceVersionId);
+        return this;
+    }
+
     private class CopyPartTask implements Callable<MultipartPartETag> {
         private final String uploadId;
         private final int partNumber;
@@ -888,7 +917,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                         .withSourceRange(new Range(offset, offset + length - 1));
                 try {
                     CopyPartResult result = s3Client.copyPart(copyPartRequest);
-                    return new MultipartPartETag(result.getPartNumber(), result.getETag());
+                    return new MultipartPartETag(result.getPartNumber(), result.getRawETag());
                 } catch (S3Exception e) {
                     throw new RuntimeException(e);
                 }
