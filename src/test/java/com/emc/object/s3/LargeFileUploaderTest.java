@@ -26,19 +26,13 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.s3.bean.GetObjectResult;
-import com.emc.object.s3.bean.MultipartPart;
-import com.emc.object.s3.bean.MultipartPartETag;
-import com.emc.object.s3.bean.Upload;
+import com.emc.object.s3.bean.*;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.lfu.LargeFileMultipartSource;
 import com.emc.object.s3.lfu.LargeFileUpload;
 import com.emc.object.s3.lfu.LargeFileUploaderResumeContext;
 import com.emc.object.s3.lfu.PartMismatchException;
-import com.emc.object.s3.request.AbortMultipartUploadRequest;
-import com.emc.object.s3.request.GetObjectRequest;
-import com.emc.object.s3.request.ListMultipartUploadsRequest;
-import com.emc.object.s3.request.UploadPartRequest;
+import com.emc.object.s3.request.*;
 import com.emc.object.util.ProgressListener;
 import com.emc.rest.util.StreamUtil;
 import com.emc.util.RandomInputStream;
@@ -170,37 +164,75 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testLFUCopy() {
+    public void testLFUCopy() throws Exception {
+        // enable versioning on the bucket
+        client.setBucketVersioning(getTestBucket(), new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
+
         String srcKey = "lfu-source.bin";
         String dstKey = "lfu-single-copy.bin";
-        String dstKey2 = "lfu-multipart-copy.bin";
-
         byte[] data = new byte[(int) MockMultipartSource.totalSize];
         new Random().nextBytes(data);
+        String srcMD5Sum = DigestUtils.md5Hex(data);
         client.putObject(getTestBucket(), srcKey, data, null);
-        S3ObjectMetadata sourceMetadata = client.getObjectMetadata(getTestBucket(), srcKey);
-        Assert.assertEquals(MockMultipartSource.totalSize, sourceMetadata.getContentLength().longValue());
+        String versionId0 = client.listVersions(getTestBucket(), null).getVersions().get(0).getVersionId();
+        S3ObjectMetadata sourceMetadata0 = client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), srcKey).withVersionId(versionId0));
+        Assert.assertEquals(MockMultipartSource.totalSize, sourceMetadata0.getContentLength().longValue());
+        Assert.assertEquals(srcMD5Sum, sourceMetadata0.getETag());
 
-        //Single Copy
+        //Upload new Version Object
+        new Random().nextBytes(data);
+        String srcMD5SumNew = DigestUtils.md5Hex(data);
+        client.putObject(getTestBucket(), srcKey, data, null);
+        String versionId1 = client.listVersions(getTestBucket(), null).getVersions().get(0).getVersionId();
+        S3ObjectMetadata sourceMetadata1 = client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), srcKey).withVersionId(versionId1));
+        Assert.assertEquals(MockMultipartSource.totalSize, sourceMetadata1.getContentLength().longValue());
+        Assert.assertEquals(srcMD5SumNew, sourceMetadata1.getETag());
+
+        //Single Copy from old version object
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
         LargeFileUploader uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
-                .withObjectMetadata(objectMetadata);
+                .withObjectMetadata(objectMetadata)
+                .withSourceVersionId(versionId0);
         uploader.upload();
         Assert.assertEquals(0, uploader.getBytesTransferred());
-        Assert.assertEquals(sourceMetadata.getETag(), uploader.getETag());
+        Assert.assertEquals(srcMD5Sum, uploader.getETag());
         Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
         Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
 
-        //Multi Part Copy
-        LargeFileUploader uploader2 = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey2)
+        //Single Copy from new version object (without providing version Id)
+        uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
+                .withObjectMetadata(objectMetadata);
+        uploader.upload();
+        Assert.assertEquals(0, uploader.getBytesTransferred());
+        Assert.assertEquals(srcMD5SumNew, uploader.getETag());
+        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+
+        //Multi Part Copy from old version object
+        uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
                 .withObjectMetadata(objectMetadata)
                 .withPartSize(MockMultipartSource.partSize)
-                .withMpuThreshold(MockMultipartSource.partSize);
-        uploader2.upload();
-        Assert.assertEquals(0, uploader2.getBytesTransferred());
-        Assert.assertTrue(uploader2.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey2).getContentLength().longValue());
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey2).getUserMetadata());
+                .withMpuThreshold(MockMultipartSource.partSize)
+                .withSourceVersionId(versionId0);
+        uploader.upload();
+        Assert.assertEquals(0, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+        Assert.assertEquals(srcMD5Sum, DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
+
+        //Multi Part Copy from new version object
+        uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
+                .withObjectMetadata(objectMetadata)
+                .withPartSize(MockMultipartSource.partSize)
+                .withMpuThreshold(MockMultipartSource.partSize)
+                .withSourceVersionId(versionId1);
+        uploader.upload();
+        Assert.assertEquals(0, uploader.getBytesTransferred());
+        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+        Assert.assertEquals(srcMD5SumNew, DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
     }
 
     @Test
@@ -244,7 +276,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
                 .withResumeContext(resumeContext);
         lfu.doMultipartUpload();
 
-        // Unfortunately, MPU Etag is not preserved even if copy parts matches the original multipart upload.
+        // Unfortunately, MPU ETag is not preserved even if copy parts matches the original multipart upload.
         // So the content verification is done by calculating md5sum instead of checking ETag.
         //Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), dstKey).getETag());
         Assert.assertEquals(DigestUtils.md5Hex(client.getObject(getTestBucket(), srcKey).getObject()), DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));

@@ -79,4 +79,10 @@ public class CopyPartRequest extends CopyObjectRequest {
         setSourceRange(sourceRange);
         return this;
     }
+
+    @Override
+    public CopyPartRequest withSourceVersionId(String sourceVersionId) {
+        super.setSourceVersionId(sourceVersionId);
+        return this;
+    }
 }

@@ -911,10 +911,11 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 // we were paused or aborted, so should not start any more tasks
                 throw new CancellationException();
             } else {
-                log.debug("uploading {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {})",
-                        bucket, key, uploadId, partNumber, offset, length);
+                log.debug("copying {}/{}, uploadId: {}, partNumber {} (offset: {}, length: {}), versionId: {}",
+                        bucket, key, uploadId, partNumber, offset, length, sourceVersionId);
                 CopyPartRequest copyPartRequest = new CopyPartRequest(srcBucket, srcKey, bucket, key, resumeContext.getUploadId(), partNumber)
-                        .withSourceRange(new Range(offset, offset + length - 1));
+                        .withSourceRange(new Range(offset, offset + length - 1))
+                        .withSourceVersionId(sourceVersionId);
                 try {
                     CopyPartResult result = s3Client.copyPart(copyPartRequest);
                     return new MultipartPartETag(result.getPartNumber(), result.getRawETag());
