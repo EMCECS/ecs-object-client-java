@@ -530,6 +530,7 @@ public class LargeFileUploader implements Runnable, ProgressListener {
             if (resumeContext.isOverwriteMismatchedParts() && throwable instanceof PartMismatchException) {
                 log.warn(throwable.getMessage()); // log details about the part that was mismatched
                 log.info("overwriting partNumber {} due to ETag mismatch", partNumber);
+                if (stream != null) throw (PartMismatchException) throwable;
                 return new UploadPartTask(uploadId, partNumber, offset, length).call();
             } else if (throwable instanceof RuntimeException) {
                 throw (RuntimeException) throwable;

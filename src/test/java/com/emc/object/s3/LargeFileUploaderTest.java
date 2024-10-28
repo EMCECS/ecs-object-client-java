@@ -376,7 +376,16 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testResumeMpuFromStream() {
+    public void testResumeMpuFromStreamWithPartCorruption() {
+        testResumeMpuFromStream(true);
+    }
+
+    @Test
+    public void testResumeMpuFromStreamNoCorruption() {
+        testResumeMpuFromStream(false);
+    }
+
+    public void testResumeMpuFromStream(boolean hasPartCorruption) {
         String bucket = getTestBucket();
         String key = "myprefix/mpu-resume-test-stream";
         final long partSize = 500 * 1024; // 500 KiB
@@ -387,6 +396,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // init MPU
         String uploadId = client.initiateMultipartUpload(bucket, key);
         int partNum = 1;
+        int badPartNum = 0;
         for (long offset = 0; offset < data.length; offset += partSize) {
             // skip some parts: first, middle, last
             if (partNum == 1 || partNum == 3 || partNum == 5) {
@@ -407,16 +417,36 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             Assert.assertEquals(404, e.getHttpCode());
         }
 
+        if (hasPartCorruption) {
+            // Modify stream data so that verification will fail at the bad partNum.
+            badPartNum = 4;
+            int badIndex =  (int)partSize * (badPartNum - 1) ;
+            data[badIndex] = (byte)~data[badIndex];
+        }
+
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
         LargeFileUploader lfu = new TestLargeFileUploader(client, bucket, key, new ByteArrayInputStream(data), size)
                 .withPartSize(partSize).withMpuThreshold(size).withResumeContext(resumeContext);
-        lfu.doMultipartUpload();
+        try {
+            lfu.doMultipartUpload();
 
-        ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
-        // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
-        Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
-        // object is uploaded successfully
-        Assert.assertEquals(size, (long) client.getObjectMetadata(bucket, key).getContentLength());
+            if (hasPartCorruption) {
+                Assert.fail("Resume multipart upload from stream should fail if mismatched part is detected");
+            }
+            ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
+            // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
+            Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
+            // object is uploaded successfully
+            Assert.assertEquals(size, (long) client.getObjectMetadata(bucket, key).getContentLength());
+        } catch (RuntimeException e) {
+            if (!hasPartCorruption) throw e;
+            // root exception will be wrapped in ExecutionException and then RuntimeException
+            Assert.assertNotNull(e.getCause());
+            Assert.assertNotNull(e.getCause().getCause());
+            Assert.assertTrue(e.getCause().getCause() instanceof PartMismatchException);
+            // make sure the failed part was expected
+            Assert.assertEquals(badPartNum, ((PartMismatchException) e.getCause().getCause()).getPartNumber());
+        }
     }
 
     @Test
