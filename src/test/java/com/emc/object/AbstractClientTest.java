@@ -91,10 +91,7 @@ public abstract class AbstractClientTest {
     }
 
     @After
-    public final void destroyTestBucket() throws Exception {
-        log.info("cleaning up bucket " + getTestBucket());
-        cleanUpBucket(getTestBucket());
-    }
+    public void destroyTestBucket() throws Exception {}
 
     protected File createRandomTempFile(int size) throws Exception {
         File file = File.createTempFile("random-" + size, null);

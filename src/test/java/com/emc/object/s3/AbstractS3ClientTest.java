@@ -38,6 +38,8 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +48,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Properties;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public abstract class AbstractS3ClientTest extends AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractS3ClientTest.class);
 
@@ -85,6 +88,12 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     @After
     public void shutdownClient() {
         if (client != null) client.destroy();
+    }
+
+    @After
+    public void destroyTestBucket() throws Exception {
+        log.info("cleaning up bucket " + getTestBucket());
+        cleanUpBucket(getTestBucket());
     }
 
     @Override
