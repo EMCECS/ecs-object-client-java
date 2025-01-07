@@ -85,6 +85,8 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
+    // inherit from superclass to make destroyTestBucket not run after shutdownClient
+    // MethodSorters would ensure destroyTestBucket run before shutdownClient
     @After
     public void destroyTestBucket() throws Exception {
         log.info("cleaning up bucket " + getTestBucket());
