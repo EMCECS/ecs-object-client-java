@@ -86,14 +86,14 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     }
 
     @After
-    public void shutdownClient() {
-        if (client != null) client.destroy();
-    }
-
-    @After
     public void destroyTestBucket() throws Exception {
         log.info("cleaning up bucket " + getTestBucket());
         cleanUpBucket(getTestBucket());
+    }
+
+    @After
+    public void shutdownClient() {
+        if (client != null) client.destroy();
     }
 
     @Override

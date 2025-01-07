@@ -29,6 +29,8 @@ package com.emc.object;
 import com.emc.util.ConcurrentJunitRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.runners.MethodSorters;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +41,7 @@ import java.io.OutputStream;
 import java.util.Random;
 import java.util.UUID;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(ConcurrentJunitRunner.class)
 public abstract class AbstractClientTest {
     private static final Logger log = LoggerFactory.getLogger(AbstractClientTest.class);
@@ -92,6 +95,9 @@ public abstract class AbstractClientTest {
 
     @After
     public void destroyTestBucket() throws Exception {}
+
+    @After
+    public void shutdownClient() {}
 
     protected File createRandomTempFile(int size) throws Exception {
         File file = File.createTempFile("random-" + size, null);
