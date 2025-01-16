@@ -54,6 +54,12 @@ public abstract class AbstractClientTest {
     protected abstract void initClient() throws Exception;
 
     /**
+     * Implement to clean up the object client used for each test. Each subclass must keep a reference to the
+     * client.
+     */
+    protected abstract void shutdownClient() throws Exception;
+
+    /**
      * Implement to create an arbitrary bucket or directory. Do not do anything if the
      * bucket/directory already exists.
      */
@@ -94,10 +100,15 @@ public abstract class AbstractClientTest {
     }
 
     @After
-    public void destroyTestBucket() throws Exception {}
+    public final void tearDown() throws Exception {
+        destroyTestBucket();
+        shutdownClient();
+    }
 
-    @After
-    public void shutdownClient() {}
+    public final void destroyTestBucket() throws Exception {
+        log.info("cleaning up bucket " + getTestBucket());
+        cleanUpBucket(getTestBucket());
+    }
 
     protected File createRandomTempFile(int size) throws Exception {
         File file = File.createTempFile("random-" + size, null);
