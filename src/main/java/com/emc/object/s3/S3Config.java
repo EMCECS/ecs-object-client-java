@@ -67,6 +67,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     public static final int DEFAULT_INITIAL_RETRY_DELAY = 1000; // ms
     public static final int DEFAULT_RETRY_LIMIT = 3;
     public static final int DEFAULT_RETRY_BUFFER_SIZE = 2 * 1024 * 1024;
+    public static final int DEFAULT_MAX_CONNECTION_IDLE_TIME = 0;
 
     protected static int defaultPort(Protocol protocol) {
         if (protocol == Protocol.HTTP) return DEFAULT_HTTP_PORT;
@@ -85,6 +86,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected float faultInjectionRate = 0.0f;
     protected boolean signMetadataSearch = true;
     protected boolean useV2Signer = true;
+    protected int maxConnectionIdleTime = DEFAULT_MAX_CONNECTION_IDLE_TIME;
 
     /**
      * Empty constructor for internal use only!
@@ -131,6 +133,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.faultInjectionRate = other.faultInjectionRate;
         this.signMetadataSearch = other.signMetadataSearch;
         this.useV2Signer = other.useV2Signer;
+        this.maxConnectionIdleTime = other.maxConnectionIdleTime;
     }
 
     @Override
@@ -243,7 +246,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     public float getFaultInjectionRate() {
         return faultInjectionRate;
     }
-
+    
     /**
      * Sets the fault injection rate. Enables fault injection when this number is &gt; 0. The rate is a ratio expressed as
      * a decimal between 0 and 1.  This is the rate at which faults (HTTP 500 errors) should randomly be injected into
@@ -279,6 +282,20 @@ public class S3Config extends ObjectConfig<S3Config> {
      */
     public void setUseV2Signer(boolean useV2Signer) {
         this.useV2Signer = useV2Signer;
+    }
+
+    @ConfigUriProperty
+    public int getMaxConnectionIdleTime() {
+        return maxConnectionIdleTime;
+    }
+
+    /**
+     * Set the maximum amount of time (in milliseconds) to keep a connection alive and idle.
+     * This is a hint to the underlying connection pool, and is not guaranteed to be honored.
+     * A zero value indicates no limit to the life time.
+     */
+    public void setMaxConnectionIdleTime(int maxConnectionIdleTime) {
+        this.maxConnectionIdleTime = maxConnectionIdleTime;
     }
 
     public S3Config withUseVHost(boolean useVHost) {
@@ -328,6 +345,11 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     public S3Config withUseV2Signer(boolean useV2Signer) {
         setUseV2Signer(useV2Signer);
+        return this;
+    }
+
+    public S3Config withMaxConnectionIdleTime(int maxConnectionIdleTime) {
+        setMaxConnectionIdleTime(maxConnectionIdleTime);
         return this;
     }
 
