@@ -61,6 +61,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     public static final int DEFAULT_CHUNKED_ENCODING_SIZE = 2 * 1024 * 1024; // 2MB to match ECS buffer size
     public static final int DEFAULT_CONNECT_TIMEOUT = 15000; // 15 seconds
     public static final int DEFAULT_READ_TIMEOUT = 0; // default is infinity
+    public static final int DEFAULT_MAX_CONNECTION_IDLE_TIME = 0;
+
 
     // NOTE: if you add a property, make sure you add it to the cloning constructor!
     private Protocol protocol;
@@ -79,6 +81,8 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
     private int readTimeout = DEFAULT_READ_TIMEOUT;
     private String sessionToken;
+    private int maxConnectionIdleTime = DEFAULT_MAX_CONNECTION_IDLE_TIME;
+
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -137,6 +141,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.connectTimeout = other.connectTimeout;
         this.readTimeout = other.readTimeout;
         this.sessionToken = other.sessionToken;
+        this.maxConnectionIdleTime = other.maxConnectionIdleTime;
         this.properties = new HashMap<String, Object>(other.properties);
     }
 
@@ -218,6 +223,7 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         // READ_TIMEOUT
         smartConfig.setProperty(ClientConfig.PROPERTY_READ_TIMEOUT, readTimeout);
 
+        smartConfig.setMaxConnectionIdleTime(maxConnectionIdleTime);
 
         return smartConfig;
     }
@@ -455,6 +461,20 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
         this.sessionToken = sessionToken;
     }
 
+    @ConfigUriProperty
+    public int getMaxConnectionIdleTime() {
+        return maxConnectionIdleTime;
+    }
+
+    /**
+     * Set the maximum amount of time (in milliseconds) to keep a connection alive and idle.
+     * This is a hint to the underlying connection pool, and is not guaranteed to be honored.
+     * A zero value indicates no limit to the life time.
+     */
+    public void setMaxConnectionIdleTime(int maxConnectionIdleTime) {
+        this.maxConnectionIdleTime = maxConnectionIdleTime;
+    }
+
     @ConfigUriProperty(converter = ConfigUri.StringPropertyConverter.class)
     public Map<String, Object> getProperties() {
         return properties;
@@ -561,6 +581,11 @@ public abstract class ObjectConfig<T extends ObjectConfig<T>> {
     @SuppressWarnings("unchecked")
     public T withReadTimeout(int readTimeout) {
         setReadTimeout(readTimeout);
+        return (T) this;
+    }
+
+    public T withMaxConnectionIdleTime(int maxConnectionIdleTime) {
+        setMaxConnectionIdleTime(maxConnectionIdleTime);
         return (T) this;
     }
 
