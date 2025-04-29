@@ -255,6 +255,37 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
+    public void testSetObjectLockConfigurationRequest() {
+        Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
+        Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
+
+        String bucketName = getTestBucket();
+        ObjectLockConfiguration objectLockConfig = new ObjectLockConfiguration().withObjectLockEnabled(ObjectLockConfiguration.ObjectLockEnabled.Enabled);
+        DefaultRetention defaultRetention = new DefaultRetention().withMode(ObjectLockRetentionMode.GOVERNANCE).withDays(2);
+        objectLockConfig.setRule(new ObjectLockRule().withDefaultRetention(defaultRetention));
+
+        SetObjectLockConfigurationRequest setObjectLockConfigurationRequest = new SetObjectLockConfigurationRequest(bucketName).withObjectLockConfiguration(objectLockConfig);
+        try {
+            client.setObjectLockConfiguration(setObjectLockConfigurationRequest);
+            Assert.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
+        } catch (S3Exception e) {
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("InvalidBucketState", e.getErrorCode());
+        }
+
+        client.enableObjectLock(bucketName);
+        client.setObjectLockConfiguration(setObjectLockConfigurationRequest);
+
+        GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
+        ObjectLockConfiguration objectLockConfig_verify = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
+
+        Assert.assertEquals(objectLockConfig.getObjectLockEnabled(), objectLockConfig_verify.getObjectLockEnabled());
+        Assert.assertEquals(defaultRetention.getMode(), objectLockConfig_verify.getRule().getDefaultRetention().getMode());
+        Assert.assertEquals(defaultRetention.getDays(), objectLockConfig_verify.getRule().getDefaultRetention().getDays());
+        Assert.assertEquals(defaultRetention.getYears(), objectLockConfig_verify.getRule().getDefaultRetention().getYears());
+    }
+
+    @Test
     public void testDeleteObjectWithLegalHoldNotAllowed() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.6.2", ecsVersion != null && ecsVersion.compareTo("3.6.2") >= 0);
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);

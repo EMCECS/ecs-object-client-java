@@ -769,8 +769,26 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void setObjectLockConfiguration(SetObjectLockConfigurationRequest setObjectLockConfigurationRequest) {
+        ObjectRequest request = new GenericBucketEntityRequest<ObjectLockConfiguration>(
+                Method.PUT, setObjectLockConfigurationRequest.getBucketName(), "object-lock", setObjectLockConfigurationRequest.getObjectLockConfiguration()).withContentType(RestUtil.TYPE_APPLICATION_XML);
+        executeAndClose(client, request);
+    }
+
+    @Override
     public ObjectLockConfiguration getObjectLockConfiguration(String bucketName) {
         ObjectRequest request = new GenericBucketRequest(Method.GET, bucketName, "object-lock");
+        try {
+            return executeRequest(client, request, ObjectLockConfiguration.class);
+        } catch (S3Exception e) {
+            if (e.getHttpCode() == 404 && "ObjectLockConfigurationNotFoundError".equals(e.getErrorCode())) return null;
+            throw e;
+        }
+    }
+
+    @Override
+    public ObjectLockConfiguration getObjectLockConfiguration(GetObjectLockConfigurationRequest getObjectLockConfigurationRequest) {
+        ObjectRequest request = new GenericBucketRequest(Method.GET, getObjectLockConfigurationRequest.getBucketName(), "object-lock");
         try {
             return executeRequest(client, request, ObjectLockConfiguration.class);
         } catch (S3Exception e) {
