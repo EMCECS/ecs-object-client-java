@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3.request;
 
+import com.emc.object.EntityRequest;
 import com.emc.object.Method;
 import com.emc.object.s3.bean.ObjectLockConfiguration;
 import com.emc.object.util.RestUtil;
@@ -33,11 +34,11 @@ import com.emc.object.util.RestUtil;
 import java.util.List;
 import java.util.Map;
 
-public class SetObjectLockConfigurationRequest extends AbstractBucketRequest {
+public class SetObjectLockConfigurationRequest extends GenericBucketRequest implements EntityRequest{
     private ObjectLockConfiguration objectLockConfiguration;
 
     public SetObjectLockConfigurationRequest(String bucketName) {
-        super(Method.PUT, bucketName, "", "object-lock");
+        super(Method.PUT, bucketName,"object-lock");
         property(RestUtil.PROPERTY_GENERATE_CONTENT_MD5, Boolean.TRUE); // sign the MD5 to prevent replays
     }
 
@@ -45,6 +46,26 @@ public class SetObjectLockConfigurationRequest extends AbstractBucketRequest {
     public Map<String, List<Object>> getHeaders() {
         Map<String, List<Object>> headers = super.getHeaders();
         return headers;
+    }
+
+    @Override
+    public ObjectLockConfiguration getEntity() {
+        return this.objectLockConfiguration;
+    }
+
+    @Override
+    public String getContentType() {
+        return RestUtil.TYPE_APPLICATION_XML;
+    }
+
+    @Override
+    public Long getContentLength() {
+        return null;
+    }
+
+    @Override
+    public boolean isChunkable() {
+        return false;
     }
 
     public void setObjectLockConfiguration(ObjectLockConfiguration objectLockConfiguration)
@@ -57,9 +78,8 @@ public class SetObjectLockConfigurationRequest extends AbstractBucketRequest {
         return this.objectLockConfiguration;
     }
 
-    public SetObjectLockConfigurationRequest
-                withObjectLockConfiguration(ObjectLockConfiguration objectLockCon) {
-        setObjectLockConfiguration(objectLockCon);
+    public SetObjectLockConfigurationRequest withObjectLockConfiguration(ObjectLockConfiguration objectLockConfiguration) {
+        setObjectLockConfiguration(objectLockConfiguration);
         return this;
     }
 }

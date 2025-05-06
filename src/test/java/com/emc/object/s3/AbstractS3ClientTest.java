@@ -97,7 +97,8 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
     @Override
     protected void cleanUpBucket(String bucketName) {
         if (client != null && client.bucketExists(bucketName)) {
-            boolean objectLockEnabled = isIamUser && client.getObjectLockConfiguration(bucketName) != null;
+            GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
+            boolean objectLockEnabled = isIamUser && client.getObjectLockConfiguration(getObjectLockConfigurationRequest) != null;
             if (client.getBucketVersioning(bucketName).getStatus() != null) {
                 for (AbstractVersion version : client.listVersions(new ListVersionsRequest(bucketName).withEncodingType(EncodingType.url)).getVersions()) {
                     DeleteObjectRequest deleteRequest = new DeleteObjectRequest(bucketName, version.getKey()).withVersionId(version.getVersionId());
