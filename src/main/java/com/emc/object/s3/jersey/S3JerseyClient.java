@@ -762,11 +762,22 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    public void setObjectLockConfiguration(String bucketName, ObjectLockConfiguration objectLockConfiguration) {
+        SetObjectLockConfigurationRequest request = new SetObjectLockConfigurationRequest(bucketName).withObjectLockConfiguration(objectLockConfiguration);
+        setObjectLockConfiguration(request);
+    }
+
+    @Override
     public void setObjectLockConfiguration(SetObjectLockConfigurationRequest request) {
         executeAndClose(client, request);
     }
 
     @Override
+    public ObjectLockConfiguration getObjectLockConfiguration(String bucketName) {
+        GetObjectLockConfigurationRequest request = new GetObjectLockConfigurationRequest(bucketName);
+        return getObjectLockConfiguration(request);
+    }
+
     public ObjectLockConfiguration getObjectLockConfiguration(GetObjectLockConfigurationRequest request) {
         try {
             return executeRequest(client, request, ObjectLockConfiguration.class);

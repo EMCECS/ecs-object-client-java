@@ -208,10 +208,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assume.assumeTrue("Skip Object Lock related tests for non IAM user.", isIamUser);
 
         String bucketName = getTestBucket();
-        GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
-        ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
+        ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
         Assert.assertNull(objectLockConfig);
         client.enableObjectLock(bucketName);
+        GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
         objectLockConfig = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
         Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
     }
@@ -223,8 +223,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         String bucketName = "s3-client-test-createObjectLockBucket";
         client.createBucket(new CreateBucketRequest(bucketName).withObjectLockEnabled(true));
-        GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
-        ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
+        ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
         Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
         client.deleteBucket(bucketName);
     }
@@ -238,10 +237,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ObjectLockConfiguration objectLockConfig = new ObjectLockConfiguration().withObjectLockEnabled(ObjectLockConfiguration.ObjectLockEnabled.Enabled);
         DefaultRetention defaultRetention = new DefaultRetention().withMode(ObjectLockRetentionMode.GOVERNANCE).withDays(2);
         objectLockConfig.setRule(new ObjectLockRule().withDefaultRetention(defaultRetention));
-
-        SetObjectLockConfigurationRequest setObjectLockConfigurationRequest = new SetObjectLockConfigurationRequest(bucketName).withObjectLockConfiguration(objectLockConfig);
         try {
-            client.setObjectLockConfiguration(setObjectLockConfigurationRequest);
+            client.setObjectLockConfiguration(bucketName, objectLockConfig);
             Assert.fail("Exception is expected when setting Object Lock configuration on existing bucket without ObjectLock being enabled.");
         } catch (S3Exception e) {
             Assert.assertEquals(409, e.getHttpCode());
@@ -249,8 +246,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
 
         client.enableObjectLock(bucketName);
+        SetObjectLockConfigurationRequest setObjectLockConfigurationRequest = new SetObjectLockConfigurationRequest(bucketName).withObjectLockConfiguration(objectLockConfig);
         client.setObjectLockConfiguration(setObjectLockConfigurationRequest);
-
         GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
         ObjectLockConfiguration objectLockConfig_verify = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
 
