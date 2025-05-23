@@ -227,8 +227,10 @@ public interface S3Client {
     /**
      * Sets whether stale reads are allowed on <code>bucketName</code>. If true, during a temporary site outage (TSO),
      * objects in the bucket may still be read from secondary sites, but these reads are not guaranteed to be strongly
-     * consistent (they may be stale if the primary site is inaccessible). Note that stale reads are <strong>not</strong>
-     * supported on {@link CreateBucketRequest#setFileSystemEnabled(Boolean) filesystem} buckets.
+     * consistent (they may be stale if the primary site is inaccessible).
+     * Note :
+     * That stale reads are <strong>not</strong> supported on {@link CreateBucketRequest#setFileSystemEnabled(Boolean) filesystem} buckets.
+     * That stale reads are <strong>supported</strong> on {@link CreateBucketRequest#setFileSystemEnabledOnADO(Boolean) filesystem} buckets.
      */
     void setBucketStaleReadAllowed(String bucketName, boolean staleReadsAllowed);
 
