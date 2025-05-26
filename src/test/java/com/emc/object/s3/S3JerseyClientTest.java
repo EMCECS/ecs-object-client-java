@@ -211,7 +211,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         ObjectLockConfiguration objectLockConfig = client.getObjectLockConfiguration(bucketName);
         Assert.assertNull(objectLockConfig);
         client.enableObjectLock(bucketName);
-        objectLockConfig = client.getObjectLockConfiguration(bucketName);
+        GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
+        objectLockConfig = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
         Assert.assertEquals(ObjectLockConfiguration.ObjectLockEnabled.Enabled, objectLockConfig.getObjectLockEnabled());
     }
 
@@ -245,8 +246,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
 
         client.enableObjectLock(bucketName);
-        client.setObjectLockConfiguration(bucketName, objectLockConfig);
-        ObjectLockConfiguration objectLockConfig_verify = client.getObjectLockConfiguration(bucketName);
+        SetObjectLockConfigurationRequest setObjectLockConfigurationRequest = new SetObjectLockConfigurationRequest(bucketName).withObjectLockConfiguration(objectLockConfig);
+        client.setObjectLockConfiguration(setObjectLockConfigurationRequest);
+        GetObjectLockConfigurationRequest getObjectLockConfigurationRequest = new GetObjectLockConfigurationRequest(bucketName);
+        ObjectLockConfiguration objectLockConfig_verify = client.getObjectLockConfiguration(getObjectLockConfigurationRequest);
 
         Assert.assertEquals(objectLockConfig.getObjectLockEnabled(), objectLockConfig_verify.getObjectLockEnabled());
         Assert.assertEquals(defaultRetention.getMode(), objectLockConfig_verify.getRule().getDefaultRetention().getMode());

@@ -448,12 +448,23 @@ public interface S3Client {
      * Set Object Lock Configuration for bucket <code>bucketName</code> using parameters in <code>objectLockConfiguration</code>.
      */
     void setObjectLockConfiguration(String bucketName, ObjectLockConfiguration objectLockConfiguration);
+    /**
+     * Set Object Lock Configuration using parameters in <code>SetObjectLockConfigurationRequest</code>.
+     */
+    void setObjectLockConfiguration(SetObjectLockConfigurationRequest setObjectLockConfigurationRequest);
 
     /**
      * Get the Object Lock configuration for bucket <code>bucketName</code>.
      * If Object Lock Configuration is not set, <code>null</code> is returned.
      */
     ObjectLockConfiguration getObjectLockConfiguration(String bucketName);
+
+    /**
+     * Get the Object Lock configuration sing parameters in <code>GetObjectLockConfigurationRequest</code>.
+     * If Object Lock Configuration is not set, <code>null</code> is returned.
+     */
+    ObjectLockConfiguration getObjectLockConfiguration(GetObjectLockConfigurationRequest getObjectLockConfigurationRequest);
+
 
     /**
      * Enable Object Lock for bucket <code>bucketName</code>.
