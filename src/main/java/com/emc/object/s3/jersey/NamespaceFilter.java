@@ -28,18 +28,16 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NamespaceFilter extends ClientFilter {
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+public class NamespaceFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(NamespaceFilter.class);
 
@@ -63,18 +61,16 @@ public class NamespaceFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        String namespace = (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE);
+    public void filter(ClientRequestContext requestContext) throws IOException {
+        String namespace = (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE);
         if (namespace != null) {
 
             if (s3Config.isUseVHost()) {
-                request.setURI(insertNamespace(request.getURI(), namespace));
+                requestContext.setUri(insertNamespace(requestContext.getUri(), namespace));
             } else {
                 // add to headers (x-emc-namespace: namespace)
-                request.getHeaders().putSingle(RestUtil.EMC_NAMESPACE, namespace);
+                requestContext.getHeaders().putSingle(RestUtil.EMC_NAMESPACE, namespace);
             }
         }
-
-        return getNext().handle(request);
     }
 }

@@ -26,79 +26,46 @@
  */
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.ChecksumFilter;
-import com.emc.object.util.ChecksumError;
-import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.core.header.InBoundHeaders;
+import java.io.ByteArrayInputStream;
+import java.util.Random;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Random;
+import com.emc.object.util.ChecksumAlgorithm;
+import com.emc.object.util.ChecksumError;
+import com.emc.object.util.ChecksumValueImpl;
+import com.emc.object.util.ChecksummedInputStream;
 
 public class ChecksumFilterTest {
     @Test
-    public void testContentMd5() throws Exception {
+    public void testChecksumVerification() throws Exception {
         byte[] data = new byte[1024];
         new Random().nextBytes(data);
 
-        MockClientHandler mockHandler = new MockClientHandler();
+        String correctMd5 = DigestUtils.md5Hex(data);
 
-        Client client = new Client(mockHandler);
-        client.addFilter(new ChecksumFilter(new S3Config()));
+        // positive test - correct checksum should not throw
+        ChecksummedInputStream goodStream = new ChecksummedInputStream(
+                new ByteArrayInputStream(data),
+                new ChecksumValueImpl(ChecksumAlgorithm.MD5, data.length, correctMd5));
+        byte[] buffer = new byte[1024];
+        int read = goodStream.read(buffer);
+        goodStream.close();
+        Assert.assertEquals(data.length, read);
 
-        // positive test
-        mockHandler.setBadMd5(false);
-        WebResource resource = client.resource("http://foo.com");
-        resource.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-        ClientResponse response = resource.put(ClientResponse.class, data);
-        Assert.assertNotNull(response);
-        Assert.assertEquals(200, response.getStatus());
-
+        // negative test - bad checksum should throw ChecksumError
         try {
-            mockHandler.setBadMd5(true);
-            resource = client.resource("http://foo.com");
-            resource.setProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-            resource.put(ClientResponse.class, data);
+            ChecksummedInputStream badStream = new ChecksummedInputStream(
+                    new ByteArrayInputStream(data),
+                    new ChecksumValueImpl(ChecksumAlgorithm.MD5, data.length, "abcdef0123456789abcdef0123456789"));
+            buffer = new byte[1024];
+            badStream.read(buffer);
+            badStream.close();
             Assert.fail("bad MD5 should throw exception");
         } catch (ChecksumError e) {
             // expected
-        }
-    }
-
-    // assumes byte[] entity
-    class MockClientHandler implements ClientHandler {
-        boolean badMd5 = false;
-
-        @Override
-        public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-            byte[] content = (byte[]) cr.getEntity();
-
-            // make sure entity is actually written (so digest stream will get real MD5)
-            try {
-                OutputStream out = cr.getAdapter().adapt(cr, new ByteArrayOutputStream());
-                out.write((byte[]) cr.getEntity());
-                out.close();
-            } catch (IOException e) {
-                throw new ClientHandlerException(e);
-            }
-
-            // set content MD5 header in response (bad or real)
-            InBoundHeaders headers = new InBoundHeaders();
-            if (badMd5) headers.add(RestUtil.EMC_CONTENT_MD5, "abcdef0123456789abcdef0123456789");
-            else headers.add(RestUtil.EMC_CONTENT_MD5, DigestUtils.md5Hex(content));
-
-            // return mock response with headers and no data
-            return new ClientResponse(ClientResponse.Status.OK, headers, new ByteArrayInputStream(new byte[0]), null);
-        }
-
-        public void setBadMd5(boolean badMd5) {
-            this.badMd5 = badMd5;
         }
     }
 }

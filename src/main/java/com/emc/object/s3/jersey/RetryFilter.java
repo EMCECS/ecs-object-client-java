@@ -28,18 +28,19 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Exception;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
 
+import javax.ws.rs.ProcessingException;
 import java.io.IOException;
 import java.io.InputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RetryFilter extends ClientFilter {
+/**
+ * Retry utility for S3 operations. In Jersey 2.x, filters cannot retry requests,
+ * so retry logic is implemented as a utility that wraps request execution.
+ */
+public class RetryFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RetryFilter.class);
 
@@ -51,61 +52,56 @@ public class RetryFilter extends ClientFilter {
         this.s3Config = s3Config;
     }
 
-    @Override
-    public ClientResponse handle(ClientRequest clientRequest) throws ClientHandlerException {
-        int retryCount = 0;
-        InputStream entityStream = null;
-        if (clientRequest.getEntity() instanceof InputStream) entityStream = (InputStream) clientRequest.getEntity();
-        while (true) {
+    /**
+     * Checks whether the given exception is retryable and handles retry logic.
+     * Returns true if the request should be retried, false otherwise.
+     * Throws the original exception if retries are exhausted or the error is not retryable.
+     */
+    public boolean shouldRetry(RuntimeException orig, int retryCount, InputStream entityStream) {
+        Throwable t = orig;
+
+        // in this case, the exception was wrapped by Jersey
+        if (t instanceof ProcessingException) t = t.getCause();
+
+        if (t instanceof S3Exception) {
+            S3Exception se = (S3Exception) t;
+
+            // retry all 50x errors except 501 (not implemented)
+            if (se.getHttpCode() < 500 || se.getHttpCode() == 501) throw orig;
+
+            // retry all IO exceptions
+        } else if (!(t instanceof IOException)) throw orig;
+
+        // only retry retryLimit times
+        if (retryCount > s3Config.getRetryLimit()) throw orig;
+
+        // attempt to reset InputStream
+        if (entityStream != null) {
             try {
-                // if using an InputStream, mark the stream so we can rewind it in case of an error
-                if (entityStream != null && entityStream.markSupported())
-                    entityStream.mark(s3Config.getRetryBufferSize());
-
-                return getNext().handle(clientRequest);
-            } catch (RuntimeException orig) {
-                Throwable t = orig;
-
-                // in this case, the exception was wrapped by Jersey
-                if (t instanceof ClientHandlerException) t = t.getCause();
-
-                if (t instanceof S3Exception) {
-                    S3Exception se = (S3Exception) t;
-
-                    // retry all 50x errors except 501 (not implemented)
-                    if (se.getHttpCode() < 500 || se.getHttpCode() == 501) throw orig;
-
-                    // retry all IO exceptions
-                } else if (!(t instanceof IOException)) throw orig;
-
-                // only retry retryLimit times
-                if (++retryCount > s3Config.getRetryLimit()) throw orig;
-
-                // attempt to reset InputStream
-                if (entityStream != null) {
-                    try {
-                        if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
-                        entityStream.reset();
-                    } catch (IOException e) {
-                        log.warn("could not reset entity stream for retry: " + e);
-                        throw orig;
-                    }
-                }
-
-                // wait for retry delay
-                if (s3Config.getInitialRetryDelay() > 0) {
-                    int retryDelay = s3Config.getInitialRetryDelay() * (int) Math.pow(2, retryCount - 1);
-                    try {
-                        log.debug("waiting {}ms before retry", retryDelay);
-                        Thread.sleep(retryDelay);
-                    } catch (InterruptedException e) {
-                        log.warn("interrupted while waiting to retry: " + e.getMessage());
-                    }
-                }
-
-                log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
-                clientRequest.getProperties().put(PROP_RETRY_COUNT, retryCount);
+                if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
+                entityStream.reset();
+            } catch (IOException e) {
+                log.warn("could not reset entity stream for retry: " + e);
+                throw orig;
             }
         }
+
+        // wait for retry delay
+        if (s3Config.getInitialRetryDelay() > 0) {
+            int retryDelay = s3Config.getInitialRetryDelay() * (int) Math.pow(2, retryCount - 1);
+            try {
+                log.debug("waiting {}ms before retry", retryDelay);
+                Thread.sleep(retryDelay);
+            } catch (InterruptedException e) {
+                log.warn("interrupted while waiting to retry: " + e.getMessage());
+            }
+        }
+
+        log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
+        return true;
+    }
+
+    public int getRetryBufferSize() {
+        return s3Config.getRetryBufferSize();
     }
 }

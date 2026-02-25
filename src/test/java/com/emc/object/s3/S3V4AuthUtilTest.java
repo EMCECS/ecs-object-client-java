@@ -2,9 +2,7 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.client.impl.ClientRequestImpl;
-import com.sun.jersey.core.header.OutBoundHeaders;
+import javax.ws.rs.core.MultivaluedHashMap;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,7 +49,7 @@ public class S3V4AuthUtilTest {
     private static final String EXPECTED_SIGNATURE =
             "5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7";
     private static Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
-    private static OutBoundHeaders HEADERS_1 = new OutBoundHeaders();
+    private static MultivaluedHashMap<String, Object> HEADERS_1 = new MultivaluedHashMap<>();
 
     private static String payload = "{\n" +
             "\"service_id\": \"09cac1c6-1b0a-11e6-b6ba-3e1d05defe78\",\n" +
@@ -99,12 +97,12 @@ public class S3V4AuthUtilTest {
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
 
-        ClientRequest request = new ClientRequestImpl(new URI("https://iam.amazonaws.com/?Action=ListUsers&Version=2010-05-08"), null);
-        request.setMethod("GET");
-        Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
+        URI requestUri = new URI("https://iam.amazonaws.com/?Action=ListUsers&Version=2010-05-08");
+        String method = "GET";
+        Map<String, String> parameters = RestUtil.getQueryParameterMap(requestUri.getRawQuery());
         Map<String, List<Object>> headers = new HashMap<>();
         RestUtil.putSingle(headers,S3Constants.AMZ_DATE, AMZ_V4_DATE);
-        Assert.assertEquals(CANONICAL_REQUEST, signer.getCanonicalRequest(request.getMethod(), request.getURI(), parameters, headers, false));
+        Assert.assertEquals(CANONICAL_REQUEST, signer.getCanonicalRequest(method, requestUri, parameters, headers, false));
     }
 
     @Test

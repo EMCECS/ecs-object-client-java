@@ -28,14 +28,13 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.*;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import java.io.IOException;
 import java.util.Map;
 
-public class AuthorizationFilter extends ClientFilter {
+public class AuthorizationFilter implements ClientRequestFilter {
     private S3Config s3Config;
     private S3Signer signer;
 
@@ -48,27 +47,25 @@ public class AuthorizationFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+    public void filter(ClientRequestContext requestContext) throws IOException {
 
         // tack on user-agent here
         if (s3Config.getUserAgent() != null) {
-            request.getHeaders().putSingle(RestUtil.HEADER_USER_AGENT, s3Config.getUserAgent());
+            requestContext.getHeaders().putSingle(RestUtil.HEADER_USER_AGENT, s3Config.getUserAgent());
         }
         // if no identity is provided, this is an anonymous client
         if (s3Config.getIdentity() != null) {
-            Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
+            Map<String, String> parameters = RestUtil.getQueryParameterMap(requestContext.getUri().getRawQuery());
 
             String resource = VHostUtil.getResourceString(s3Config,
-                    (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE),
-                    (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
-                    RestUtil.getEncodedPath(request.getURI()));
+                    (String) requestContext.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                    (String) requestContext.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                    RestUtil.getEncodedPath(requestContext.getUri()));
 
-            signer.sign(request,
+            signer.sign(requestContext,
                     resource,
                     parameters,
-                    request.getHeaders());
+                    requestContext.getHeaders());
         }
-
-        return getNext().handle(request);
     }
 }

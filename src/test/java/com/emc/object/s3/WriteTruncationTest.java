@@ -1,13 +1,13 @@
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.S3JerseyClient;
-import com.emc.object.s3.request.CreateBucketRequest;
-import com.emc.object.s3.request.PutObjectRequest;
-import com.emc.object.s3.request.UploadPartRequest;
-import com.emc.object.util.FaultInjectionStream;
-import com.emc.util.ConcurrentJunitRunner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Random;
+
+import javax.ws.rs.ProcessingException;
+import javax.xml.bind.DatatypeConverter;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -15,11 +15,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.xml.bind.DatatypeConverter;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Random;
+import com.emc.object.s3.jersey.S3JerseyClient;
+import com.emc.object.s3.request.CreateBucketRequest;
+import com.emc.object.s3.request.PutObjectRequest;
+import com.emc.object.s3.request.UploadPartRequest;
+import com.emc.object.util.FaultInjectionStream;
+import com.emc.util.ConcurrentJunitRunner;
 
 @RunWith(ConcurrentJunitRunner.class)
 public class WriteTruncationTest extends AbstractS3ClientTest {
@@ -32,7 +33,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     @Override
     protected S3Client createS3Client() throws Exception {
         S3Config s3Config = createS3Config().withRetryEnabled(false);
-        this.jvmClient = new S3JerseyClient(s3Config, new URLConnectionClientHandler());
+        this.jvmClient = new S3JerseyClient(s3Config);
         return new S3JerseyClient(createS3Config().withRetryEnabled(false));
     }
 
@@ -161,7 +162,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
-        } catch (ClientHandlerException e) {
+        } catch (ProcessingException e) {
             if (exceptionType == ExceptionType.RuntimeException) {
                 Assert.assertTrue(e.getCause() instanceof RuntimeException);
             } else {
@@ -198,7 +199,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
                 s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
                         .withContentLength((long) MOCK_OBJ_SIZE));
                 Assert.fail("exception in input stream did not throw an exception");
-            } catch (ClientHandlerException e) {
+            } catch (ProcessingException e) {
                 Assert.assertTrue(e.getCause() instanceof IOException);
                 Assert.assertEquals(message, e.getCause().getMessage());
 

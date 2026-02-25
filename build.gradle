@@ -30,13 +30,13 @@ plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-    id 'net.saliman.cobertura' version '4.0.0'
-    id 'com.github.jk1.dependency-license-report' version '1.17'
+    id 'jacoco'
+    id 'com.github.jk1.dependency-license-report' version '2.9'
     id 'distribution'
     id 'signing'
-    id 'maven'
-    id 'org.ajoberstar.git-publish' version '3.0.1'
-    id 'nebula.release' version '15.3.1'
+    id 'maven-publish'
+    id 'org.ajoberstar.git-publish' version '4.2.2'
+    id 'nebula.release' version '19.0.10'
 }
 
 group 'com.emc.ecs'
@@ -62,17 +62,17 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client-ecs:3.0.6'
-    implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
-    // NOTE: Jackson 2.13 dropped support for JAX-RS 1.x, and we use Jersey client 1.x, so we are stuck on Jackson 1.12.x
-    // ref: https://github.com/FasterXML/jackson-jaxrs-providers/issues/90#issuecomment-1081368194
-    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7'
-    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7'
+    implementation 'com.emc.ecs:smart-client-ecs'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.47'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.47'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.47'
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.17.3'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.17.3'
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
-    implementation 'commons-codec:commons-codec:1.15'
-    implementation('org.dom4j:dom4j:2.1.3') {
+    implementation 'commons-codec:commons-codec:1.17.1'
+    implementation('org.dom4j:dom4j:2.1.4') {
         // workaround for jdom2 bug (https://github.com/dom4j/dom4j/issues/99)
         // NOTE: a component metadata rule will not solve the problem for library consumers - this is the only way
         exclude module: 'pull-parser'
@@ -82,11 +82,12 @@ dependencies {
         exclude module: 'stax-api'
         exclude module: 'jaxb-api'
     }
-    implementation 'org.slf4j:slf4j-api:1.7.36'
-    testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
-    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.36'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.19.0'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.junit.vintage:junit-vintage-engine:5.11.4'
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5:5.4.1'
+    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.16'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3'
 }
 
 allprojects {
@@ -101,54 +102,21 @@ configurations {
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-sourceCompatibility = 1.8
-
-def projectPom = {
-    project {
-        name project.name
-        description project.description
-        url githubProjectUrl
-
-        scm {
-            url githubProjectUrl
-            connection githubScmUrl
-            developerConnection githubScmUrl
-        }
-
-        licenses {
-            license {
-                name licenseName
-                url licenseUrl
-                distribution 'repo'
-            }
-        }
-
-        developers {
-            developer {
-                id 'EMCECS'
-                name 'Dell EMC ECS'
-            }
-        }
-    }
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
-task writePom {
-    ext.pomFile = file("$buildDir/pom.xml")
-    outputs.file pomFile
-    doLast {
-        pom(projectPom).writeTo pomFile
-    }
+test {
+    useJUnitPlatform()
 }
 
 jar {
     doFirst {
         manifest {
             attributes 'Implementation-Version': project.version,
-                    'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
+                    'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
         }
-    }
-    into("META-INF/maven/$project.group/$project.name") {
-        from writePom
     }
 }
 
@@ -158,7 +126,7 @@ javadoc {
 
 task javadocJar(type: Jar) {
     archiveClassifier = 'javadoc'
-    from "${docsDir}/javadoc"
+    from javadoc.destinationDir
 }
 tasks.javadocJar.dependsOn javadoc
 
@@ -197,36 +165,64 @@ distributions {
     }
 }
 
-signing {
-    required { gradle.taskGraph.hasTask(':uploadJars') }
-    sign configurations.jars
-}
-
-uploadJars {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { deployment -> signing.signPom(deployment) }
-
-            repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                authentication(userName: '', password: '')
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact javadocJar
+            artifact sourcesJar
+            pom {
+                name = project.name
+                description = project.description
+                url = githubProjectUrl
+                scm {
+                    url = githubProjectUrl
+                    connection = githubScmUrl
+                    developerConnection = githubScmUrl
+                }
+                licenses {
+                    license {
+                        name = licenseName
+                        url = licenseUrl
+                        distribution = 'repo'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'EMCECS'
+                        name = 'Dell EMC ECS'
+                    }
+                }
             }
-
-            pom projectPom
+        }
+    }
+    repositories {
+        maven {
+            url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            credentials {
+                username = rootProject.findProperty('sonatypeUser') ?: ''
+                password = rootProject.findProperty('sonatypePass') ?: ''
+            }
         }
     }
 }
 
-ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
+signing {
+    required { gradle.taskGraph.hasTask(':publishMavenJavaPublicationToMavenRepository') }
+    sign publishing.publications.mavenJava
+}
+
+ext.aggregatedDocsDir = "${layout.buildDirectory.get()}/aggregatedDocs"
 task aggregateDocs {
     doLast {
         if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
             copy {
-                from docsDir
+                from javadoc.destinationDir
                 into "${aggregatedDocsDir}/latest"
             }
         }
         copy {
-            from docsDir
+            from javadoc.destinationDir
             into "${aggregatedDocsDir}/${project.version}"
         }
     }
@@ -243,7 +239,7 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
+tasks.release.dependsOn test, publishMavenJavaPublicationToMavenRepository, gitPublishPush, distZip
 
 clean {
     delete aggregatedDocsDir
@@ -252,7 +248,7 @@ clean {
 // allow typing in credentials
 // note: this only works when run without the Gradle daemon (--no-daemon)
 gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(':uploadJars')) {
+    if (taskGraph.hasTask(':publishMavenJavaPublicationToMavenRepository')) {
         if (!rootProject.hasProperty('signingSecretKeyRingFile'))
             rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
         if (!rootProject.hasProperty('signingKeyId'))
@@ -266,8 +262,6 @@ gradle.taskGraph.whenReady { taskGraph ->
         ext.'signing.keyId' = rootProject.ext.signingKeyId
         ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
         ext.'signing.password' = rootProject.ext.signingPass
-        uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
-        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
     }
     if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
         if (!rootProject.hasProperty('gitUsername'))

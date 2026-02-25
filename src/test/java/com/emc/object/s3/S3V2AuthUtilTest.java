@@ -28,9 +28,7 @@ package com.emc.object.s3;
 
 import com.emc.object.Method;
 import com.emc.object.s3.request.PresignedUrlRequest;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.client.impl.ClientRequestImpl;
-import com.sun.jersey.core.header.OutBoundHeaders;
+import javax.ws.rs.core.MultivaluedHashMap;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,7 +46,7 @@ public class S3V2AuthUtilTest {
     private static final String METHOD_1 = "GET";
     private static final String RESOURCE_1 = "/johnsmith/photos/puppy.jpg";
     private static Map<String, String> PARAMETERS_1 = new HashMap<String, String>();
-    private static OutBoundHeaders HEADERS_1 = new OutBoundHeaders();
+    private static MultivaluedHashMap<String, Object> HEADERS_1 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_1 = "GET\n" +
             "\n" +
             "\n" +
@@ -59,7 +57,7 @@ public class S3V2AuthUtilTest {
     private static final String METHOD_2 = "PUT";
     private static final String RESOURCE_2 = "/static.johnsmith.net/db-backup.dat.gz";
     private static Map<String, String> PARAMETERS_2 = new HashMap<String, String>();
-    private static OutBoundHeaders HEADERS_2 = new OutBoundHeaders();
+    private static MultivaluedHashMap<String, Object> HEADERS_2 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_2 = "PUT\n" +
             "4gJE4saaMU4BqNR0kLY+lw==\n" +
             "application/x-download\n" +
@@ -74,7 +72,7 @@ public class S3V2AuthUtilTest {
     private static final String METHOD_3 = "GET";
     private static final String RESOURCE_3 = "/johnsmith/";
     private static Map<String, String> PARAMETERS_3 = new HashMap<String, String>();
-    private static OutBoundHeaders HEADERS_3 = new OutBoundHeaders();
+    private static MultivaluedHashMap<String, Object> HEADERS_3 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_3 = "GET\n" +
             "\n" +
             "\n" +
@@ -85,7 +83,7 @@ public class S3V2AuthUtilTest {
     private static final String METHOD_4 = "GET";
     private static final String RESOURCE_4 = "/johnsmith/";
     private static Map<String, String> PARAMETERS_4 = new HashMap<String, String>();
-    private static OutBoundHeaders HEADERS_4 = new OutBoundHeaders();
+    private static MultivaluedHashMap<String, Object> HEADERS_4 = new MultivaluedHashMap<>();
     private static final String SIGN_STRING_4 = "GET\n" +
             "\n" +
             "\n" +
@@ -123,27 +121,23 @@ public class S3V2AuthUtilTest {
         S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
-        ClientRequest request = new ClientRequestImpl(new URI("http://s3.company.com"), null);
+        // Test signing via string-to-sign and signature verification
+        // (sign() now requires ClientRequestContext, so we test the underlying methods directly)
+        String stringToSign1 = signer.getStringToSign(METHOD_1, RESOURCE_1, PARAMETERS_1, HEADERS_1);
+        String signature1 = signer.getSignature(stringToSign1, null);
+        Assert.assertEquals(SIGNATURE_1, signature1);
 
-        MultivaluedMap<String, Object> headers = new OutBoundHeaders(HEADERS_1);
-        request.setMethod(METHOD_1);
-        signer.sign(request, RESOURCE_1, PARAMETERS_1, headers);
-        Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_1, headers.getFirst("Authorization"));
+        String stringToSign2 = signer.getStringToSign(METHOD_2, RESOURCE_2, PARAMETERS_2, HEADERS_2);
+        String signature2 = signer.getSignature(stringToSign2, null);
+        Assert.assertEquals(SIGNATURE_2, signature2);
 
-        headers = new OutBoundHeaders(HEADERS_2);
-        request.setMethod(METHOD_2);
-        signer.sign(request, RESOURCE_2, PARAMETERS_2, headers);
-        Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_2, headers.getFirst("Authorization"));
+        String stringToSign3 = signer.getStringToSign(METHOD_3, RESOURCE_3, PARAMETERS_3, HEADERS_3);
+        String signature3 = signer.getSignature(stringToSign3, null);
+        Assert.assertEquals(SIGNATURE_3, signature3);
 
-        headers = new OutBoundHeaders(HEADERS_3);
-        request.setMethod(METHOD_3);
-        signer.sign(request, RESOURCE_3, PARAMETERS_3, headers);
-        Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_3, headers.getFirst("Authorization"));
-
-        headers = new OutBoundHeaders(HEADERS_4);
-        request.setMethod(METHOD_4);
-        signer.sign(request, RESOURCE_4, PARAMETERS_4, headers);
-        Assert.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_4, headers.getFirst("Authorization"));
+        String stringToSign4 = signer.getStringToSign(METHOD_4, RESOURCE_4, PARAMETERS_4, HEADERS_4);
+        String signature4 = signer.getSignature(stringToSign4, null);
+        Assert.assertEquals(SIGNATURE_4, signature4);
     }
 
     @Test
