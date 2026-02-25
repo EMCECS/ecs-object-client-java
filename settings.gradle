@@ -1,2 +1,17 @@
-rootProject.name = 'object-client'
-include 'geo-pin-cli'
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'ecs-object-client-java'
+
+// Temporarily disable geo-pin-cli - shadow plugin requires additional configuration for composite builds
+// include 'geo-pin-cli'
+
+includeBuild('../smart-client-java') {
+    dependencySubstitution {
+        substitute module('com.emc.ecs:smart-client-ecs') using project(':smart-client-ecs')
+    }
+}

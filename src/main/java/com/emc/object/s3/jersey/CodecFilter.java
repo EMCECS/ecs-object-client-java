@@ -29,24 +29,26 @@ package com.emc.object.s3.jersey;
 import com.emc.codec.CodecChain;
 import com.emc.object.s3.S3ObjectMetadata;
 import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.api.client.filter.ClientFilter;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.Provider;
+import javax.ws.rs.ext.WriterInterceptor;
+import javax.ws.rs.ext.WriterInterceptorContext;
+import javax.ws.rs.ext.ReaderInterceptor;
+import javax.ws.rs.ext.ReaderInterceptorContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class CodecFilter extends ClientFilter {
+@Provider
+public class CodecFilter implements WriterInterceptor, ReaderInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);
 
@@ -59,85 +61,69 @@ public class CodecFilter extends ClientFilter {
 
     @SuppressWarnings("unchecked")
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        Map<String, String> userMeta = (Map<String, String>) request.getProperties().get(RestUtil.PROPERTY_USER_METADATA);
-        Map<String, String> metaBackup = null;
-
-        Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
-        if (encode != null && encode) {
-
-            // if encoded size is predictable and we know the original size, we can set a content-length and avoid chunked encoding
-            Long originalSize = SizeOverrideWriter.getEntitySize();
-            if (encodeChain.isSizePredictable() && originalSize != null) {
-                long encodedSize = encodeChain.getEncodedSize(originalSize);
-                log.debug("updating content-length for encoded data (original: {}, encoded: {})", originalSize, encodedSize);
-                SizeOverrideWriter.setEntitySize(encodedSize);
-            } else {
-                // we don't know what the size will be; this will turn on chunked encoding in the apache client
-                SizeOverrideWriter.setEntitySize(-1L);
-            }
-
+    public void aroundWriteTo(WriterInterceptorContext context) throws IOException, WebApplicationException {
+        Map<String, String> userMeta = (Map<String, String>) context.getProperty(RestUtil.PROPERTY_USER_METADATA);
+        Boolean encode = (Boolean) context.getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
+        
+        if (encode != null && encode && userMeta != null) {
             // backup original metadata in case of an error
-            metaBackup = new HashMap<String, String>(userMeta);
-
-            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
-            // a "dangling" output stream and connect it in the adapter
-            // NOTE: we can't alter the headers in the adapt() method because they've already been a) signed and b) sent
-            DanglingOutputStream danglingStream = new DanglingOutputStream();
-            OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
-
-            // add pre-stream encode metadata
-            request.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
-
-            // wrap output stream with encryptor
-            request.setAdapter(new EncryptAdapter(request.getAdapter(), danglingStream, encodeStream));
-        }
-
-        // execute request
-        ClientResponse response;
-        try {
-            response = getNext().handle(request);
-        } catch (RuntimeException e) {
-            if (encode != null && encode) {
+            Map<String, String> metaBackup = new HashMap<String, String>(userMeta);
+            
+            try {
+                // get pre-stream metadata from encoder
+                DanglingOutputStream danglingStream = new DanglingOutputStream();
+                OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
+                
+                // add pre-stream encode metadata to headers
+                context.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
+                
+                // connect dangling stream to actual output and wrap with encoder
+                OutputStream originalStream = context.getOutputStream();
+                danglingStream.setOutputStream(originalStream);
+                context.setOutputStream(encodeStream);
+                
+                context.proceed();
+            } catch (RuntimeException e) {
                 // restore metadata from backup
                 userMeta.clear();
                 userMeta.putAll(metaBackup);
+                throw e;
             }
-            throw e;
-        } finally {
-            // make sure we clear the content-length override for this thread if we set it
-            if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
+        } else {
+            context.proceed();
         }
-
+    }
+    
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object aroundReadFrom(ReaderInterceptorContext context) throws IOException, WebApplicationException {
         // get user metadata from response headers
-        MultivaluedMap<String, String> headers = response.getHeaders();
+        MultivaluedMap<String, String> headers = context.getHeaders();
         Map<String, String> storedMeta = S3ObjectMetadata.getUserMetadata(headers);
         Set<String> keysToRemove = new HashSet<String>();
         keysToRemove.addAll(storedMeta.keySet());
-
+        
         // get encode specs from user metadata
         String[] encodeSpecs = CodecChain.getEncodeSpecs(storedMeta);
         if (encodeSpecs != null) {
-
             // create codec chain
             CodecChain decodeChain = new CodecChain(encodeSpecs).withProperties(codecProperties);
-
+            
             // do we need to decode the entity?
-            Boolean decode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_DECODE_ENTITY);
+            Boolean decode = (Boolean) context.getProperty(RestUtil.PROPERTY_DECODE_ENTITY);
             if (decode != null && decode) {
-
-                // wrap input stream with decryptor (this will remove any encode metadata from storedMeta)
-                response.setEntityInputStream(decodeChain.getDecodeStream(response.getEntityInputStream(), storedMeta));
+                // wrap input stream with decoder
+                InputStream originalStream = context.getInputStream();
+                InputStream decodeStream = decodeChain.getDecodeStream(originalStream, storedMeta);
+                context.setInputStream(decodeStream);
             } else {
-
                 // need to remove any encode metadata so we can update the headers
                 decodeChain.removeEncodeMetadata(storedMeta, decodeChain.getEncodeMetadataList(storedMeta));
             }
-
+            
             // should we keep the encode headers?
-            Boolean keepHeaders = (Boolean) request.getProperties().get(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS);
+            Boolean keepHeaders = (Boolean) context.getProperty(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS);
             if (keepHeaders == null || !keepHeaders) {
-
                 // remove encode metadata from headers (storedMeta now contains only user-defined metadata)
                 keysToRemove.removeAll(storedMeta.keySet()); // all metadata - user-defined metadata
                 for (String key : keysToRemove) {
@@ -145,27 +131,10 @@ public class CodecFilter extends ClientFilter {
                 }
             }
         }
-
-        return response;
+        
+        return context.proceed();
     }
 
-    // only way to set the output stream
-    private class EncryptAdapter extends AbstractClientRequestAdapter {
-        DanglingOutputStream danglingStream;
-        OutputStream encodeStream;
-
-        EncryptAdapter(ClientRequestAdapter parent, DanglingOutputStream danglingStream, OutputStream encodeStream) {
-            super(parent);
-            this.danglingStream = danglingStream;
-            this.encodeStream = encodeStream;
-        }
-
-        @Override
-        public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
-            danglingStream.setOutputStream(out); // connect the dangling output stream
-            return getAdapter().adapt(request, encodeStream); // don't break the chain
-        }
-    }
 
     public Map<String, Object> getCodecProperties() {
         return codecProperties;
