@@ -26,40 +26,46 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.S3Exception;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
-
+import java.io.IOException;
 import java.util.Random;
 
-public class FaultInjectionFilter extends ClientFilter {
-    public static final String FAULT_INJECTION_ERROR_CODE = "FaultInjection";
-    public static final String FAULT_INJECTION_ERROR_MESSAGE = "Fault Injection";
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
 
-    public static final float DEFAULT_FAILURE_RATE = 0.25f;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-    private Random random = new Random();
-    private float failureRate;
+import com.emc.object.s3.S3Exception;
 
-    public FaultInjectionFilter() {
-        this(DEFAULT_FAILURE_RATE);
-    }
+public class FaultInjectionFilter implements ClientRequestFilter {
 
-    public FaultInjectionFilter(float failureRate) {
-        this.failureRate = failureRate;
+    private static final Logger log = LoggerFactory.getLogger(FaultInjectionFilter.class);
+    public static final String ERROR_CODE = "FaultInjection";
+
+    private float rate;
+    private Random random;
+
+    /**
+     * @param rate failure rate from 0-1 (i.e. .5 is 50% chance of failure)
+     */
+    public FaultInjectionFilter(float rate) {
+        this.rate = rate;
+        this.random = new Random();
     }
 
     @Override
-    public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-        if (random.nextFloat() < failureRate)
-            throw new S3Exception(FAULT_INJECTION_ERROR_MESSAGE, 500, FAULT_INJECTION_ERROR_CODE, null);
-
-        return getNext().handle(cr);
+    public void filter(ClientRequestContext requestContext) throws IOException {
+        if (random.nextFloat() < rate) {
+            log.info("randomly injecting an error into the response");
+            throw new S3Exception(ERROR_CODE, 500, "Internal Server Error", "Randomly injected error");
+        }
     }
 
-    public float getFailureRate() {
-        return failureRate;
+    public float getRate() {
+        return rate;
+    }
+
+    public void setRate(float rate) {
+        this.rate = rate;
     }
 }

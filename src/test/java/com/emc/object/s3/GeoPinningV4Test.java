@@ -4,7 +4,7 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.ecs.Vdc;
-import org.junit.Assume;
+import org.junit.jupiter.api.Assumptions;
 
 import java.util.*;
 
@@ -14,7 +14,7 @@ public class GeoPinningV4Test extends GeoPinningTest {
     @Override
     protected S3Config createS3Config() throws Exception {
         S3Config s3Config = super.createS3Config().withUseV2Signer(false);
-        Assume.assumeFalse(s3Config.isUseVHost());
+        Assumptions.assumeFalse(s3Config.isUseVHost());
 
         // just going to use the same VDC thrice for lack of a geo env.
         List<? extends Host> hosts = s3Config.getVdcs().get(0).getHosts();

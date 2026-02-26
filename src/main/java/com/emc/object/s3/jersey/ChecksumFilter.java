@@ -26,20 +26,44 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.*;
-import com.emc.object.util.*;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.api.client.filter.ClientFilter;
-
-import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayOutputStream;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
-public class ChecksumFilter extends ClientFilter {
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.ext.WriterInterceptor;
+import javax.ws.rs.ext.WriterInterceptorContext;
+import javax.xml.bind.DatatypeConverter;
+
+import org.glassfish.jersey.client.ClientRequest;
+
+import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.S3Signer;
+import com.emc.object.s3.S3SignerV2;
+import com.emc.object.s3.S3SignerV4;
+import com.emc.object.s3.VHostUtil;
+import com.emc.object.util.ChecksumAlgorithm;
+import com.emc.object.util.ChecksumError;
+import com.emc.object.util.ChecksumValueImpl;
+import com.emc.object.util.ChecksummedInputStream;
+import com.emc.object.util.ChecksummedOutputStream;
+import com.emc.object.util.RestUtil;
+import com.emc.object.util.RunningChecksum;
+
+public class ChecksumFilter implements ClientRequestFilter, ClientResponseFilter, WriterInterceptor {
+    static final String PROP_VERIFY_WRITE = "com.emc.object.checksumFilter.verifyWrite";
+    static final String PROP_VERIFY_READ = "com.emc.object.checksumFilter.verifyRead";
+    static final String PROP_GENERATE_MD5 = "com.emc.object.checksumFilter.generateMd5";
+    static final String PROP_WRITE_CHECKSUM = "com.emc.object.checksumFilter.writeChecksum";
+
     private S3Config s3Config;
     private S3Signer signer;
 
@@ -52,157 +76,109 @@ public class ChecksumFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        try {
-            ChecksumAdapter adapter = new ChecksumAdapter(request.getAdapter());
+    public void filter(ClientRequestContext requestContext) throws IOException {
+        // propagate checksum flags to request properties for use in WriterInterceptor and response filter
+        Boolean verifyWrite = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
+        if (verifyWrite != null && verifyWrite) {
+            requestContext.setProperty(PROP_VERIFY_WRITE, true);
+        }
+        Boolean generateMd5 = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
+        if (generateMd5 != null && generateMd5) {
+            requestContext.setProperty(PROP_GENERATE_MD5, true);
+        }
+        Boolean verifyRead = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
+        if (verifyRead != null && verifyRead) {
+            requestContext.setProperty(PROP_VERIFY_READ, true);
+        }
+    }
 
-            Boolean verifyWrite = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM);
+    @Override
+    public void aroundWriteTo(WriterInterceptorContext context) throws IOException, WebApplicationException {
+        Boolean verifyWrite = (Boolean) context.getProperty(PROP_VERIFY_WRITE);
+        Boolean generateMd5 = (Boolean) context.getProperty(PROP_GENERATE_MD5);
+
+        RunningChecksum writeChecksum = null;
+        OutputStream originalOut = context.getOutputStream();
+
+        try {
+            if (generateMd5 != null && generateMd5) {
+                // buffer the entity, compute MD5, add Content-MD5 header, re-sign, then write
+                RunningChecksum md5Checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                OutputStream checksumOut = new ChecksummedOutputStream(buffer, md5Checksum);
+                context.setOutputStream(checksumOut);
+                context.proceed();
+                checksumOut.close();
+
+                // add Content-MD5 header
+                context.getHeaders().putSingle(RestUtil.HEADER_CONTENT_MD5,
+                        DatatypeConverter.printBase64Binary(md5Checksum.getByteValue()));
+
+                // re-sign request because Content-MD5 is included in the signature
+                ClientRequest request = (ClientRequest) context.getProperty("com.emc.object.clientRequest");
+                if (request != null && s3Config.getIdentity() != null) {
+                    Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getUri().getRawQuery());
+                    String resource = VHostUtil.getResourceString(s3Config,
+                            (String) request.getProperty(RestUtil.PROPERTY_NAMESPACE),
+                            (String) request.getProperty(S3Constants.PROPERTY_BUCKET_NAME),
+                            RestUtil.getEncodedPath(request.getUri()));
+                    signer.sign(request, resource, parameters, request.getHeaders());
+                }
+
+                // also track write checksum if needed
+                if (verifyWrite != null && verifyWrite) {
+                    writeChecksum = md5Checksum;
+                    context.setProperty(PROP_WRITE_CHECKSUM, writeChecksum);
+                }
+
+                // write buffered data to original stream
+                originalOut.write(buffer.toByteArray());
+                return;
+            }
+
             if (verifyWrite != null && verifyWrite) {
                 // wrap stream to calculate write checksum
-                request.setAdapter(adapter);
+                writeChecksum = new RunningChecksum(ChecksumAlgorithm.MD5);
+                context.setOutputStream(new ChecksummedOutputStream(originalOut, writeChecksum));
+                context.setProperty(PROP_WRITE_CHECKSUM, writeChecksum);
             }
-
-            Boolean generateMd5 = (Boolean) request.getProperties().get(RestUtil.PROPERTY_GENERATE_CONTENT_MD5);
-            if (generateMd5 != null && generateMd5) {
-                // wrap stream to generate Content-MD5 header
-                ContentMd5Adapter md5Adapter = new ContentMd5Adapter(request.getAdapter());
-                request.setAdapter(md5Adapter);
-            }
-
-            // execute request
-            ClientResponse response = getNext().handle(request);
-
-            // pull etag from response headers
-            String md5Header = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_ETAG);
-            if (md5Header != null) md5Header = md5Header.replaceAll("\"", "");
-            if (md5Header != null && (md5Header.length() <= 2 || md5Header.contains("-")))
-                md5Header = null; // look for valid etags
-
-            // also look for content MD5 (this trumps etag if present)
-            String contentMd5 = RestUtil.getFirstAsString(response.getHeaders(), RestUtil.EMC_CONTENT_MD5);
-            if (contentMd5 != null) md5Header = contentMd5;
-
-            if (verifyWrite != null && verifyWrite && md5Header != null) {
-                // verify write checksum
-                if (!adapter.getChecksum().getHexValue().equals(md5Header))
-                    throw new ChecksumError("Checksum failure while writing stream", adapter.getChecksum().getHexValue(), md5Header);
-            }
-
-            Boolean verifyRead = (Boolean) request.getProperties().get(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM);
-            if (verifyRead != null && verifyRead && md5Header != null) {
-                // wrap stream to verify read checksum
-                response.setEntityInputStream(new ChecksummedInputStream(response.getEntityInputStream(),
-                        new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, md5Header))); // won't have length for chunked responses
-            }
-
-            return response;
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("fatal: MD5 algorithm not found");
         }
+
+        context.proceed();
     }
 
-    private class ChecksumAdapter extends AbstractClientRequestAdapter {
-        RunningChecksum checksum;
+    @Override
+    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
+        // pull etag from response headers
+        List<String> etagHeaders = responseContext.getHeaders().get(RestUtil.HEADER_ETAG);
+        String md5Header = (etagHeaders != null && !etagHeaders.isEmpty()) ? etagHeaders.get(0) : null;
+        if (md5Header != null) md5Header = md5Header.replaceAll("\"", "");
+        if (md5Header != null && (md5Header.length() <= 2 || md5Header.contains("-")))
+            md5Header = null; // look for valid etags
 
-        ChecksumAdapter(ClientRequestAdapter parent) {
-            super(parent);
+        // also look for content MD5 (this trumps etag if present)
+        List<String> contentMd5Headers = responseContext.getHeaders().get(RestUtil.EMC_CONTENT_MD5);
+        String contentMd5 = (contentMd5Headers != null && !contentMd5Headers.isEmpty()) ? contentMd5Headers.get(0) : null;
+        if (contentMd5 != null) md5Header = contentMd5;
+
+        Boolean verifyWrite = (Boolean) requestContext.getProperty(PROP_VERIFY_WRITE);
+        if (verifyWrite != null && verifyWrite && md5Header != null) {
+            RunningChecksum writeChecksum = (RunningChecksum) requestContext.getProperty(PROP_WRITE_CHECKSUM);
+            if (writeChecksum != null && !writeChecksum.getHexValue().equals(md5Header))
+                throw new ChecksumError("Checksum failure while writing stream", writeChecksum.getHexValue(), md5Header);
         }
 
-        @Override
-        public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
+        Boolean verifyRead = (Boolean) requestContext.getProperty(PROP_VERIFY_READ);
+        if (verifyRead != null && verifyRead && md5Header != null) {
             try {
-                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
-                out = new ChecksummedOutputStream(out, checksum);
-                return getAdapter().adapt(request, out); // don't break the chain
+                // wrap stream to verify read checksum
+                responseContext.setEntityStream(new ChecksummedInputStream(responseContext.getEntityStream(),
+                        new ChecksumValueImpl(ChecksumAlgorithm.MD5, 0, md5Header))); // won't have length for chunked responses
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("fatal: MD5 algorithm not found");
             }
         }
-
-        public RunningChecksum getChecksum() {
-            return checksum;
-        }
-    }
-
-    private class ContentMd5Adapter extends AbstractClientRequestAdapter implements CloseEventListener {
-        ClientRequest request;
-        OutputStream finalStream;
-        RunningChecksum checksum;
-        ByteArrayOutputStream buffer;
-
-        ContentMd5Adapter(ClientRequestAdapter parent) {
-            super(parent);
-        }
-
-        @Override
-        public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
-            this.request = request;
-            finalStream = out;
-            try {
-                checksum = new RunningChecksum(ChecksumAlgorithm.MD5);
-                buffer = new ByteArrayOutputStream();
-                out = new CloseNotifyOutputStream(buffer, this);
-                out = new ChecksummedOutputStream(out, checksum);
-                return getAdapter().adapt(request, out); // don't break the chain
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("fatal: MD5 algorithm not found");
-            }
-        }
-
-        @Override
-        public void streamClosed(CloseNotifyOutputStream stream) throws IOException {
-            // add Content-MD5 (before anything is written to the final stream)
-            request.getHeaders().putSingle(RestUtil.HEADER_CONTENT_MD5,
-                    DatatypeConverter.printBase64Binary(checksum.getByteValue()));
-
-            // need to re-sign request because Content-MD5 is included in the signature!
-            if (s3Config.getIdentity() != null) {
-                Map<String, String> parameters = RestUtil.getQueryParameterMap(request.getURI().getRawQuery());
-
-                String resource = VHostUtil.getResourceString(s3Config,
-                        (String) request.getProperties().get(RestUtil.PROPERTY_NAMESPACE),
-                        (String) request.getProperties().get(S3Constants.PROPERTY_BUCKET_NAME),
-                        RestUtil.getEncodedPath(request.getURI()));
-
-                signer.sign(request,
-                        resource,
-                        parameters,
-                        request.getHeaders());
-            }
-
-            // write the complete buffered data
-            finalStream.write(buffer.toByteArray());
-        }
-    }
-
-    private class CloseNotifyOutputStream extends FilterOutputStream {
-        private List<CloseEventListener> listeners = new ArrayList<CloseEventListener>();
-
-        CloseNotifyOutputStream(OutputStream out, CloseEventListener... listeners) {
-            super(out);
-            if (listeners != null) this.listeners.addAll(Arrays.asList(listeners));
-        }
-
-        @Override
-        public void write(byte[] b) throws IOException {
-            write(b, 0, b.length);
-        }
-
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            out.write(b, off, len);
-        }
-
-        @Override
-        public void close() throws IOException {
-            super.close();
-            for (CloseEventListener listener : listeners) {
-                listener.streamClosed(this);
-            }
-        }
-    }
-
-    private interface CloseEventListener extends EventListener {
-        void streamClosed(CloseNotifyOutputStream stream) throws IOException;
     }
 }

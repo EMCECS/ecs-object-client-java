@@ -30,7 +30,7 @@ import com.emc.object.s3.jersey.BucketFilter;
 import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
+import org.glassfish.jersey.client.ClientRequest;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.xml.bind.DatatypeConverter;

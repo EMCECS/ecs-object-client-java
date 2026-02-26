@@ -5,15 +5,13 @@ import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.FaultInjectionStream;
-import com.emc.util.ConcurrentJunitRunner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import javax.ws.rs.ProcessingException;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.ByteArrayInputStream;
@@ -21,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Random;
 
-@RunWith(ConcurrentJunitRunner.class)
 public class WriteTruncationTest extends AbstractS3ClientTest {
     static final int OBJECT_RETENTION_PERIOD = 15; // 15 seconds
     static final int MOCK_OBJ_SIZE = 5 * 1024 * 1024; // 5MB
@@ -32,7 +29,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     @Override
     protected S3Client createS3Client() throws Exception {
         S3Config s3Config = createS3Config().withRetryEnabled(false);
-        this.jvmClient = new S3JerseyClient(s3Config, new URLConnectionClientHandler());
+        this.jvmClient = new S3JerseyClient(s3Config, new HttpUrlConnectorProvider());
         return new S3JerseyClient(createS3Config().withRetryEnabled(false));
     }
 
@@ -58,7 +55,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         super.cleanUpBucket(bucketName);
     }
 
-    @After
+    @AfterEach
     public void shutdownJvmClient() {
         if (jvmClient != null) jvmClient.destroy();
     }
@@ -87,7 +84,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     // Content-Length was used)
     // TODO: the client still seems to send a 0-byte chunk terminator, which it probably shouldn't
     //       - see if we can stop the write such that ECS does not commit it
-    @Ignore
+    @Disabled
     @Test
     public void testIOExceptionChunkedEncodingApache() {
         testTruncatedWrite(true, false, ExceptionType.IOException, 0, false);
@@ -97,7 +94,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     // Content-Length was used)
     // TODO: the client still seems to send a 0-byte chunk terminator, which it probably shouldn't
     //       - see if we can stop the write such that ECS does not commit it
-    @Ignore
+    @Disabled
     @Test
     public void testIOExceptionChunkedEncodingJvm() {
         testTruncatedWrite(false, false, ExceptionType.IOException, 0, false);
@@ -160,14 +157,14 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
 
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
-            Assert.fail("exception in input stream did not throw an exception");
-        } catch (ClientHandlerException e) {
+            Assertions.fail("exception in input stream did not throw an exception");
+        } catch (ProcessingException e) {
             if (exceptionType == ExceptionType.RuntimeException) {
-                Assert.assertTrue(e.getCause() instanceof RuntimeException);
+                Assertions.assertTrue(e.getCause() instanceof RuntimeException);
             } else {
-                Assert.assertTrue(e.getCause() instanceof IOException);
+                Assertions.assertTrue(e.getCause() instanceof IOException);
             }
-            Assert.assertEquals(message, e.getCause().getMessage());
+            Assertions.assertEquals(message, e.getCause().getMessage());
         }
 
         // TODO: sometimes the object is created, but does not show in a list right away - figure out why (is this a bug?)
@@ -176,7 +173,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         } catch (InterruptedException ignored) {
         }
 
-        Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
+        Assertions.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
     }
 
     @Test
@@ -197,15 +194,15 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
             try {
                 s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
                         .withContentLength((long) MOCK_OBJ_SIZE));
-                Assert.fail("exception in input stream did not throw an exception");
-            } catch (ClientHandlerException e) {
-                Assert.assertTrue(e.getCause() instanceof IOException);
-                Assert.assertEquals(message, e.getCause().getMessage());
+                Assertions.fail("exception in input stream did not throw an exception");
+            } catch (ProcessingException e) {
+                Assertions.assertTrue(e.getCause() instanceof IOException);
+                Assertions.assertEquals(message, e.getCause().getMessage());
 
                 // object should not exist
-                Assert.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
+                Assertions.assertEquals(0, s3Client.listObjects(getTestBucket()).getObjects().size());
                 // upload should exist, but should have no parts
-                Assert.assertEquals(0, s3Client.listParts(getTestBucket(), key, uploadId).getParts().size());
+                Assertions.assertEquals(0, s3Client.listParts(getTestBucket(), key, uploadId).getParts().size());
             } finally {
                 cleanMpus(getTestBucket());
             }

@@ -28,11 +28,16 @@ package com.emc.object;
 
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.client.ClientProperties;
 
 import java.net.URI;
 import java.util.Map;
@@ -50,14 +55,14 @@ public abstract class AbstractJerseyClient {
         this.objectConfig = objectConfig;
     }
 
-    protected ClientResponse executeAndClose(Client client, ObjectRequest request) {
-        ClientResponse response = executeRequest(client, request);
+    protected Response executeAndClose(Client client, ObjectRequest request) {
+        Response response = executeRequest(client, request);
         response.close();
         return response;
     }
 
     @SuppressWarnings("unchecked")
-    protected ClientResponse executeRequest(Client client, ObjectRequest request) {
+    protected Response executeRequest(Client client, ObjectRequest request) {
         try {
             if (request.getMethod().isRequiresEntity()) {
                 String contentType = RestUtil.DEFAULT_CONTENT_TYPE;
@@ -78,33 +83,32 @@ public abstract class AbstractJerseyClient {
                         // that the entity is buffered (will set content length from buffered write)
                     } else if (!entityRequest.isChunkable()) {
                         log.debug("no content-length and request is not chunkable, attempting to enable buffering");
-                        request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
-                        request.property(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, null);
+                        request.property(ApacheClientProperties.REQUEST_CONFIG, Boolean.TRUE);
+                        request.property(ClientProperties.CHUNKED_ENCODING_SIZE, null);
                     }
                 } else {
 
                     // no entity, but make sure the apache handler doesn't mess up the content-length somehow
                     // (i.e. if content-encoding is set)
-                    request.property(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
+                    request.property(ApacheClientProperties.REQUEST_CONFIG, Boolean.TRUE);
 
                     String headerContentType = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_TYPE);
                     if (headerContentType != null) contentType = headerContentType;
                 }
 
-                WebResource.Builder builder = buildRequest(client, request);
+                Invocation.Builder builder = buildRequest(client, request);
 
                 // jersey requires content-type for entity requests
-                builder.type(contentType);
-                return builder.method(request.getMethod().toString(), ClientResponse.class, entity);
+                return builder.method(request.getMethod().toString(), Entity.entity(entity, MediaType.valueOf(contentType)));
             } else { // non-entity request method
 
                 // can't send content with non-entity methods (GET, HEAD, etc.)
                 if (request instanceof EntityRequest)
                     throw new UnsupportedOperationException("an entity request is using a non-entity method (" + request.getMethod() + ")");
 
-                WebResource.Builder builder = buildRequest(client, request);
+                Invocation.Builder builder = buildRequest(client, request);
 
-                return builder.method(request.getMethod().toString(), ClientResponse.class);
+                return builder.method(request.getMethod().toString());
             }
         } finally {
             // make sure we clear the content-length override for this thread
@@ -113,32 +117,32 @@ public abstract class AbstractJerseyClient {
     }
 
     protected <T> T executeRequest(Client client, ObjectRequest request, Class<T> responseType) {
-        ClientResponse response = executeRequest(client, request);
-        T responseEntity = response.getEntity(responseType);
+        Response response = executeRequest(client, request);
+        T responseEntity = response.readEntity(responseType);
         fillResponseEntity(responseEntity, response);
         return responseEntity;
     }
 
-    protected void fillResponseEntity(Object responseEntity, ClientResponse response) {
+    protected void fillResponseEntity(Object responseEntity, Response response) {
         if (responseEntity instanceof ObjectResponse)
-            ((ObjectResponse) responseEntity).setHeaders(response.getHeaders());
+            ((ObjectResponse) responseEntity).setHeaders(response.getStringHeaders());
     }
 
-    protected WebResource.Builder buildRequest(Client client, ObjectRequest request) {
+    protected Invocation.Builder buildRequest(Client client, ObjectRequest request) {
         URI uri = objectConfig.resolvePath(request.getPath(), request.getRawQueryString());
-        WebResource resource = client.resource(uri);
+        WebTarget target = client.target(uri);
 
         // set properties
         for (Map.Entry<String, Object> entry : request.getProperties().entrySet()) {
-            resource.setProperty(entry.getKey(), entry.getValue());
+            target = target.property(entry.getKey(), entry.getValue());
         }
 
         // set namespace
         String namespace = request.getNamespace() != null ? request.getNamespace() : objectConfig.getNamespace();
         if (namespace != null)
-            resource.setProperty(RestUtil.PROPERTY_NAMESPACE, namespace);
+            target = target.property(RestUtil.PROPERTY_NAMESPACE, namespace);
 
-        WebResource.Builder builder = resource.getRequestBuilder();
+        Invocation.Builder builder = target.request();
 
         // set headers
         for (String name : request.getHeaders().keySet()) {

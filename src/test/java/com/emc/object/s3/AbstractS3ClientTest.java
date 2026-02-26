@@ -36,8 +36,8 @@ import com.emc.object.util.TestProperties;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.util.TestConfig;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,13 +68,13 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void checkIamUser() throws IOException {
         Properties props = TestConfig.getProperties();
         this.isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER));
     }
 
-    @After
+    @AfterEach
     public void dumpLBStats() {
         if (client != null) {
             LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();

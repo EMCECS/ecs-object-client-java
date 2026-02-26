@@ -37,9 +37,9 @@ import com.emc.object.util.ProgressListener;
 import com.emc.rest.util.StreamUtil;
 import com.emc.util.RandomInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
@@ -78,7 +78,7 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         super.cleanUpBucket(bucketName);
     }
 
-    @Before
+    @BeforeEach
     public void createTempFile() throws Exception {
         tempFile = File.createTempFile("lfu-test", null);
         tempFile.deleteOnExit();
@@ -106,9 +106,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // multipart
         uploader.doMultipartUpload();
 
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertEquals(size, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
 
         client.deleteObject(getTestBucket(), key);
 
@@ -119,10 +119,10 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
 
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
+        Assertions.assertEquals(size, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
 
         // test issue 1 (https://github.com/emcvipr/ecs-object-client-java/issues/1)
         objectMetadata = new S3ObjectMetadata();
@@ -152,13 +152,13 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // multipart
         uploader.doMultipartUpload();
 
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(size, pl.completed.get());
-        Assert.assertEquals(size, pl.total.get());
-        Assert.assertTrue(String.format("Should transfer at least %d bytes but only got %d", size, pl.transferred.get()),
-                pl.transferred.get() >= size);
+        Assertions.assertEquals(size, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertEquals(size, pl.completed.get());
+        Assertions.assertEquals(size, pl.total.get());
+        Assertions.assertTrue(pl.transferred.get() >= size,
+                String.format("Should transfer at least %d bytes but only got %d", size, pl.transferred.get()));
 
         client.deleteObject(getTestBucket(), key);
     }
@@ -176,8 +176,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), srcKey, data, null);
         String versionId0 = client.listVersions(getTestBucket(), null).getVersions().get(0).getVersionId();
         S3ObjectMetadata sourceMetadata0 = client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), srcKey).withVersionId(versionId0));
-        Assert.assertEquals(MockMultipartSource.totalSize, sourceMetadata0.getContentLength().longValue());
-        Assert.assertEquals(srcMD5Sum, sourceMetadata0.getETag());
+        Assertions.assertEquals(MockMultipartSource.totalSize, sourceMetadata0.getContentLength().longValue());
+        Assertions.assertEquals(srcMD5Sum, sourceMetadata0.getETag());
 
         //Upload new Version Object
         new Random().nextBytes(data);
@@ -185,8 +185,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         client.putObject(getTestBucket(), srcKey, data, null);
         String versionId1 = client.listVersions(getTestBucket(), null).getVersions().get(0).getVersionId();
         S3ObjectMetadata sourceMetadata1 = client.getObjectMetadata(new GetObjectMetadataRequest(getTestBucket(), srcKey).withVersionId(versionId1));
-        Assert.assertEquals(MockMultipartSource.totalSize, sourceMetadata1.getContentLength().longValue());
-        Assert.assertEquals(srcMD5SumNew, sourceMetadata1.getETag());
+        Assertions.assertEquals(MockMultipartSource.totalSize, sourceMetadata1.getContentLength().longValue());
+        Assertions.assertEquals(srcMD5SumNew, sourceMetadata1.getETag());
 
         //Single Copy from old version object
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().addUserMetadata("key", "value");
@@ -194,19 +194,19 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
                 .withObjectMetadata(objectMetadata)
                 .withSourceVersionId(versionId0);
         uploader.upload();
-        Assert.assertEquals(0, uploader.getBytesTransferred());
-        Assert.assertEquals(srcMD5Sum, uploader.getETag());
-        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+        Assertions.assertEquals(0, uploader.getBytesTransferred());
+        Assertions.assertEquals(srcMD5Sum, uploader.getETag());
+        Assertions.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assertions.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
 
         //Single Copy from new version object (without providing version Id)
         uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
                 .withObjectMetadata(objectMetadata);
         uploader.upload();
-        Assert.assertEquals(0, uploader.getBytesTransferred());
-        Assert.assertEquals(srcMD5SumNew, uploader.getETag());
-        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+        Assertions.assertEquals(0, uploader.getBytesTransferred());
+        Assertions.assertEquals(srcMD5SumNew, uploader.getETag());
+        Assertions.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assertions.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
 
         //Multi Part Copy from old version object
         uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
@@ -215,11 +215,11 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
                 .withMpuThreshold(MockMultipartSource.partSize)
                 .withSourceVersionId(versionId0);
         uploader.upload();
-        Assert.assertEquals(0, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
-        Assert.assertEquals(srcMD5Sum, DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
+        Assertions.assertEquals(0, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assertions.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+        Assertions.assertEquals(srcMD5Sum, DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
 
         //Multi Part Copy from new version object
         uploader = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
@@ -228,11 +228,11 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
                 .withMpuThreshold(MockMultipartSource.partSize)
                 .withSourceVersionId(versionId1);
         uploader.upload();
-        Assert.assertEquals(0, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
-        Assert.assertEquals(srcMD5SumNew, DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
+        Assertions.assertEquals(0, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertEquals(MockMultipartSource.totalSize, client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        Assertions.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), dstKey).getUserMetadata());
+        Assertions.assertEquals(srcMD5SumNew, DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
     }
 
     @Test
@@ -258,18 +258,18 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // object should not exist
         try {
-            Assert.assertNull(client.getObjectMetadata(getTestBucket(), dstKey));
+            Assertions.assertNull(client.getObjectMetadata(getTestBucket(), dstKey));
         } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+            Assertions.assertEquals(404, e.getHttpCode());
+            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // check resume context accuracy
-        Assert.assertNotNull(resumeContext.getUploadId());
-        Assert.assertNotNull(resumeContext.getUploadedParts());
-        Assert.assertFalse(resumeContext.getUploadedParts().isEmpty());
+        Assertions.assertNotNull(resumeContext.getUploadId());
+        Assertions.assertNotNull(resumeContext.getUploadedParts());
+        Assertions.assertFalse(resumeContext.getUploadedParts().isEmpty());
         List<MultipartPart> parts = client.listParts(getTestBucket(), dstKey, resumeContext.getUploadId()).getParts();
-        Assert.assertNotNull(parts);
+        Assertions.assertNotNull(parts);
 
         lfu = new TestLargeFileUploader(client, getTestBucket(), srcKey, getTestBucket(), dstKey)
                 .withPartSize(mockMultipartSource.getPartSize()).withMpuThreshold((int) mockMultipartSource.getTotalSize())
@@ -278,9 +278,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // Unfortunately, MPU ETag is not preserved even if copy parts matches the original multipart upload.
         // So the content verification is done by calculating md5sum instead of checking ETag.
-        //Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), dstKey).getETag());
-        Assert.assertEquals(DigestUtils.md5Hex(client.getObject(getTestBucket(), srcKey).getObject()), DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
+        //Assertions.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), dstKey).getETag());
+        Assertions.assertEquals(DigestUtils.md5Hex(client.getObject(getTestBucket(), srcKey).getObject()), DigestUtils.md5Hex(client.getObject(getTestBucket(), dstKey).getObject()));
+        Assertions.assertEquals(mockMultipartSource.getTotalSize(), client.getObjectMetadata(getTestBucket(), dstKey).getContentLength().longValue());
     }
 
     @Test
@@ -297,9 +297,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // multipart
         uploader.doMultipartUpload();
 
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertEquals(size, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
 
         client.deleteObject(getTestBucket(), key);
 
@@ -310,10 +310,10 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         uploader.setObjectMetadata(objectMetadata);
         uploader.doByteRangeUpload();
 
-        Assert.assertEquals(size, uploader.getBytesTransferred());
-        Assert.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
-        Assert.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
-        Assert.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
+        Assertions.assertEquals(size, uploader.getBytesTransferred());
+        Assertions.assertTrue(uploader.getETag().contains("-")); // hyphen signifies multipart / updated object
+        Assertions.assertArrayEquals(data, client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertEquals(objectMetadata.getUserMetadata(), client.getObjectMetadata(getTestBucket(), key).getUserMetadata());
     }
 
     @Test
@@ -330,20 +330,20 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // verify MPU
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals(FILE_SIZE, metadata.getContentLength().longValue());
-        Assert.assertTrue(metadata.getETag().endsWith("-" + FILE_SIZE / partSize));
+        Assertions.assertEquals(FILE_SIZE, metadata.getContentLength().longValue());
+        Assertions.assertTrue(metadata.getETag().endsWith("-" + FILE_SIZE / partSize));
 
         // verify progress indicators
-        Assert.assertEquals(FILE_SIZE, lfu.getBytesTransferred());
-        Assert.assertEquals(FILE_SIZE, pl.completed.get());
-        Assert.assertEquals(FILE_SIZE, pl.total.get());
-        Assert.assertEquals(FILE_SIZE, pl.transferred.get());
+        Assertions.assertEquals(FILE_SIZE, lfu.getBytesTransferred());
+        Assertions.assertEquals(FILE_SIZE, pl.completed.get());
+        Assertions.assertEquals(FILE_SIZE, pl.total.get());
+        Assertions.assertEquals(FILE_SIZE, pl.transferred.get());
 
         // verify content
         DigestInputStream dis = new DigestInputStream(client.readObjectStream(getTestBucket(), key, null),
                 MessageDigest.getInstance("MD5"));
         StreamUtil.copy(dis, new NullStream(), metadata.getContentLength());
-        Assert.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
+        Assertions.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
     }
 
     @Test
@@ -359,20 +359,20 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // verify no MPU
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals(FILE_SIZE, metadata.getContentLength().longValue());
-        Assert.assertEquals(md5Hex, metadata.getETag().toLowerCase());
+        Assertions.assertEquals(FILE_SIZE, metadata.getContentLength().longValue());
+        Assertions.assertEquals(md5Hex, metadata.getETag().toLowerCase());
 
         // verify progress indicators
-        Assert.assertEquals(FILE_SIZE, lfu.getBytesTransferred());
-        Assert.assertEquals(FILE_SIZE, pl.completed.get());
-        Assert.assertEquals(FILE_SIZE, pl.total.get());
-        Assert.assertEquals(FILE_SIZE, pl.transferred.get());
+        Assertions.assertEquals(FILE_SIZE, lfu.getBytesTransferred());
+        Assertions.assertEquals(FILE_SIZE, pl.completed.get());
+        Assertions.assertEquals(FILE_SIZE, pl.total.get());
+        Assertions.assertEquals(FILE_SIZE, pl.transferred.get());
 
         // verify content
         DigestInputStream dis = new DigestInputStream(client.readObjectStream(getTestBucket(), key, null),
                 MessageDigest.getInstance("MD5"));
         StreamUtil.copy(dis, new NullStream(), metadata.getContentLength());
-        Assert.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
+        Assertions.assertEquals(md5Hex, DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase());
     }
 
     @Test
@@ -412,9 +412,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         try {
             client.getObjectMetadata(bucket, key);
-            Assert.fail("Object should not exist because MPU upload is incomplete");
+            Assertions.fail("Object should not exist because MPU upload is incomplete");
         } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
+            Assertions.assertEquals(404, e.getHttpCode());
         }
 
         if (hasPartCorruption) {
@@ -431,21 +431,21 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
             lfu.doMultipartUpload();
 
             if (hasPartCorruption) {
-                Assert.fail("Resume multipart upload from stream should fail if mismatched part is detected");
+                Assertions.fail("Resume multipart upload from stream should fail if mismatched part is detected");
             }
             ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
             // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
-            Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
+            Assertions.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
             // object is uploaded successfully
-            Assert.assertEquals(size, (long) client.getObjectMetadata(bucket, key).getContentLength());
+            Assertions.assertEquals(size, (long) client.getObjectMetadata(bucket, key).getContentLength());
         } catch (RuntimeException e) {
             if (!hasPartCorruption) throw e;
             // root exception will be wrapped in ExecutionException and then RuntimeException
-            Assert.assertNotNull(e.getCause());
-            Assert.assertNotNull(e.getCause().getCause());
-            Assert.assertTrue(e.getCause().getCause() instanceof PartMismatchException);
+            Assertions.assertNotNull(e.getCause());
+            Assertions.assertNotNull(e.getCause().getCause());
+            Assertions.assertTrue(e.getCause().getCause() instanceof PartMismatchException);
             // make sure the failed part was expected
-            Assert.assertEquals(badPartNum, ((PartMismatchException) e.getCause().getCause()).getPartNumber());
+            Assertions.assertEquals(badPartNum, ((PartMismatchException) e.getCause().getCause()).getPartNumber());
         }
     }
 
@@ -470,9 +470,9 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         try {
             client.getObjectMetadata(bucket, key);
-            Assert.fail("Object should not exist because MPU upload is incomplete");
+            Assertions.fail("Object should not exist because MPU upload is incomplete");
         } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
+            Assertions.assertEquals(404, e.getHttpCode());
         }
 
         LargeFileUploaderResumeContext resumeContext = new LargeFileUploaderResumeContext().withUploadId(uploadId);
@@ -482,11 +482,11 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         ListMultipartUploadsRequest request = new ListMultipartUploadsRequest(bucket).withPrefix(key);
         // will resume from previous multipart upload thus uploadId will not exist after CompleteMultipartUpload.
-        Assert.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
+        Assertions.assertEquals(0, client.listMultipartUploads(request).getUploads().size());
         // object is uploaded successfully
         S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
-        Assert.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize(), (long)om.getContentLength());
+        Assertions.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
     }
 
     @Test
@@ -499,8 +499,8 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         GetObjectRequest request = new GetObjectRequest(getTestBucket(), key);
         GetObjectResult<byte[]> result = client.getObject(request, byte[].class);
-        Assert.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
-        Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
+        Assertions.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
+        Assertions.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
     }
 
     @Test
@@ -533,12 +533,12 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         lfu.doMultipartUpload();
 
         S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long) om.getContentLength());
-        Assert.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize(), (long) om.getContentLength());
+        Assertions.assertEquals(mockMultipartSource.getMpuETag(), om.getETag());
 
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, pl.completed.get());
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, pl.completed.get());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
     }
 
 
@@ -572,17 +572,17 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
                 .withPartSize(partSize).withMpuThreshold(mockMultipartSource.getTotalSize()).withResumeContext(resumeContext);
         try {
             lfu.doMultipartUpload();
-            Assert.fail("one of the ETags in uploadedParts is wrong - should abort the upload and throw an exception");
+            Assertions.fail("one of the ETags in uploadedParts is wrong - should abort the upload and throw an exception");
         } catch (S3Exception e) {
-            Assert.assertEquals(400, e.getHttpCode());
-            Assert.assertEquals("InvalidPart", e.getErrorCode());
+            Assertions.assertEquals(400, e.getHttpCode());
+            Assertions.assertEquals("InvalidPart", e.getErrorCode());
         }
         try {
             client.listParts(bucket, key, uploadId);
-            Assert.fail("UploadId should not exist because MPU is aborted");
+            Assertions.fail("UploadId should not exist because MPU is aborted");
         } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchUpload", e.getErrorCode());
+            Assertions.assertEquals(404, e.getHttpCode());
+            Assertions.assertEquals("NoSuchUpload", e.getErrorCode());
         }
     }
 
@@ -630,30 +630,30 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         try {
             lfu.doMultipartUpload();
             if (!overwriteBadPart)
-                Assert.fail("one of the data in uploadedParts is wrong - should abort the upload and throw an exception");
+                Assertions.fail("one of the data in uploadedParts is wrong - should abort the upload and throw an exception");
         } catch (RuntimeException e) {
             if (overwriteBadPart) throw e;
             // root exception will be wrapped in ExecutionException and then RuntimeException
-            Assert.assertNotNull(e.getCause());
-            Assert.assertNotNull(e.getCause().getCause());
-            Assert.assertTrue(e.getCause().getCause() instanceof PartMismatchException);
+            Assertions.assertNotNull(e.getCause());
+            Assertions.assertNotNull(e.getCause().getCause());
+            Assertions.assertTrue(e.getCause().getCause() instanceof PartMismatchException);
             // make sure the failed part was expected
-            Assert.assertEquals(totalPartsToResume, ((PartMismatchException) e.getCause().getCause()).getPartNumber());
+            Assertions.assertEquals(totalPartsToResume, ((PartMismatchException) e.getCause().getCause()).getPartNumber());
         }
         if (overwriteBadPart) {
             // should have re-uploaded the bad part, so this should be reflected in the bytes transferred
-            Assert.assertEquals(mockMultipartSource.getTotalSize() - (partSize * (totalPartsToResume - 1)), lfu.getBytesTransferred());
-            Assert.assertEquals(mockMultipartSource.getTotalSize() - (partSize * (totalPartsToResume - 1)), pl.completed.get());
-            Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
-            Assert.assertEquals(mockMultipartSource.getMpuETag(), lfu.getETag());
+            Assertions.assertEquals(mockMultipartSource.getTotalSize() - (partSize * (totalPartsToResume - 1)), lfu.getBytesTransferred());
+            Assertions.assertEquals(mockMultipartSource.getTotalSize() - (partSize * (totalPartsToResume - 1)), pl.completed.get());
+            Assertions.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
+            Assertions.assertEquals(mockMultipartSource.getMpuETag(), lfu.getETag());
         } else {
             // MPU should be aborted because of a bad part
             try {
                 client.listParts(bucket, key, uploadId);
-                Assert.fail("UploadId should not exist because MPU is aborted");
+                Assertions.fail("UploadId should not exist because MPU is aborted");
             } catch (S3Exception e) {
-                Assert.assertEquals(404, e.getHttpCode());
-                Assert.assertEquals("NoSuchUpload", e.getErrorCode());
+                Assertions.assertEquals(404, e.getHttpCode());
+                Assertions.assertEquals("NoSuchUpload", e.getErrorCode());
             }
         }
     }
@@ -693,12 +693,12 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         lfu.doMultipartUpload();
 
         S3ObjectMetadata om = client.getObjectMetadata(bucket, key);
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), (long) om.getContentLength());
-        Assert.assertNotEquals(mockMultipartSource.getMpuETag(), om.getETag());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize(), (long) om.getContentLength());
+        Assertions.assertNotEquals(mockMultipartSource.getMpuETag(), om.getETag());
 
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, pl.completed.get());
-        Assert.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, lfu.getBytesTransferred());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize() - partSize * totalPartsToResume, pl.completed.get());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize(), pl.total.get());
     }
 
     @Test
@@ -726,27 +726,27 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
 
         // object should not exist
         try {
-            Assert.assertNull(client.getObjectMetadata(bucket, key));
+            Assertions.assertNull(client.getObjectMetadata(bucket, key));
         } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+            Assertions.assertEquals(404, e.getHttpCode());
+            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // check resume context accuracy
-        Assert.assertNotNull(resumeContext.getUploadId());
-        Assert.assertNotNull(resumeContext.getUploadedParts());
-        Assert.assertEquals(2, resumeContext.getUploadedParts().size());
+        Assertions.assertNotNull(resumeContext.getUploadId());
+        Assertions.assertNotNull(resumeContext.getUploadedParts());
+        Assertions.assertEquals(2, resumeContext.getUploadedParts().size());
 
         // check only the bytes of 2 parts were xferred
-        Assert.assertEquals(2 * partSize, pl.transferred.get());
-        Assert.assertEquals(2 * partSize, pl.completed.get());
+        Assertions.assertEquals(2 * partSize, pl.transferred.get());
+        Assertions.assertEquals(2 * partSize, pl.completed.get());
 
         // make sure only 2 parts were uploaded and the ETags match our list
         List<MultipartPart> parts = client.listParts(getTestBucket(), key, resumeContext.getUploadId()).getParts();
-        Assert.assertNotNull(parts);
-        Assert.assertEquals(2, parts.size());
-        Assert.assertEquals(parts.get(0).getRawETag(), resumeContext.getUploadedParts().get(1).getRawETag());
-        Assert.assertEquals(parts.get(1).getRawETag(), resumeContext.getUploadedParts().get(2).getRawETag());
+        Assertions.assertNotNull(parts);
+        Assertions.assertEquals(2, parts.size());
+        Assertions.assertEquals(parts.get(0).getRawETag(), resumeContext.getUploadedParts().get(1).getRawETag());
+        Assertions.assertEquals(parts.get(1).getRawETag(), resumeContext.getUploadedParts().get(2).getRawETag());
 
         // disable delay in part streams
         mockMultipartSource.setPartDelayMs(0);
@@ -758,11 +758,11 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         lfu.doMultipartUpload();
 
         // check complete object
-        Assert.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
+        Assertions.assertEquals(mockMultipartSource.getMpuETag(), client.getObjectMetadata(getTestBucket(), key).getETag());
 
         // check only remaining parts were uploaded
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.transferred.get());
-        Assert.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.completed.get());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.transferred.get());
+        Assertions.assertEquals(mockMultipartSource.getTotalSize() - (2 * partSize), pl.completed.get());
     }
 
     @Test
@@ -792,13 +792,13 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         // based on part count, thread count and part delay, we expect at least (ceiling(partCount / threadCount)) timeouts to occur
         long partCount = (mockMultipartSource.getTotalSize() - 1) / mockMultipartSource.getPartSize() + 1;
         long expectedTimeouts = (partCount - 1) / 2 + 1;
-        Assert.assertTrue(timeoutCount >= expectedTimeouts);
+        Assertions.assertTrue(timeoutCount >= expectedTimeouts);
 
         // upload should be done
         GetObjectRequest<?> request = new GetObjectRequest<>(getTestBucket(), key);
         GetObjectResult<byte[]> result = client.getObject(request, byte[].class);
-        Assert.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
-        Assert.assertEquals(mockMultipartSource.getMpuETag(), result.getObjectMetadata().getETag());
+        Assertions.assertArrayEquals(mockMultipartSource.getTotalBytes(), result.getObject());
+        Assertions.assertEquals(mockMultipartSource.getMpuETag(), result.getObjectMetadata().getETag());
     }
 
     @Test
@@ -821,25 +821,25 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         Thread.sleep(3000);
 
         // make sure the upload was started
-        Assert.assertEquals(1, client.listMultipartUploads(getTestBucket()).getUploads().size());
+        Assertions.assertEquals(1, client.listMultipartUploads(getTestBucket()).getUploads().size());
 
         // abort it
         upload.abort();
 
         // make sure resume context is cleared
-        Assert.assertNull(lfu.getResumeContext().getUploadId());
-        Assert.assertNull(lfu.getResumeContext().getUploadedParts());
+        Assertions.assertNull(lfu.getResumeContext().getUploadId());
+        Assertions.assertNull(lfu.getResumeContext().getUploadedParts());
 
         // object should not exist
         try {
-            Assert.assertNull(client.getObjectMetadata(bucket, key));
+            Assertions.assertNull(client.getObjectMetadata(bucket, key));
         } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+            Assertions.assertEquals(404, e.getHttpCode());
+            Assertions.assertEquals("NoSuchKey", e.getErrorCode());
         }
 
         // upload should not exist
-        Assert.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
+        Assertions.assertEquals(0, client.listMultipartUploads(getTestBucket()).getUploads().size());
     }
 
     static class NullStream extends OutputStream {

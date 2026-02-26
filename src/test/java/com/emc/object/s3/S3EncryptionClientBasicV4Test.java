@@ -4,8 +4,8 @@ import com.emc.codec.CodecChain;
 import com.emc.object.EncryptionConfig;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ public class S3EncryptionClientBasicV4Test extends S3EncryptionClientBasicTest {
         for (int i = 0; i < 6; i++) {
             _client.putObject(getTestBucket(), key, data, null);
             S3ObjectMetadata metadata = rclient.getObjectMetadata(getTestBucket(), key);
-            Assert.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
+            Assertions.assertEquals(encodeSpec, metadata.getUserMetadata(CodecChain.META_TRANSFORM_MODE));
         }
     }
 }

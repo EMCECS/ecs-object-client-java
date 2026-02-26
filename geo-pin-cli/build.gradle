@@ -27,13 +27,15 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '6.1.0'
+    id 'com.gradleup.shadow' version '9.0.0-beta12'
 }
 
 group 'com.emc.ecs'
 description = 'Geo-pin CLI Tool - provides utility commands to work with geo-pinned objects.'
 
-mainClassName = 'com.emc.object.s3.GeoPinCli'
+application {
+    mainClass = 'com.emc.object.s3.GeoPinCli'
+}
 
 defaultTasks 'shadowJar'
 
@@ -42,18 +44,28 @@ repositories {
     mavenLocal()
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
 dependencies {
     implementation rootProject,
             'commons-cli:commons-cli:1.5.0'
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 shadowJar {
-    destinationDir file("${buildDir}/shadow")
-    classifier ''
+    destinationDirectory = file("${layout.buildDirectory.get().asFile}/shadow")
+    archiveClassifier = ''
     manifest {
         attributes 'Implementation-Version': project.version
     }
+}
+
+test {
+    useJUnitPlatform()
 }
 
 artifacts {

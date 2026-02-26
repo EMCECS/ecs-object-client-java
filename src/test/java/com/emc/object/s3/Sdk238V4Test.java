@@ -1,17 +1,12 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.filter.ClientFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
-public class Sdk238V4Test extends Sdk238Test{
+public class Sdk238V4Test extends Sdk238Test {
     @Override
     @Test
     public void testTrailingSlash() throws Exception {
@@ -22,9 +17,9 @@ public class Sdk238V4Test extends Sdk238Test{
         client.createBucket(bucket);
         try {
             if (s3Config.isUseVHost()) {
-                Assert.assertEquals("/", client.getLastUri().getPath());
+                Assertions.assertEquals("/", client.getLastUri().getPath());
             } else {
-                Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
+                Assertions.assertEquals("/" + bucket, client.getLastUri().getPath());
             }
         } finally {
             client.deleteBucket(bucket);
@@ -36,23 +31,8 @@ public class Sdk238V4Test extends Sdk238Test{
 
         TestClient(S3Config s3Config) {
             super(s3Config.withUseV2Signer(false));
-
-            List<ClientFilter> filters = new ArrayList<ClientFilter>();
-
-            ClientHandler handler = client.getHeadHandler();
-            while (handler instanceof ClientFilter) {
-                ClientFilter filter = (ClientFilter) handler;
-                filters.add(filter);
-                handler = filter.getNext();
-            }
-
-            filters.add(captureFilter);
-
-            Collections.reverse(filters);
-            client.removeAllFilters();
-            for (ClientFilter filter : filters) {
-                client.addFilter(filter);
-            }
+            // In Jersey 2, just register the filter on the client
+            client.register(captureFilter);
         }
 
         URI getLastUri() {

@@ -7,10 +7,11 @@ import com.emc.object.s3.bean.DeleteObjectsResult;
 import com.emc.object.s3.bean.DeleteSuccess;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
-import com.sun.jersey.api.client.Client;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +36,11 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         S3Client tempClient = new S3JerseyClient(s3Config);
         URL url = tempClient.getPresignedUrl("johnsmith", "photos/puppy.jpg", new Date(1175139620000L));
         System.out.println("url: " + url);
-        assert url.toString().contains("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg?Action=GET&" +
-                "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F") &
-                url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &
-                url.toString().contains("&X-Amz-Expires=") & url.toString().contains("&X-Amz-Signature=") &
-                url.toString().contains("&X-Amz-SignedHeaders");
+        Assertions.assertTrue(url.toString().contains("https://johnsmith.s3.amazonaws.com/photos/puppy.jpg?Action=GET&" +
+                "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F") &&
+                url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &&
+                url.toString().contains("&X-Amz-Expires=") && url.toString().contains("&X-Amz-Signature=") &&
+                url.toString().contains("&X-Amz-SignedHeaders"));
     }
 
     @Override
@@ -58,11 +59,11 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                                 .addUserMetadata("reviewedby", "joe@johnsmith.net,jane@johnsmith.net"))
         );
 
-        assert url.toString().contains("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz?Action=PUT&" +
-                "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F") &
-                url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &
-                url.toString().contains("&X-Amz-Expires=") & url.toString().contains("&X-Amz-Signature=") &
-                url.toString().contains("&X-Amz-SignedHeaders=content-md5%3Bcontent-type%3Bx-amz-meta-checksumalgorithm%3Bx-amz-meta-filechecksum%3Bx-amz-meta-reviewedby");
+        Assertions.assertTrue(url.toString().contains("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz?Action=PUT&" +
+                "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F") &&
+                url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &&
+                url.toString().contains("&X-Amz-Expires=") && url.toString().contains("&X-Amz-Signature=") &&
+                url.toString().contains("&X-Amz-SignedHeaders=content-md5%3Bcontent-type%3Bx-amz-meta-checksumalgorithm%3Bx-amz-meta-filechecksum%3Bx-amz-meta-reviewedby"));
 
         // test real PUT
         String key = "pre-signed-put-test", content = "This is my test object content";
@@ -71,12 +72,12 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                 .addUserMetadata("foo", "bar"))
         );
-        Client.create().resource(url.toURI())
-                .type("application/x-download").header("x-amz-meta-foo", "bar")
-                .put(content);
-        Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
+        ClientBuilder.newClient().target(url.toURI()).request()
+                .header("Content-Type", "application/x-download").header("x-amz-meta-foo", "bar")
+                .put(Entity.entity(content, "application/x-download"));
+        Assertions.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Override
@@ -87,11 +88,11 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         S3Client tempClient = new S3JerseyClient(s3Config);
         URL url = tempClient.getPresignedUrl(
                 new PresignedUrlRequest(Method.PUT, "static.johnsmith.net", "db-backup.dat.gz", new Date(1175139620000L)));
-        assert url.toString().contains("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz?Action=PUT&" +
-                "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F") &
-                url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &
-                url.toString().contains("&X-Amz-Expires=") & url.toString().contains("&X-Amz-Signature=") &
-                url.toString().contains("&X-Amz-SignedHeaders");
+        Assertions.assertTrue(url.toString().contains("https://static.johnsmith.net.s3.amazonaws.com/db-backup.dat.gz?Action=PUT&" +
+                "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F") &&
+                url.toString().contains("%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=") &&
+                url.toString().contains("&X-Amz-Expires=") && url.toString().contains("&X-Amz-Signature=") &&
+                url.toString().contains("&X-Amz-SignedHeaders"));
 
         // test real PUT
         // only way is to use HttpURLConnection directly
@@ -110,12 +111,12 @@ public class S3JerseyClientV4Test extends S3JerseyClientTest {
         con.setDoOutput(true);
         con.setDoInput(true);
         con.connect();
-        Assert.assertEquals(200, con.getResponseCode());
+        Assertions.assertEquals(200, con.getResponseCode());
 
-        Assert.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
+        Assertions.assertArrayEquals(new byte[0], client.readObject(getTestBucket(), key, byte[].class));
 
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
-        Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
+        Assertions.assertEquals("bar", metadata.getUserMetadata("foo"));
     }
 
     @Override

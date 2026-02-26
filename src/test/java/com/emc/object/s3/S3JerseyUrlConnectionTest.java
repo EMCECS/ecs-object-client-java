@@ -30,10 +30,10 @@ import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.util.RandomInputStream;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -54,10 +54,10 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        return new S3JerseyClient(config, new URLConnectionClientHandler());
+        return new S3JerseyClient(config, new HttpUrlConnectorProvider());
     }
 
-    @Ignore // only run this test against a co-located ECS!
+    @Disabled // only run this test against a co-located ECS!
     @Test
     public void testVeryLargeWrite() throws Exception {
         String key = "very-large-object";
@@ -67,10 +67,10 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
         PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(metadata);
         client.putObject(request);
 
-        Assert.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
+        Assertions.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
     }
 
-    @Ignore // only run this test against a co-located ECS!
+    @Disabled // only run this test against a co-located ECS!
     @Test
     public void testVeryLargeChunkedWrite() throws Exception {
         String key = "very-large-chunked-object";
@@ -78,6 +78,6 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
         InputStream content = new RandomInputStream(size);
         client.putObject(getTestBucket(), key, content, null);
 
-        Assert.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
+        Assertions.assertEquals(size, client.getObjectMetadata(getTestBucket(), key).getContentLength().longValue());
     }
 }

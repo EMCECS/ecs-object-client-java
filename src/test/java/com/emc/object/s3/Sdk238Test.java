@@ -27,18 +27,13 @@
 package com.emc.object.s3;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class Sdk238Test {
     @Test
@@ -50,9 +45,9 @@ public class Sdk238Test {
         client.createBucket(bucket);
         try {
             if (s3Config.isUseVHost()) {
-                Assert.assertEquals("/", client.getLastUri().getPath());
+                Assertions.assertEquals("/", client.getLastUri().getPath());
             } else {
-                Assert.assertEquals("/" + bucket, client.getLastUri().getPath());
+                Assertions.assertEquals("/" + bucket, client.getLastUri().getPath());
             }
         } finally {
             client.deleteBucket(bucket);
@@ -64,23 +59,8 @@ public class Sdk238Test {
 
         TestClient(S3Config s3Config) {
             super(s3Config);
-
-            List<ClientFilter> filters = new ArrayList<>();
-
-            ClientHandler handler = client.getHeadHandler();
-            while (handler instanceof ClientFilter) {
-                ClientFilter filter = (ClientFilter) handler;
-                filters.add(filter);
-                handler = filter.getNext();
-            }
-
-            filters.add(captureFilter);
-
-            Collections.reverse(filters);
-            client.removeAllFilters();
-            for (ClientFilter filter : filters) {
-                client.addFilter(filter);
-            }
+            // In Jersey 2, just register the filter on the client
+            client.register(captureFilter);
         }
 
         URI getLastUri() {
@@ -88,13 +68,12 @@ public class Sdk238Test {
         }
     }
 
-    protected static class UriCaptureFilter extends ClientFilter {
+    protected static class UriCaptureFilter implements ClientRequestFilter {
         private URI uri;
 
         @Override
-        public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-            uri = cr.getURI();
-            return getNext().handle(cr);
+        public void filter(ClientRequestContext requestContext) throws IOException {
+            uri = requestContext.getUri();
         }
 
         URI getLastUri() {

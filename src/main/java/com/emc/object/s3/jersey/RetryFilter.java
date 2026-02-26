@@ -26,20 +26,25 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.S3Config;
-import com.emc.object.s3.S3Exception;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
-
 import java.io.IOException;
 import java.io.InputStream;
+
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.core.Response;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class RetryFilter extends ClientFilter {
+import com.emc.object.ObjectRequest;
+import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Exception;
+
+/**
+ * In Jersey 2, retry logic cannot be implemented as a ClientRequestFilter/ClientResponseFilter
+ * because filters don't control the request-response lifecycle. Instead, retry is implemented
+ * at the invocation level in S3JerseyClient.
+ */
+public class RetryFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RetryFilter.class);
 
@@ -51,23 +56,28 @@ public class RetryFilter extends ClientFilter {
         this.s3Config = s3Config;
     }
 
-    @Override
-    public ClientResponse handle(ClientRequest clientRequest) throws ClientHandlerException {
+    /**
+     * Execute a request with retry logic. The caller provides a RetryAction that performs the actual request.
+     */
+    public Response execute(ObjectRequest objectRequest, RetryAction action) {
         int retryCount = 0;
         InputStream entityStream = null;
-        if (clientRequest.getEntity() instanceof InputStream) entityStream = (InputStream) clientRequest.getEntity();
+        if (objectRequest instanceof com.emc.object.EntityRequest) {
+            Object entity = ((com.emc.object.EntityRequest) objectRequest).getEntity();
+            if (entity instanceof InputStream) entityStream = (InputStream) entity;
+        }
         while (true) {
             try {
                 // if using an InputStream, mark the stream so we can rewind it in case of an error
                 if (entityStream != null && entityStream.markSupported())
                     entityStream.mark(s3Config.getRetryBufferSize());
 
-                return getNext().handle(clientRequest);
+                return action.execute();
             } catch (RuntimeException orig) {
                 Throwable t = orig;
 
                 // in this case, the exception was wrapped by Jersey
-                if (t instanceof ClientHandlerException) t = t.getCause();
+                if (t instanceof ProcessingException) t = t.getCause();
 
                 if (t instanceof S3Exception) {
                     S3Exception se = (S3Exception) t;
@@ -104,8 +114,13 @@ public class RetryFilter extends ClientFilter {
                 }
 
                 log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, s3Config.getRetryLimit() });
-                clientRequest.getProperties().put(PROP_RETRY_COUNT, retryCount);
+                objectRequest.property(PROP_RETRY_COUNT, retryCount);
             }
         }
+    }
+
+    @FunctionalInterface
+    public interface RetryAction {
+        Response execute();
     }
 }

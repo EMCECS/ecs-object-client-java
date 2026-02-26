@@ -5,7 +5,7 @@ import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.s3.request.ResponseHeaderOverride;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
+import org.glassfish.jersey.client.ClientRequest;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -40,10 +40,10 @@ public class S3SignerV4 extends S3Signer {
         String serviceType = getServiceType();
         date = getDate(parameters, headers);
         String shortDate = getShortDate(date);
-        addHeadersForV4(request.getURI(), date, headers);
+        addHeadersForV4(request.getUri(), date, headers);
 
         // #1 Create a canonical request for Signature Version 4
-        String canonicalRequest = getCanonicalRequest(request.getMethod(), request.getURI(), parameters, headers, false);
+        String canonicalRequest = getCanonicalRequest(request.getMethod(), request.getUri(), parameters, headers, false);
 
         // #2 Create a string to sign for Signature Version 4
         String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType, canonicalRequest);

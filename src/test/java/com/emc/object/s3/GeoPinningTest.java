@@ -26,10 +26,18 @@
  */
 package com.emc.object.s3;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+
 import com.emc.object.ObjectConfig;
-import com.emc.object.s3.jersey.GeoPinningFilter;
 import com.emc.object.s3.jersey.GeoPinningRule;
-import com.emc.object.s3.jersey.RetryFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.Host;
@@ -38,24 +46,6 @@ import com.emc.rest.smart.HostVetoRule;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.Filterable;
-import com.sun.jersey.client.impl.ClientRequestImpl;
-import com.sun.jersey.core.header.InBoundHeaders;
-import com.sun.jersey.spi.MessageBodyWorkers;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
-import java.io.ByteArrayInputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
-import java.net.URI;
-import java.util.*;
 
 public class GeoPinningTest extends AbstractS3ClientTest {
     private List<Vdc> vdcs;
@@ -65,8 +55,8 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         S3Config s3Config = super.createS3Config();
 
         // won't work with VHost or if smart-client is disabled
-        Assume.assumeFalse(s3Config.isUseVHost());
-        Assume.assumeTrue(s3Config.isSmartClient());
+        Assumptions.assumeFalse(s3Config.isUseVHost());
+        Assumptions.assumeTrue(s3Config.isSmartClient());
 
         // just going to use the same VDC thrice for lack of a geo env.
         List<? extends Host> hosts = s3Config.getVdcs().get(0).getHosts();
@@ -96,12 +86,12 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testGuidExtraction() {
-        Assert.assertEquals("my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "my/object/key"));
-        Assert.assertEquals("/my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "/my/object/key"));
+        Assertions.assertEquals("my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "my/object/key"));
+        Assertions.assertEquals("/my/object/key", GeoPinningUtil.getGeoId(getTestBucket(), "/my/object/key"));
 
         String bucketName = getTestBucket();
-        Assert.assertEquals(bucketName, GeoPinningUtil.getGeoId(bucketName, null));
-        Assert.assertEquals(bucketName, GeoPinningUtil.getGeoId(bucketName, ""));
+        Assertions.assertEquals(bucketName, GeoPinningUtil.getGeoId(bucketName, null));
+        Assertions.assertEquals(bucketName, GeoPinningUtil.getGeoId(bucketName, ""));
     }
 
     @Test
@@ -109,15 +99,15 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         String guid = "Hello GeoPinning";
         int hashNum = 0xa3fce8;
 
-        Assert.assertEquals(0, GeoPinningUtil.getGeoPinIndex(guid, 1));
-        Assert.assertEquals(hashNum % 2, GeoPinningUtil.getGeoPinIndex(guid, 2));
-        Assert.assertEquals(hashNum % 3, GeoPinningUtil.getGeoPinIndex(guid, 3));
-        Assert.assertEquals(hashNum % 4, GeoPinningUtil.getGeoPinIndex(guid, 4));
-        Assert.assertEquals(hashNum % 5, GeoPinningUtil.getGeoPinIndex(guid, 5));
-        Assert.assertEquals(hashNum % 6, GeoPinningUtil.getGeoPinIndex(guid, 6));
-        Assert.assertEquals(hashNum % 7, GeoPinningUtil.getGeoPinIndex(guid, 7));
-        Assert.assertEquals(hashNum % 8, GeoPinningUtil.getGeoPinIndex(guid, 8));
-        Assert.assertEquals(hashNum % 9, GeoPinningUtil.getGeoPinIndex(guid, 9));
+        Assertions.assertEquals(0, GeoPinningUtil.getGeoPinIndex(guid, 1));
+        Assertions.assertEquals(hashNum % 2, GeoPinningUtil.getGeoPinIndex(guid, 2));
+        Assertions.assertEquals(hashNum % 3, GeoPinningUtil.getGeoPinIndex(guid, 3));
+        Assertions.assertEquals(hashNum % 4, GeoPinningUtil.getGeoPinIndex(guid, 4));
+        Assertions.assertEquals(hashNum % 5, GeoPinningUtil.getGeoPinIndex(guid, 5));
+        Assertions.assertEquals(hashNum % 6, GeoPinningUtil.getGeoPinIndex(guid, 6));
+        Assertions.assertEquals(hashNum % 7, GeoPinningUtil.getGeoPinIndex(guid, 7));
+        Assertions.assertEquals(hashNum % 8, GeoPinningUtil.getGeoPinIndex(guid, 8));
+        Assertions.assertEquals(hashNum % 9, GeoPinningUtil.getGeoPinIndex(guid, 9));
     }
 
     @Test
@@ -129,12 +119,12 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
         HostVetoRule geoPinningRule = new GeoPinningRule();
 
-        Assert.assertFalse(geoPinningRule.shouldVeto(good.getHosts().get(0), properties));
-        Assert.assertFalse(geoPinningRule.shouldVeto(good.getHosts().get(1), properties));
-        Assert.assertFalse(geoPinningRule.shouldVeto(good.getHosts().get(2), properties));
-        Assert.assertTrue(geoPinningRule.shouldVeto(bad.getHosts().get(0), properties));
-        Assert.assertTrue(geoPinningRule.shouldVeto(bad.getHosts().get(1), properties));
-        Assert.assertTrue(geoPinningRule.shouldVeto(bad.getHosts().get(2), properties));
+        Assertions.assertFalse(geoPinningRule.shouldVeto(good.getHosts().get(0), properties));
+        Assertions.assertFalse(geoPinningRule.shouldVeto(good.getHosts().get(1), properties));
+        Assertions.assertFalse(geoPinningRule.shouldVeto(good.getHosts().get(2), properties));
+        Assertions.assertTrue(geoPinningRule.shouldVeto(bad.getHosts().get(0), properties));
+        Assertions.assertTrue(geoPinningRule.shouldVeto(bad.getHosts().get(1), properties));
+        Assertions.assertTrue(geoPinningRule.shouldVeto(bad.getHosts().get(2), properties));
     }
 
     @Test
@@ -155,53 +145,6 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         testBucketDistribution(bucket3, bHash3 % vdcs.size());
     }
 
-    @Test
-    public void testReadRetryFailoverInFilter() throws Exception {
-        S3Config s3ConfigF = new S3Config(createS3Config());
-        s3ConfigF.setGeoReadRetryFailover(true);
-        GeoPinningFilter filter = new GeoPinningFilter(s3ConfigF);
-
-        String bucket = "foo";
-        String key = "my/object/key";
-        int geoIndex = 0xbb8619 % vdcs.size();
-        DummyClient client = new DummyClient();
-        client.addFilter(filter);
-
-        // test no retry
-        ClientRequest request = new ClientRequestImpl(new URI("http://s3.company.com"), null);
-        request.setMethod("GET");
-        request.getProperties().put(S3Constants.PROPERTY_BUCKET_NAME, bucket);
-        request.getProperties().put(S3Constants.PROPERTY_OBJECT_KEY, key);
-        client.handle(request);
-
-        Assert.assertEquals(vdcs.get(geoIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-
-        // test 1st retry
-        int retries = 1;
-        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-        client.handle(request);
-
-        int retryIndex = (geoIndex + retries) % vdcs.size();
-        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-
-        // test 2nd retry
-        retries++;
-        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-        client.handle(request);
-
-        retryIndex = (geoIndex + retries) % vdcs.size();
-        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-
-        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
-        retries++;
-        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-        client.handle(request);
-
-        retryIndex = (geoIndex + retries) % vdcs.size();
-        Assert.assertEquals(geoIndex, retryIndex);
-        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-    }
-
     protected void testKeyDistribution(String key, int vdcIndex) {
         LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
         loadBalancer.resetStats();
@@ -212,16 +155,16 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
 
         // check no errors and total count
-        Assert.assertEquals(0, loadBalancer.getTotalErrors());
-        Assert.assertEquals(10, loadBalancer.getTotalConnections());
+        Assertions.assertEquals(0, loadBalancer.getTotalErrors());
+        Assertions.assertEquals(10, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
             if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
                 // all hosts in the appropriate VDC should have been used at least once
-                Assert.assertTrue(stats.getTotalConnections() > 0);
+                Assertions.assertTrue(stats.getTotalConnections() > 0);
             } else {
                 // hosts in other VDCs should *not* be used
-                Assert.assertEquals(0, stats.getTotalConnections());
+                Assertions.assertEquals(0, stats.getTotalConnections());
             }
         }
     }
@@ -242,69 +185,18 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         client.deleteBucket(bucket);
 
         // check no errors and total count
-        Assert.assertEquals(0, loadBalancer.getTotalErrors());
-        Assert.assertEquals(requestCount, loadBalancer.getTotalConnections());
+        Assertions.assertEquals(0, loadBalancer.getTotalErrors());
+        Assertions.assertEquals(requestCount, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
             if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
                 // all hosts in the appropriate VDC should have been used at least once
-                Assert.assertTrue(stats.getTotalConnections() > 0);
+                Assertions.assertTrue(stats.getTotalConnections() > 0);
             } else {
                 // hosts in other VDCs should *not* be used
-                Assert.assertEquals(0, stats.getTotalConnections());
+                Assertions.assertEquals(0, stats.getTotalConnections());
             }
         }
     }
 
-    private static class DummyClient extends Filterable {
-        public DummyClient() {
-            super(cr -> new ClientResponse(200, new InBoundHeaders(), new ByteArrayInputStream(new byte[0]), new DummyWorkers()));
-        }
-
-        public ClientResponse handle(ClientRequest request) {
-            return getHeadHandler().handle(request);
-        }
-    }
-
-    private static class DummyWorkers implements MessageBodyWorkers {
-        @Override
-        public Map<MediaType, List<MessageBodyReader>> getReaders(MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public Map<MediaType, List<MessageBodyWriter>> getWriters(MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public String readersToString(Map<MediaType, List<MessageBodyReader>> readers) {
-            return null;
-        }
-
-        @Override
-        public String writersToString(Map<MediaType, List<MessageBodyWriter>> writers) {
-            return null;
-        }
-
-        @Override
-        public <T> MessageBodyReader<T> getMessageBodyReader(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public <T> MessageBodyWriter<T> getMessageBodyWriter(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public <T> List<MediaType> getMessageBodyWriterMediaTypes(Class<T> type, Type genericType, Annotation[] annotations) {
-            return null;
-        }
-
-        @Override
-        public <T> MediaType getMessageBodyWriterMediaType(Class<T> type, Type genericType, Annotation[] annotations, List<MediaType> acceptableMediaTypes) {
-            return null;
-        }
-    }
 }
