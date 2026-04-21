@@ -35,18 +35,30 @@ public class S3SignerV4 extends S3Signer {
 
     @Override
     public void sign(ClientRequestContext request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        signInternal(request.getMethod(), request.getUri(), resource, parameters, headers);
+    }
+
+    @Override
+    public void resign(String method, URI uri, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        // strip prior auth/date headers so the re-sign produces the only signature set
+        headers.remove("Authorization");
+        headers.remove(S3Constants.AMZ_DATE);
+        signInternal(method, uri, resource, parameters, headers);
+    }
+
+    private void signInternal(String method, URI uri, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         // # Preparation, add x-amz-date and host headers
         String date;
         String serviceType = getServiceType();
         date = getDate(parameters, headers);
         String shortDate = getShortDate(date);
-        addHeadersForV4(request.getUri(), date, headers);
+        addHeadersForV4(uri, date, headers);
 
         // #1 Create a canonical request for Signature Version 4
-        String canonicalRequest = getCanonicalRequest(request.getMethod(), request.getUri(), parameters, headers, false);
+        String canonicalRequest = getCanonicalRequest(method, uri, parameters, headers, false);
 
         // #2 Create a string to sign for Signature Version 4
-        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType, canonicalRequest);
+        String stringToSign = getStringToSign(method, resource, parameters, headers, date, serviceType, canonicalRequest);
         log.debug("StringToSign: {}", stringToSign);
 
         // Get signed headers

@@ -26,21 +26,22 @@
  */
 package com.emc.object;
 
-import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.RequestEntityProcessing;
+import java.net.URI;
+import java.util.Map;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
-import java.net.URI;
-import java.util.Map;
 
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.RequestEntityProcessing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
 public abstract class AbstractJerseyClient {
 
@@ -58,8 +59,70 @@ public abstract class AbstractJerseyClient {
         return response;
     }
 
+    /**
+     * Override in subclasses that support retry to return a configured {@link com.emc.object.s3.jersey.RetryFilter}.
+     * Default is {@code null} (no retry).
+     */
+    protected com.emc.object.s3.jersey.RetryFilter getRetryFilter() {
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
     protected Response executeRequest(Client client, ObjectRequest request) {
+        com.emc.object.s3.jersey.RetryFilter retryFilter = getRetryFilter();
+        int retryCount = 0;
+        while (true) {
+            try {
+                return unwrapAndExecute(client, request);
+            } catch (RuntimeException orig) {
+                if (retryFilter == null) throw orig;
+                retryCount++;
+                // stash retry count so GeoPinningFilter can fail over on reads
+                request.property(com.emc.object.s3.jersey.RetryFilter.PROP_RETRY_COUNT, retryCount);
+                java.io.InputStream entityStream = null;
+                if (request instanceof EntityRequest) {
+                    Object entity = ((EntityRequest) request).getEntity();
+                    if (entity instanceof java.io.InputStream) entityStream = (java.io.InputStream) entity;
+                }
+                // shouldRetry throws the original exception if retries are exhausted or not retryable
+                retryFilter.shouldRetry(orig, retryCount, entityStream);
+            }
+        }
+    }
+
+    private Response unwrapAndExecute(Client client, ObjectRequest request) {
+        try {
+            return doExecuteRequest(client, request);
+        } catch (javax.ws.rs.ProcessingException e) {
+            // Jersey 2 wraps any runtime exception (from response filters AND from entity writers /
+            // connector I/O) in a ProcessingException. Only unwrap when the exception was thrown
+            // from ErrorFilter (i.e. a parsed server-side S3 error); let other wrappings surface
+            // as ProcessingException so callers can distinguish transport/stream failures.
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException && isFromErrorFilter(cause)) {
+                throw (RuntimeException) cause;
+            }
+            throw e;
+        }
+    }
+
+    private static boolean isFromErrorFilter(Throwable cause) {
+        // Only unwrap S3Exceptions raised directly from filters whose purpose is to translate
+        // server responses (ErrorFilter) or synthetic client-side rejections (FaultInjectionFilter).
+        // Stream/IO failures from the entity-write path intentionally remain wrapped in a
+        // ProcessingException so callers can distinguish transport-level failures.
+        // Note: WriterInterceptors like ChecksumFilter must NOT be matched here, since exceptions
+        // thrown while reading a user-supplied InputStream pass through their frames.
+        for (StackTraceElement frame : cause.getStackTrace()) {
+            String cn = frame.getClassName();
+            if ("com.emc.object.s3.jersey.ErrorFilter".equals(cn)) return true;
+            if ("com.emc.object.s3.jersey.FaultInjectionFilter".equals(cn)) return true;
+        }
+        return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Response doExecuteRequest(Client client, ObjectRequest request) {
         try {
             if (request.getMethod().isRequiresEntity()) {
                 String contentType = RestUtil.DEFAULT_CONTENT_TYPE;
@@ -129,17 +192,20 @@ public abstract class AbstractJerseyClient {
         URI uri = objectConfig.resolvePath(request.getPath(), request.getRawQueryString());
         WebTarget target = client.target(uri);
 
-        // set properties
+        Invocation.Builder builder = target.request();
+
+        // set per-request properties on the Invocation.Builder so that they are visible
+        // to ClientRequestFilter/ClientResponseFilter via ClientRequestContext#getProperty().
+        // Properties set on WebTarget live in its Configuration and are not exposed via
+        // ClientRequestContext#getProperty().
         for (Map.Entry<String, Object> entry : request.getProperties().entrySet()) {
-            target = target.property(entry.getKey(), entry.getValue());
+            builder = builder.property(entry.getKey(), entry.getValue());
         }
 
         // set namespace
         String namespace = request.getNamespace() != null ? request.getNamespace() : objectConfig.getNamespace();
         if (namespace != null)
-            target = target.property(RestUtil.PROPERTY_NAMESPACE, namespace);
-
-        Invocation.Builder builder = target.request();
+            builder = builder.property(RestUtil.PROPERTY_NAMESPACE, namespace);
 
         // set headers
         for (String name : request.getHeaders().keySet()) {

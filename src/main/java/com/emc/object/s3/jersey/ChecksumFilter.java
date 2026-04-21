@@ -26,8 +26,12 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.*;
-import com.emc.object.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientResponseContext;
@@ -35,12 +39,18 @@ import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.ext.WriterInterceptor;
 import javax.ws.rs.ext.WriterInterceptorContext;
 import javax.xml.bind.DatatypeConverter;
-import java.io.ByteArrayOutputStream;
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.security.NoSuchAlgorithmException;
-import java.util.*;
+
+import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Signer;
+import com.emc.object.s3.S3SignerV2;
+import com.emc.object.s3.S3SignerV4;
+import com.emc.object.util.ChecksumAlgorithm;
+import com.emc.object.util.ChecksumError;
+import com.emc.object.util.ChecksumValueImpl;
+import com.emc.object.util.ChecksummedInputStream;
+import com.emc.object.util.ChecksummedOutputStream;
+import com.emc.object.util.RestUtil;
+import com.emc.object.util.RunningChecksum;
 
 public class ChecksumFilter implements WriterInterceptor, ClientResponseFilter {
     private static final String PROP_WRITE_CHECKSUM = "com.emc.object.checksumFilter.writeChecksum";
@@ -78,15 +88,25 @@ public class ChecksumFilter implements WriterInterceptor, ClientResponseFilter {
                 context.setOutputStream(new ChecksummedOutputStream(buffer, md5Checksum));
                 context.proceed();
 
-                // add Content-MD5 header
+                // add Content-MD5 header (this mutates the outbound headers)
                 context.getHeaders().putSingle(RestUtil.HEADER_CONTENT_MD5,
                         DatatypeConverter.printBase64Binary(md5Checksum.getByteValue()));
 
-                // re-sign if needed
+                // re-sign if credentials were available at request time (the Content-MD5 header
+                // is part of the V2 stringToSign and part of the V4 canonical headers, so the
+                // signature computed earlier by AuthorizationFilter is now stale)
                 if (s3Config.getIdentity() != null) {
-                    // note: re-signing with Content-MD5 requires the request context,
-                    // which is not directly available in WriterInterceptor.
-                    // The Content-MD5 header is added; signing will be handled by filter ordering.
+                    S3Signer stashedSigner = (S3Signer) context.getProperty(com.emc.object.s3.jersey.AuthorizationFilter.PROP_SIGNER);
+                    if (stashedSigner != null) {
+                        String method = (String) context.getProperty(com.emc.object.s3.jersey.AuthorizationFilter.PROP_SIGN_METHOD);
+                        java.net.URI uri = (java.net.URI) context.getProperty(com.emc.object.s3.jersey.AuthorizationFilter.PROP_SIGN_URI);
+                        String resource = (String) context.getProperty(com.emc.object.s3.jersey.AuthorizationFilter.PROP_SIGN_RESOURCE);
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> parameters = (Map<String, String>) context.getProperty(com.emc.object.s3.jersey.AuthorizationFilter.PROP_SIGN_PARAMETERS);
+                        @SuppressWarnings({"unchecked", "rawtypes"})
+                        Map<String, List<Object>> signingHeaders = (Map) context.getHeaders();
+                        stashedSigner.resign(method, uri, resource, parameters, signingHeaders);
+                    }
                 }
 
                 // write buffered data to original stream

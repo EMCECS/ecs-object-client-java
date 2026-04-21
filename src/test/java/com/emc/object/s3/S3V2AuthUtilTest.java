@@ -29,9 +29,9 @@ package com.emc.object.s3;
 import com.emc.object.Method;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import javax.ws.rs.core.MultivaluedHashMap;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.MultivaluedMap;
 import java.net.URI;
@@ -91,7 +91,7 @@ public class S3V2AuthUtilTest {
             "/johnsmith/?acl";
     private static final String SIGNATURE_4 = "c2WLPFtWHVgbEmeEG93a4cG37dM=";
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() {
         HEADERS_1.putSingle("Host", "johnsmith.s3.amazonaws.com");
         HEADERS_1.putSingle("Date", "Tue, 27 Mar 2007 19:36:42 +0000");
@@ -125,19 +125,19 @@ public class S3V2AuthUtilTest {
         // (sign() now requires ClientRequestContext, so we test the underlying methods directly)
         String stringToSign1 = signer.getStringToSign(METHOD_1, RESOURCE_1, PARAMETERS_1, HEADERS_1);
         String signature1 = signer.getSignature(stringToSign1, null);
-        Assert.assertEquals(SIGNATURE_1, signature1);
+        Assertions.assertEquals(SIGNATURE_1, signature1);
 
         String stringToSign2 = signer.getStringToSign(METHOD_2, RESOURCE_2, PARAMETERS_2, HEADERS_2);
         String signature2 = signer.getSignature(stringToSign2, null);
-        Assert.assertEquals(SIGNATURE_2, signature2);
+        Assertions.assertEquals(SIGNATURE_2, signature2);
 
         String stringToSign3 = signer.getStringToSign(METHOD_3, RESOURCE_3, PARAMETERS_3, HEADERS_3);
         String signature3 = signer.getSignature(stringToSign3, null);
-        Assert.assertEquals(SIGNATURE_3, signature3);
+        Assertions.assertEquals(SIGNATURE_3, signature3);
 
         String stringToSign4 = signer.getStringToSign(METHOD_4, RESOURCE_4, PARAMETERS_4, HEADERS_4);
         String signature4 = signer.getSignature(stringToSign4, null);
-        Assert.assertEquals(SIGNATURE_4, signature4);
+        Assertions.assertEquals(SIGNATURE_4, signature4);
     }
 
     @Test
@@ -146,16 +146,16 @@ public class S3V2AuthUtilTest {
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
         String stringToSign = signer.getStringToSign(METHOD_1, RESOURCE_1, PARAMETERS_1, HEADERS_1);
-        Assert.assertEquals(SIGN_STRING_1, stringToSign);
+        Assertions.assertEquals(SIGN_STRING_1, stringToSign);
 
         stringToSign = signer.getStringToSign(METHOD_2, RESOURCE_2, PARAMETERS_2, HEADERS_2);
-        Assert.assertEquals(SIGN_STRING_2, stringToSign);
+        Assertions.assertEquals(SIGN_STRING_2, stringToSign);
 
         stringToSign = signer.getStringToSign(METHOD_3, RESOURCE_3, PARAMETERS_3, HEADERS_3);
-        Assert.assertEquals(SIGN_STRING_3, stringToSign);
+        Assertions.assertEquals(SIGN_STRING_3, stringToSign);
 
         stringToSign = signer.getStringToSign(METHOD_4, RESOURCE_4, PARAMETERS_4, HEADERS_4);
-        Assert.assertEquals(SIGN_STRING_4, stringToSign);
+        Assertions.assertEquals(SIGN_STRING_4, stringToSign);
     }
 
     @Test
@@ -163,13 +163,13 @@ public class S3V2AuthUtilTest {
         S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
-        Assert.assertEquals(SIGNATURE_1, signer.getSignature(SIGN_STRING_1, null));
+        Assertions.assertEquals(SIGNATURE_1, signer.getSignature(SIGN_STRING_1, null));
 
-        Assert.assertEquals(SIGNATURE_2, signer.getSignature(SIGN_STRING_2, null));
+        Assertions.assertEquals(SIGNATURE_2, signer.getSignature(SIGN_STRING_2, null));
 
-        Assert.assertEquals(SIGNATURE_3, signer.getSignature(SIGN_STRING_3, null));
+        Assertions.assertEquals(SIGNATURE_3, signer.getSignature(SIGN_STRING_3, null));
 
-        Assert.assertEquals(SIGNATURE_4, signer.getSignature(SIGN_STRING_4, null));
+        Assertions.assertEquals(SIGNATURE_4, signer.getSignature(SIGN_STRING_4, null));
     }
 
     @Test
@@ -187,6 +187,6 @@ public class S3V2AuthUtilTest {
                 "&Signature=NpgCjnDzrM%2BWFzoENXmpNDUsSn8%3D";
         String actualUrl = signer.generatePresignedUrl(request).toString();
 
-        Assert.assertEquals(expectedUrl, actualUrl);
+        Assertions.assertEquals(expectedUrl, actualUrl);
     }
 }

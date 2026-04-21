@@ -65,10 +65,21 @@ public final class S3SignerV2 extends S3Signer {
 
     @Override
     public void sign(ClientRequestContext request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        signInternal(request.getMethod(), resource, parameters, headers);
+    }
+
+    @Override
+    public void resign(String method, URI uri, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        // strip prior Authorization so the new signature is the only one present
+        headers.remove("Authorization");
+        signInternal(method, resource, parameters, headers);
+    }
+
+    private void signInternal(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         if (s3Config.getSessionToken() != null) {
             RestUtil.putSingle(headers, S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
         }
-        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers);
+        String stringToSign = getStringToSign(method, resource, parameters, headers);
         String signature = getSignature(stringToSign, null);
         RestUtil.putSingle(headers, "Authorization", "AWS " + s3Config.getIdentity() + ":" + signature);
     }

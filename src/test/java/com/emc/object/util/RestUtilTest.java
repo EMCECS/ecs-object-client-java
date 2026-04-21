@@ -29,8 +29,8 @@ package com.emc.object.util;
 import com.emc.object.Method;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.request.S3ObjectRequest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -41,43 +41,43 @@ public class RestUtilTest {
     public void testQueryMap() {
         String query = "";
         Map<String, String> parameters = RestUtil.getQueryParameterMap(query);
-        Assert.assertEquals(0, parameters.size());
+        Assertions.assertEquals(0, parameters.size());
 
         query = "   ";
         parameters = RestUtil.getQueryParameterMap(query);
-        Assert.assertEquals(0, parameters.size());
+        Assertions.assertEquals(0, parameters.size());
 
         query = "foo=bar&baz=foo";
         parameters = RestUtil.getQueryParameterMap(query);
-        Assert.assertEquals(2, parameters.size());
-        Assert.assertEquals("bar", parameters.get("foo"));
-        Assert.assertEquals("foo", parameters.get("baz"));
+        Assertions.assertEquals(2, parameters.size());
+        Assertions.assertEquals("bar", parameters.get("foo"));
+        Assertions.assertEquals("foo", parameters.get("baz"));
 
         query = "alpha=&bravo=charlie";
         parameters = RestUtil.getQueryParameterMap(query);
-        Assert.assertEquals(2, parameters.size());
-        Assert.assertEquals("", parameters.get("alpha"));
-        Assert.assertEquals("charlie", parameters.get("bravo"));
+        Assertions.assertEquals(2, parameters.size());
+        Assertions.assertEquals("", parameters.get("alpha"));
+        Assertions.assertEquals("charlie", parameters.get("bravo"));
 
         // you don't need an equals sign (value will be null)
         query = "delta=echo&foxtrot";
         parameters = RestUtil.getQueryParameterMap(query);
-        Assert.assertEquals(2, parameters.size());
-        Assert.assertEquals("echo", parameters.get("delta"));
-        Assert.assertEquals(null, parameters.get("foxtrot"));
+        Assertions.assertEquals(2, parameters.size());
+        Assertions.assertEquals("echo", parameters.get("delta"));
+        Assertions.assertEquals(null, parameters.get("foxtrot"));
 
         // ampersand at the end is ignored
         query = "golf=hotel&";
         parameters = RestUtil.getQueryParameterMap(query);
-        Assert.assertEquals(1, parameters.size());
-        Assert.assertEquals("hotel", parameters.get("golf"));
+        Assertions.assertEquals(1, parameters.size());
+        Assertions.assertEquals("hotel", parameters.get("golf"));
 
         // negative tests
 
         query = "&a=b";
         try {
             RestUtil.getQueryParameterMap(query);
-            Assert.fail("ampersand at the beginning is bad (no empty parameters)");
+            Assertions.fail("ampersand at the beginning is bad (no empty parameters)");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -85,7 +85,7 @@ public class RestUtilTest {
         query = "a=&&b=c";
         try {
             RestUtil.getQueryParameterMap(query);
-            Assert.fail("consecutive ampersands are bad (no empty parameters)");
+            Assertions.fail("consecutive ampersands are bad (no empty parameters)");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -93,7 +93,7 @@ public class RestUtilTest {
         query = "a=b& ";
         try {
             RestUtil.getQueryParameterMap(query);
-            Assert.fail("a space is not a key");
+            Assertions.fail("a space is not a key");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -101,7 +101,7 @@ public class RestUtilTest {
         query = "a=b& =foo";
         try {
             RestUtil.getQueryParameterMap(query);
-            Assert.fail("a space is not a key");
+            Assertions.fail("a space is not a key");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -109,7 +109,7 @@ public class RestUtilTest {
         query = "=d";
         try {
             RestUtil.getQueryParameterMap(query);
-            Assert.fail("empty key should fail");
+            Assertions.fail("empty key should fail");
         } catch (IllegalArgumentException e) {
             // expected
         }
@@ -120,12 +120,12 @@ public class RestUtilTest {
         String query = "foo=x&bar=y&baz=z&yo=&alpha=bra%26vo";
         Map<String, String> parameters = RestUtil.getQueryParameterMap(query);
 
-        Assert.assertEquals("x", parameters.get("foo"));
-        Assert.assertEquals("y", parameters.get("bar"));
-        Assert.assertEquals("z", parameters.get("baz"));
-        Assert.assertEquals("", parameters.get("yo"));
-        Assert.assertEquals("bra&vo", parameters.get("alpha"));
-        Assert.assertEquals(null, parameters.get("bogus"));
+        Assertions.assertEquals("x", parameters.get("foo"));
+        Assertions.assertEquals("y", parameters.get("bar"));
+        Assertions.assertEquals("z", parameters.get("baz"));
+        Assertions.assertEquals("", parameters.get("yo"));
+        Assertions.assertEquals("bra&vo", parameters.get("alpha"));
+        Assertions.assertEquals(null, parameters.get("bogus"));
     }
 
     @Test
@@ -139,7 +139,7 @@ public class RestUtilTest {
         S3ObjectRequest request = new S3ObjectRequest(Method.GET, bucket, key, null);
         URI uri = config.resolvePath(request.getPath(), query);
         String post = "http://foo.com/foo-bar/foo/%5B%20test%20&%20spaces%20%5D/bar?prefix=CS_Archive2_Copy%2FScreens%2F%5B%20Archived%20%26%20Toolbox%20%5D%2FCountry%20Flags";
-        Assert.assertEquals(new URI(post), RestUtil.replacePath(uri, "/" + bucket + "/" + key));
+        Assertions.assertEquals(new URI(post), RestUtil.replacePath(uri, "/" + bucket + "/" + key));
     }
 
     // Unicode "OHM SYMBOL"
@@ -159,13 +159,13 @@ public class RestUtilTest {
         String query = "prefix=" + RestUtil.urlEncode("foo/bar/" + OHM_UTF8 + "/baz/");
 
         URI u = RestUtil.buildUri("http", "www.foo.com", -1, "/100 " + ohm + " Differential impedance 2.rar", query, null);
-        Assert.assertEquals("http://www.foo.com/100%20%E2%84%A6%20Differential%20impedance%202.rar?" + query, u.toString());
+        Assertions.assertEquals("http://www.foo.com/100%20%E2%84%A6%20Differential%20impedance%202.rar?" + query, u.toString());
     }
 
     @Test
     public void testJoin() throws Exception {
-        Assert.assertEquals("", RestUtil.join(",", Arrays.asList(new String[0])));
-        Assert.assertEquals("x", RestUtil.join(",", Arrays.asList("x")));
-        Assert.assertEquals("x,y", RestUtil.join(",", Arrays.asList("x","y")));
+        Assertions.assertEquals("", RestUtil.join(",", Arrays.asList(new String[0])));
+        Assertions.assertEquals("x", RestUtil.join(",", Arrays.asList("x")));
+        Assertions.assertEquals("x,y", RestUtil.join(",", Arrays.asList("x","y")));
     }
 }

@@ -26,14 +26,21 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.object.s3.*;
-import com.emc.object.util.RestUtil;
-
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
 import java.io.IOException;
 import java.util.Map;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+
+import com.emc.object.s3.S3Config;
+import com.emc.object.s3.S3Constants;
+import com.emc.object.s3.S3Signer;
+import com.emc.object.s3.S3SignerV2;
+import com.emc.object.s3.S3SignerV4;
+import com.emc.object.s3.VHostUtil;
+import com.emc.object.util.RestUtil;
+
+@javax.annotation.Priority(4000) // must run after NamespaceFilter, GeoPinningFilter and BucketFilter
 public class AuthorizationFilter implements ClientRequestFilter {
     private S3Config s3Config;
     private S3Signer signer;
@@ -45,6 +52,12 @@ public class AuthorizationFilter implements ClientRequestFilter {
         else
             this.signer = new S3SignerV4(s3Config);
     }
+
+    public static final String PROP_SIGN_METHOD = "com.emc.object.signing.method";
+    public static final String PROP_SIGN_URI = "com.emc.object.signing.uri";
+    public static final String PROP_SIGN_RESOURCE = "com.emc.object.signing.resource";
+    public static final String PROP_SIGN_PARAMETERS = "com.emc.object.signing.parameters";
+    public static final String PROP_SIGNER = "com.emc.object.signing.signer";
 
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
@@ -66,6 +79,14 @@ public class AuthorizationFilter implements ClientRequestFilter {
                     resource,
                     parameters,
                     requestContext.getHeaders());
+
+            // Stash signing inputs so a WriterInterceptor can re-sign after mutating the outbound
+            // headers (e.g. ChecksumFilter adding Content-MD5). See ChecksumFilter#aroundWriteTo.
+            requestContext.setProperty(PROP_SIGN_METHOD, requestContext.getMethod());
+            requestContext.setProperty(PROP_SIGN_URI, requestContext.getUri());
+            requestContext.setProperty(PROP_SIGN_RESOURCE, resource);
+            requestContext.setProperty(PROP_SIGN_PARAMETERS, parameters);
+            requestContext.setProperty(PROP_SIGNER, signer);
         }
     }
 }

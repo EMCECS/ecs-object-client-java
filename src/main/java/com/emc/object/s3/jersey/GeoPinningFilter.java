@@ -26,24 +26,27 @@
  */
 package com.emc.object.s3.jersey;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.emc.object.Method;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.ecs.Vdc;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Note: this filter must be applied *before* the BucketFilter (it does not remove the bucket from
  * the path to extract the object key)
  */
+@javax.annotation.Priority(2000) // must run before BucketFilter
 public class GeoPinningFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(GeoPinningFilter.class);

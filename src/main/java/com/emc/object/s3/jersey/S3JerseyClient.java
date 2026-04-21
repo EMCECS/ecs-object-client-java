@@ -229,6 +229,11 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
+    protected RetryFilter getRetryFilter() {
+        return retryFilter;
+    }
+
+    @Override
     public PingResponse pingNode(String host) {
         return pingNode(s3Config.getProtocol(), host, s3Config.getPort());
     }
@@ -238,7 +243,16 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         String portStr = (port > 0) ? ":" + port : "";
         WebTarget target = client.target(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
         target = target.property(SmartFilter.BYPASS_LOAD_BALANCER, true);
-        return target.request().get(PingResponse.class);
+        try {
+            return target.request().get(PingResponse.class);
+        } catch (ProcessingException e) {
+            // Jersey 2 wraps exceptions from ClientRequestFilter (e.g. FaultInjectionFilter)
+            // and ClientResponseFilter (e.g. ErrorFilter). Unwrap so callers see the same
+            // exception types they did under Jersey 1.
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) throw (RuntimeException) cause;
+            throw e;
+        }
     }
 
     @Override

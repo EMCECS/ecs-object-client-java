@@ -33,13 +33,13 @@ import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
 import org.glassfish.jersey.client.ClientProperties;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ConfigUriS3Test {
     private ConfigUri<S3Config> s3Uri = new ConfigUri<S3Config>(S3Config.class);

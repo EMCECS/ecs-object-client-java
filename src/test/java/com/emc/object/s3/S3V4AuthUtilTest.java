@@ -3,9 +3,9 @@ package com.emc.object.s3;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.util.RestUtil;
 import javax.ws.rs.core.MultivaluedHashMap;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -62,7 +62,7 @@ public class S3V4AuthUtilTest {
 
     private static PutObjectRequest request = new PutObjectRequest("testBucket", "testKey", payload);
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() {
         HEADERS_1.putSingle("Host", "johnsmith.s3.amazonaws.com");
         HEADERS_1.putSingle("Date", "Sun, 30 Aug 2015 12:36:00 GMT");
@@ -76,7 +76,7 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
-        Assert.assertEquals(V4_DATE, signer.getShortDate(signer.getDate(PARAMETERS_1, HEADERS_1)));
+        Assertions.assertEquals(V4_DATE, signer.getShortDate(signer.getDate(PARAMETERS_1, HEADERS_1)));
     }
 
     @Test
@@ -86,7 +86,7 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
-        Assert.assertEquals(EXPECTED_SCOPE, signer.getScope(V4_DATE, SERVICE));
+        Assertions.assertEquals(EXPECTED_SCOPE, signer.getScope(V4_DATE, SERVICE));
     }
 
     @Test
@@ -102,7 +102,7 @@ public class S3V4AuthUtilTest {
         Map<String, String> parameters = RestUtil.getQueryParameterMap(requestUri.getRawQuery());
         Map<String, List<Object>> headers = new HashMap<>();
         RestUtil.putSingle(headers,S3Constants.AMZ_DATE, AMZ_V4_DATE);
-        Assert.assertEquals(CANONICAL_REQUEST, signer.getCanonicalRequest(method, requestUri, parameters, headers, false));
+        Assertions.assertEquals(CANONICAL_REQUEST, signer.getCanonicalRequest(method, requestUri, parameters, headers, false));
     }
 
     @Test
@@ -111,7 +111,7 @@ public class S3V4AuthUtilTest {
                 .withIdentity(ACCESS_KEY)
                 .withSecretKey(SECRET_KEY);
         S3SignerV4 signer = new S3SignerV4(s3Config);
-        Assert.assertEquals(EXPECTED_STRING_TO_SIGN,
+        Assertions.assertEquals(EXPECTED_STRING_TO_SIGN,
                 signer.getStringToSign(null, null, null, null, AMZ_V4_DATE, SERVICE, EXPECTED_CANONICAL_REQUEST));
     }
 
@@ -122,7 +122,7 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
         S3SignerV4 signer = new S3SignerV4(s3Config);
         byte[] signingKey = signer.getSigningKey(V4_DATE, S3Constants.AWS_SERVICE_IAM);
-        Assert.assertEquals(EXPECTED_SIGNING_KEY, signer.hexEncode(signingKey));
+        Assertions.assertEquals(EXPECTED_SIGNING_KEY, signer.hexEncode(signingKey));
     }
 
     @Test
@@ -134,7 +134,7 @@ public class S3V4AuthUtilTest {
         S3SignerV4 signer = new S3SignerV4(s3Config);
         String stringToSign = EXPECTED_STRING_TO_SIGN;
         byte[] signingKey = signer.getSigningKey(V4_DATE, S3Constants.AWS_SERVICE_IAM);
-        Assert.assertEquals(EXPECTED_SIGNATURE, signer.getSignature(stringToSign, signingKey));
+        Assertions.assertEquals(EXPECTED_SIGNATURE, signer.getSignature(stringToSign, signingKey));
     }
 
     @Test
@@ -144,6 +144,6 @@ public class S3V4AuthUtilTest {
                 .withSecretKey(SECRET_KEY);
 
         S3SignerV4 signer = new S3SignerV4(s3Config);
-        Assert.assertEquals(V4_DATE, signer.getShortDate(AMZ_V4_DATE));
+        Assertions.assertEquals(V4_DATE, signer.getShortDate(AMZ_V4_DATE));
     }
 }

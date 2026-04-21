@@ -30,8 +30,8 @@ import java.io.ByteArrayInputStream;
 import java.util.Random;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import com.emc.object.util.ChecksumAlgorithm;
 import com.emc.object.util.ChecksumError;
@@ -51,9 +51,10 @@ public class ChecksumFilterTest {
                 new ByteArrayInputStream(data),
                 new ChecksumValueImpl(ChecksumAlgorithm.MD5, data.length, correctMd5));
         byte[] buffer = new byte[1024];
-        int read = goodStream.read(buffer);
+        int total = 0, n;
+        while ((n = goodStream.read(buffer)) >= 0) total += n;
         goodStream.close();
-        Assert.assertEquals(data.length, read);
+        Assertions.assertEquals(data.length, total);
 
         // negative test - bad checksum should throw ChecksumError
         try {
@@ -61,9 +62,9 @@ public class ChecksumFilterTest {
                     new ByteArrayInputStream(data),
                     new ChecksumValueImpl(ChecksumAlgorithm.MD5, data.length, "abcdef0123456789abcdef0123456789"));
             buffer = new byte[1024];
-            badStream.read(buffer);
+            while (badStream.read(buffer) >= 0) { /* read to EOF to trigger verification */ }
             badStream.close();
-            Assert.fail("bad MD5 should throw exception");
+            Assertions.fail("bad MD5 should throw exception");
         } catch (ChecksumError e) {
             // expected
         }

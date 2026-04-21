@@ -32,8 +32,8 @@ import java.net.URI;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
 
@@ -47,9 +47,9 @@ public class Sdk238Test {
         testClient.createBucket(bucket);
         try {
             if (s3Config.isUseVHost()) {
-                Assert.assertEquals("/", testClient.getLastUri().getPath());
+                Assertions.assertEquals("/", testClient.getLastUri().getPath());
             } else {
-                Assert.assertEquals("/" + bucket, testClient.getLastUri().getPath());
+                Assertions.assertEquals("/" + bucket, testClient.getLastUri().getPath());
             }
         } finally {
             testClient.deleteBucket(bucket);

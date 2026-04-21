@@ -2,8 +2,8 @@ package com.emc.object.s3;
 
 import java.io.StringReader;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import com.emc.object.s3.jersey.ErrorFilter;
 
@@ -22,9 +22,9 @@ public class ErrorFilterTest {
 
         // In Jersey 2.x, test the error parsing directly instead of through the filter chain
         S3Exception e = ErrorFilter.parseErrorResponse(new StringReader(xml), statusCode);
-        Assert.assertEquals(statusCode, e.getHttpCode());
-        Assert.assertEquals(errorCode, e.getErrorCode());
-        Assert.assertEquals(message, e.getMessage());
+        Assertions.assertEquals(statusCode, e.getHttpCode());
+        Assertions.assertEquals(errorCode, e.getErrorCode());
+        Assertions.assertEquals(message, e.getMessage());
     }
 
     @Test
@@ -41,8 +41,8 @@ public class ErrorFilterTest {
 
         // In Jersey 2.x, test the error parsing directly instead of through the filter chain
         S3Exception e = ErrorFilter.parseErrorResponse(new StringReader(xml), statusCode);
-        Assert.assertEquals(statusCode, e.getHttpCode());
-        Assert.assertEquals(errorCode, e.getErrorCode());
-        Assert.assertEquals(message, e.getMessage());
+        Assertions.assertEquals(statusCode, e.getHttpCode());
+        Assertions.assertEquals(errorCode, e.getErrorCode());
+        Assertions.assertEquals(message, e.getMessage());
     }
 }
