@@ -51,6 +51,14 @@ All 49 test classes green. The 316 skips are all `Assume.assumeTrue/False` guard
 ### Fix applied in this round
 - `S3JerseyClientTest.testDeleteBucketWithBackgroundTasks` previously relied on a fixed 3-minute sleep before asserting the background empty-bucket task had produced a 404 `getBucketDeletionStatus`. On slower lab clusters the 1-minute scheduler loop sometimes took longer than the sleep window. Replaced the fixed sleep with a poll loop (30s cadence, 8-minute deadline) that breaks as soon as a 404 is observed. Functional contract unchanged — we still fail the test if the deletion never completes within the deadline.
 
+### Cap-20844 one-by-one rerun (2026-04-22)
+Ran every non-abstract test class one-by-one via `./gradlew test --tests <class>`. Two fixes applied before the remaining classes went green:
+
+1. `S3EncryptionWithCompressionV4Test.testRetries` + `S3EncryptionClientBasicV4Test.testRetries` — both had been regressed to `setRetryLimit(6)` in the V4 overrides even though the base test uses `setRetryLimit(10)`. At a 0.4 fault-injection rate 6 retries is statistically too tight for a 6-iteration loop and one `S3Exception: Fault Injection` would bubble out on slow CI. Restored the limit to `10` in both overrides to match the base `S3EncryptionClientBasicTest.testRetries`.
+2. `ExtendedConfigTest.testApacheConnectionLimit` — failed with `ClassCastException: Integer cannot be cast to String` inside `SmartConfig.getIntProperty` (smart-client composite build). The test stores `MAX_CONNECTIONS_PER_HOST`/`MAX_CONNECTIONS` as `Integer`, which is legal via `SmartConfig.setProperty(String, Object)`. Rewrote `SmartConfig.getIntProperty` in `smart-client-java/smart-client-core` to accept `Number` directly and fall back to `toString()` parsing for anything else.
+
+Final per-class sweep: 47 test classes, all PASS. Subsequent full `./gradlew test` run: **tests=1966 failures=0 errors=0 skipped=320**, `BUILD SUCCESSFUL`.
+
 ## Docs
 - [x] `report/plan.md`.
 - [x] `report/progress.md` (this file).
