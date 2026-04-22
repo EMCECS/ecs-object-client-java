@@ -242,9 +242,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     public PingResponse pingNode(Protocol protocol, String host, int port) {
         String portStr = (port > 0) ? ":" + port : "";
         WebTarget target = client.target(String.format("%s://%s%s/?ping", protocol.name().toLowerCase(), host, portStr));
-        target = target.property(SmartFilter.BYPASS_LOAD_BALANCER, true);
         try {
-            return target.request().get(PingResponse.class);
+            return target.request().property(SmartFilter.BYPASS_LOAD_BALANCER, true).get(PingResponse.class);
         } catch (ProcessingException e) {
             // Jersey 2 wraps exceptions from ClientRequestFilter (e.g. FaultInjectionFilter)
             // and ClientResponseFilter (e.g. ErrorFilter). Unwrap so callers see the same

@@ -35,6 +35,8 @@ import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientResponseContext;
 import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.ReaderInterceptor;
+import javax.ws.rs.ext.ReaderInterceptorContext;
 import javax.ws.rs.ext.WriterInterceptor;
 import javax.ws.rs.ext.WriterInterceptorContext;
 
@@ -49,9 +51,13 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class CodecFilter implements WriterInterceptor, ClientResponseFilter {
+@javax.annotation.Priority(javax.ws.rs.Priorities.USER + 100) // must run AFTER ChecksumFilter so that the checksum is computed over the on-the-wire (encoded) bytes on both outbound and inbound
+public class CodecFilter implements WriterInterceptor, ClientResponseFilter, ReaderInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);
+
+    private static final String PROP_DECODE_CHAIN = "com.emc.object.codecFilter.decodeChain";
+    private static final String PROP_STORED_META = "com.emc.object.codecFilter.storedMeta";
 
     private CodecChain encodeChain;
     private Map<String, Object> codecProperties;
@@ -132,8 +138,13 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter {
             Boolean decode = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_DECODE_ENTITY);
             if (decode != null && decode) {
 
-                // wrap input stream with decryptor (this will remove any encode metadata from storedMeta)
-                responseContext.setEntityStream(decodeChain.getDecodeStream(responseContext.getEntityStream(), storedMeta));
+                // NOTE: we intentionally do NOT wrap responseContext.setEntityStream() here.
+                // The wrap happens in aroundReadFrom (ReaderInterceptor) so that ChecksumFilter's
+                // ClientResponseFilter has a chance to wrap the raw (ciphertext) stream first.
+                // Otherwise ChecksumFilter would verify the MD5 of the decrypted plaintext, which
+                // does not match the server's ETag (MD5 of stored/ciphertext content).
+                requestContext.setProperty(PROP_DECODE_CHAIN, decodeChain);
+                requestContext.setProperty(PROP_STORED_META, storedMeta);
             } else {
 
                 // need to remove any encode metadata so we can update the headers
@@ -151,6 +162,18 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter {
                 }
             }
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object aroundReadFrom(ReaderInterceptorContext context) throws IOException {
+        CodecChain decodeChain = (CodecChain) context.getProperty(PROP_DECODE_CHAIN);
+        Map<String, String> storedMeta = (Map<String, String>) context.getProperty(PROP_STORED_META);
+        if (decodeChain != null && storedMeta != null) {
+            // wrap the input stream with a decoder (this will also strip encode metadata from storedMeta)
+            context.setInputStream(decodeChain.getDecodeStream(context.getInputStream(), storedMeta));
+        }
+        return context.proceed();
     }
 
     public Map<String, Object> getCodecProperties() {

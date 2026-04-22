@@ -36,7 +36,7 @@ plugins {
     id 'signing'
     id 'maven-publish'
     id 'org.ajoberstar.git-publish' version '4.2.2'
-    id 'nebula.release' version '19.0.10'
+    id 'nebula.release' version '21.0.0'
 }
 
 group 'com.emc.ecs'
@@ -111,6 +111,9 @@ java {
 
 test {
     useJUnitPlatform()
+    maxHeapSize = '2g'
+    // some encryption + large file tests allocate a lot of transient buffers; give the forked JVM enough headroom
+    jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
 }
 
 jar {

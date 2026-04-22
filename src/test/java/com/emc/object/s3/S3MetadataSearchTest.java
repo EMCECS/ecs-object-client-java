@@ -47,6 +47,8 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
     @Test
     public void testListSystemMetadataSearchKeys() throws Exception {
         boolean is37x = ecsVersion != null && ecsVersion.matches("3\\.7\\..*");
+        // ECS 3.8+/4.x exposes ReplicationStatus as an optional attribute but not as an indexable key
+        boolean is38Plus = ecsVersion != null && ecsVersion.matches("^(3\\.(8|9)\\..*|[4-9]\\..*)");
         MetadataSearchKey[] expectedIndexableKeys;
         MetadataSearchKey[] expectedOptionalAttributes;
         if (!is37x) {
@@ -58,20 +60,38 @@ public class S3MetadataSearchTest extends AbstractS3ClientTest {
                     new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
             };
 
-            expectedOptionalAttributes = new MetadataSearchKey[]{
-                    new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
-                    new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
-                    new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
-                    new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
-                    new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
-                    new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
-                    new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
-                    new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
-                    new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
-                    new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
-                    new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
-                    new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
-            };
+            if (is38Plus) {
+                expectedOptionalAttributes = new MetadataSearchKey[]{
+                        new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("ObjName", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
+                        new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
+                };
+            } else {
+                expectedOptionalAttributes = new MetadataSearchKey[]{
+                        new MetadataSearchKey("ContentEncoding", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("ContentType", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("CreateTime", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("Etag", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("Expiration", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("Expires", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("LastModified", MetadataSearchDatatype.datetime),
+                        new MetadataSearchKey("Namespace", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("ObjectName", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("Owner", MetadataSearchDatatype.string),
+                        new MetadataSearchKey("Retention", MetadataSearchDatatype.integer),
+                        new MetadataSearchKey("Size", MetadataSearchDatatype.integer),
+                };
+            }
         }
         else {
             expectedIndexableKeys = new MetadataSearchKey[] {

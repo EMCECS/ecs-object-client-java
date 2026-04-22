@@ -11,6 +11,7 @@ import javax.xml.bind.DatatypeConverter;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,9 +46,15 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     @Override
     protected void createBucket(String bucketName) {
         // create bucket with retention period and D@RE enabled
-        client.createBucket(new CreateBucketRequest(getTestBucket())
-                .withRetentionPeriod(OBJECT_RETENTION_PERIOD)
-                .withEncryptionEnabled(true));
+        try {
+            client.createBucket(new CreateBucketRequest(getTestBucket())
+                    .withRetentionPeriod(OBJECT_RETENTION_PERIOD)
+                    .withEncryptionEnabled(true));
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping WriteTruncation tests: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
     }
 
     @Override

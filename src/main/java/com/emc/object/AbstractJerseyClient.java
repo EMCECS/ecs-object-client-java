@@ -159,7 +159,13 @@ public abstract class AbstractJerseyClient {
                 Invocation.Builder builder = buildRequest(client, request);
 
                 // jersey requires content-type for entity requests
-                return builder.method(request.getMethod().toString(), Entity.entity(entity, contentType));
+                // NOTE: Jersey 2's JerseyInvocation.storeEntity(Entity) calls request.variant(entity.getVariant()),
+                // which in turn REMOVES the Content-Encoding header when the variant encoding is null.
+                // Preserve any Content-Encoding header by pushing it into the Entity's Variant.
+                String contentEncoding = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_ENCODING);
+                javax.ws.rs.core.Variant variant = new javax.ws.rs.core.Variant(
+                        javax.ws.rs.core.MediaType.valueOf(contentType), (String) null, contentEncoding);
+                return builder.method(request.getMethod().toString(), Entity.entity(entity, variant));
             } else { // non-entity request method
 
                 // can't send content with non-entity methods (GET, HEAD, etc.)
