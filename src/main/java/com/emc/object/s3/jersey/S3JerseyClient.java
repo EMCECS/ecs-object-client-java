@@ -221,7 +221,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
      */
     @Override
     public void destroy() {
-        SmartClientFactory.destroy(client, smartConfig);
+        SmartClientFactory.destroy(client);
     }
 
     public LoadBalancer getLoadBalancer() {
