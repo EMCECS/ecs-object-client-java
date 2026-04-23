@@ -59,6 +59,20 @@ Ran every non-abstract test class one-by-one via `./gradlew test --tests <class>
 
 Final per-class sweep: 47 test classes, all PASS. Subsequent full `./gradlew test` run: **tests=1966 failures=0 errors=0 skipped=320**, `BUILD SUCCESSFUL`.
 
+### Cap-20844 one-by-one rerun (2026-04-23)
+Investigated the 11 originally-reported failures (6 × `testStream`, 2 × `S3EncryptionWithCompressionTest.{testStream,testCreateObjectByteArray}`, 2 × `testMpuAbortInMiddle`, plus one compression V4 variant). Running them individually all PASS — the original failures were a symptom of running under a fresh checkout where `src/test/resources/test.properties` was absent, which caused the tests to abort at the Assume guard before reaching the real assertion site. Once `test.properties` is populated the specific line-176 comparison no longer fails. (Note: `test.properties` is intentionally gitignored and must be copied from `test.properties.template` or from `smart-client-java/test.properties` before running live tests.)
+
+Running the full `./gradlew test` against the live ECS surfaced 4 secondary failures on `testCopyRangeAPI` (S3JerseyClientTest, S3JerseyClientV4Test, S3JerseyUrlConnectionTest, S3JerseyUrlConnectionV4Test). Root cause:
+
+- `testCopyRangeAPI` creates `TestObject_target_1` with a 2-second `x-emc-retention-period` to exercise the "key Target with retention" scenario. When the later SSE scenario trips an `Assume.assumeFalse` (lab ECS without D@RE license), JUnit 5 vintage engine would try to report the test as skipped. The `@After` cleanup then called `deleteObject` on the retained object, which ECS rejected with `ObjectUnderRetention` because the 2-second window had not yet elapsed. The combination of a skip assumption + cleanup failure produced a `TestCouldNotBeSkippedException` (MultipleFailureException wrapper) and the test was reported FAILED instead of SKIPPED.
+- Even when the D@RE scenario succeeded (test actually ran to completion ~3s), cleanup could still land within the ECS retention-window rounding boundary and intermittently fail with the same error.
+
+Fixes applied:
+1. `AbstractS3ClientTest.cleanUpBucket` — `deleteObject` calls are now routed through `deleteObjectTolerateRetention`, which retries for up to 10s with 500ms backoff when ECS returns "under retention". Applies to both the versioned and non-versioned cleanup paths, with a dedicated overload for `DeleteObjectRequest` so the existing `bypassGovernanceRetention`/`legalHold` handling is preserved.
+2. `S3JerseyClientTest.testCopyRangeAPI` — moved the D@RE license probe to the top of the test (before any retention objects are created) so the assumption fires cleanly when the lab ECS lacks the D@RE license.
+
+Final full-suite result: **tests=1966 failures=0 errors=0 skipped=307**, `BUILD SUCCESSFUL in 16m 52s`.
+
 ## Docs
 - [x] `report/plan.md`.
 - [x] `report/progress.md` (this file).

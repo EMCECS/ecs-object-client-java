@@ -3006,6 +3006,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                 key1 = "TestObject_source_1",
                 key2 = "TestObject_source_2";
 
+        // Probe for D@RE license availability up front, before we create any retention-protected
+        // objects. If the lab ECS doesn't have the D@RE license, step 7 below (SSE scenario) would
+        // trip an Assume and skip the test, but the @After cleanup would then fail because
+        // TestObject_target_1's 2-second retention may not have elapsed yet — yielding a
+        // TestCouldNotBeSkippedException instead of a clean skip.
+        String keyDareProbe = "TestObject_dare_probe";
+        try {
+            client.putObject(new PutObjectRequest(bucketName, keyDareProbe, keyDareProbe)
+                    .withObjectMetadata(new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256)));
+            client.deleteObject(bucketName, keyDareProbe);
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping testCopyRangeAPI: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
+
         // set up versioning.
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
 
