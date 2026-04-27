@@ -203,7 +203,11 @@ publishing {
     }
     repositories {
         maven {
-            url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            // OSSRH is EOL (June 30 2025). Use the Central Portal OSSRH Staging API
+            // compatibility service. Credentials must now be a Portal user token
+            // (generate at https://central.sonatype.com/account) — not the old OSSRH password.
+            name = 'centralPortalOssrhStaging'
+            url = 'https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/'
             credentials {
                 username = rootProject.findProperty('sonatypeUser') ?: ''
                 password = rootProject.findProperty('sonatypePass') ?: ''
@@ -213,7 +217,8 @@ publishing {
 }
 
 signing {
-    required { gradle.taskGraph.hasTask(':publishMavenJavaPublicationToMavenRepository') }
+    useGpgCmd()
+    required { gradle.taskGraph.hasTask(':publishMavenJavaPublicationToCentralPortalOssrhStagingRepository') }
     sign publishing.publications.mavenJava
 }
 
@@ -244,18 +249,88 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn test, publishMavenJavaPublicationToMavenRepository, gitPublishPush, distZip
+// After uploading via maven-publish (a "Maven-API-like" plugin that only does PUTs),
+// we must POST to the manual upload endpoint so the deployment becomes visible in the
+// Central Publisher Portal (https://central.sonatype.com/publishing/deployments).
+//
+// IMPORTANT details (verified against
+//   https://central.sonatype.org/publish/publish-portal-ossrh-staging-api/):
+//   - The POST must come from the SAME IP address as the PUT uploads.
+//   - The /manual/* endpoints require a "Bearer <base64(user:pass)>" header
+//     (NOT Basic) — Sonatype's own quirk. Same credentials as the PUT upload,
+//     different scheme keyword.
+//   - publishing_type defaults to user_managed: deployment lands in the Portal
+//     as a "Pending" deployment that you Publish or Drop manually in the UI.
+//     Pass ?publishing_type=automatic to auto-release if validation passes
+//     (do NOT use this for an RC — review first).
+task publishToPortal {
+    group = 'publishing'
+    description = 'Signals the OSSRH Staging API to transfer the staged deployment to the Central Publisher Portal for review/release'
+    dependsOn publishMavenJavaPublicationToCentralPortalOssrhStagingRepository
+    doLast {
+        def namespace   = project.group as String           // derived, not hard-coded
+        def portalUser  = rootProject.findProperty('sonatypeUser') ?: ''
+        def portalPass  = rootProject.findProperty('sonatypePass') ?: ''
+        if (!portalUser || !portalPass) {
+            throw new GradleException('sonatypeUser/sonatypePass not set — generate a Portal token at https://central.sonatype.com/account')
+        }
+        def endpoint = "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/${namespace}?publishing_type=user_managed"
+        def bearer   = java.util.Base64.encoder.encodeToString(
+                            "${portalUser}:${portalPass}".getBytes('UTF-8'))
+
+        logger.lifecycle("  Signalling Central Portal to transfer staged deployment for namespace: ${namespace}")
+        def conn = (java.net.HttpURLConnection) new URL(endpoint).openConnection()
+        try {
+            conn.requestMethod  = 'POST'
+            conn.connectTimeout =  30_000   //  30 s
+            conn.readTimeout    = 120_000   // 120 s — service may take time to inventory the repo
+            conn.setRequestProperty('Authorization', "Bearer ${bearer}")
+            conn.setRequestProperty('Content-Length', '0')
+            conn.setRequestProperty('Accept', 'application/json')
+            conn.connect()
+
+            def code = conn.responseCode
+            if (code in [200, 201, 202, 204]) {
+                logger.lifecycle("  Deployment transferred to Central Publisher Portal (HTTP ${code}).")
+                logger.lifecycle('  Review and publish at: https://central.sonatype.com/publishing/deployments')
+            } else {
+                def body = '(no body)'
+                try { if (conn.errorStream) body = new String(conn.errorStream.bytes, 'UTF-8') } catch (ignored) { }
+                def hint = (code == 401)
+                    ? '  → 401: Portal user token is invalid/expired. Regenerate at https://central.sonatype.com/account\n'
+                    : (code == 404)
+                        ? "  → 404: No staging repo found for IP. Did the upload actually run? Check that signing succeeded.\n"
+                        : ''
+                throw new GradleException(
+                    "Failed to transfer deployment to Central Publisher Portal: HTTP ${code}\n" +
+                    "${hint}${body}\n" +
+                    'Search staged repos with:\n' +
+                    "  curl -H 'Authorization: Bearer ${'<token>'}' \\\n" +
+                    "       'https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?ip=any&profile_id=${namespace}'")
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+}
+
+tasks.release.dependsOn test, publishToPortal, gitPublishPush, distZip
 
 clean {
     delete aggregatedDocsDir
 }
 
+task runDemo(type: JavaExec, dependsOn: testClasses) {
+    group       = 'Demo'
+    description = 'Runs EcsClientDemo against a live ECS cluster (configure via test.properties)'
+    classpath   = sourceSets.test.runtimeClasspath
+    mainClass   = 'com.emc.object.demo.EcsClientDemo'
+}
+
 // allow typing in credentials
 // note: this only works when run without the Gradle daemon (--no-daemon)
 gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(':publishMavenJavaPublicationToMavenRepository')) {
-        if (!rootProject.hasProperty('signingSecretKeyRingFile'))
-            rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
+    if (taskGraph.hasTask(':publishMavenJavaPublicationToCentralPortalOssrhStagingRepository')) {
         if (!rootProject.hasProperty('signingKeyId'))
             rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
         if (!rootProject.hasProperty('signingPass'))
@@ -265,8 +340,9 @@ gradle.taskGraph.whenReady { taskGraph ->
         if (!rootProject.hasProperty('sonatypePass'))
             rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
         ext.'signing.keyId' = rootProject.ext.signingKeyId
-        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
         ext.'signing.password' = rootProject.ext.signingPass
+        ext.'signing.gnupg.keyName'    = rootProject.ext.signingKeyId
+        ext.'signing.gnupg.passphrase' = rootProject.ext.signingPass
     }
     if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
         if (!rootProject.hasProperty('gitUsername'))
