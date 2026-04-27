@@ -62,7 +62,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client-ecs:3.1.0-rc.1'
+    implementation 'com.emc.ecs:smart-client-ecs:4.0.0-rc.2'
     implementation 'org.glassfish.jersey.core:jersey-client:2.47'
     implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.47'
     implementation 'org.glassfish.jersey.inject:jersey-hk2:2.47'
