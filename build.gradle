@@ -29,7 +29,7 @@ import com.github.jk1.license.render.InventoryHtmlReportRenderer
 plugins {
     id 'idea'
     id 'eclipse'
-    id 'java'
+    id 'java-library'
     id 'jacoco'
     id 'com.github.jk1.dependency-license-report' version '2.9'
     id 'distribution'
@@ -62,7 +62,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client-ecs:4.0.0-rc.2'
+    api 'com.emc.ecs:smart-client-ecs:4.0.0-rc.2'
     implementation 'org.glassfish.jersey.core:jersey-client:2.47'
     implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.47'
     implementation 'org.glassfish.jersey.inject:jersey-hk2:2.47'
