@@ -26,10 +26,13 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.codec.CodecChain;
-import com.emc.object.s3.S3ObjectMetadata;
-import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.jersey.SizeOverrideWriter;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientResponseContext;
@@ -43,13 +46,10 @@ import javax.ws.rs.ext.WriterInterceptorContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import com.emc.codec.CodecChain;
+import com.emc.object.s3.S3ObjectMetadata;
+import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
 @javax.annotation.Priority(javax.ws.rs.Priorities.USER + 100) // must run AFTER ChecksumFilter so that the checksum is computed over the on-the-wire (encoded) bytes on both outbound and inbound
 public class CodecFilter implements WriterInterceptor, ClientResponseFilter, ReaderInterceptor {
@@ -94,12 +94,45 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
             DanglingOutputStream danglingStream = new DanglingOutputStream();
             OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
 
-            // add pre-stream encode metadata
-            context.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
+            // NOTE: do NOT add encode metadata to context.getHeaders() here.
+            // With HttpUrlConnectorProvider, Jersey's CommittingOutputStream defers the
+            // setOutboundHeaders() callback until the first byte is written. If we add
+            // x-amz-meta-* headers to context.getHeaders() now, they will be copied to
+            // the HttpURLConnection and sent to the server, even though they were not
+            // present when the request was signed — causing a V2/V4 signature mismatch.
+            // The metadata stored in userMeta is sent via the subsequent CopyObject
+            // metadata-update request instead (see S3EncryptionClient.putObject).
 
-            // connect the dangling stream and wrap the output
+            // connect the dangling stream and wrap the output.
+            // Wrap with a stream that strips Content-Length before the first write.
+            // SizeOverrideWriter.writeTo() adds Content-Length to context.getHeaders()
+            // (possibly -1 for unpredictable sizes). With allowRestrictedHeaders=true
+            // (needed for V4 Host header), this leaks through HttpURLConnection's
+            // setOutboundHeaders alongside Transfer-Encoding: chunked, which is invalid
+            // and can cause server-side issues. Stripping it here ensures only chunked
+            // encoding is used for encrypted uploads.
             OutputStream originalOut = context.getOutputStream();
-            danglingStream.setOutputStream(originalOut);
+            final MultivaluedMap<String, Object> headers = context.getHeaders();
+            OutputStream safeOut = new FilterOutputStream(originalOut) {
+                private boolean cleaned = false;
+                @Override
+                public void write(int b) throws IOException {
+                    stripContentLength();
+                    out.write(b);
+                }
+                @Override
+                public void write(byte[] b, int off, int len) throws IOException {
+                    stripContentLength();
+                    out.write(b, off, len);
+                }
+                private void stripContentLength() {
+                    if (!cleaned) {
+                        cleaned = true;
+                        headers.remove("Content-Length");
+                    }
+                }
+            };
+            danglingStream.setOutputStream(safeOut);
             context.setOutputStream(encodeStream);
 
             try {

@@ -24,11 +24,7 @@ public class S3SignerV4 extends S3Signer {
     private static final String AMZ_DATE_FORMAT_SHORT = "yyyyMMdd";
     private static final long PRESIGN_URL_MAX_EXPIRATION_SECONDS = 60 * 60 * 24 * 7;
     private static final String HASHED_EMPTY_PAYLOAD = hexEncode(hash256(""));
-
-    private static final SortedSet<String> excludedSignedHeaders = new TreeSet(Arrays.asList(
-        "authorization"
-    ));
-
+    
     public S3SignerV4(S3Config s3Config) {
         super(s3Config);
     }
@@ -185,8 +181,16 @@ public class S3SignerV4 extends S3Signer {
 
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
-            if (!excludedSignedHeaders.contains(lcHeader))
+            // Only sign headers that are guaranteed to arrive at the server unchanged.
+            // HTTP connectors (e.g. HttpUrlConnectorProvider) may modify standard headers
+            // such as Content-Length, User-Agent, Accept, and Transfer-Encoding after
+            // signing, which causes V4 signature mismatches. Following AWS SDK conventions,
+            // we sign: host (required), content-type, content-md5, and all x-amz-/x-emc-
+            // prefixed headers.
+            if (lcHeader.equals("host") || lcHeader.equals("content-type") || lcHeader.equals("content-md5")
+                    || lcHeader.startsWith(S3Constants.AMZ_PREFIX) || lcHeader.startsWith(RestUtil.EMC_PREFIX)) {
                 canonicalizedHeaders.put(lcHeader, trimAndJoin(headers.get(header), ","));
+            }
         }
 
         return canonicalizedHeaders;

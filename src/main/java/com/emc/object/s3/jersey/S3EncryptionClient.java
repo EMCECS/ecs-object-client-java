@@ -26,19 +26,37 @@
  */
 package com.emc.object.s3.jersey;
 
+import java.io.InputStream;
+import java.net.URL;
+import java.util.Map;
+
+import org.glassfish.jersey.client.spi.ConnectorProvider;
+
 import com.emc.codec.CodecChain;
 import com.emc.codec.encryption.DoesNotNeedRekeyException;
 import com.emc.codec.encryption.EncryptionCodec;
 import com.emc.object.EncryptionConfig;
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3ObjectMetadata;
-import com.emc.object.s3.bean.*;
-import com.emc.object.s3.request.*;
+import com.emc.object.s3.bean.AccessControlList;
+import com.emc.object.s3.bean.CompleteMultipartUploadResult;
+import com.emc.object.s3.bean.CopyObjectResult;
+import com.emc.object.s3.bean.CopyPartResult;
+import com.emc.object.s3.bean.GetObjectResult;
+import com.emc.object.s3.bean.InitiateMultipartUploadResult;
+import com.emc.object.s3.bean.MultipartPartETag;
+import com.emc.object.s3.bean.PutObjectResult;
+import com.emc.object.s3.request.AbortMultipartUploadRequest;
+import com.emc.object.s3.request.CompleteMultipartUploadRequest;
+import com.emc.object.s3.request.CopyObjectRequest;
+import com.emc.object.s3.request.CopyPartRequest;
+import com.emc.object.s3.request.GetObjectMetadataRequest;
+import com.emc.object.s3.request.GetObjectRequest;
+import com.emc.object.s3.request.InitiateMultipartUploadRequest;
+import com.emc.object.s3.request.PresignedUrlRequest;
+import com.emc.object.s3.request.PutObjectRequest;
+import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.RestUtil;
-
-import java.io.InputStream;
-import java.net.URL;
-import java.util.Map;
 
 /**
  * Implements client-side encryption on top of the S3 API.
@@ -105,7 +123,11 @@ public class S3EncryptionClient extends S3JerseyClient {
     private EncryptionConfig encryptionConfig;
 
     public S3EncryptionClient(S3Config s3Config, EncryptionConfig encryptionConfig) {
-        super(s3Config);
+        this(s3Config, null, encryptionConfig);
+    }
+
+    public S3EncryptionClient(S3Config s3Config, ConnectorProvider connectorProvider, EncryptionConfig encryptionConfig) {
+        super(s3Config, connectorProvider);
         this.encryptionConfig = encryptionConfig;
 
         // create an encode chain based on parameters

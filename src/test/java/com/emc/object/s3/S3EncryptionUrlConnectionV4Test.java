@@ -1,15 +1,16 @@
 package com.emc.object.s3;
 
+import java.net.URI;
+
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
+import org.junit.Assert;
+import org.junit.Test;
+
 import com.emc.codec.CodecChain;
 import com.emc.object.EncryptionConfig;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.S3EncryptionClient;
 import com.emc.object.s3.jersey.S3JerseyClient;
-// URLConnectionClientHandler removed in Jersey 2.x migration
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.net.URI;
 
 public class S3EncryptionUrlConnectionV4Test extends S3EncryptionClientBasicTest {
     @Override
@@ -27,9 +28,10 @@ public class S3EncryptionUrlConnectionV4Test extends S3EncryptionClientBasicTest
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        rclient = new S3JerseyClient(config);
+        HttpUrlConnectorProvider connectorProvider = new HttpUrlConnectorProvider();
+        rclient = new S3JerseyClient(config, connectorProvider);
         EncryptionConfig eConfig = createEncryptionConfig();
-        eclient = new S3EncryptionClient(config, eConfig);
+        eclient = new S3EncryptionClient(config, connectorProvider, eConfig);
         encodeSpec = eConfig.getEncryptionSpec();
         if (eConfig.isCompressionEnabled()) encodeSpec = eConfig.getCompressionSpec() + "," + encodeSpec;
         return eclient;

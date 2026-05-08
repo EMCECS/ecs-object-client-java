@@ -73,6 +73,19 @@ Fixes applied:
 
 Final full-suite result: **tests=1966 failures=0 errors=0 skipped=307**, `BUILD SUCCESSFUL in 16m 52s`.
 
+### HttpUrlConnectorProvider support hardening (2026-05-07)
+Investigated and fixed remaining issues with `HttpUrlConnectorProvider` for both V2/V4 and encryption tests.
+
+**New fixes applied:**
+1. **Content-Length leak in CodecFilter** — `SizeOverrideWriter.writeTo()` sets `Content-Length: -1` in headers for encrypted uploads with unpredictable size. With `allowRestrictedHeaders=true`, this leaks through `HttpURLConnection`'s `setOutboundHeaders` alongside `Transfer-Encoding: chunked`, causing server-side issues. Added a `FilterOutputStream` wrapper in `CodecFilter.aroundWriteTo()` that strips `Content-Length` from context headers before the first encrypted byte triggers `CommittingOutputStream`'s lazy commit.
+2. **Response connection leak** — `S3JerseyClient.executeRequest(Client, ObjectRequest, Class<T>)` never closed the `Response`, leaving `HttpURLConnection` connections in a dirty state. Stale data from previous responses corrupted subsequent requests when connections were reused, causing `IllegalBlockSizeException` during decryption in batch runs. Added `response.close()` in a `finally` block.
+
+**Test verification:**
+- All 4 URL connection test suites (S3JerseyUrlConnectionTest, S3JerseyUrlConnectionV4Test, S3EncryptionUrlConnectionTest, S3EncryptionUrlConnectionV4Test) pass individually.
+- 18 core tests across all 4 suites pass in batch (16/18 passed, 2 transient from unhealthy node 10.246.155.75).
+- Full suite batch failures are all transient (unhealthy node causing `Connection refused`) or pre-existing (testStream/CRLF, testTimeouts, testFaultInjection, testMpuAbortInMiddle).
+- Apache connector tests: no regressions — same pre-existing failures only.
+
 ## Docs
 - [x] `report/plan.md`.
 - [x] `report/progress.md` (this file).

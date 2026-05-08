@@ -29,6 +29,7 @@ package com.emc.object.s3;
 import java.io.InputStream;
 import java.net.URI;
 
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -54,7 +55,7 @@ public class S3JerseyUrlConnectionTest extends S3JerseyClientTest {
             System.setProperty("http.proxyHost", proxyUri.getHost());
             System.setProperty("http.proxyPort", "" + proxyUri.getPort());
         }
-        return new S3JerseyClient(config);
+        return new S3JerseyClient(config, new HttpUrlConnectorProvider());
     }
 
     @Ignore // only run this test against a co-located ECS!
