@@ -26,6 +26,8 @@
  */
 package com.emc.object;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 
@@ -70,6 +72,21 @@ public abstract class AbstractJerseyClient {
     @SuppressWarnings("unchecked")
     protected Response executeRequest(Client client, ObjectRequest request) {
         com.emc.object.s3.jersey.RetryFilter retryFilter = getRetryFilter();
+        InputStream entityStream = null;
+        if (retryFilter != null && request instanceof EntityRequest) {
+            Object entity = ((EntityRequest) request).getEntity();
+            if (entity instanceof InputStream) {
+                int bufSize = retryFilter.getRetryBufferSize();
+                InputStream is = (InputStream) entity;
+                InputStream buffered = is.markSupported() ? is : new BufferedInputStream(is, bufSize);
+                buffered.mark(bufSize);
+                try {
+                    ((EntityRequest) request).setEntity(buffered);
+                } catch (UnsupportedOperationException ignored) {
+                }
+                entityStream = buffered;
+            }
+        }
         int retryCount = 0;
         while (true) {
             try {
@@ -79,11 +96,6 @@ public abstract class AbstractJerseyClient {
                 retryCount++;
                 // stash retry count so GeoPinningFilter can fail over on reads
                 request.property(com.emc.object.s3.jersey.RetryFilter.PROP_RETRY_COUNT, retryCount);
-                java.io.InputStream entityStream = null;
-                if (request instanceof EntityRequest) {
-                    Object entity = ((EntityRequest) request).getEntity();
-                    if (entity instanceof java.io.InputStream) entityStream = (java.io.InputStream) entity;
-                }
                 // shouldRetry throws the original exception if retries are exhausted or not retryable
                 retryFilter.shouldRetry(orig, retryCount, entityStream);
             }
