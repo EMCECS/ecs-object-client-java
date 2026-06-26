@@ -99,6 +99,11 @@ public class UploadPartRequest extends S3ObjectRequest implements EntityRequest 
         this.object = object;
     }
 
+    @Override
+    public void setEntity(Object entity) {
+        setObject(entity);
+    }
+
     public void setContentLength(Long contentLength) {
         this.contentLength = contentLength;
     }

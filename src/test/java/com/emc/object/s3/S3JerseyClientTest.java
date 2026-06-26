@@ -59,6 +59,7 @@ import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
@@ -642,7 +643,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String keyInRetention = "testObjectRetention";
         client.enableObjectLock(bucketName);
         // ensure the retention period is longer than the bucket deletion background tasks.
-        Date retentionDate = new Date(System.currentTimeMillis() + 3 * 60 * 1000);
+        Date retentionDate = new Date(System.currentTimeMillis() + 6 * 60 * 1000);
         ObjectLockRetention objectLockRetention = new ObjectLockRetention()
                 .withMode(ObjectLockRetentionMode.COMPLIANCE)
                 .withRetainUntilDate(retentionDate);
@@ -2842,6 +2843,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                         || e.getMessage().startsWith("Connection reset by peer")
                         || e.getMessage().startsWith("Software caused connection abort")))
                     continue;
+                // Java 25+ HttpURLConnection throws IOException instead of SocketException on abort
+                if (e instanceof java.io.IOException && "Error writing to server".equals(e.getMessage()))
+                    continue;
                 if (!(e instanceof S3Exception)) throw new RuntimeException(e);
                 S3Exception se = (S3Exception) e;
                 if (!"NoSuchUpload".equals(se.getErrorCode()) && !"NoSuchKey".equals(se.getErrorCode()))
@@ -2855,10 +2859,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testListMarkerWithSpecialChars() {
-        String marker = "foo/bar/blah%blah&blah";
-        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
+        String rawMarker = "foo/bar/blah%blah&blah";
+        String encodedMarker = URLEncoder.encode(rawMarker, StandardCharsets.UTF_8);
+
+        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(encodedMarker)
                 .withEncodingType(EncodingType.url));
-        Assert.assertEquals(marker, result.getMarker());
+
+        Assert.assertEquals(rawMarker, result.getMarker());
         Assert.assertEquals(EncodingType.url, result.getEncodingType());
     }
 

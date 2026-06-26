@@ -72,6 +72,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
         s3Config.setGeoPinningEnabled(true);
+        s3Config.setProperty(ObjectConfig.PROPERTY_DISABLE_HOST_UPDATE, "true");
         return s3Config;
     }
 

@@ -1,7 +1,2 @@
 rootProject.name = 'object-client'
 include 'geo-pin-cli'
-includeBuild('../smart-client-java') {
-    dependencySubstitution {
-        substitute module('com.emc.ecs:smart-client-ecs') using project(':smart-client-ecs')
-    }
-}
