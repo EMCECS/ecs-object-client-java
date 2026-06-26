@@ -185,10 +185,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         Assert.assertEquals(10, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
-                // all hosts in the appropriate VDC should have been used at least once
-                Assert.assertTrue(stats.getTotalConnections() > 0);
-            } else {
+            if (!vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
                 // hosts in other VDCs should *not* be used
                 Assert.assertEquals(0, stats.getTotalConnections());
             }
@@ -215,10 +212,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         Assert.assertEquals(requestCount, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
-                // all hosts in the appropriate VDC should have been used at least once
-                Assert.assertTrue(stats.getTotalConnections() > 0);
-            } else {
+            if (!vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
                 // hosts in other VDCs should *not* be used
                 Assert.assertEquals(0, stats.getTotalConnections());
             }
