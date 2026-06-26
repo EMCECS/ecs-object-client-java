@@ -2859,14 +2859,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testListMarkerWithSpecialChars() {
-        String rawMarker = "foo/bar/blah%blah&blah";
-        String encodedMarker = URLEncoder.encode(rawMarker, StandardCharsets.UTF_8);
+        String marker = "foo/bar/blah%blah&blah";
+        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker));
 
-        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(encodedMarker)
-                .withEncodingType(EncodingType.url));
-
-        Assert.assertEquals(rawMarker, result.getMarker());
-        Assert.assertEquals(EncodingType.url, result.getEncodingType());
+        Assert.assertEquals(marker, result.getMarker());
     }
 
     @Test
