@@ -72,6 +72,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
         s3Config.setGeoPinningEnabled(true);
+        s3Config.setProperty(ObjectConfig.PROPERTY_DISABLE_HOST_UPDATE, "true");
         return s3Config;
     }
 
@@ -185,7 +186,10 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         Assert.assertEquals(10, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            if (!vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
+            if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
+                // all hosts in the appropriate VDC should have been used at least once
+                Assert.assertTrue(stats.getTotalConnections() > 0);
+            } else {
                 // hosts in other VDCs should *not* be used
                 Assert.assertEquals(0, stats.getTotalConnections());
             }
@@ -212,7 +216,10 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         Assert.assertEquals(requestCount, loadBalancer.getTotalConnections());
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            if (!vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
+            if (vdcs.get(vdcIndex).equals(((VdcHost) stats).getVdc())) {
+                // all hosts in the appropriate VDC should have been used at least once
+                Assert.assertTrue(stats.getTotalConnections() > 0);
+            } else {
                 // hosts in other VDCs should *not* be used
                 Assert.assertEquals(0, stats.getTotalConnections());
             }
