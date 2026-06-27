@@ -6,6 +6,7 @@ import java.util.Properties;
 
 import javax.ws.rs.client.Client;
 
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,9 +47,6 @@ public class ExtendedConfigTest {
         return s3Config;
     }
 
-    // NOTE: In Jersey 2.x with Apache connector, connection pool settings are configured
-    //       through SmartClientFactory which sets up the Apache HttpClient 5.x connection manager.
-    //       This test verifies that a custom connection limit can be set via SmartConfig properties.
     @Test
     public void testApacheConnectionLimit() throws IOException {
         S3Config s3Config = loadTestConfig();
@@ -56,15 +54,18 @@ public class ExtendedConfigTest {
         int connectionLimitPerHost = 4; // non-default number
         int connectionLimitTotal = 39; // non-default number
 
-        // In Jersey 2.x, connection limits are set via SmartConfig properties
         s3Config.setProperty(SmartClientFactory.MAX_CONNECTIONS_PER_HOST, connectionLimitPerHost);
         s3Config.setProperty(SmartClientFactory.MAX_CONNECTIONS, connectionLimitTotal);
 
         TestS3JerseyClient s3Client = new TestS3JerseyClient(s3Config);
 
-        // verify the client was created successfully with custom config
+        // verify actual Apache connection pool settings were applied
         Client jerseyClient = s3Client.getClient();
-        Assert.assertNotNull(jerseyClient);
+        PoolingHttpClientConnectionManager cm = (PoolingHttpClientConnectionManager)
+                jerseyClient.getConfiguration().getProperty(SmartClientFactory.CONNECTION_MANAGER_PROPERTY_KEY);
+        Assert.assertNotNull("Apache connection manager not found in client config", cm);
+        Assert.assertEquals(connectionLimitPerHost, cm.getDefaultMaxPerRoute());
+        Assert.assertEquals(connectionLimitTotal, cm.getMaxTotal());
     }
 
     static class TestS3JerseyClient extends S3JerseyClient {

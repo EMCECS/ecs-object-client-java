@@ -17,10 +17,4 @@ build
 *.iws
 dependency-reduced-pom.xml
 .gradle
-# Local workspace files (not part of the repo)
-CLIENT_DEMO.md
-*.pptx
-src/test/java/com/emc/object/demo/
-video_tools/
 test.properties
-release-notes-*.md

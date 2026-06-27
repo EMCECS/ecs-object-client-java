@@ -320,13 +320,6 @@ clean {
     delete aggregatedDocsDir
 }
 
-task runDemo(type: JavaExec, dependsOn: testClasses) {
-    group       = 'Demo'
-    description = 'Runs EcsClientDemo against a live ECS cluster (configure via test.properties)'
-    classpath   = sourceSets.test.runtimeClasspath
-    mainClass   = 'com.emc.object.demo.EcsClientDemo'
-}
-
 // allow typing in credentials
 // note: this only works when run without the Gradle daemon (--no-daemon)
 gradle.taskGraph.whenReady { taskGraph ->

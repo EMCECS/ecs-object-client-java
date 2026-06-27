@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.emc.object.s3.jersey.S3JerseyClient;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.UploadPartRequest;
@@ -34,7 +35,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     @Override
     protected S3Client createS3Client() throws Exception {
         S3Config s3Config = createS3Config().withRetryEnabled(false);
-        this.jvmClient = new S3JerseyClient(s3Config);
+        this.jvmClient = new S3JerseyClient(s3Config, new HttpUrlConnectorProvider());
         return new S3JerseyClient(createS3Config().withRetryEnabled(false));
     }
 

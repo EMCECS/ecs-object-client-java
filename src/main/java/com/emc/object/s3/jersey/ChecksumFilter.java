@@ -42,8 +42,6 @@ import javax.xml.bind.DatatypeConverter;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Signer;
-import com.emc.object.s3.S3SignerV2;
-import com.emc.object.s3.S3SignerV4;
 import com.emc.object.util.ChecksumAlgorithm;
 import com.emc.object.util.ChecksumError;
 import com.emc.object.util.ChecksumValueImpl;
@@ -56,14 +54,9 @@ public class ChecksumFilter implements WriterInterceptor, ClientResponseFilter {
     private static final String PROP_WRITE_CHECKSUM = "com.emc.object.checksumFilter.writeChecksum";
 
     private S3Config s3Config;
-    private S3Signer signer;
 
     public ChecksumFilter(S3Config s3Config) {
         this.s3Config = s3Config;
-        if(s3Config.isUseV2Signer())
-            this.signer = new S3SignerV2(s3Config);
-        else
-            this.signer = new S3SignerV4(s3Config);
     }
 
     @Override

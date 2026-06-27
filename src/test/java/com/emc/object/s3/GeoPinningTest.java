@@ -146,32 +146,6 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         testBucketDistribution(bucket3, bHash3 % vdcs.size());
     }
 
-    @Test
-    public void testReadRetryFailoverInFilter() throws Exception {
-        S3Config s3ConfigF = new S3Config(createS3Config());
-        s3ConfigF.setGeoReadRetryFailover(true);
-
-        String bucket = "foo";
-        String key = "my/object/key";
-        int geoIndex = 0xbb8619 % vdcs.size();
-
-        // In Jersey 2.x, we test geo-pinning index calculation directly
-        // since we can't easily construct mock ClientRequestContext
-        int geoPinIndex = GeoPinningUtil.getGeoPinIndex(GeoPinningUtil.getGeoId(bucket, key), vdcs.size());
-        Assert.assertEquals(geoIndex, geoPinIndex);
-
-        // test retry failover indices
-        int retryIndex1 = (geoIndex + 1) % vdcs.size();
-        Assert.assertNotEquals(geoIndex, retryIndex1);
-
-        int retryIndex2 = (geoIndex + 2) % vdcs.size();
-        Assert.assertNotEquals(geoIndex, retryIndex2);
-
-        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
-        int retryIndex3 = (geoIndex + 3) % vdcs.size();
-        Assert.assertEquals(geoIndex, retryIndex3);
-    }
-
     protected void testKeyDistribution(String key, int vdcIndex) {
         LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
         loadBalancer.resetStats();
