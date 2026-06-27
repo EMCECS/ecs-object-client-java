@@ -80,10 +80,6 @@ public abstract class AbstractJerseyClient {
                 InputStream is = (InputStream) entity;
                 InputStream buffered = is.markSupported() ? is : new BufferedInputStream(is, bufSize);
                 buffered.mark(bufSize);
-                try {
-                    ((EntityRequest) request).setEntity(buffered);
-                } catch (UnsupportedOperationException ignored) {
-                }
                 entityStream = buffered;
             }
         }
