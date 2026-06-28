@@ -146,6 +146,46 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         testBucketDistribution(bucket3, bHash3 % vdcs.size());
     }
 
+    @Test
+    public void testReadRetryFailoverInFilter() throws Exception {
+        // create a separate client with geo-read-retry-failover enabled
+        S3Config s3ConfigF = createS3Config();
+        s3ConfigF.setGeoReadRetryFailover(true);
+        S3JerseyClient failoverClient = new S3JerseyClient(s3ConfigF);
+        Thread.sleep(500); // wait for polling daemon
+
+        try {
+            String key = "my/object/key";
+            int geoIndex = 0xbb8619 % vdcs.size();
+
+            // write the test object
+            failoverClient.putObject(getTestBucket(), key, "Hello GeoPinning!", "text/plain");
+
+            LoadBalancer loadBalancer = failoverClient.getLoadBalancer();
+            loadBalancer.resetStats();
+
+            // read the object 10 times — should all route to the geo-pinned VDC
+            for (int i = 0; i < 10; i++) {
+                failoverClient.readObject(getTestBucket(), key, String.class);
+            }
+
+            // verify no errors and total count
+            Assert.assertEquals(0, loadBalancer.getTotalErrors());
+            Assert.assertEquals(10, loadBalancer.getTotalConnections());
+
+            // verify reads are routed to the correct VDC
+            for (HostStats stats : loadBalancer.getHostStats()) {
+                if (vdcs.get(geoIndex).equals(((VdcHost) stats).getVdc())) {
+                    Assert.assertTrue(stats.getTotalConnections() > 0);
+                } else {
+                    Assert.assertEquals(0, stats.getTotalConnections());
+                }
+            }
+        } finally {
+            failoverClient.destroy();
+        }
+    }
+
     protected void testKeyDistribution(String key, int vdcIndex) {
         LoadBalancer loadBalancer = ((S3JerseyClient) client).getLoadBalancer();
         loadBalancer.resetStats();
