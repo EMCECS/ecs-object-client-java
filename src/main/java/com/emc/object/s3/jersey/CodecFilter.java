@@ -92,6 +92,16 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
             Map<String, String> metaBackup = new HashMap<>(userMeta);
             context.setProperty("com.emc.object.codecFilter.metaBackup", metaBackup);
 
+            // NOTE: do NOT add encode metadata to context.getHeaders() here.
+            // With HttpUrlConnectorProvider, Jersey's CommittingOutputStream defers the
+            // setOutboundHeaders() callback until the first byte is written. If we add
+            // x-amz-meta-* headers to context.getHeaders() now, they will be copied to
+            // the HttpURLConnection and sent to the server, even though they were not
+            // present when the request was signed — causing a V2/V4 signature mismatch.
+            // The metadata stored in userMeta is sent via the subsequent CopyObject
+            // metadata-update request instead (see S3EncryptionClient.putObject).
+
+            // connect the dangling stream and wrap the output.
             // Wrap with a stream that strips Content-Length before the first write.
             // SizeOverrideWriter.writeTo() adds Content-Length to context.getHeaders()
             // (possibly -1 for unpredictable sizes). With allowRestrictedHeaders=true
@@ -121,29 +131,7 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
                 }
             };
 
-            // wire encode stream directly to safeOut (no DanglingOutputStream needed
-            // since both streams are created in the same logic block)
             OutputStream encodeStream = encodeChain.getEncodeStream(safeOut, userMeta);
-
-            // add pre-stream encode metadata to outbound headers so that if the initial
-            // write succeeds but the subsequent copy-update fails, the object still has
-            // the IV/DEK headers needed for decryption
-            context.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
-
-            // re-sign the request because the new x-amz-meta-* headers must be covered
-            // by the V2/V4 signature (same pattern as ChecksumFilter)
-            S3Signer stashedSigner = (S3Signer) context.getProperty(AuthorizationFilter.PROP_SIGNER);
-            if (stashedSigner != null) {
-                String method = (String) context.getProperty(AuthorizationFilter.PROP_SIGN_METHOD);
-                URI uri = (URI) context.getProperty(AuthorizationFilter.PROP_SIGN_URI);
-                String resource = (String) context.getProperty(AuthorizationFilter.PROP_SIGN_RESOURCE);
-                @SuppressWarnings("unchecked")
-                Map<String, String> parameters = (Map<String, String>) context.getProperty(AuthorizationFilter.PROP_SIGN_PARAMETERS);
-                @SuppressWarnings({"unchecked", "rawtypes"})
-                Map<String, List<Object>> signingHeaders = (Map) context.getHeaders();
-                stashedSigner.resign(method, uri, resource, parameters, signingHeaders);
-            }
-
             context.setOutputStream(encodeStream);
 
             try {
