@@ -30,8 +30,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Map;
 
-import org.glassfish.jersey.client.spi.ConnectorProvider;
-
 import com.emc.codec.CodecChain;
 import com.emc.codec.encryption.DoesNotNeedRekeyException;
 import com.emc.codec.encryption.EncryptionCodec;
@@ -123,11 +121,7 @@ public class S3EncryptionClient extends S3JerseyClient {
     private EncryptionConfig encryptionConfig;
 
     public S3EncryptionClient(S3Config s3Config, EncryptionConfig encryptionConfig) {
-        this(s3Config, null, encryptionConfig);
-    }
-
-    public S3EncryptionClient(S3Config s3Config, ConnectorProvider connectorProvider, EncryptionConfig encryptionConfig) {
-        super(s3Config, connectorProvider);
+        super(s3Config);
         this.encryptionConfig = encryptionConfig;
 
         // create an encode chain based on parameters

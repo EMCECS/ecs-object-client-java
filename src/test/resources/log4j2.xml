@@ -11,8 +11,10 @@
         <Logger name="com.sun.jersey.api.client" level="info"/>
 
         <!-- signature debugging -->
+        <!--
         <Logger name="com.emc.object.s3.S3Signer" level="debug"/>
         <Logger name="com.emc.object.s3.jersey.ErrorFilter" level="debug"/>
+        -->
 
         <!-- request debugging -->
         <!--

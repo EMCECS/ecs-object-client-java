@@ -182,11 +182,8 @@ public class S3SignerV4 extends S3Signer {
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
             // Only sign headers that are guaranteed to arrive at the server unchanged.
-            // HTTP connectors (e.g. HttpUrlConnectorProvider) may modify standard headers
-            // such as Content-Length, User-Agent, Accept, and Transfer-Encoding after
-            // signing, which causes V4 signature mismatches. Following AWS SDK conventions,
-            // we sign: host (required), content-type, content-md5, and all x-amz-/x-emc-
-            // prefixed headers.
+            // Following AWS SDK conventions, we sign: host (required), content-type,
+            // content-md5, and all x-amz-/x-emc- prefixed headers.
             if (lcHeader.equals("host") || lcHeader.equals("content-type") || lcHeader.equals("content-md5")
                     || lcHeader.startsWith(S3Constants.AMZ_PREFIX) || lcHeader.startsWith(RestUtil.EMC_PREFIX)) {
                 canonicalizedHeaders.put(lcHeader, trimAndJoin(headers.get(header), ","));

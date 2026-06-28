@@ -29,8 +29,10 @@ package com.emc.object.s3.jersey;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -48,6 +50,7 @@ import org.slf4j.LoggerFactory;
 
 import com.emc.codec.CodecChain;
 import com.emc.object.s3.S3ObjectMetadata;
+import com.emc.object.s3.S3Signer;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
@@ -89,11 +92,6 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
             Map<String, String> metaBackup = new HashMap<>(userMeta);
             context.setProperty("com.emc.object.codecFilter.metaBackup", metaBackup);
 
-            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
-            // a "dangling" output stream and connect it in the interceptor
-            DanglingOutputStream danglingStream = new DanglingOutputStream();
-            OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
-
             // NOTE: do NOT add encode metadata to context.getHeaders() here.
             // With HttpUrlConnectorProvider, Jersey's CommittingOutputStream defers the
             // setOutboundHeaders() callback until the first byte is written. If we add
@@ -132,7 +130,8 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
                     }
                 }
             };
-            danglingStream.setOutputStream(safeOut);
+
+            OutputStream encodeStream = encodeChain.getEncodeStream(safeOut, userMeta);
             context.setOutputStream(encodeStream);
 
             try {
@@ -146,10 +145,9 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
                 // make sure we clear the content-length override for this thread if we set it
                 SizeOverrideWriter.setEntitySize(null);
             }
-            return;
+        } else {
+            context.proceed();
         }
-
-        context.proceed();
     }
 
     @SuppressWarnings("unchecked")
@@ -222,30 +220,4 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
         return this;
     }
 
-    private static class DanglingOutputStream extends FilterOutputStream {
-        private static final OutputStream BOGUS_STREAM = new OutputStream() {
-            @Override
-            public void write(int b) throws IOException {
-                throw new RuntimeException("you didn't connect a dangling output stream!");
-            }
-        };
-
-        DanglingOutputStream() {
-            super(BOGUS_STREAM);
-        }
-
-        void setOutputStream(OutputStream out) {
-            this.out = out;
-        }
-
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            out.write(b, off, len);
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            throw new UnsupportedOperationException("single-byte write called!");
-        }
-    }
 }

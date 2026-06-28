@@ -148,28 +148,42 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testReadRetryFailoverInFilter() throws Exception {
-        S3Config s3ConfigF = new S3Config(createS3Config());
+        // create a separate client with geo-read-retry-failover enabled
+        S3Config s3ConfigF = createS3Config();
         s3ConfigF.setGeoReadRetryFailover(true);
+        S3JerseyClient failoverClient = new S3JerseyClient(s3ConfigF);
+        Thread.sleep(500); // wait for polling daemon
 
-        String bucket = "foo";
-        String key = "my/object/key";
-        int geoIndex = 0xbb8619 % vdcs.size();
+        try {
+            String key = "my/object/key";
+            int geoIndex = 0xbb8619 % vdcs.size();
 
-        // In Jersey 2.x, we test geo-pinning index calculation directly
-        // since we can't easily construct mock ClientRequestContext
-        int geoPinIndex = GeoPinningUtil.getGeoPinIndex(GeoPinningUtil.getGeoId(bucket, key), vdcs.size());
-        Assert.assertEquals(geoIndex, geoPinIndex);
+            // write the test object
+            failoverClient.putObject(getTestBucket(), key, "Hello GeoPinning!", "text/plain");
 
-        // test retry failover indices
-        int retryIndex1 = (geoIndex + 1) % vdcs.size();
-        Assert.assertNotEquals(geoIndex, retryIndex1);
+            LoadBalancer loadBalancer = failoverClient.getLoadBalancer();
+            loadBalancer.resetStats();
 
-        int retryIndex2 = (geoIndex + 2) % vdcs.size();
-        Assert.assertNotEquals(geoIndex, retryIndex2);
+            // read the object 10 times — should all route to the geo-pinned VDC
+            for (int i = 0; i < 10; i++) {
+                failoverClient.readObject(getTestBucket(), key, String.class);
+            }
 
-        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
-        int retryIndex3 = (geoIndex + 3) % vdcs.size();
-        Assert.assertEquals(geoIndex, retryIndex3);
+            // verify no errors and total count
+            Assert.assertEquals(0, loadBalancer.getTotalErrors());
+            Assert.assertEquals(10, loadBalancer.getTotalConnections());
+
+            // verify reads are routed to the correct VDC
+            for (HostStats stats : loadBalancer.getHostStats()) {
+                if (vdcs.get(geoIndex).equals(((VdcHost) stats).getVdc())) {
+                    Assert.assertTrue(stats.getTotalConnections() > 0);
+                } else {
+                    Assert.assertEquals(0, stats.getTotalConnections());
+                }
+            }
+        } finally {
+            failoverClient.destroy();
+        }
     }
 
     protected void testKeyDistribution(String key, int vdcIndex) {

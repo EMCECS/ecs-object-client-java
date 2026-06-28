@@ -37,8 +37,6 @@ import com.emc.rest.smart.ecs.EcsHostListProvider;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.rest.smart.jersey.SmartFilter;
 import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.HttpUrlConnectorProvider;
-import org.glassfish.jersey.client.spi.ConnectorProvider;
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
@@ -117,13 +115,7 @@ import java.util.*;
  * <pre>
  *     System.setProperty(ReaderWriter.BUFFER_SIZE_SYSTEM_PROPERTY, "" + 128 * 1024); // 128k
  * </pre>
- * You can also try using Jersey's HttpUrlConnectorProvider, but be aware that this connector does not support
- * <code>Expect: 100-Continue</code> behavior if that is important to you. You should also increase
- * <code>http.maxConnections</code> to match your thread count.
- * <pre>
- *     System.setProperty("http.maxConnections", "" + 32); // if you have 32 threads
- *     S3Client s3Client = new S3JerseyClient(configX, new HttpUrlConnectorProvider());
- * </pre>
+ * This client always uses the Apache HTTP connector.
  */
 public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
@@ -136,26 +128,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected RetryFilter retryFilter;
 
     public S3JerseyClient(S3Config s3Config) {
-        this(s3Config, null);
-    }
-
-    /**
-     * Provide a specific Jersey {@link ConnectorProvider} implementation (default is
-     * {@link org.glassfish.jersey.apache.connector.ApacheConnectorProvider}). If you experience
-     * performance problems, you might try using
-     * {@link org.glassfish.jersey.client.HttpUrlConnectorProvider}, but note that it will not support the
-     * Expect: 100-Continue header and upload size is limited to 2GB. Also note that when using that
-     * provider, you should set the "http.maxConnections" system property to match your thread count
-     * (default is only 5).
-     */
-    public S3JerseyClient(S3Config s3Config, ConnectorProvider connectorProvider) {
         super(new S3Config(s3Config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
-        // HttpURLConnection restricts certain headers (Host, Content-Length, etc.) by default.
-        // V4 signing requires the Host header to pass through unchanged, so we must allow
-        // restricted headers when using HttpUrlConnectorProvider.
-        if (connectorProvider instanceof HttpUrlConnectorProvider) {
-            System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
-        }
         this.s3Config = (S3Config) super.getObjectConfig();
         if (this.s3Config.isUseV2Signer())
             this.signer = new S3SignerV2(this.s3Config);
@@ -169,11 +142,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         smartConfig.setProperty(ClientProperties.CHUNKED_ENCODING_SIZE, this.s3Config.getChunkedEncodingSize());
 
         // creates a standard (non-load-balancing) jersey client
-        if (connectorProvider == null) {
-            client = SmartClientFactory.createStandardClient(smartConfig);
-        } else {
-            client = SmartClientFactory.createStandardClient(smartConfig, connectorProvider);
-        }
+        client = SmartClientFactory.createStandardClient(smartConfig);
 
         if (this.s3Config.isSmartClient()) {
             // SMART CLIENT SETUP
@@ -208,11 +177,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
             // S.C. - CLIENT CREATION
             // create a load-balancing jersey client
-            if (connectorProvider == null) {
-                client = SmartClientFactory.createSmartClient(smartConfig);
-            } else {
-                client = SmartClientFactory.createSmartClient(smartConfig, connectorProvider);
-            }
+            client = SmartClientFactory.createSmartClient(smartConfig);
         }
 
         // In Jersey 2.x, filters are registered on the client (order matters for request filters:

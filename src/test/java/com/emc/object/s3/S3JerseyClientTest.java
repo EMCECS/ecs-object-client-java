@@ -2860,9 +2860,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testListMarkerWithSpecialChars() {
         String marker = "foo/bar/blah%blah&blah";
-        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker));
-
+        ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
+                .withEncodingType(EncodingType.url));
         Assert.assertEquals(marker, result.getMarker());
+        Assert.assertEquals(EncodingType.url, result.getEncodingType());
     }
 
     @Test

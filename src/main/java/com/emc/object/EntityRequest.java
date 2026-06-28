@@ -34,8 +34,4 @@ public interface EntityRequest {
     Long getContentLength();
 
     boolean isChunkable();
-
-    default void setEntity(Object entity) {
-        throw new UnsupportedOperationException("setEntity not supported on this request type");
-    }
 }
