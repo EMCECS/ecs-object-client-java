@@ -86,6 +86,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.16'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation 'org.junit.vintage:junit-vintage-engine:5.11.4'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
     testImplementation 'org.apache.httpcomponents.client5:httpclient5:5.4.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.16'

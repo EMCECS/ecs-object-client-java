@@ -26,6 +26,7 @@
  */
 package com.emc.object.s3;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,7 +38,9 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import com.emc.object.ObjectConfig;
+import com.emc.object.s3.jersey.GeoPinningFilter;
 import com.emc.object.s3.jersey.GeoPinningRule;
+import com.emc.object.s3.jersey.RetryFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.Host;
@@ -148,42 +151,45 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testReadRetryFailoverInFilter() throws Exception {
-        // create a separate client with geo-read-retry-failover enabled
         S3Config s3ConfigF = createS3Config();
         s3ConfigF.setGeoReadRetryFailover(true);
-        S3JerseyClient failoverClient = new S3JerseyClient(s3ConfigF);
-        Thread.sleep(500); // wait for polling daemon
+        GeoPinningFilter filter = new GeoPinningFilter(s3ConfigF);
 
-        try {
-            String key = "my/object/key";
-            int geoIndex = 0xbb8619 % vdcs.size();
+        String bucket = getTestBucket();
+        String key = "my/object/key";
+        int geoIndex = 0xbb8619 % vdcs.size();
+        URI uri = URI.create("http://localhost/test");
 
-            // write the test object
-            failoverClient.putObject(getTestBucket(), key, "Hello GeoPinning!", "text/plain");
+        // no retry: routed to the primary geo-pinned VDC
+        TestClientRequestContexts.StubClientRequestContext ctx0 =
+                TestClientRequestContexts.request("GET", uri);
+        ctx0.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        ctx0.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
+        filter.filter(ctx0);
+        Vdc primary = (Vdc) ctx0.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
+        Assert.assertEquals(vdcs.get(geoIndex), primary);
 
-            LoadBalancer loadBalancer = failoverClient.getLoadBalancer();
-            loadBalancer.resetStats();
+        // retry 1: must failover to a different VDC
+        TestClientRequestContexts.StubClientRequestContext ctx1 =
+                TestClientRequestContexts.request("GET", uri);
+        ctx1.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        ctx1.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
+        ctx1.setProperty(RetryFilter.PROP_RETRY_COUNT, 1);
+        filter.filter(ctx1);
+        Vdc failover1 = (Vdc) ctx1.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
+        Assert.assertNotEquals("retry 1 must use a different VDC", primary, failover1);
+        Assert.assertEquals(vdcs.get((geoIndex + 1) % vdcs.size()), failover1);
 
-            // read the object 10 times — should all route to the geo-pinned VDC
-            for (int i = 0; i < 10; i++) {
-                failoverClient.readObject(getTestBucket(), key, String.class);
-            }
-
-            // verify no errors and total count
-            Assert.assertEquals(0, loadBalancer.getTotalErrors());
-            Assert.assertEquals(10, loadBalancer.getTotalConnections());
-
-            // verify reads are routed to the correct VDC
-            for (HostStats stats : loadBalancer.getHostStats()) {
-                if (vdcs.get(geoIndex).equals(((VdcHost) stats).getVdc())) {
-                    Assert.assertTrue(stats.getTotalConnections() > 0);
-                } else {
-                    Assert.assertEquals(0, stats.getTotalConnections());
-                }
-            }
-        } finally {
-            failoverClient.destroy();
-        }
+        // retry 2: must failover to yet another VDC
+        TestClientRequestContexts.StubClientRequestContext ctx2 =
+                TestClientRequestContexts.request("GET", uri);
+        ctx2.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        ctx2.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
+        ctx2.setProperty(RetryFilter.PROP_RETRY_COUNT, 2);
+        filter.filter(ctx2);
+        Vdc failover2 = (Vdc) ctx2.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
+        Assert.assertNotEquals("retry 2 must differ from retry 1", failover1, failover2);
+        Assert.assertEquals(vdcs.get((geoIndex + 2) % vdcs.size()), failover2);
     }
 
     protected void testKeyDistribution(String key, int vdcIndex) {
