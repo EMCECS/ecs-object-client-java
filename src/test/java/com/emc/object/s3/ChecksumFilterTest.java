@@ -153,7 +153,7 @@ public class ChecksumFilterTest {
         when(reqCtx.getProperty(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM)).thenReturn(null);
         when(reqCtx.getProperty(RestUtil.PROPERTY_VERIFY_READ_CHECKSUM)).thenReturn(Boolean.TRUE);
         when(respCtx.getHeaders()).thenReturn(headers);
-        when(respCtx.getEntityStream()).thenReturn(mock(InputStream.class));
+        when(respCtx.getEntityStream()).thenReturn(new ByteArrayInputStream(data));
 
         new ChecksumFilter(new S3Config()).filter(reqCtx, respCtx);
 

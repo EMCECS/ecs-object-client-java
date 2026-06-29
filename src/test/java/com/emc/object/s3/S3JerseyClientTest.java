@@ -112,7 +112,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         S3JerseyClient tempClient = new S3JerseyClient(config);
 
-        Thread.sleep(1000); // wait for poll to complete
+        Thread.sleep(3000); // wait for poll to complete
 
         // the client will clone the config, so we have to get new references
         vdc1 = tempClient.getS3Config().getVdcs().get(0);
