@@ -29,6 +29,7 @@ package com.emc.object.s3.request;
 import com.emc.object.Method;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.bean.EncodingType;
+import com.emc.object.util.RestUtil;
 
 import java.util.Map;
 
@@ -38,6 +39,7 @@ public class ListObjectsRequest extends AbstractBucketRequest {
     private Integer maxKeys;
     private String marker;
     private EncodingType encodingType;
+    private boolean urlEncodeMarker;
 
     public ListObjectsRequest(String bucketName) {
         super(Method.GET, bucketName, "", null);
@@ -49,7 +51,12 @@ public class ListObjectsRequest extends AbstractBucketRequest {
         if (prefix != null) paramMap.put(S3Constants.PARAM_PREFIX, prefix);
         if (delimiter != null) paramMap.put(S3Constants.PARAM_DELIMITER, delimiter);
         if (maxKeys != null) paramMap.put(S3Constants.PARAM_MAX_KEYS, maxKeys.toString());
-        if (marker != null) paramMap.put(S3Constants.PARAM_MARKER, marker);
+        if (marker != null) {
+            // When urlEncodeMarker is true, pre-encode the marker value so that
+            // generateRawQueryString() will double-encode it on the wire.
+            // ECS 4.4+ requires this double-encoding; ECS 4.3 does not.
+            paramMap.put(S3Constants.PARAM_MARKER, urlEncodeMarker ? RestUtil.urlEncode(marker) : marker);
+        }
         if (encodingType != null) paramMap.put(S3Constants.PARAM_ENCODING_TYPE, encodingType.toString());
         return paramMap;
     }
@@ -116,6 +123,19 @@ public class ListObjectsRequest extends AbstractBucketRequest {
 
     public ListObjectsRequest withEncodingType(EncodingType encodingType) {
         setEncodingType(encodingType);
+        return this;
+    }
+
+    public boolean isUrlEncodeMarker() {
+        return urlEncodeMarker;
+    }
+
+    public void setUrlEncodeMarker(boolean urlEncodeMarker) {
+        this.urlEncodeMarker = urlEncodeMarker;
+    }
+
+    public ListObjectsRequest withUrlEncodeMarker(boolean urlEncodeMarker) {
+        setUrlEncodeMarker(urlEncodeMarker);
         return this;
     }
 }

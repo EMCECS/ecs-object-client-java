@@ -489,6 +489,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public ListObjectsResult listObjects(ListObjectsRequest request) {
+        request.setUrlEncodeMarker(s3Config.isUrlEncodeMarker());
         ListObjectsResult result = executeRequest(client, request, ListObjectsResult.class);
         if (result.isTruncated() && result.getNextMarker() == null)
             result.setNextMarker(result.getObjects().get(result.getObjects().size() - 1).getKey());

@@ -2851,13 +2851,31 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     @Test
-    public void testListMarkerWithSpecialChars() {
+    public void testListMarkerWithSpecialCharsEcs44() {
         String marker = "foo/bar/blah%blah&blah";
+        Assert.assertTrue("urlEncodeMarker should be enabled by default",
+                ((S3JerseyClient) client).getS3Config().isUrlEncodeMarker());
         ListObjectsResult result = client.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
                 .withEncodingType(EncodingType.url));
         Assert.assertEquals(marker, result.getMarker());
         Assert.assertEquals(EncodingType.url, result.getEncodingType());
     }
+
+//    @Test
+//    public void testListMarkerWithSpecialCharsEcs43() throws Exception {
+//        String marker = "foo/bar/blah%blah&blah";
+//        S3Config config43 = createS3Config();
+//        config43.setUrlEncodeMarker(false);
+//        S3Client client43 = new S3JerseyClient(config43);
+//        try {
+//            ListObjectsResult result = client43.listObjects(new ListObjectsRequest(getTestBucket()).withMarker(marker)
+//                    .withEncodingType(EncodingType.url));
+//            Assert.assertEquals(marker, result.getMarker());
+//            Assert.assertEquals(EncodingType.url, result.getEncodingType());
+//        } finally {
+//            client43.destroy();
+//        }
+//    }
 
     @Test
     public void testListPagesNoDelimiter() {

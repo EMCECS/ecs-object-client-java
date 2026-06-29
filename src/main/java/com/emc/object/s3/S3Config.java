@@ -85,6 +85,7 @@ public class S3Config extends ObjectConfig<S3Config> {
     protected float faultInjectionRate = 0.0f;
     protected boolean signMetadataSearch = true;
     protected boolean useV2Signer = true;
+    protected boolean urlEncodeMarker = true;
 
     /**
      * Empty constructor for internal use only!
@@ -131,6 +132,7 @@ public class S3Config extends ObjectConfig<S3Config> {
         this.faultInjectionRate = other.faultInjectionRate;
         this.signMetadataSearch = other.signMetadataSearch;
         this.useV2Signer = other.useV2Signer;
+        this.urlEncodeMarker = other.urlEncodeMarker;
     }
 
     @Override
@@ -331,6 +333,24 @@ public class S3Config extends ObjectConfig<S3Config> {
         return this;
     }
 
+    @ConfigUriProperty
+    public boolean isUrlEncodeMarker() {
+        return urlEncodeMarker;
+    }
+
+    /**
+     * When true (default), URL-encodes the marker query parameter value before signing.
+     * Required for ECS 4.4+. Set to false for compatibility with ECS 4.3 and earlier.
+     */
+    public void setUrlEncodeMarker(boolean urlEncodeMarker) {
+        this.urlEncodeMarker = urlEncodeMarker;
+    }
+
+    public S3Config withUrlEncodeMarker(boolean urlEncodeMarker) {
+        setUrlEncodeMarker(urlEncodeMarker);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "S3Config{" +
@@ -344,6 +364,7 @@ public class S3Config extends ObjectConfig<S3Config> {
                 ", faultInjectionRate=" + faultInjectionRate +
                 ", signMetadataSearch=" + signMetadataSearch +
                 ", useV2Signer=" + useV2Signer +
+                ", urlEncodeMarker=" + urlEncodeMarker +
                 "} " + super.toString();
     }
 }
