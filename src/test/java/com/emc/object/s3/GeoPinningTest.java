@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.emc.object.AbstractJerseyClient;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -40,7 +41,6 @@ import org.junit.Test;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.GeoPinningFilter;
 import com.emc.object.s3.jersey.GeoPinningRule;
-import com.emc.object.s3.jersey.RetryFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.Host;
@@ -174,7 +174,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
                 TestClientRequestContexts.request("GET", uri);
         ctx1.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
         ctx1.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
-        ctx1.setProperty(RetryFilter.PROP_RETRY_COUNT, 1);
+        ctx1.setProperty(AbstractJerseyClient.PROP_RETRY_COUNT, 1);
         filter.filter(ctx1);
         Vdc failover1 = (Vdc) ctx1.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
         Assert.assertNotEquals("retry 1 must use a different VDC", primary, failover1);
@@ -185,7 +185,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
                 TestClientRequestContexts.request("GET", uri);
         ctx2.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
         ctx2.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
-        ctx2.setProperty(RetryFilter.PROP_RETRY_COUNT, 2);
+        ctx2.setProperty(AbstractJerseyClient.PROP_RETRY_COUNT, 2);
         filter.filter(ctx2);
         Vdc failover2 = (Vdc) ctx2.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
         Assert.assertNotEquals("retry 2 must differ from retry 1", failover1, failover2);
