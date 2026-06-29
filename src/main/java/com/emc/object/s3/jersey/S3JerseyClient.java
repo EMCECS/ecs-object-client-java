@@ -125,7 +125,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     protected S3Signer signer;
 
     protected SmartConfig smartConfig;
-    protected RetryFilter retryFilter;
 
     public S3JerseyClient(S3Config s3Config) {
         super(new S3Config(s3Config)); // deep-copy config so that two clients don't share the same host lists (SDK-122)
@@ -186,7 +185,6 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
         client.register(new NamespaceFilter(this.s3Config));
         client.register(new BucketFilter(this.s3Config));
         if (this.s3Config.isGeoPinningEnabled()) client.register(new GeoPinningFilter(this.s3Config));
-        if (this.s3Config.isRetryEnabled()) retryFilter = new RetryFilter(this.s3Config);
         client.register(new AuthorizationFilter(this.s3Config));
         if (this.s3Config.isChecksumEnabled()) client.register(new ChecksumFilter(this.s3Config));
         if (this.s3Config.getFaultInjectionRate() > 0.0f)
@@ -223,8 +221,23 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     }
 
     @Override
-    protected RetryFilter getRetryFilter() {
-        return retryFilter;
+    protected boolean isRetryEnabled() {
+        return s3Config.isRetryEnabled();
+    }
+
+    @Override
+    protected int getRetryLimit() {
+        return s3Config.getRetryLimit();
+    }
+
+    @Override
+    protected int getInitialRetryDelay() {
+        return s3Config.getInitialRetryDelay();
+    }
+
+    @Override
+    protected int getRetryBufferSize() {
+        return s3Config.getRetryBufferSize();
     }
 
     @Override

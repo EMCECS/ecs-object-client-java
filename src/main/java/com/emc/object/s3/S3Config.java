@@ -140,7 +140,7 @@ public class S3Config extends ObjectConfig<S3Config> {
 
     @Override
     public SmartConfig toSmartConfig() {
-        // disable Apache client's retry - retries will be governed by our config and RetryFilter
+        // disable Apache client's retry - retries will be governed by our config and AbstractJerseyClient
         return super.toSmartConfig().withProperty(SmartClientFactory.DISABLE_APACHE_RETRY, Boolean.TRUE);
     }
 

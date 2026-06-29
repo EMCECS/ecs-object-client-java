@@ -27,10 +27,12 @@
 package com.emc.object;
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
@@ -42,12 +44,15 @@ import org.glassfish.jersey.client.RequestEntityProcessing;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
 public abstract class AbstractJerseyClient {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractJerseyClient.class);
+
+    public static final String PROP_RETRY_COUNT = "com.emc.object.retryCount";
 
     protected ObjectConfig objectConfig;
 
@@ -62,21 +67,42 @@ public abstract class AbstractJerseyClient {
     }
 
     /**
-     * Override in subclasses that support retry to return a configured {@link com.emc.object.s3.jersey.RetryFilter}.
-     * Default is {@code null} (no retry).
+     * Override in subclasses that support retry. Default is {@code false} (no retry).
      */
-    protected com.emc.object.s3.jersey.RetryFilter getRetryFilter() {
-        return null;
+    protected boolean isRetryEnabled() {
+        return false;
+    }
+
+    /**
+     * Override in subclasses to provide the maximum number of retries.
+     */
+    protected int getRetryLimit() {
+        return 0;
+    }
+
+    /**
+     * Override in subclasses to provide the initial retry delay in milliseconds.
+     * Exponential backoff is applied: delay = initialRetryDelay * 2^(retryCount-1).
+     */
+    protected int getInitialRetryDelay() {
+        return 0;
+    }
+
+    /**
+     * Override in subclasses to provide the buffer size for marking input streams during retry.
+     */
+    protected int getRetryBufferSize() {
+        return 0;
     }
 
     @SuppressWarnings("unchecked")
     protected Response executeRequest(Client client, ObjectRequest request) {
-        com.emc.object.s3.jersey.RetryFilter retryFilter = getRetryFilter();
+        boolean retryEnabled = isRetryEnabled();
         InputStream entityStream = null;
-        if (retryFilter != null && request instanceof EntityRequest) {
+        if (retryEnabled && request instanceof EntityRequest) {
             Object entity = ((EntityRequest) request).getEntity();
             if (entity instanceof InputStream) {
-                int bufSize = retryFilter.getRetryBufferSize();
+                int bufSize = getRetryBufferSize();
                 InputStream is = (InputStream) entity;
                 InputStream buffered = is.markSupported() ? is : new BufferedInputStream(is, bufSize);
                 buffered.mark(bufSize);
@@ -88,14 +114,63 @@ public abstract class AbstractJerseyClient {
             try {
                 return unwrapAndExecute(client, request);
             } catch (RuntimeException orig) {
-                if (retryFilter == null) throw orig;
+                if (!retryEnabled) throw orig;
                 retryCount++;
                 // stash retry count so GeoPinningFilter can fail over on reads
-                request.property(com.emc.object.s3.jersey.RetryFilter.PROP_RETRY_COUNT, retryCount);
-                // shouldRetry throws the original exception if retries are exhausted or not retryable
-                retryFilter.shouldRetry(orig, retryCount, entityStream);
+                request.property(PROP_RETRY_COUNT, retryCount);
+                // checkRetry throws the original exception if retries are exhausted or not retryable
+                checkRetry(orig, retryCount, entityStream);
             }
         }
+    }
+
+    /**
+     * Checks whether the given exception is retryable and handles retry logic including
+     * exponential backoff. Throws the original exception if retries are exhausted or the
+     * error is not retryable.
+     */
+    private void checkRetry(RuntimeException orig, int retryCount, InputStream entityStream) {
+        Throwable t = orig;
+
+        // in this case, the exception was wrapped by Jersey
+        if (t instanceof ProcessingException) t = t.getCause();
+
+        if (t instanceof S3Exception) {
+            S3Exception se = (S3Exception) t;
+
+            // retry all 50x errors except 501 (not implemented)
+            if (se.getHttpCode() < 500 || se.getHttpCode() == 501) throw orig;
+
+            // retry all IO exceptions
+        } else if (!(t instanceof IOException)) throw orig;
+
+        // only retry retryLimit times
+        if (retryCount > getRetryLimit()) throw orig;
+
+        // attempt to reset InputStream
+        if (entityStream != null) {
+            try {
+                if (!entityStream.markSupported()) throw new IOException("stream does not support mark/reset");
+                entityStream.reset();
+            } catch (IOException e) {
+                log.warn("could not reset entity stream for retry: " + e);
+                throw orig;
+            }
+        }
+
+        // wait for retry delay with exponential backoff
+        int initialDelay = getInitialRetryDelay();
+        if (initialDelay > 0) {
+            int retryDelay = initialDelay * (int) Math.pow(2, retryCount - 1);
+            try {
+                log.debug("waiting {}ms before retry", retryDelay);
+                Thread.sleep(retryDelay);
+            } catch (InterruptedException e) {
+                log.warn("interrupted while waiting to retry: " + e.getMessage());
+            }
+        }
+
+        log.info("error received in response [{}], retrying ({} of {})...", new Object[] { t, retryCount, getRetryLimit() });
     }
 
     private Response unwrapAndExecute(Client client, ObjectRequest request) {

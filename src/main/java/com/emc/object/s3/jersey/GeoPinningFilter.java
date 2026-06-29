@@ -36,6 +36,7 @@ import javax.ws.rs.client.ClientRequestFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.emc.object.AbstractJerseyClient;
 import com.emc.object.Method;
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.S3Constants;
@@ -78,7 +79,7 @@ public class GeoPinningFilter implements ClientRequestFilter {
 
             // if this is a read and failover for retries is requested, round-robin the VDCs for each retry
             if (objectConfig.isGeoReadRetryFailover() && Method.GET.name().equalsIgnoreCase(requestContext.getMethod())) {
-                Integer retries = (Integer) requestContext.getProperty(RetryFilter.PROP_RETRY_COUNT);
+                Integer retries = (Integer) requestContext.getProperty(AbstractJerseyClient.PROP_RETRY_COUNT);
                 if (retries != null) {
                     int newIndex = (geoPinIndex + retries) % healthyVdcs.size();
                     log.info("geo-pin read retry #{}: failing over from primary VDC {} to VDC {}",
