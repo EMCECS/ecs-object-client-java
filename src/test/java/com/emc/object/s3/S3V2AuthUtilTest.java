@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.core.MultivaluedMap;
 import java.net.URI;
 import java.util.Date;
@@ -121,23 +122,26 @@ public class S3V2AuthUtilTest {
         S3Config s3Config = new S3Config(new URI("http://here.com")).withIdentity(ACCESS_KEY).withSecretKey(SECRET_KEY);
         S3SignerV2 signer = new S3SignerV2(s3Config);
 
-        // Test signing via string-to-sign and signature verification
-        // (sign() now requires ClientRequestContext, so we test the underlying methods directly)
-        String stringToSign1 = signer.getStringToSign(METHOD_1, RESOURCE_1, PARAMETERS_1, HEADERS_1);
-        String signature1 = signer.getSignature(stringToSign1, null);
-        Assertions.assertEquals(SIGNATURE_1, signature1);
+        ClientRequestContext request = TestClientRequestContexts.request(METHOD_1, new URI("http://s3.company.com"));
 
-        String stringToSign2 = signer.getStringToSign(METHOD_2, RESOURCE_2, PARAMETERS_2, HEADERS_2);
-        String signature2 = signer.getSignature(stringToSign2, null);
-        Assertions.assertEquals(SIGNATURE_2, signature2);
+        MultivaluedHashMap<String, Object> headers = new MultivaluedHashMap<>(HEADERS_1);
+        signer.sign(request, RESOURCE_1, PARAMETERS_1, headers);
+        Assertions.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_1, headers.getFirst("Authorization"));
 
-        String stringToSign3 = signer.getStringToSign(METHOD_3, RESOURCE_3, PARAMETERS_3, HEADERS_3);
-        String signature3 = signer.getSignature(stringToSign3, null);
-        Assertions.assertEquals(SIGNATURE_3, signature3);
+        headers = new MultivaluedHashMap<>(HEADERS_2);
+        request = TestClientRequestContexts.request(METHOD_2, new URI("http://s3.company.com"));
+        signer.sign(request, RESOURCE_2, PARAMETERS_2, headers);
+        Assertions.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_2, headers.getFirst("Authorization"));
 
-        String stringToSign4 = signer.getStringToSign(METHOD_4, RESOURCE_4, PARAMETERS_4, HEADERS_4);
-        String signature4 = signer.getSignature(stringToSign4, null);
-        Assertions.assertEquals(SIGNATURE_4, signature4);
+        headers = new MultivaluedHashMap<>(HEADERS_3);
+        request = TestClientRequestContexts.request(METHOD_3, new URI("http://s3.company.com"));
+        signer.sign(request, RESOURCE_3, PARAMETERS_3, headers);
+        Assertions.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_3, headers.getFirst("Authorization"));
+
+        headers = new MultivaluedHashMap<>(HEADERS_4);
+        request = TestClientRequestContexts.request(METHOD_4, new URI("http://s3.company.com"));
+        signer.sign(request, RESOURCE_4, PARAMETERS_4, headers);
+        Assertions.assertEquals("AWS " + ACCESS_KEY + ":" + SIGNATURE_4, headers.getFirst("Authorization"));
     }
 
     @Test
