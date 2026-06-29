@@ -136,15 +136,6 @@ public class S3EncryptionClient extends S3JerseyClient {
     }
 
     /**
-     * Encryption client does not support automatic retries because the encrypt-then-copy-update
-     * sequence is not safely retriable (a partial write leaves the object in an inconsistent state).
-     */
-    @Override
-    protected boolean isRetryEnabled() {
-        return false;
-    }
-
-    /**
      * "Rekeys" an object.  This operation re-encrypts the object's key with the most
      * current master key and is used to implement key rotation.  Note that when you
      * create a new master key, your EncryptionConfig should keep all of the old master
