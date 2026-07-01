@@ -101,10 +101,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assume.assumeNoException(e);
         }
 
-        // requires a multi-node ECS cluster to meaningfully exercise load balancing
-        Assume.assumeTrue("testMultipleVdcs requires a multi-node ECS cluster",
-                config.getVdcs().get(0).getHosts().size() > 1);
-
         // just going to use the same VDC twice for lack of a geo env.
         List<? extends Host> hosts = config.getVdcs().get(0).getHosts();
         Vdc vdc1 = new Vdc("vdc1", new ArrayList<Host>(hosts)), vdc2 = new Vdc("vdc2", new ArrayList<Host>(hosts));
@@ -116,7 +112,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         S3JerseyClient tempClient = new S3JerseyClient(config);
 
-        Thread.sleep(1000); // wait for poll to complete
+        Thread.sleep(3000); // wait for poll to complete
 
         // the client will clone the config, so we have to get new references
         vdc1 = tempClient.getS3Config().getVdcs().get(0);
@@ -579,9 +575,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     @Test
     public void testDeleteBucketWithMPUWithBackgroundTasks() throws Exception {
         Assume.assumeTrue("ECS version must be at least 3.8", ecsVersion != null && ecsVersion.compareTo("3.8") >= 0);
-        // MPU is not supported by the encryption client
-        Assume.assumeFalse("MPU is not supported by the encryption client",
-                client instanceof com.emc.object.s3.jersey.S3EncryptionClient);
 
         String bucketName = getTestBucket() + "-mpu";
         client.createBucket(bucketName);

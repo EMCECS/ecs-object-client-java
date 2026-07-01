@@ -26,7 +26,6 @@
  */
 package com.emc.object.s3.jersey;
 
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -92,46 +91,30 @@ public class CodecFilter implements WriterInterceptor, ClientResponseFilter, Rea
             Map<String, String> metaBackup = new HashMap<>(userMeta);
             context.setProperty("com.emc.object.codecFilter.metaBackup", metaBackup);
 
-            // NOTE: do NOT add encode metadata to context.getHeaders() here.
-            // With HttpUrlConnectorProvider, Jersey's CommittingOutputStream defers the
-            // setOutboundHeaders() callback until the first byte is written. If we add
-            // x-amz-meta-* headers to context.getHeaders() now, they will be copied to
-            // the HttpURLConnection and sent to the server, even though they were not
-            // present when the request was signed — causing a V2/V4 signature mismatch.
-            // The metadata stored in userMeta is sent via the subsequent CopyObject
-            // metadata-update request instead (see S3EncryptionClient.putObject).
-
-            // connect the dangling stream and wrap the output.
-            // Wrap with a stream that strips Content-Length before the first write.
-            // SizeOverrideWriter.writeTo() adds Content-Length to context.getHeaders()
-            // (possibly -1 for unpredictable sizes). With allowRestrictedHeaders=true
-            // (needed for V4 Host header), this leaks through HttpURLConnection's
-            // setOutboundHeaders alongside Transfer-Encoding: chunked, which is invalid
-            // and can cause server-side issues. Stripping it here ensures only chunked
-            // encoding is used for encrypted uploads.
             OutputStream originalOut = context.getOutputStream();
-            final MultivaluedMap<String, Object> headers = context.getHeaders();
-            OutputStream safeOut = new FilterOutputStream(originalOut) {
-                private boolean cleaned = false;
-                @Override
-                public void write(int b) throws IOException {
-                    stripContentLength();
-                    out.write(b);
-                }
-                @Override
-                public void write(byte[] b, int off, int len) throws IOException {
-                    stripContentLength();
-                    out.write(b, off, len);
-                }
-                private void stripContentLength() {
-                    if (!cleaned) {
-                        cleaned = true;
-                        headers.remove("Content-Length");
-                    }
-                }
-            };
+            OutputStream encodeStream = encodeChain.getEncodeStream(originalOut, userMeta);
 
-            OutputStream encodeStream = encodeChain.getEncodeStream(safeOut, userMeta);
+            // add pre-stream encode metadata (IV, DEK, etc.) to the outbound headers.
+            // This ensures the initial PUT has encryption headers as a safety net: if the
+            // write succeeds but the subsequent copy-update fails, the object is still
+            // decryptable.
+            context.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
+
+            // re-sign: the encode metadata headers (x-amz-meta-*) are part of the V2/V4
+            // signed canonical headers, so the signature computed by AuthorizationFilter
+            // is now stale. Use the stashed signer to recompute (same pattern as ChecksumFilter).
+            S3Signer stashedSigner = (S3Signer) context.getProperty(AuthorizationFilter.PROP_SIGNER);
+            if (stashedSigner != null) {
+                String method = (String) context.getProperty(AuthorizationFilter.PROP_SIGN_METHOD);
+                URI uri = (URI) context.getProperty(AuthorizationFilter.PROP_SIGN_URI);
+                String resource = (String) context.getProperty(AuthorizationFilter.PROP_SIGN_RESOURCE);
+                @SuppressWarnings("unchecked")
+                Map<String, String> parameters = (Map<String, String>) context.getProperty(AuthorizationFilter.PROP_SIGN_PARAMETERS);
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                Map<String, List<Object>> signingHeaders = (Map) context.getHeaders();
+                stashedSigner.resign(method, uri, resource, parameters, signingHeaders);
+            }
+
             context.setOutputStream(encodeStream);
 
             try {
