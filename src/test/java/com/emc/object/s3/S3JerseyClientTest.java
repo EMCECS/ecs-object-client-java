@@ -2836,9 +2836,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                         || e.getMessage().startsWith("Connection reset by peer")
                         || e.getMessage().startsWith("Software caused connection abort")))
                     continue;
-                // Java 25+ HttpURLConnection throws IOException instead of SocketException on abort
-                if (e instanceof java.io.IOException && "Error writing to server".equals(e.getMessage()))
-                    continue;
                 if (!(e instanceof S3Exception)) throw new RuntimeException(e);
                 S3Exception se = (S3Exception) e;
                 if (!"NoSuchUpload".equals(se.getErrorCode()) && !"NoSuchKey".equals(se.getErrorCode()))
