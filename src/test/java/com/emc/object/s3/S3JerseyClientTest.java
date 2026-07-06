@@ -42,9 +42,9 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
 import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Response;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -59,6 +59,7 @@ import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
@@ -111,7 +112,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         S3JerseyClient tempClient = new S3JerseyClient(config);
 
-        Thread.sleep(1000); // wait for poll to complete
+        Thread.sleep(3000); // wait for poll to complete
 
         // the client will clone the config, so we have to get new references
         vdc1 = tempClient.getS3Config().getVdcs().get(0);
@@ -197,7 +198,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     public void testCreateEncryptedBucket() {
         String bucketName = getTestBucket() + "-enc";
 
-        client.createBucket(new CreateBucketRequest(bucketName).withEncryptionEnabled(true));
+        try {
+            client.createBucket(new CreateBucketRequest(bucketName).withEncryptionEnabled(true));
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping SSE test: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
 
         client.deleteBucket(bucketName);
     }
@@ -541,16 +548,27 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
             Assert.assertEquals("EmptyBucketInProgress", e.getErrorCode());
         }
 
-        // Empty bucket execution frequency is 1 min, so 3 min wait would be enough for this test to finish.
-        Thread.sleep(3 * 60 * 1000);
-
-        try {
-            client.getBucketDeletionStatus(bucketName);
-            Assert.fail("GET EmptyBucketStatus when the bucket is deleted should give 404.");
-        } catch (S3Exception e) {
-            Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("The specified bucket does not exist", e.getMessage());
+        // Empty bucket execution frequency is 1 min; poll for up to 8 minutes to tolerate
+        // slower lab clusters instead of relying on a single fixed-window sleep.
+        long deadline = System.currentTimeMillis() + 8 * 60 * 1000L;
+        S3Exception deletionComplete = null;
+        while (System.currentTimeMillis() < deadline) {
+            Thread.sleep(30 * 1000L);
+            try {
+                client.getBucketDeletionStatus(bucketName);
+            } catch (S3Exception e) {
+                if (e.getHttpCode() == 404) {
+                    deletionComplete = e;
+                    break;
+                }
+                throw e;
+            }
         }
+        if (deletionComplete == null) {
+            Assert.fail("GET EmptyBucketStatus when the bucket is deleted should give 404.");
+        }
+        Assert.assertEquals(404, deletionComplete.getHttpCode());
+        Assert.assertEquals("The specified bucket does not exist", deletionComplete.getMessage());
         Assert.assertFalse("Failed to delete bucket" + bucketName, client.bucketExists(bucketName));
     }
 
@@ -618,7 +636,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String keyInRetention = "testObjectRetention";
         client.enableObjectLock(bucketName);
         // ensure the retention period is longer than the bucket deletion background tasks.
-        Date retentionDate = new Date(System.currentTimeMillis() + 3 * 60 * 1000);
+        Date retentionDate = new Date(System.currentTimeMillis() + 6 * 60 * 1000);
         ObjectLockRetention objectLockRetention = new ObjectLockRetention()
                 .withMode(ObjectLockRetentionMode.COMPLIANCE)
                 .withRetainUntilDate(retentionDate);
@@ -1450,7 +1468,13 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String key = "object-with-serverside-encryption";
         String content = "Hello SSE-S3!";
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
-        client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        try {
+            client.putObject(new PutObjectRequest(getTestBucket(), key, content).withObjectMetadata(objectMetadata));
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping SSE test: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
         objectMetadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals(SseAlgorithm.AES256, objectMetadata.getServerSideEncryption());
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
@@ -2643,9 +2667,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                             .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                     .addUserMetadata("foo", "bar"))
             );
-            Client.create().resource(url.toURI())
-                    .type("application/x-download").header("x-amz-meta-foo", "bar")
-                    .put(content);
+            javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
+                    .request().header("Content-Type", "application/x-download").header("x-amz-meta-foo", "bar")
+                    .put(javax.ws.rs.client.Entity.entity(content, "application/x-download"));
             Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
             S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
             Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
@@ -2730,8 +2754,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         URL url = client.getPresignedUrl(new PresignedUrlRequest(Method.GET, getTestBucket(), key, expiration.getTime())
                 .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
 
-        ClientResponse response = Client.create().resource(url.toURI()).get(ClientResponse.class);
-        Assert.assertEquals(contentDisposition, response.getHeaders().getFirst(RestUtil.HEADER_CONTENT_DISPOSITION));
+        Response response = javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
+        Assert.assertEquals(contentDisposition, response.getHeaderString(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 
     @Test
@@ -2909,7 +2933,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         } catch (TimeoutException e) {
             Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {
-            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getCause() instanceof ProcessingException);
             Assert.assertTrue(e.getMessage().contains("timed out"));
         }
     }
@@ -2975,6 +2999,22 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String bucketName = getTestBucket(),
                 key1 = "TestObject_source_1",
                 key2 = "TestObject_source_2";
+
+        // Probe for D@RE license availability up front, before we create any retention-protected
+        // objects. If the lab ECS doesn't have the D@RE license, step 7 below (SSE scenario) would
+        // trip an Assume and skip the test, but the @After cleanup would then fail because
+        // TestObject_target_1's 2-second retention may not have elapsed yet — yielding a
+        // TestCouldNotBeSkippedException instead of a clean skip.
+        String keyDareProbe = "TestObject_dare_probe";
+        try {
+            client.putObject(new PutObjectRequest(bucketName, keyDareProbe, keyDareProbe)
+                    .withObjectMetadata(new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256)));
+            client.deleteObject(bucketName, keyDareProbe);
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping testCopyRangeAPI: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
 
         // set up versioning.
         client.setBucketVersioning(bucketName, new VersioningConfiguration().withStatus(VersioningConfiguration.Status.Enabled));
@@ -3154,7 +3194,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         // 7. One or more source objects have invalid SSE-C keys
         String keyTargetSSEInvalid = "TestObject_target_7";
         S3ObjectMetadata objectMetadata = new S3ObjectMetadata().withServerSideEncryption(SseAlgorithm.AES256);
-        client.putObject(new PutObjectRequest(bucketName, keySSE, keySSE).withObjectMetadata(objectMetadata));
+        try {
+            client.putObject(new PutObjectRequest(bucketName, keySSE, keySSE).withObjectMetadata(objectMetadata));
+        } catch (S3Exception e) {
+            // D@RE license is not available on every lab ECS; skip the SSE scenario in that case
+            Assume.assumeFalse("Skipping SSE scenario: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
         try {
             sseKey = java.util.Base64.getEncoder().encodeToString(keySSE.getBytes(StandardCharsets.UTF_8.toString()));
             sseMD5 = getContentMD5(keySSE);

@@ -1,25 +1,25 @@
 package com.emc.object.s3;
 
-import com.emc.object.s3.jersey.BucketFilter;
-import com.emc.object.s3.jersey.NamespaceFilter;
-import com.emc.object.s3.request.PresignedUrlRequest;
-import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
-import org.apache.commons.codec.binary.Hex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import javax.xml.bind.DatatypeConverter;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import javax.ws.rs.client.ClientRequestContext;
+import javax.xml.bind.DatatypeConverter;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.emc.object.s3.request.PresignedUrlRequest;
 
 public abstract class S3Signer {
     protected static final Logger log = LoggerFactory.getLogger(S3Signer.class);
@@ -33,8 +33,16 @@ public abstract class S3Signer {
     /**
      * Sign the request
      */
-    public abstract void sign(ClientRequest request, String resource, Map<String, String> parameters,
+    public abstract void sign(ClientRequestContext request, String resource, Map<String, String> parameters,
                               Map<String, List<Object>> headers);
+
+    /**
+     * Re-sign the request using the HTTP method, URI, and the headers that are now in the outbound
+     * stream (useful for writer-interceptors that add Content-MD5 after the initial sign).
+     * Removes any existing Authorization header before re-signing.
+     */
+    public abstract void resign(String method, URI uri, String resource, Map<String, String> parameters,
+                                Map<String, List<Object>> headers);
 
     /**
      * Get the signature as String, singingKey is only

@@ -26,29 +26,40 @@
  */
 package com.emc.object.s3.jersey;
 
-import com.emc.codec.CodecChain;
-import com.emc.object.s3.S3ObjectMetadata;
-import com.emc.object.util.RestUtil;
-import com.emc.rest.smart.jersey.SizeOverrideWriter;
-import com.sun.jersey.api.client.*;
-import com.sun.jersey.api.client.filter.ClientFilter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.ReaderInterceptor;
+import javax.ws.rs.ext.ReaderInterceptorContext;
+import javax.ws.rs.ext.WriterInterceptor;
+import javax.ws.rs.ext.WriterInterceptorContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FilterOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import com.emc.codec.CodecChain;
+import com.emc.object.s3.S3ObjectMetadata;
+import com.emc.object.s3.S3Signer;
+import com.emc.object.util.RestUtil;
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
-public class CodecFilter extends ClientFilter {
+@javax.annotation.Priority(javax.ws.rs.Priorities.USER + 100) // must run AFTER ChecksumFilter so that the checksum is computed over the on-the-wire (encoded) bytes on both outbound and inbound
+public class CodecFilter implements WriterInterceptor, ClientResponseFilter, ReaderInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);
+
+    private static final String PROP_DECODE_CHAIN = "com.emc.object.codecFilter.decodeChain";
+    private static final String PROP_STORED_META = "com.emc.object.codecFilter.storedMeta";
 
     private CodecChain encodeChain;
     private Map<String, Object> codecProperties;
@@ -59,12 +70,11 @@ public class CodecFilter extends ClientFilter {
 
     @SuppressWarnings("unchecked")
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        Map<String, String> userMeta = (Map<String, String>) request.getProperties().get(RestUtil.PROPERTY_USER_METADATA);
-        Map<String, String> metaBackup = null;
+    public void aroundWriteTo(WriterInterceptorContext context) throws IOException {
+        Map<String, String> userMeta = (Map<String, String>) context.getProperty(RestUtil.PROPERTY_USER_METADATA);
 
-        Boolean encode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_ENCODE_ENTITY);
-        if (encode != null && encode) {
+        Boolean encode = (Boolean) context.getProperty(RestUtil.PROPERTY_ENCODE_ENTITY);
+        if (encode != null && encode && userMeta != null) {
 
             // if encoded size is predictable and we know the original size, we can set a content-length and avoid chunked encoding
             Long originalSize = SizeOverrideWriter.getEntitySize();
@@ -78,42 +88,58 @@ public class CodecFilter extends ClientFilter {
             }
 
             // backup original metadata in case of an error
-            metaBackup = new HashMap<String, String>(userMeta);
+            Map<String, String> metaBackup = new HashMap<>(userMeta);
+            context.setProperty("com.emc.object.codecFilter.metaBackup", metaBackup);
 
-            // we need pre-stream metadata from the encoder, but we don't have the entity output stream, so we'll use
-            // a "dangling" output stream and connect it in the adapter
-            // NOTE: we can't alter the headers in the adapt() method because they've already been a) signed and b) sent
-            DanglingOutputStream danglingStream = new DanglingOutputStream();
-            OutputStream encodeStream = encodeChain.getEncodeStream(danglingStream, userMeta);
+            OutputStream originalOut = context.getOutputStream();
+            OutputStream encodeStream = encodeChain.getEncodeStream(originalOut, userMeta);
 
-            // add pre-stream encode metadata
-            request.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
+            // add pre-stream encode metadata (IV, DEK, etc.) to the outbound headers.
+            // This ensures the initial PUT has encryption headers as a safety net: if the
+            // write succeeds but the subsequent copy-update fails, the object is still
+            // decryptable.
+            context.getHeaders().putAll(S3ObjectMetadata.getUmdHeaders(userMeta));
 
-            // wrap output stream with encryptor
-            request.setAdapter(new EncryptAdapter(request.getAdapter(), danglingStream, encodeStream));
-        }
+            // re-sign: the encode metadata headers (x-amz-meta-*) are part of the V2/V4
+            // signed canonical headers, so the signature computed by AuthorizationFilter
+            // is now stale. Use the stashed signer to recompute (same pattern as ChecksumFilter).
+            S3Signer stashedSigner = (S3Signer) context.getProperty(AuthorizationFilter.PROP_SIGNER);
+            if (stashedSigner != null) {
+                String method = (String) context.getProperty(AuthorizationFilter.PROP_SIGN_METHOD);
+                URI uri = (URI) context.getProperty(AuthorizationFilter.PROP_SIGN_URI);
+                String resource = (String) context.getProperty(AuthorizationFilter.PROP_SIGN_RESOURCE);
+                @SuppressWarnings("unchecked")
+                Map<String, String> parameters = (Map<String, String>) context.getProperty(AuthorizationFilter.PROP_SIGN_PARAMETERS);
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                Map<String, List<Object>> signingHeaders = (Map) context.getHeaders();
+                stashedSigner.resign(method, uri, resource, parameters, signingHeaders);
+            }
 
-        // execute request
-        ClientResponse response;
-        try {
-            response = getNext().handle(request);
-        } catch (RuntimeException e) {
-            if (encode != null && encode) {
+            context.setOutputStream(encodeStream);
+
+            try {
+                context.proceed();
+            } catch (RuntimeException e) {
                 // restore metadata from backup
                 userMeta.clear();
                 userMeta.putAll(metaBackup);
+                throw e;
+            } finally {
+                // make sure we clear the content-length override for this thread if we set it
+                SizeOverrideWriter.setEntitySize(null);
             }
-            throw e;
-        } finally {
-            // make sure we clear the content-length override for this thread if we set it
-            if (encode != null && encode) SizeOverrideWriter.setEntitySize(null);
+        } else {
+            context.proceed();
         }
+    }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
         // get user metadata from response headers
-        MultivaluedMap<String, String> headers = response.getHeaders();
+        MultivaluedMap<String, String> headers = responseContext.getHeaders();
         Map<String, String> storedMeta = S3ObjectMetadata.getUserMetadata(headers);
-        Set<String> keysToRemove = new HashSet<String>();
-        keysToRemove.addAll(storedMeta.keySet());
+        Set<String> keysToRemove = new HashSet<>(storedMeta.keySet());
 
         // get encode specs from user metadata
         String[] encodeSpecs = CodecChain.getEncodeSpecs(storedMeta);
@@ -123,11 +149,16 @@ public class CodecFilter extends ClientFilter {
             CodecChain decodeChain = new CodecChain(encodeSpecs).withProperties(codecProperties);
 
             // do we need to decode the entity?
-            Boolean decode = (Boolean) request.getProperties().get(RestUtil.PROPERTY_DECODE_ENTITY);
+            Boolean decode = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_DECODE_ENTITY);
             if (decode != null && decode) {
 
-                // wrap input stream with decryptor (this will remove any encode metadata from storedMeta)
-                response.setEntityInputStream(decodeChain.getDecodeStream(response.getEntityInputStream(), storedMeta));
+                // NOTE: we intentionally do NOT wrap responseContext.setEntityStream() here.
+                // The wrap happens in aroundReadFrom (ReaderInterceptor) so that ChecksumFilter's
+                // ClientResponseFilter has a chance to wrap the raw (ciphertext) stream first.
+                // Otherwise ChecksumFilter would verify the MD5 of the decrypted plaintext, which
+                // does not match the server's ETag (MD5 of stored/ciphertext content).
+                requestContext.setProperty(PROP_DECODE_CHAIN, decodeChain);
+                requestContext.setProperty(PROP_STORED_META, storedMeta);
             } else {
 
                 // need to remove any encode metadata so we can update the headers
@@ -135,7 +166,7 @@ public class CodecFilter extends ClientFilter {
             }
 
             // should we keep the encode headers?
-            Boolean keepHeaders = (Boolean) request.getProperties().get(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS);
+            Boolean keepHeaders = (Boolean) requestContext.getProperty(RestUtil.PROPERTY_KEEP_ENCODE_HEADERS);
             if (keepHeaders == null || !keepHeaders) {
 
                 // remove encode metadata from headers (storedMeta now contains only user-defined metadata)
@@ -145,26 +176,18 @@ public class CodecFilter extends ClientFilter {
                 }
             }
         }
-
-        return response;
     }
 
-    // only way to set the output stream
-    private class EncryptAdapter extends AbstractClientRequestAdapter {
-        DanglingOutputStream danglingStream;
-        OutputStream encodeStream;
-
-        EncryptAdapter(ClientRequestAdapter parent, DanglingOutputStream danglingStream, OutputStream encodeStream) {
-            super(parent);
-            this.danglingStream = danglingStream;
-            this.encodeStream = encodeStream;
+    @SuppressWarnings("unchecked")
+    @Override
+    public Object aroundReadFrom(ReaderInterceptorContext context) throws IOException {
+        CodecChain decodeChain = (CodecChain) context.getProperty(PROP_DECODE_CHAIN);
+        Map<String, String> storedMeta = (Map<String, String>) context.getProperty(PROP_STORED_META);
+        if (decodeChain != null && storedMeta != null) {
+            // wrap the input stream with a decoder (this will also strip encode metadata from storedMeta)
+            context.setInputStream(decodeChain.getDecodeStream(context.getInputStream(), storedMeta));
         }
-
-        @Override
-        public OutputStream adapt(ClientRequest request, OutputStream out) throws IOException {
-            danglingStream.setOutputStream(out); // connect the dangling output stream
-            return getAdapter().adapt(request, encodeStream); // don't break the chain
-        }
+        return context.proceed();
     }
 
     public Map<String, Object> getCodecProperties() {
@@ -180,30 +203,4 @@ public class CodecFilter extends ClientFilter {
         return this;
     }
 
-    private static class DanglingOutputStream extends FilterOutputStream {
-        private static final OutputStream BOGUS_STREAM = new OutputStream() {
-            @Override
-            public void write(int b) throws IOException {
-                throw new RuntimeException("you didn't connect a dangling output stream!");
-            }
-        };
-
-        DanglingOutputStream() {
-            super(BOGUS_STREAM);
-        }
-
-        void setOutputStream(OutputStream out) {
-            this.out = out;
-        }
-
-        @Override
-        public void write(byte[] b, int off, int len) throws IOException {
-            out.write(b, off, len);
-        }
-
-        @Override
-        public void write(int b) throws IOException {
-            throw new UnsupportedOperationException("single-byte write called!");
-        }
-    }
 }

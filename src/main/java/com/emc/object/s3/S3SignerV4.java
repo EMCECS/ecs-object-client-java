@@ -5,7 +5,7 @@ import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.s3.request.ResponseHeaderOverride;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
+import javax.ws.rs.client.ClientRequestContext;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -24,29 +24,37 @@ public class S3SignerV4 extends S3Signer {
     private static final String AMZ_DATE_FORMAT_SHORT = "yyyyMMdd";
     private static final long PRESIGN_URL_MAX_EXPIRATION_SECONDS = 60 * 60 * 24 * 7;
     private static final String HASHED_EMPTY_PAYLOAD = hexEncode(hash256(""));
-
-    private static final SortedSet<String> excludedSignedHeaders = new TreeSet(Arrays.asList(
-        "authorization"
-    ));
-
+    
     public S3SignerV4(S3Config s3Config) {
         super(s3Config);
     }
 
     @Override
-    public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+    public void sign(ClientRequestContext request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        signInternal(request.getMethod(), request.getUri(), resource, parameters, headers);
+    }
+
+    @Override
+    public void resign(String method, URI uri, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        // strip prior auth/date headers so the re-sign produces the only signature set
+        headers.remove("Authorization");
+        headers.remove(S3Constants.AMZ_DATE);
+        signInternal(method, uri, resource, parameters, headers);
+    }
+
+    private void signInternal(String method, URI uri, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         // # Preparation, add x-amz-date and host headers
         String date;
         String serviceType = getServiceType();
         date = getDate(parameters, headers);
         String shortDate = getShortDate(date);
-        addHeadersForV4(request.getURI(), date, headers);
+        addHeadersForV4(uri, date, headers);
 
         // #1 Create a canonical request for Signature Version 4
-        String canonicalRequest = getCanonicalRequest(request.getMethod(), request.getURI(), parameters, headers, false);
+        String canonicalRequest = getCanonicalRequest(method, uri, parameters, headers, false);
 
         // #2 Create a string to sign for Signature Version 4
-        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers, date, serviceType, canonicalRequest);
+        String stringToSign = getStringToSign(method, resource, parameters, headers, date, serviceType, canonicalRequest);
         log.debug("StringToSign: {}", stringToSign);
 
         // Get signed headers
@@ -173,8 +181,13 @@ public class S3SignerV4 extends S3Signer {
 
         for (String header : headers.keySet()) {
             String lcHeader = header.toLowerCase();
-            if (!excludedSignedHeaders.contains(lcHeader))
+            // Only sign headers that are guaranteed to arrive at the server unchanged.
+            // Following AWS SDK conventions, we sign: host (required), content-type,
+            // content-md5, and all x-amz-/x-emc- prefixed headers.
+            if (lcHeader.equals("host") || lcHeader.equals("content-type") || lcHeader.equals("content-md5")
+                    || lcHeader.startsWith(S3Constants.AMZ_PREFIX) || lcHeader.startsWith(RestUtil.EMC_PREFIX)) {
                 canonicalizedHeaders.put(lcHeader, trimAndJoin(headers.get(header), ","));
+            }
         }
 
         return canonicalizedHeaders;

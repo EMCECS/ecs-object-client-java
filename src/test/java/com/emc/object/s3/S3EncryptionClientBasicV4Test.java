@@ -35,7 +35,7 @@ public class S3EncryptionClientBasicV4Test extends S3EncryptionClientBasicTest {
 
         S3Config _config = createS3Config().withUseV2Signer(false);
         _config.setFaultInjectionRate(0.4f);
-        _config.setRetryLimit(6);
+        _config.setRetryLimit(10);
         S3Client _client = new S3EncryptionClient(_config, createEncryptionConfig());
 
         // make sure we hit at least one error

@@ -1,38 +1,36 @@
 package com.emc.object.s3;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Random;
+
+import javax.ws.rs.ProcessingException;
+import javax.xml.bind.DatatypeConverter;
+
+import org.apache.commons.codec.digest.DigestUtils;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.CreateBucketRequest;
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.s3.request.UploadPartRequest;
 import com.emc.object.util.FaultInjectionStream;
 import com.emc.util.ConcurrentJunitRunner;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.xml.bind.DatatypeConverter;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Random;
 
 @RunWith(ConcurrentJunitRunner.class)
 public class WriteTruncationTest extends AbstractS3ClientTest {
     static final int OBJECT_RETENTION_PERIOD = 15; // 15 seconds
     static final int MOCK_OBJ_SIZE = 5 * 1024 * 1024; // 5MB
 
-    S3Client jvmClient;
     final Random random = new Random();
 
     @Override
     protected S3Client createS3Client() throws Exception {
-        S3Config s3Config = createS3Config().withRetryEnabled(false);
-        this.jvmClient = new S3JerseyClient(s3Config, new URLConnectionClientHandler());
         return new S3JerseyClient(createS3Config().withRetryEnabled(false));
     }
 
@@ -44,9 +42,15 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     @Override
     protected void createBucket(String bucketName) {
         // create bucket with retention period and D@RE enabled
-        client.createBucket(new CreateBucketRequest(getTestBucket())
-                .withRetentionPeriod(OBJECT_RETENTION_PERIOD)
-                .withEncryptionEnabled(true));
+        try {
+            client.createBucket(new CreateBucketRequest(getTestBucket())
+                    .withRetentionPeriod(OBJECT_RETENTION_PERIOD)
+                    .withEncryptionEnabled(true));
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping WriteTruncation tests: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
     }
 
     @Override
@@ -58,29 +62,14 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         super.cleanUpBucket(bucketName);
     }
 
-    @After
-    public void shutdownJvmClient() {
-        if (jvmClient != null) jvmClient.destroy();
+    @Test
+    public void testIOExceptionDuringRead() {
+        testTruncatedWrite(true, ExceptionType.IOException, 0, false);
     }
 
     @Test
-    public void testIOExceptionDuringReadApache() {
-        testTruncatedWrite(true, true, ExceptionType.IOException, 0, false);
-    }
-
-    @Test
-    public void testIOExceptionDuringReadJvm() {
-        testTruncatedWrite(false, true, ExceptionType.IOException, 0, false);
-    }
-
-    @Test
-    public void testRuntimeExceptionDuringReadApache() {
-        testTruncatedWrite(true, true, ExceptionType.RuntimeException, 0, false);
-    }
-
-    @Test
-    public void testRuntimeExceptionDuringReadJvm() {
-        testTruncatedWrite(false, true, ExceptionType.RuntimeException, 0, false);
+    public void testRuntimeExceptionDuringRead() {
+        testTruncatedWrite(true, ExceptionType.RuntimeException, 0, false);
     }
 
     // This will fail because ECS does not know how much data is the correct amount (as would be the case if
@@ -89,56 +78,32 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
     //       - see if we can stop the write such that ECS does not commit it
     @Ignore
     @Test
-    public void testIOExceptionChunkedEncodingApache() {
-        testTruncatedWrite(true, false, ExceptionType.IOException, 0, false);
-    }
-
-    // This will fail because ECS does not know how much data is the correct amount (as would be the case if
-    // Content-Length was used)
-    // TODO: the client still seems to send a 0-byte chunk terminator, which it probably shouldn't
-    //       - see if we can stop the write such that ECS does not commit it
-    @Ignore
-    @Test
-    public void testIOExceptionChunkedEncodingJvm() {
-        testTruncatedWrite(false, false, ExceptionType.IOException, 0, false);
+    public void testIOExceptionChunkedEncoding() {
+        testTruncatedWrite(false, ExceptionType.IOException, 0, false);
     }
 
     // (see above)
     // However, when a Content-MD5 header is sent on the PUT, ECS will reject it if the data doesn't match - this is our workaround
     @Test
-    public void testIOExceptionChunkedEncodingMd5Apache() {
-        testTruncatedWrite(true, false, ExceptionType.IOException, 0, true);
-    }
-
-    // (see above)
-    // However, when a Content-MD5 header is sent on the PUT, ECS will reject it if the data doesn't match - this is our workaround
-    @Test
-    public void testIOExceptionChunkedEncodingMd5Jvm() {
-        testTruncatedWrite(false, false, ExceptionType.IOException, 0, true);
+    public void testIOExceptionChunkedEncodingMd5() {
+        testTruncatedWrite(false, ExceptionType.IOException, 0, true);
     }
 
     @Test
-    public void testDelayedIOExceptionApache() {
-        testTruncatedWrite(true, true, ExceptionType.IOException, 61, false);
+    public void testDelayedIOException() {
+        testTruncatedWrite(true, ExceptionType.IOException, 61, false);
     }
 
-    @Test
-    public void testDelayedIOExceptionJvm() {
-        testTruncatedWrite(false, true, ExceptionType.IOException, 61, false);
-    }
-
-    void testTruncatedWrite(boolean useApacheClient,
-                            boolean setContentLength,
+    void testTruncatedWrite(boolean setContentLength,
                             ExceptionType exceptionType,
                             int delayBeforeException,
                             boolean sendContentMd5) {
-        S3Client s3Client = useApacheClient ? this.client : this.jvmClient;
+        S3Client s3Client = this.client;
 
-        String key = String.format("read-%s%s-%s%stest",
+        String key = String.format("read-%s%s-%stest",
                 delayBeforeException > 0 ? "delayed-" : "",
                 exceptionType,
-                setContentLength ? "chunked-" : "",
-                useApacheClient ? "apache-" : "jvm-");
+                setContentLength ? "chunked-" : "");
         S3ObjectMetadata metadata = new S3ObjectMetadata();
         if (setContentLength) metadata.withContentLength(MOCK_OBJ_SIZE);
         metadata.withRetentionPeriod((long) OBJECT_RETENTION_PERIOD);
@@ -161,7 +126,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
         try {
             s3Client.putObject(new PutObjectRequest(getTestBucket(), key, badStream).withObjectMetadata(metadata));
             Assert.fail("exception in input stream did not throw an exception");
-        } catch (ClientHandlerException e) {
+        } catch (ProcessingException e) {
             if (exceptionType == ExceptionType.RuntimeException) {
                 Assert.assertTrue(e.getCause() instanceof RuntimeException);
             } else {
@@ -198,7 +163,7 @@ public class WriteTruncationTest extends AbstractS3ClientTest {
                 s3Client.uploadPart(new UploadPartRequest(getTestBucket(), key, uploadId, 1, badStream)
                         .withContentLength((long) MOCK_OBJ_SIZE));
                 Assert.fail("exception in input stream did not throw an exception");
-            } catch (ClientHandlerException e) {
+            } catch (ProcessingException e) {
                 Assert.assertTrue(e.getCause() instanceof IOException);
                 Assert.assertEquals(message, e.getCause().getMessage());
 

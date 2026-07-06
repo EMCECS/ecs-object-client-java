@@ -32,14 +32,14 @@ import com.emc.object.util.ConfigUri;
 import com.emc.object.util.RestUtilTest;
 import com.emc.rest.smart.SmartConfig;
 import com.emc.rest.smart.ecs.Vdc;
-import com.sun.jersey.api.client.config.ClientConfig;
-import org.junit.Test;
+import org.glassfish.jersey.client.ClientProperties;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ConfigUriS3Test {
     private ConfigUri<S3Config> s3Uri = new ConfigUri<S3Config>(S3Config.class);
@@ -163,8 +163,8 @@ public class ConfigUriS3Test {
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_URI), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_USER), dummyString);
         assertEquals(smartConfig.getProperty(PROPERTY_PROXY_PASS), dummyString);
-        assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_CONNECT_TIMEOUT), dummyInt);
-        assertEquals(smartConfig.getProperty(ClientConfig.PROPERTY_READ_TIMEOUT), dummyInt);
+        assertEquals(smartConfig.getProperty(ClientProperties.CONNECT_TIMEOUT), dummyInt);
+        assertEquals(smartConfig.getProperty(ClientProperties.READ_TIMEOUT), dummyInt);
     }
 
     @Test

@@ -29,14 +29,14 @@ import com.github.jk1.license.render.InventoryHtmlReportRenderer
 plugins {
     id 'idea'
     id 'eclipse'
-    id 'java'
-    id 'net.saliman.cobertura' version '4.0.0'
-    id 'com.github.jk1.dependency-license-report' version '1.17'
+    id 'java-library'
+    id 'jacoco'
+    id 'com.github.jk1.dependency-license-report' version '2.9'
     id 'distribution'
     id 'signing'
-    id 'maven'
-    id 'org.ajoberstar.git-publish' version '3.0.1'
-    id 'nebula.release' version '15.3.1'
+    id 'maven-publish'
+    id 'org.ajoberstar.git-publish' version '4.2.2'
+    id 'nebula.release' version '21.0.0'
 }
 
 group 'com.emc.ecs'
@@ -62,17 +62,18 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.emc.ecs:smart-client-ecs:3.0.6'
-    implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
-    // NOTE: Jackson 2.13 dropped support for JAX-RS 1.x, and we use Jersey client 1.x, so we are stuck on Jackson 1.12.x
-    // ref: https://github.com/FasterXML/jackson-jaxrs-providers/issues/90#issuecomment-1081368194
-    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7'
-    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7'
+    api 'com.emc.ecs:smart-client-ecs:4.0.0'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.47'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.47'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.47'
+    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.47'
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.17.3'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.17.3'
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
-    implementation 'commons-codec:commons-codec:1.15'
-    implementation('org.dom4j:dom4j:2.1.3') {
+    implementation 'commons-codec:commons-codec:1.17.1'
+    implementation('org.dom4j:dom4j:2.1.4') {
         // workaround for jdom2 bug (https://github.com/dom4j/dom4j/issues/99)
         // NOTE: a component metadata rule will not solve the problem for library consumers - this is the only way
         exclude module: 'pull-parser'
@@ -82,11 +83,15 @@ dependencies {
         exclude module: 'stax-api'
         exclude module: 'jaxb-api'
     }
-    implementation 'org.slf4j:slf4j-api:1.7.36'
-    testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
-    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:1.7.36'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j-impl:2.19.0'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testImplementation 'org.junit.vintage:junit-vintage-engine:5.11.4'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.2'
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5:5.4.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.slf4j:jcl-over-slf4j:2.0.16'
+    testRuntimeOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.24.3'
 }
 
 allprojects {
@@ -101,54 +106,24 @@ configurations {
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-sourceCompatibility = 1.8
-
-def projectPom = {
-    project {
-        name project.name
-        description project.description
-        url githubProjectUrl
-
-        scm {
-            url githubProjectUrl
-            connection githubScmUrl
-            developerConnection githubScmUrl
-        }
-
-        licenses {
-            license {
-                name licenseName
-                url licenseUrl
-                distribution 'repo'
-            }
-        }
-
-        developers {
-            developer {
-                id 'EMCECS'
-                name 'Dell EMC ECS'
-            }
-        }
-    }
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
-task writePom {
-    ext.pomFile = file("$buildDir/pom.xml")
-    outputs.file pomFile
-    doLast {
-        pom(projectPom).writeTo pomFile
-    }
+test {
+    useJUnitPlatform()
+    maxHeapSize = '2g'
+    // some encryption + large file tests allocate a lot of transient buffers; give the forked JVM enough headroom
+    jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
 }
 
 jar {
     doFirst {
         manifest {
             attributes 'Implementation-Version': project.version,
-                    'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
+                    'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
         }
-    }
-    into("META-INF/maven/$project.group/$project.name") {
-        from writePom
     }
 }
 
@@ -158,7 +133,7 @@ javadoc {
 
 task javadocJar(type: Jar) {
     archiveClassifier = 'javadoc'
-    from "${docsDir}/javadoc"
+    from javadoc.destinationDir
 }
 tasks.javadocJar.dependsOn javadoc
 
@@ -197,36 +172,69 @@ distributions {
     }
 }
 
-signing {
-    required { gradle.taskGraph.hasTask(':uploadJars') }
-    sign configurations.jars
-}
-
-uploadJars {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { deployment -> signing.signPom(deployment) }
-
-            repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                authentication(userName: '', password: '')
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact javadocJar
+            artifact sourcesJar
+            pom {
+                name = project.name
+                description = project.description
+                url = githubProjectUrl
+                scm {
+                    url = githubProjectUrl
+                    connection = githubScmUrl
+                    developerConnection = githubScmUrl
+                }
+                licenses {
+                    license {
+                        name = licenseName
+                        url = licenseUrl
+                        distribution = 'repo'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'EMCECS'
+                        name = 'Dell EMC ECS'
+                    }
+                }
             }
-
-            pom projectPom
+        }
+    }
+    repositories {
+        maven {
+            // OSSRH is EOL (June 30 2025). Use the Central Portal OSSRH Staging API
+            // compatibility service. Credentials must now be a Portal user token
+            // (generate at https://central.sonatype.com/account) — not the old OSSRH password.
+            name = 'centralPortalOssrhStaging'
+            url = 'https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/'
+            credentials {
+                username = rootProject.findProperty('sonatypeUser') ?: ''
+                password = rootProject.findProperty('sonatypePass') ?: ''
+            }
         }
     }
 }
 
-ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
+signing {
+    useGpgCmd()
+    required { gradle.taskGraph.hasTask(':publishMavenJavaPublicationToCentralPortalOssrhStagingRepository') }
+    sign publishing.publications.mavenJava
+}
+
+ext.aggregatedDocsDir = "${layout.buildDirectory.get()}/aggregatedDocs"
 task aggregateDocs {
     doLast {
         if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
             copy {
-                from docsDir
+                from javadoc.destinationDir
                 into "${aggregatedDocsDir}/latest"
             }
         }
         copy {
-            from docsDir
+            from javadoc.destinationDir
             into "${aggregatedDocsDir}/${project.version}"
         }
     }
@@ -243,7 +251,72 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
+// After uploading via maven-publish (a "Maven-API-like" plugin that only does PUTs),
+// we must POST to the manual upload endpoint so the deployment becomes visible in the
+// Central Publisher Portal (https://central.sonatype.com/publishing/deployments).
+//
+// IMPORTANT details (verified against
+//   https://central.sonatype.org/publish/publish-portal-ossrh-staging-api/):
+//   - The POST must come from the SAME IP address as the PUT uploads.
+//   - The /manual/* endpoints require a "Bearer <base64(user:pass)>" header
+//     (NOT Basic) — Sonatype's own quirk. Same credentials as the PUT upload,
+//     different scheme keyword.
+//   - publishing_type defaults to user_managed: deployment lands in the Portal
+//     as a "Pending" deployment that you Publish or Drop manually in the UI.
+//     Pass ?publishing_type=automatic to auto-release if validation passes
+//     (do NOT use this for an RC — review first).
+task publishToPortal {
+    group = 'publishing'
+    description = 'Signals the OSSRH Staging API to transfer the staged deployment to the Central Publisher Portal for review/release'
+    dependsOn publishMavenJavaPublicationToCentralPortalOssrhStagingRepository
+    doLast {
+        def namespace   = project.group as String           // derived, not hard-coded
+        def portalUser  = rootProject.findProperty('sonatypeUser') ?: ''
+        def portalPass  = rootProject.findProperty('sonatypePass') ?: ''
+        if (!portalUser || !portalPass) {
+            throw new GradleException('sonatypeUser/sonatypePass not set — generate a Portal token at https://central.sonatype.com/account')
+        }
+        def endpoint = "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/${namespace}?publishing_type=user_managed"
+        def bearer   = java.util.Base64.encoder.encodeToString(
+                            "${portalUser}:${portalPass}".getBytes('UTF-8'))
+
+        logger.lifecycle("  Signalling Central Portal to transfer staged deployment for namespace: ${namespace}")
+        def conn = (java.net.HttpURLConnection) new URL(endpoint).openConnection()
+        try {
+            conn.requestMethod  = 'POST'
+            conn.connectTimeout =  30_000   //  30 s
+            conn.readTimeout    = 120_000   // 120 s — service may take time to inventory the repo
+            conn.setRequestProperty('Authorization', "Bearer ${bearer}")
+            conn.setRequestProperty('Content-Length', '0')
+            conn.setRequestProperty('Accept', 'application/json')
+            conn.connect()
+
+            def code = conn.responseCode
+            if (code in [200, 201, 202, 204]) {
+                logger.lifecycle("  Deployment transferred to Central Publisher Portal (HTTP ${code}).")
+                logger.lifecycle('  Review and publish at: https://central.sonatype.com/publishing/deployments')
+            } else {
+                def body = '(no body)'
+                try { if (conn.errorStream) body = new String(conn.errorStream.bytes, 'UTF-8') } catch (ignored) { }
+                def hint = (code == 401)
+                    ? '  → 401: Portal user token is invalid/expired. Regenerate at https://central.sonatype.com/account\n'
+                    : (code == 404)
+                        ? "  → 404: No staging repo found for IP. Did the upload actually run? Check that signing succeeded.\n"
+                        : ''
+                throw new GradleException(
+                    "Failed to transfer deployment to Central Publisher Portal: HTTP ${code}\n" +
+                    "${hint}${body}\n" +
+                    'Search staged repos with:\n' +
+                    "  curl -H 'Authorization: Bearer ${'<token>'}' \\\n" +
+                    "       'https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?ip=any&profile_id=${namespace}'")
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+}
+
+tasks.release.dependsOn test, publishToPortal, gitPublishPush, distZip
 
 clean {
     delete aggregatedDocsDir
@@ -252,9 +325,7 @@ clean {
 // allow typing in credentials
 // note: this only works when run without the Gradle daemon (--no-daemon)
 gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(':uploadJars')) {
-        if (!rootProject.hasProperty('signingSecretKeyRingFile'))
-            rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
+    if (taskGraph.hasTask(':publishMavenJavaPublicationToCentralPortalOssrhStagingRepository')) {
         if (!rootProject.hasProperty('signingKeyId'))
             rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
         if (!rootProject.hasProperty('signingPass'))
@@ -264,10 +335,9 @@ gradle.taskGraph.whenReady { taskGraph ->
         if (!rootProject.hasProperty('sonatypePass'))
             rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
         ext.'signing.keyId' = rootProject.ext.signingKeyId
-        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
         ext.'signing.password' = rootProject.ext.signingPass
-        uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
-        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
+        ext.'signing.gnupg.keyName'    = rootProject.ext.signingKeyId
+        ext.'signing.gnupg.passphrase' = rootProject.ext.signingPass
     }
     if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
         if (!rootProject.hasProperty('gitUsername'))

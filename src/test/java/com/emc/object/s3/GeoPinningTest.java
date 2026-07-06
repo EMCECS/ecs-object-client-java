@@ -26,10 +26,21 @@
  */
 package com.emc.object.s3;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.emc.object.AbstractJerseyClient;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Test;
+
 import com.emc.object.ObjectConfig;
 import com.emc.object.s3.jersey.GeoPinningFilter;
 import com.emc.object.s3.jersey.GeoPinningRule;
-import com.emc.object.s3.jersey.RetryFilter;
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.util.GeoPinningUtil;
 import com.emc.rest.smart.Host;
@@ -38,24 +49,6 @@ import com.emc.rest.smart.HostVetoRule;
 import com.emc.rest.smart.LoadBalancer;
 import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.Filterable;
-import com.sun.jersey.client.impl.ClientRequestImpl;
-import com.sun.jersey.core.header.InBoundHeaders;
-import com.sun.jersey.spi.MessageBodyWorkers;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
-import java.io.ByteArrayInputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
-import java.net.URI;
-import java.util.*;
 
 public class GeoPinningTest extends AbstractS3ClientTest {
     private List<Vdc> vdcs;
@@ -82,6 +75,7 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         if (proxyUri != null) s3Config.setProperty(ObjectConfig.PROPERTY_PROXY_URI, proxyUri);
 
         s3Config.setGeoPinningEnabled(true);
+        s3Config.setProperty(ObjectConfig.PROPERTY_DISABLE_HOST_UPDATE, "true");
         return s3Config;
     }
 
@@ -157,49 +151,45 @@ public class GeoPinningTest extends AbstractS3ClientTest {
 
     @Test
     public void testReadRetryFailoverInFilter() throws Exception {
-        S3Config s3ConfigF = new S3Config(createS3Config());
+        S3Config s3ConfigF = createS3Config();
         s3ConfigF.setGeoReadRetryFailover(true);
         GeoPinningFilter filter = new GeoPinningFilter(s3ConfigF);
 
-        String bucket = "foo";
+        String bucket = getTestBucket();
         String key = "my/object/key";
         int geoIndex = 0xbb8619 % vdcs.size();
-        DummyClient client = new DummyClient();
-        client.addFilter(filter);
+        URI uri = URI.create("http://localhost/test");
 
-        // test no retry
-        ClientRequest request = new ClientRequestImpl(new URI("http://s3.company.com"), null);
-        request.setMethod("GET");
-        request.getProperties().put(S3Constants.PROPERTY_BUCKET_NAME, bucket);
-        request.getProperties().put(S3Constants.PROPERTY_OBJECT_KEY, key);
-        client.handle(request);
+        // no retry: routed to the primary geo-pinned VDC
+        TestClientRequestContexts.StubClientRequestContext ctx0 =
+                TestClientRequestContexts.request("GET", uri);
+        ctx0.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        ctx0.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
+        filter.filter(ctx0);
+        Vdc primary = (Vdc) ctx0.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
+        Assert.assertEquals(vdcs.get(geoIndex), primary);
 
-        Assert.assertEquals(vdcs.get(geoIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
+        // retry 1: must failover to a different VDC
+        TestClientRequestContexts.StubClientRequestContext ctx1 =
+                TestClientRequestContexts.request("GET", uri);
+        ctx1.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        ctx1.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
+        ctx1.setProperty(AbstractJerseyClient.PROP_RETRY_COUNT, 1);
+        filter.filter(ctx1);
+        Vdc failover1 = (Vdc) ctx1.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
+        Assert.assertNotEquals("retry 1 must use a different VDC", primary, failover1);
+        Assert.assertEquals(vdcs.get((geoIndex + 1) % vdcs.size()), failover1);
 
-        // test 1st retry
-        int retries = 1;
-        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-        client.handle(request);
-
-        int retryIndex = (geoIndex + retries) % vdcs.size();
-        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-
-        // test 2nd retry
-        retries++;
-        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-        client.handle(request);
-
-        retryIndex = (geoIndex + retries) % vdcs.size();
-        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
-
-        // test 3rd retry (we have 3 VDCs, so this should go back to the primary)
-        retries++;
-        request.getProperties().put(RetryFilter.PROP_RETRY_COUNT, retries);
-        client.handle(request);
-
-        retryIndex = (geoIndex + retries) % vdcs.size();
-        Assert.assertEquals(geoIndex, retryIndex);
-        Assert.assertEquals(vdcs.get(retryIndex), request.getProperties().get(GeoPinningRule.PROP_GEO_PINNED_VDC));
+        // retry 2: must failover to yet another VDC
+        TestClientRequestContexts.StubClientRequestContext ctx2 =
+                TestClientRequestContexts.request("GET", uri);
+        ctx2.setProperty(S3Constants.PROPERTY_BUCKET_NAME, bucket);
+        ctx2.setProperty(S3Constants.PROPERTY_OBJECT_KEY, key);
+        ctx2.setProperty(AbstractJerseyClient.PROP_RETRY_COUNT, 2);
+        filter.filter(ctx2);
+        Vdc failover2 = (Vdc) ctx2.getProperty(GeoPinningRule.PROP_GEO_PINNED_VDC);
+        Assert.assertNotEquals("retry 2 must differ from retry 1", failover1, failover2);
+        Assert.assertEquals(vdcs.get((geoIndex + 2) % vdcs.size()), failover2);
     }
 
     protected void testKeyDistribution(String key, int vdcIndex) {
@@ -256,55 +246,4 @@ public class GeoPinningTest extends AbstractS3ClientTest {
         }
     }
 
-    private static class DummyClient extends Filterable {
-        public DummyClient() {
-            super(cr -> new ClientResponse(200, new InBoundHeaders(), new ByteArrayInputStream(new byte[0]), new DummyWorkers()));
-        }
-
-        public ClientResponse handle(ClientRequest request) {
-            return getHeadHandler().handle(request);
-        }
-    }
-
-    private static class DummyWorkers implements MessageBodyWorkers {
-        @Override
-        public Map<MediaType, List<MessageBodyReader>> getReaders(MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public Map<MediaType, List<MessageBodyWriter>> getWriters(MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public String readersToString(Map<MediaType, List<MessageBodyReader>> readers) {
-            return null;
-        }
-
-        @Override
-        public String writersToString(Map<MediaType, List<MessageBodyWriter>> writers) {
-            return null;
-        }
-
-        @Override
-        public <T> MessageBodyReader<T> getMessageBodyReader(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public <T> MessageBodyWriter<T> getMessageBodyWriter(Class<T> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-            return null;
-        }
-
-        @Override
-        public <T> List<MediaType> getMessageBodyWriterMediaTypes(Class<T> type, Type genericType, Annotation[] annotations) {
-            return null;
-        }
-
-        @Override
-        public <T> MediaType getMessageBodyWriterMediaType(Class<T> type, Type genericType, Annotation[] annotations, List<MediaType> acceptableMediaTypes) {
-            return null;
-        }
-    }
 }

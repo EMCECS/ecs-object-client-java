@@ -26,47 +26,42 @@
  */
 package com.emc.object.util;
 
-import com.emc.rest.util.StreamUtil;
+import java.io.ByteArrayInputStream;
+import java.util.Random;
+
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-
-public class InputStreamSegmentTest {
+public class ChecksummedInputStreamTest {
     @Test
-    public void testMiddle() throws Exception {
-        String s = "0123456789Hello Middle!3456789";
-        //                    1         2
+    public void testChecksumVerification() throws Exception {
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
 
-        InputStream is = new InputStreamSegment(new ByteArrayInputStream(s.getBytes("UTF-8")), 10, 13);
+        String correctMd5 = DigestUtils.md5Hex(data);
 
-        // read entire stream
-        String result = StreamUtil.readAsString(is);
-        Assertions.assertEquals("Hello Middle!", result);
-    }
+        // positive test - correct checksum should not throw
+        ChecksummedInputStream goodStream = new ChecksummedInputStream(
+                new ByteArrayInputStream(data),
+                new ChecksumValueImpl(ChecksumAlgorithm.MD5, data.length, correctMd5));
+        byte[] buffer = new byte[1024];
+        int total = 0, n;
+        while ((n = goodStream.read(buffer)) >= 0) total += n;
+        goodStream.close();
+        Assertions.assertEquals(data.length, total);
 
-    @Test
-    public void testBeginning() throws Exception {
-        String s = "Hello Middle!34567890123456789";
-        //                    1         2
-
-        InputStream is = new InputStreamSegment(new ByteArrayInputStream(s.getBytes("UTF-8")), 0, 13);
-
-        // read entire stream
-        String result = StreamUtil.readAsString(is);
-        Assertions.assertEquals("Hello Middle!", result);
-    }
-
-    @Test
-    public void testEnd() throws Exception {
-        String s = "01234567890123456Hello Middle!";
-        //                    1         2
-
-        InputStream is = new InputStreamSegment(new ByteArrayInputStream(s.getBytes("UTF-8")), 17, 13);
-
-        // read entire stream
-        String result = StreamUtil.readAsString(is);
-        Assertions.assertEquals("Hello Middle!", result);
+        // negative test - bad checksum should throw ChecksumError
+        try {
+            ChecksummedInputStream badStream = new ChecksummedInputStream(
+                    new ByteArrayInputStream(data),
+                    new ChecksumValueImpl(ChecksumAlgorithm.MD5, data.length, "abcdef0123456789abcdef0123456789"));
+            buffer = new byte[1024];
+            while (badStream.read(buffer) >= 0) { /* read to EOF to trigger verification */ }
+            badStream.close();
+            Assertions.fail("bad MD5 should throw exception");
+        } catch (ChecksumError e) {
+            // expected
+        }
     }
 }

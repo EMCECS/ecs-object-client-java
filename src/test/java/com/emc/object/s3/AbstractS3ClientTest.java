@@ -107,14 +107,48 @@ public abstract class AbstractS3ClientTest extends AbstractClientTest {
                                 .withLegalHold(new ObjectLockLegalHold().withStatus(ObjectLockLegalHold.Status.OFF)));
                         deleteRequest.withBypassGovernanceRetention(true);
                     }
-                    client.deleteObject(deleteRequest);
+                    deleteObjectTolerateRetention(deleteRequest);
                 }
             } else {
                 for (S3Object object : client.listObjects(new ListObjectsRequest(bucketName).withEncodingType(EncodingType.url)).getObjects()) {
-                    client.deleteObject(bucketName, object.getKey());
+                    deleteObjectTolerateRetention(bucketName, object.getKey());
                 }
             }
             client.deleteBucket(bucketName);
+        }
+    }
+
+    /**
+     * Delete an object, tolerating ECS "classic" retention (x-emc-retention-period) that may not
+     * yet have elapsed. Some tests intentionally stamp short retention windows on objects (e.g.
+     * 2-second retention in testCopyRangeAPI); during cleanup we retry for a short while until
+     * retention expires, so the teardown path does not spuriously fail the whole test.
+     */
+    private void deleteObjectTolerateRetention(String bucketName, String key) {
+        deleteObjectTolerateRetention(() -> client.deleteObject(bucketName, key));
+    }
+
+    private void deleteObjectTolerateRetention(DeleteObjectRequest request) {
+        deleteObjectTolerateRetention(() -> client.deleteObject(request));
+    }
+
+    private void deleteObjectTolerateRetention(Runnable deleteAction) {
+        long deadlineMs = System.currentTimeMillis() + 10_000L;
+        while (true) {
+            try {
+                deleteAction.run();
+                return;
+            } catch (S3Exception e) {
+                boolean isRetention = e.getMessage() != null
+                        && e.getMessage().toLowerCase().contains("under retention");
+                if (!isRetention || System.currentTimeMillis() > deadlineMs) throw e;
+                try {
+                    Thread.sleep(500L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            }
         }
     }
 

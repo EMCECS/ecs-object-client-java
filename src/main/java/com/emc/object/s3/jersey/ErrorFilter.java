@@ -29,35 +29,35 @@ package com.emc.object.s3.jersey;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.s3.S3Exception;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
 import org.dom4j.Document;
 import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Date;
 
-public class ErrorFilter extends ClientFilter {
+public class ErrorFilter implements ClientResponseFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ErrorFilter.class);
 
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
-        ClientResponse response = getNext().handle(request);
+    @Override
+    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
 
-        if (response.getStatus() > 299) {
+        if (responseContext.getStatus() > 299) {
 
             // check for clock skew (can save hours of troubleshooting)
-            if (response.getStatus() == 403) {
-                Date clientTime = RestUtil.amzHeaderParse(RestUtil.getFirstAsString(request.getHeaders(), S3Constants.AMZ_DATE));
+            if (responseContext.getStatus() == 403) {
+                Date clientTime = RestUtil.amzHeaderParse(RestUtil.getFirstAsString(requestContext.getHeaders(), S3Constants.AMZ_DATE));
                 if (clientTime == null)
-                    clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_DATE));
-                Date serverTime = RestUtil.headerParse(RestUtil.getFirstAsString(response.getHeaders(), RestUtil.HEADER_DATE));
+                    clientTime = RestUtil.headerParse(RestUtil.getFirstAsString(requestContext.getHeaders(), RestUtil.HEADER_DATE));
+                Date serverTime = RestUtil.headerParse(RestUtil.getFirstAsString(responseContext.getHeaders(), RestUtil.HEADER_DATE));
                 if (clientTime != null && serverTime != null) {
                     long skew = clientTime.getTime() - serverTime.getTime();
                     if (Math.abs(skew) > 5 * 60 * 1000) { // +/- 5 minutes
@@ -65,22 +65,16 @@ public class ErrorFilter extends ClientFilter {
                     }
                 }
             }
-            if (response.hasEntity()) {
-                throw parseErrorResponse(new InputStreamReader(response.getEntityInputStream()), response.getStatus());
+            if (responseContext.hasEntity()) {
+                throw parseErrorResponse(new InputStreamReader(responseContext.getEntityStream()), responseContext.getStatus());
             } else {
                 // No response entity.  Don't try to parse it.
-                try {
-                    response.close();
-                } catch (Throwable t) {
-                    log.warn("could not close response after error", t);
-                }
-                Response.StatusType st = response.getStatusInfo();
+                Response.StatusType st = responseContext.getStatusInfo();
+                String requestId = responseContext.getHeaders() != null ? responseContext.getHeaderString("x-amz-request-id") : null;
                 throw new S3Exception(st.getReasonPhrase(), st.getStatusCode(), guessStatus(st.getStatusCode()),
-                        response.getHeaders().getFirst("x-amz-request-id"));
+                        requestId);
             }
         }
-
-        return response;
     }
 
     private String guessStatus(int statusCode) {

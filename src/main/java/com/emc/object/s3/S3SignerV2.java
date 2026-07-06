@@ -30,7 +30,7 @@ import com.emc.object.s3.jersey.BucketFilter;
 import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.util.RestUtil;
-import com.sun.jersey.api.client.ClientRequest;
+import javax.ws.rs.client.ClientRequestContext;
 import org.apache.commons.codec.binary.Base64;
 
 import javax.xml.bind.DatatypeConverter;
@@ -64,11 +64,22 @@ public final class S3SignerV2 extends S3Signer {
     }
 
     @Override
-    public void sign(ClientRequest request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+    public void sign(ClientRequestContext request, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        signInternal(request.getMethod(), resource, parameters, headers);
+    }
+
+    @Override
+    public void resign(String method, URI uri, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
+        // strip prior Authorization so the new signature is the only one present
+        headers.remove("Authorization");
+        signInternal(method, resource, parameters, headers);
+    }
+
+    private void signInternal(String method, String resource, Map<String, String> parameters, Map<String, List<Object>> headers) {
         if (s3Config.getSessionToken() != null) {
             RestUtil.putSingle(headers, S3Constants.AMZ_SECURITY_TOKEN, s3Config.getSessionToken());
         }
-        String stringToSign = getStringToSign(request.getMethod(), resource, parameters, headers);
+        String stringToSign = getStringToSign(method, resource, parameters, headers);
         String signature = getSignature(stringToSign, null);
         RestUtil.putSingle(headers, "Authorization", "AWS " + s3Config.getIdentity() + ":" + signature);
     }
