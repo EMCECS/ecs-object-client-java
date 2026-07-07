@@ -221,7 +221,12 @@ publishing {
 signing {
     useGpgCmd()
     required { gradle.taskGraph.hasTask(':publishMavenJavaPublicationToCentralPortalOssrhStagingRepository') }
-    sign publishing.publications.mavenJava
+}
+
+afterEvaluate {
+    signing {
+        sign publishing.publications.mavenJava
+    }
 }
 
 ext.aggregatedDocsDir = "${layout.buildDirectory.get()}/aggregatedDocs"
