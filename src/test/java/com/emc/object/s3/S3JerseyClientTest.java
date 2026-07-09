@@ -179,10 +179,29 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         Assume.assumeFalse("FS buckets are not supported with IAM user.", isIamUser);
 
         String bucketName = getTestBucket() + "-y";
+        try {
+            client.createBucket(new CreateBucketRequest(bucketName).withFileSystemEnabled(true));
 
-        client.createBucket(new CreateBucketRequest(bucketName).withFileSystemEnabled(true));
+            client.deleteBucket(bucketName);
+        } catch (S3Exception e) {
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("InvalidBucketState", e.getErrorCode());
+        }
+    }
 
-        client.deleteBucket(bucketName);
+    @Test
+    public void testCreateFilesystemBucketOnADO() {
+        Assume.assumeFalse("FS buckets are not supported with IAM user.", isIamUser);
+
+        String bucketName = getTestBucket() + "-ado";
+        try {
+            client.createBucket(new CreateBucketRequest(bucketName).withFileSystemEnabledOnADO(true));
+
+            client.deleteBucket(bucketName);
+        } catch (S3Exception e) {
+            Assert.assertEquals(409, e.getHttpCode());
+            Assert.assertEquals("InvalidBucketState", e.getErrorCode());
+        }
     }
 
     @Test

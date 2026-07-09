@@ -44,6 +44,7 @@ public class CreateBucketRequest extends AbstractBucketRequest {
     private AccessControlList acl;
     private String vPoolId;
     private Boolean fileSystemEnabled;
+    private Boolean fileSystemEnabledOnADO;
     private Boolean staleReadAllowed;
     private Boolean encryptionEnabled;
     private Long retentionPeriod;
@@ -62,6 +63,10 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         if (acl != null) headers.putAll(acl.toHeaders());
         if (vPoolId != null) RestUtil.putSingle(headers, RestUtil.EMC_VPOOL, vPoolId);
         if (fileSystemEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabled);
+        if (fileSystemEnabledOnADO != null) {
+            RestUtil.putSingle(headers, RestUtil.EMC_FS_ENABLED, fileSystemEnabledOnADO);
+            RestUtil.add(headers, RestUtil.EMC_TSO_READONLY, Boolean.TRUE);
+        }
         if (staleReadAllowed != null) RestUtil.putSingle(headers, RestUtil.EMC_STALE_READ_ALLOWED, staleReadAllowed);
         if (encryptionEnabled != null) RestUtil.putSingle(headers, RestUtil.EMC_ENCRYPTION_ENABLED, encryptionEnabled);
         if (retentionPeriod != null) RestUtil.putSingle(headers, RestUtil.EMC_RETENTION_PERIOD, retentionPeriod);
@@ -99,13 +104,29 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         return fileSystemEnabled;
     }
 
+    public Boolean getFileSystemEnabledOnADO() {
+        return fileSystemEnabledOnADO;
+    }
+
     /**
      * Sets whether the bucket can be access via filesystem (i.e. HDFS). This will enable some internal semantics for
      * directories and may affect other features (i.e.
      * {@link com.emc.object.s3.S3Client#setBucketStaleReadAllowed(String, boolean) TSO support})
      */
     public void setFileSystemEnabled(Boolean fileSystemEnabled) {
+        if(this.fileSystemEnabledOnADO != null) this.fileSystemEnabledOnADO = null;
         this.fileSystemEnabled = fileSystemEnabled;
+    }
+
+    /**
+     * Sets whether the bucket can be access via filesystem (i.e. HDFS) using ADO semantics.
+     * This will enable some internal semantics for directories and may affect other features (i.e.
+     * {@link com.emc.object.s3.S3Client#setBucketStaleReadAllowed(String, boolean) TSO support})
+     * Note that this will override any existing file system enabled setting.
+     */
+    public void setFileSystemEnabledOnADO(Boolean fileSystemEnabledOnADO) {
+        if(this.fileSystemEnabled != null) this.fileSystemEnabled = null;
+        this.fileSystemEnabledOnADO = fileSystemEnabledOnADO;
     }
 
     public Boolean getStaleReadAllowed() {
@@ -184,8 +205,30 @@ public class CreateBucketRequest extends AbstractBucketRequest {
         return this;
     }
 
+    /**
+     * Sets whether the bucket can be accessed via a filesystem (i.e. HDFS) and returns this request object.
+     *
+     * This will enable some internal semantics for directories and may affect other features.
+     * Note that this will override any existing file system enabled with ADO setting.
+     *
+     * @param fileSystemEnabled Whether to enable filesystem access on the bucket of non-ADO enabled namespace
+     * @return this request object
+     */
     public CreateBucketRequest withFileSystemEnabled(boolean fileSystemEnabled) {
         setFileSystemEnabled(fileSystemEnabled);
+        return this;
+    }
+    /**
+     * Sets whether the bucket can be accessed via a filesystem (i.e. HDFS) using ADO semantics and returns this request object.
+     *
+     * This will enable some internal semantics for directories and may affect other features.
+     * Note that this will override any existing file system enabled setting.
+     *
+     * @param fileSystemEnabledOnADO Whether to enable filesystem access via ADO semantics on the bucket of ADO enabled namespace
+     * @return this request object
+     */
+    public CreateBucketRequest withFileSystemEnabledOnADO(boolean fileSystemEnabledOnADO) {
+        setFileSystemEnabledOnADO(fileSystemEnabledOnADO);
         return this;
     }
 
