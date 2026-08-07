@@ -88,6 +88,43 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         md5Hex = DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase();
     }
 
+    /**
+     * Regression test for OBS04O-107: even when the raw source stream supports mark()/reset()
+     * (e.g. a ByteArrayInputStream), the per-part stream returned by getSourcePartDataStream()
+     * must report markSupported() == false and reset() must throw. All parts of a raw-stream
+     * upload share a single forward-only cursor over the source stream, so if an HTTP connector
+     * (e.g. Jersey's Apache connector) were allowed to mark/reset this entity to retry a request,
+     * it would rewind the shared source stream and cause subsequent parts to read the wrong
+     * bytes - silently corrupting the upload or masking a genuine read failure as a success.
+     */
+    @Test
+    public void testSourcePartStreamIsNotMarkable() throws Exception {
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+
+        // ByteArrayInputStream supports mark/reset - this is the exact condition that triggers the bug
+        InputStream markableSource = new ByteArrayInputStream(data);
+
+        LargeFileUploader uploader = new TestLargeFileUploader(client, getTestBucket(), "lfu-mark-reset-test",
+                markableSource, data.length);
+
+        try (InputStream partStream = uploader.getSourcePartDataStream(0, data.length)) {
+            Assert.assertFalse("per-part stream must never report mark/reset support, even if the source stream does",
+                    partStream.markSupported());
+
+            // mark() must be a safe no-op (some callers check markSupported() first, but a
+            // defensive connector could call mark() regardless)
+            partStream.mark(data.length);
+
+            try {
+                partStream.reset();
+                Assert.fail("reset() should throw IOException since mark/reset is intentionally unsupported");
+            } catch (IOException e) {
+                // expected
+            }
+        }
+    }
+
     @Test
     public void testLargeFileUploader() throws Exception {
         String key = "large-file-uploader.bin";

@@ -331,7 +331,8 @@ public class LargeFileUploader implements Runnable, ProgressListener {
         return is;
     }
 
-    private InputStream getSourcePartDataStream(long offset, long length) throws IOException {
+    // package-private (rather than private) so the mark/reset contract can be unit tested directly
+    InputStream getSourcePartDataStream(long offset, long length) throws IOException {
         InputStream is;
         if (multipartSource != null) {
             is = multipartSource.getPartDataStream(offset, length);
@@ -342,6 +343,29 @@ public class LargeFileUploader implements Runnable, ProgressListener {
                 @Override
                 public void close() {
                     // no-op
+                }
+
+                // IMPORTANT: this stream must never report mark/reset support, even if the
+                // underlying source stream does. All parts share a single forward-only cursor
+                // over `stream`, so if the HTTP connector (e.g. Jersey's Apache connector)
+                // marks/resets this entity to retry a request, it will rewind the *shared*
+                // source stream rather than just this part - causing subsequent parts to
+                // silently read the wrong bytes (data corruption) or masking real read
+                // failures as successes. Disabling mark/reset forces any part-level failure
+                // to propagate normally and be handled by the existing MPU abort/retry logic.
+                @Override
+                public boolean markSupported() {
+                    return false;
+                }
+
+                @Override
+                public void mark(int readLimit) {
+                    // no-op: mark/reset is intentionally unsupported for this stream (see above)
+                }
+
+                @Override
+                public void reset() throws IOException {
+                    throw new IOException("mark/reset is not supported for a streamed MPU/byte-range part");
                 }
             };
         }
