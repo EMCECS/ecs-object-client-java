@@ -3466,6 +3466,81 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
+    /**
+     * OBS04O-108: Verify that uploadPart with VERIFY_WRITE_CHECKSUM succeeds for normal (uncorrupted) data.
+     */
+    @Test
+    public void testUploadPartChecksumVerificationSucceeds() throws Exception {
+        String key = "mpu-checksum-normal.bin";
+        byte[] data = new byte[5 * 1024 * 1024]; // 5 MB
+        new Random(42).nextBytes(data);
+
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        try {
+            UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                    new ByteArrayInputStream(data));
+            request.setContentLength((long) data.length);
+
+            MultipartPartETag result = client.uploadPart(request);
+            Assert.assertNotNull("uploadPart should return an ETag", result.getETag());
+            log.info("OBS04O-108: Normal uploadPart with checksum verification succeeded (ETag: {})", result.getETag());
+        } finally {
+            try {
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /**
+     * OBS04O-108: Simulate data corruption by sending corrupted data with correct Content-MD5.
+     * ECS must reject with BadDigest/InvalidDigest (HTTP 400), proving server-side integrity
+     * verification works when Content-MD5 is present.
+     */
+    @Test
+    public void testUploadPartRejectsCorruptedData() throws Exception {
+        String key = "mpu-corruption-rejection.bin";
+        byte[] goodData = new byte[5 * 1024 * 1024]; // 5 MB
+        new Random(42).nextBytes(goodData);
+
+        // Compute MD5 of good data
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        String md5Base64 = new String(Base64.encodeBase64(md5.digest(goodData)));
+
+        // Corrupt the data
+        byte[] corruptedData = goodData.clone();
+        corruptedData[0] = (byte) ~corruptedData[0];
+        corruptedData[1000] = (byte) ~corruptedData[1000];
+        corruptedData[corruptedData.length - 1] = (byte) ~corruptedData[corruptedData.length - 1];
+
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        try {
+            UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                    new ByteArrayInputStream(corruptedData));
+            request.setContentLength((long) corruptedData.length);
+            request.setContentMd5(md5Base64);
+            request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
+
+            client.uploadPart(request);
+            Assert.fail("ECS should have rejected the upload with BadDigest (Content-MD5 mismatch)");
+
+        } catch (S3Exception e) {
+            log.info("OBS04O-108: ECS rejected corrupted part — error code: {}, status: {}, message: {}",
+                    e.getErrorCode(), e.getHttpCode(), e.getMessage());
+            Assert.assertEquals("Expected HTTP 400 for Content-MD5 mismatch", 400, e.getHttpCode());
+            String errorCode = e.getErrorCode();
+            Assert.assertTrue("Expected BadDigest or InvalidDigest error code, got: " + errorCode,
+                    "BadDigest".equals(errorCode) || "InvalidDigest".equals(errorCode));
+        } finally {
+            try {
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     private String getContentMD5(Object obj) {
         String contentMD5 = null;
         try {
