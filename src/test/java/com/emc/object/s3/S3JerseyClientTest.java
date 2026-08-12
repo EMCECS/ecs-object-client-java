@@ -3466,12 +3466,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    /**
-     * OBS04O-108: Verify that uploadPart with VERIFY_WRITE_CHECKSUM succeeds for normal (uncorrupted) data.
-     */
+    // OBS04O-108: verify uploadPart() sets VERIFY_WRITE_CHECKSUM so ChecksumFilter validates the ETag
     @Test
-    public void testUploadPartChecksumVerificationSucceeds() throws Exception {
-        String key = "mpu-checksum-normal.bin";
+    public void testUploadPartSetsVerifyWriteChecksumProperty() throws Exception {
+        String key = "mpu-verify-property.bin";
         byte[] data = new byte[5 * 1024 * 1024]; // 5 MB
         new Random(42).nextBytes(data);
 
@@ -3482,9 +3480,12 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                     new ByteArrayInputStream(data));
             request.setContentLength((long) data.length);
 
+            Assert.assertNull(request.getProperties().get(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM));
+
             MultipartPartETag result = client.uploadPart(request);
-            Assert.assertNotNull("uploadPart should return an ETag", result.getETag());
-            log.info("OBS04O-108: Normal uploadPart with checksum verification succeeded (ETag: {})", result.getETag());
+            Assert.assertNotNull(result.getETag());
+
+            Assert.assertEquals(Boolean.TRUE, request.getProperties().get(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM));
         } finally {
             try {
                 client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
@@ -3493,52 +3494,74 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
-    /**
-     * OBS04O-108: Simulate data corruption by sending corrupted data with correct Content-MD5.
-     * ECS must reject with BadDigest/InvalidDigest (HTTP 400), proving server-side integrity
-     * verification works when Content-MD5 is present.
-     */
+    // OBS04O-108: verify ChecksumFilter throws ChecksumError when response ETag doesn't match client-computed MD5
     @Test
-    public void testUploadPartRejectsCorruptedData() throws Exception {
-        String key = "mpu-corruption-rejection.bin";
-        byte[] goodData = new byte[5 * 1024 * 1024]; // 5 MB
-        new Random(42).nextBytes(goodData);
+    public void testUploadPartWriteChecksumDetectsETagMismatch() throws Exception {
+        byte[] data = new byte[1024];
+        new Random(42).nextBytes(data);
+        String wrongMd5 = "00000000000000000000000000000000";
 
-        // Compute MD5 of good data
-        MessageDigest md5 = MessageDigest.getInstance("MD5");
-        String md5Base64 = new String(Base64.encodeBase64(md5.digest(goodData)));
-
-        // Corrupt the data
-        byte[] corruptedData = goodData.clone();
-        corruptedData[0] = (byte) ~corruptedData[0];
-        corruptedData[1000] = (byte) ~corruptedData[1000];
-        corruptedData[corruptedData.length - 1] = (byte) ~corruptedData[corruptedData.length - 1];
-
-        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+        org.glassfish.jersey.client.ClientConfig clientConfig = new org.glassfish.jersey.client.ClientConfig();
+        clientConfig.connectorProvider(new MockETagConnectorProvider(wrongMd5));
+        Client jerseyClient = javax.ws.rs.client.ClientBuilder.newClient(clientConfig);
+        jerseyClient.register(new com.emc.object.s3.jersey.ChecksumFilter(new S3Config()));
 
         try {
-            UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, 1,
-                    new ByteArrayInputStream(corruptedData));
-            request.setContentLength((long) corruptedData.length);
-            request.setContentMd5(md5Base64);
-            request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
-
-            client.uploadPart(request);
-            Assert.fail("ECS should have rejected the upload with BadDigest (Content-MD5 mismatch)");
-
-        } catch (S3Exception e) {
-            log.info("OBS04O-108: ECS rejected corrupted part — error code: {}, status: {}, message: {}",
-                    e.getErrorCode(), e.getHttpCode(), e.getMessage());
-            Assert.assertEquals("Expected HTTP 400 for Content-MD5 mismatch", 400, e.getHttpCode());
-            String errorCode = e.getErrorCode();
-            Assert.assertTrue("Expected BadDigest or InvalidDigest error code, got: " + errorCode,
-                    "BadDigest".equals(errorCode) || "InvalidDigest".equals(errorCode));
+            jerseyClient.target("http://localhost/test")
+                    .request()
+                    .property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE)
+                    .put(javax.ws.rs.client.Entity.entity(data, "application/octet-stream"));
+            Assert.fail("Expected ChecksumError wrapped in ProcessingException");
+        } catch (ProcessingException e) {
+            Assert.assertTrue("Root cause must be ChecksumError, was: " + e.getCause(),
+                    e.getCause() instanceof com.emc.object.util.ChecksumError);
         } finally {
-            try {
-                client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
-            } catch (Exception ignored) {
-            }
+            jerseyClient.close();
         }
+    }
+
+    // Mock connector that returns a fake 200 response with a caller-supplied ETag
+    static class MockETagConnectorProvider implements org.glassfish.jersey.client.spi.ConnectorProvider,
+            org.glassfish.jersey.client.spi.Connector {
+        private final String responseMd5;
+
+        MockETagConnectorProvider(String responseMd5) {
+            this.responseMd5 = responseMd5;
+        }
+
+        @Override
+        public org.glassfish.jersey.client.spi.Connector getConnector(Client client,
+                javax.ws.rs.core.Configuration runtimeConfig) {
+            return this;
+        }
+
+        @Override
+        public org.glassfish.jersey.client.ClientResponse apply(org.glassfish.jersey.client.ClientRequest request)
+                throws ProcessingException {
+            request.setStreamProvider(contentLength -> new java.io.ByteArrayOutputStream());
+            try {
+                request.writeEntity();
+            } catch (java.io.IOException e) {
+                throw new ProcessingException(e);
+            }
+            org.glassfish.jersey.client.ClientResponse response =
+                    new org.glassfish.jersey.client.ClientResponse(Response.Status.OK, request);
+            response.headers(RestUtil.HEADER_ETAG, "\"" + responseMd5 + "\"");
+            response.setEntityStream(new java.io.ByteArrayInputStream(new byte[0]));
+            return response;
+        }
+
+        @Override
+        public java.util.concurrent.Future<?> apply(org.glassfish.jersey.client.ClientRequest request,
+                org.glassfish.jersey.client.spi.AsyncConnectorCallback callback) {
+            throw new UnsupportedOperationException("async not supported");
+        }
+
+        @Override
+        public String getName() { return "MockETagConnectorProvider"; }
+
+        @Override
+        public void close() { }
     }
 
     private String getContentMD5(Object obj) {
