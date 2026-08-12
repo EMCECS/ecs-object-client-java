@@ -88,6 +88,143 @@ public class LargeFileUploaderTest extends AbstractS3ClientTest {
         md5Hex = DatatypeConverter.printHexBinary(dis.getMessageDigest().digest()).toLowerCase();
     }
 
+    /**
+     * Regression test for OBS04O-107: even when the raw source stream supports mark()/reset()
+     * (e.g. a ByteArrayInputStream), the per-part stream returned by getSourcePartDataStream()
+     * must report markSupported() == false and reset() must throw. All parts of a raw-stream
+     * upload share a single forward-only cursor over the source stream, so if an HTTP connector
+     * (e.g. Jersey's Apache connector) were allowed to mark/reset this entity to retry a request,
+     * it would rewind the shared source stream and cause subsequent parts to read the wrong
+     * bytes - silently corrupting the upload or masking a genuine read failure as a success.
+     */
+    @Test
+    public void testSourcePartStreamIsNotMarkable() throws Exception {
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+
+        // ByteArrayInputStream supports mark/reset - this is the exact condition that triggers the bug
+        InputStream markableSource = new ByteArrayInputStream(data);
+
+        LargeFileUploader uploader = new TestLargeFileUploader(client, getTestBucket(), "lfu-mark-reset-test",
+                markableSource, data.length);
+
+        try (InputStream partStream = uploader.getSourcePartDataStream(0, data.length)) {
+            Assert.assertFalse("per-part stream must never report mark/reset support, even if the source stream does",
+                    partStream.markSupported());
+
+            // mark() must be a safe no-op (some callers check markSupported() first, but a
+            // defensive connector could call mark() regardless)
+            partStream.mark(data.length);
+
+            try {
+                partStream.reset();
+                Assert.fail("reset() should throw IOException since mark/reset is intentionally unsupported");
+            } catch (IOException e) {
+                // expected
+            }
+        }
+    }
+
+    private static byte[] readNBytes(InputStream is, int n) throws IOException {
+        byte[] buf = new byte[n];
+        int total = 0;
+        while (total < n) {
+            int count = is.read(buf, total, n - total);
+            if (count == -1) throw new IOException("unexpected EOF after " + total + "/" + n + " bytes");
+            total += count;
+        }
+        return buf;
+    }
+
+    /**
+     * End-to-end regression test for OBS04O-107 against a real ECS bucket, verifying the fix in
+     * {@link LargeFileUploader#getSourcePartDataStream(long, long)}: even though all parts of a raw-stream
+     * upload share one underlying forward-only cursor, the per-part stream now refuses to participate in
+     * mark()/reset(), so an HTTP connector (e.g. Jersey's Apache connector) can no longer rewind the shared
+     * source stream out from under a subsequent part.
+     * <p>
+     * This test performs the exact choreography that used to corrupt the upload before the fix (mark part 1
+     * once it is believed fully sent, start reading part 2, then attempt to reset part 1 as if retrying a
+     * transient I/O error): mark() is now a safe no-op and reset() throws, so the attempted "retry" cannot
+     * silently rewind the shared cursor. The part 2 bytes actually sent are therefore exactly its own,
+     * unpolluted bytes, and the object downloaded from the live bucket matches the intended content exactly.
+     */
+    @Test
+    public void testMarkResetNoLongerCorruptsMultipartUploadFromRawStream() throws Exception {
+        String key = "mark-reset-fix-" + System.currentTimeMillis();
+        int partSize = 100 * 1024; // 100KB parts
+        byte[] data = new byte[partSize * 3];
+        // use non-periodic random data (not e.g. (byte) i, which repeats every 256 bytes and could mask a
+        // rewind/duplication defect if the rewound region happens to land on a period boundary)
+        new Random(42).nextBytes(data);
+
+        InputStream source = new ByteArrayInputStream(data); // markable source stream, per OBS04O-107
+        LargeFileUploader lfu = new TestLargeFileUploader(client, getTestBucket(), key, source, data.length);
+
+        String uploadId = lfu.initMpu();
+        boolean completed = false;
+        try {
+            SortedSet<MultipartPartETag> uploadedParts = new TreeSet<>();
+
+            // Part 1: read via the (fixed) production path and upload it to the real bucket, in full.
+            InputStream part1 = lfu.getSourcePartDataStream(0, partSize);
+            byte[] part1Bytes = readNBytes(part1, partSize);
+            uploadedParts.add(lfu.uploadPart(uploadId, 1, new ByteArrayInputStream(part1Bytes), partSize));
+
+            // The per-part stream must no longer claim to support mark/reset, even though the underlying
+            // source (ByteArrayInputStream) does.
+            Assert.assertFalse("per-part stream must never report mark/reset support (OBS04O-107 fix)",
+                    part1.markSupported());
+
+            // Simulate the Jersey 2.x Apache connector marking part 1's entity once it believes it has
+            // finished sending it to ECS. This must now be a harmless no-op.
+            part1.mark(partSize);
+
+            // Part 2 begins reading -- as would happen while its bytes are being streamed to ECS -- consuming
+            // the first half of its data from the shared underlying source stream.
+            InputStream part2 = lfu.getSourcePartDataStream(partSize, partSize);
+            byte[] part2FirstHalf = readNBytes(part2, partSize / 2);
+
+            // Simulate the connector attempting to retry part 1 (e.g. after a transient socket error) by
+            // resetting its entity stream. With the fix in place, this must fail loudly instead of silently
+            // rewinding the shared source stream out from under part 2.
+            try {
+                part1.reset();
+                Assert.fail("reset() should throw IOException since mark/reset is intentionally unsupported " +
+                        "(OBS04O-107 fix) -- a real connector would now surface this as a part-level failure " +
+                        "instead of silently corrupting the shared source stream");
+            } catch (IOException expected) {
+                // expected: the shared source stream was NOT rewound
+            }
+
+            // Part 2 keeps reading, and -- because reset() above did not (and could not) rewind the shared
+            // cursor -- correctly receives the remaining, fresh half of its own bytes.
+            byte[] part2SecondHalf = readNBytes(part2, partSize - partSize / 2);
+
+            byte[] part2Bytes = new byte[partSize];
+            System.arraycopy(part2FirstHalf, 0, part2Bytes, 0, part2FirstHalf.length);
+            System.arraycopy(part2SecondHalf, 0, part2Bytes, part2FirstHalf.length, part2SecondHalf.length);
+            uploadedParts.add(lfu.uploadPart(uploadId, 2, new ByteArrayInputStream(part2Bytes), partSize));
+
+            // Part 3: unaffected, read + upload normally.
+            InputStream part3 = lfu.getSourcePartDataStream(2L * partSize, partSize);
+            byte[] part3Bytes = readNBytes(part3, partSize);
+            uploadedParts.add(lfu.uploadPart(uploadId, 3, new ByteArrayInputStream(part3Bytes), partSize));
+
+            lfu.completeMpu(uploadId, uploadedParts);
+            completed = true;
+        } finally {
+            if (!completed) client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
+        }
+
+        // Read the object back from the LIVE ECS bucket and confirm it matches the originally intended
+        // content exactly -- i.e. part 2 was NOT corrupted by part 1's attempted mark()/reset() (OBS04O-107).
+        byte[] downloaded = client.readObject(getTestBucket(), key, byte[].class);
+        Assert.assertArrayEquals("object downloaded from the live ECS bucket does not match the intended " +
+                "content: mark/reset should no longer be able to corrupt a raw-stream MPU (OBS04O-107 fix)",
+                data, downloaded);
+    }
+
     @Test
     public void testLargeFileUploader() throws Exception {
         String key = "large-file-uploader.bin";
