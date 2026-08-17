@@ -3466,6 +3466,172 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         }
     }
 
+    // OBS04O-108: verify uploadPart() sets VERIFY_WRITE_CHECKSUM so ChecksumFilter validates the ETag
+    @Test
+    public void testUploadPartSetsVerifyWriteChecksumProperty() throws Exception {
+        String key = "mpu-verify-property.bin";
+        byte[] data = new byte[5 * 1024 * 1024]; // 5 MB
+        new Random(42).nextBytes(data);
+
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        try {
+            UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, 1,
+                    new ByteArrayInputStream(data));
+            request.setContentLength((long) data.length);
+
+            Assert.assertNull(request.getProperties().get(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM));
+
+            MultipartPartETag result = client.uploadPart(request);
+            Assert.assertNotNull(result.getETag());
+
+            Assert.assertEquals(Boolean.TRUE, request.getProperties().get(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM));
+        } finally {
+            try {
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    // OBS04O-108: verify ChecksumFilter throws ChecksumError when response ETag doesn't match client-computed MD5
+    @Test
+    public void testUploadPartWriteChecksumDetectsETagMismatch() throws Exception {
+        byte[] data = new byte[1024];
+        new Random(42).nextBytes(data);
+        String wrongMd5 = "00000000000000000000000000000000";
+
+        org.glassfish.jersey.client.ClientConfig clientConfig = new org.glassfish.jersey.client.ClientConfig();
+        clientConfig.connectorProvider(new MockETagConnectorProvider(wrongMd5));
+        Client jerseyClient = javax.ws.rs.client.ClientBuilder.newClient(clientConfig);
+        jerseyClient.register(new com.emc.object.s3.jersey.ChecksumFilter(new S3Config()));
+
+        try {
+            jerseyClient.target("http://localhost/test")
+                    .request()
+                    .property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE)
+                    .put(javax.ws.rs.client.Entity.entity(data, "application/octet-stream"));
+            Assert.fail("Expected ChecksumError wrapped in ProcessingException");
+        } catch (ProcessingException e) {
+            Assert.assertTrue("Root cause must be ChecksumError, was: " + e.getCause(),
+                    e.getCause() instanceof com.emc.object.util.ChecksumError);
+        } finally {
+            jerseyClient.close();
+        }
+    }
+
+    // Mock connector that returns a fake 200 response with a caller-supplied ETag
+    static class MockETagConnectorProvider implements org.glassfish.jersey.client.spi.ConnectorProvider,
+            org.glassfish.jersey.client.spi.Connector {
+        private final String responseMd5;
+
+        MockETagConnectorProvider(String responseMd5) {
+            this.responseMd5 = responseMd5;
+        }
+
+        @Override
+        public org.glassfish.jersey.client.spi.Connector getConnector(Client client,
+                javax.ws.rs.core.Configuration runtimeConfig) {
+            return this;
+        }
+
+        @Override
+        public org.glassfish.jersey.client.ClientResponse apply(org.glassfish.jersey.client.ClientRequest request)
+                throws ProcessingException {
+            request.setStreamProvider(contentLength -> new java.io.ByteArrayOutputStream());
+            try {
+                request.writeEntity();
+            } catch (java.io.IOException e) {
+                throw new ProcessingException(e);
+            }
+            org.glassfish.jersey.client.ClientResponse response =
+                    new org.glassfish.jersey.client.ClientResponse(Response.Status.OK, request);
+            response.headers(RestUtil.HEADER_ETAG, "\"" + responseMd5 + "\"");
+            response.setEntityStream(new java.io.ByteArrayInputStream(new byte[0]));
+            return response;
+        }
+
+        @Override
+        public java.util.concurrent.Future<?> apply(org.glassfish.jersey.client.ClientRequest request,
+                org.glassfish.jersey.client.spi.AsyncConnectorCallback callback) {
+            throw new UnsupportedOperationException("async not supported");
+        }
+
+        @Override
+        public String getName() { return "MockETagConnectorProvider"; }
+
+        @Override
+        public void close() { }
+    }
+
+    // OBS04O-108: confirm no false-positive ChecksumError on D@RE (encrypted) buckets for MPU
+    @Test
+    public void testUploadPartChecksumOnEncryptedBucket() throws Exception {
+        String bucketName = getTestBucket() + "-dare-mpu";
+        String key = "mpu-dare-checksum.bin";
+        int partSize = 5 * 1024 * 1024; // minimum 5MB part
+        byte[] data = new byte[partSize];
+        new Random(42).nextBytes(data);
+        String expectedPartMd5 = DigestUtils.md5Hex(data);
+
+        // create D@RE-enabled bucket
+        try {
+            client.createBucket(new CreateBucketRequest(bucketName).withEncryptionEnabled(true));
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
+
+        try {
+            // initiate MPU on encrypted bucket
+            String uploadId = client.initiateMultipartUpload(bucketName, key);
+
+            try {
+                // uploadPart() now sets VERIFY_WRITE_CHECKSUM — if the ETag returned by ECS
+                // for a D@RE bucket were not the plaintext MD5, ChecksumFilter would throw
+                // ChecksumError here, failing this test
+                UploadPartRequest partRequest = new UploadPartRequest(bucketName, key, uploadId, 1,
+                        new ByteArrayInputStream(data));
+                partRequest.setContentLength((long) data.length);
+                MultipartPartETag partETag = client.uploadPart(partRequest);
+
+                // verify the returned ETag matches the expected plaintext MD5
+                Assert.assertNotNull("part ETag must not be null", partETag.getETag());
+                Assert.assertEquals("part ETag must equal plaintext MD5 on D@RE bucket",
+                        expectedPartMd5, partETag.getETag());
+
+                // complete the MPU
+                SortedSet<MultipartPartETag> parts = new TreeSet<>(Arrays.asList(partETag));
+                client.completeMultipartUpload(
+                        new CompleteMultipartUploadRequest(bucketName, key, uploadId).withParts(parts));
+
+                // verify readback
+                byte[] readBack = client.readObject(bucketName, key, byte[].class);
+                Assert.assertArrayEquals("data round-trip must be identical", data, readBack);
+            } catch (Exception e) {
+                try {
+                    client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+                } catch (Exception ignored) {
+                }
+                throw e;
+            }
+        } finally {
+            try {
+                client.deleteObject(bucketName, key);
+            } catch (Exception ignored) {
+            }
+            try {
+                cleanMpus(bucketName);
+            } catch (Exception ignored) {
+            }
+            try {
+                client.deleteBucket(bucketName);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     private String getContentMD5(Object obj) {
         String contentMD5 = null;
         try {

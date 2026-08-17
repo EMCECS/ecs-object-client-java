@@ -805,6 +805,8 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
 
     @Override
     public MultipartPartETag uploadPart(UploadPartRequest request) {
+        // enable checksum verification of the uploaded part 
+        request.property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE);
         return new MultipartPartETag(request.getPartNumber(), executeAndClose(client, request).getEntityTag().getValue());
     }
 
