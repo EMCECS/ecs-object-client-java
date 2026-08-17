@@ -3564,6 +3564,74 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         public void close() { }
     }
 
+    // OBS04O-108: confirm no false-positive ChecksumError on D@RE (encrypted) buckets for MPU
+    @Test
+    public void testUploadPartChecksumOnEncryptedBucket() throws Exception {
+        String bucketName = getTestBucket() + "-dare-mpu";
+        String key = "mpu-dare-checksum.bin";
+        int partSize = 5 * 1024 * 1024; // minimum 5MB part
+        byte[] data = new byte[partSize];
+        new Random(42).nextBytes(data);
+        String expectedPartMd5 = DigestUtils.md5Hex(data);
+
+        // create D@RE-enabled bucket
+        try {
+            client.createBucket(new CreateBucketRequest(bucketName).withEncryptionEnabled(true));
+        } catch (S3Exception e) {
+            Assume.assumeFalse("Skipping: D@RE license is not available on this ECS",
+                    e.getMessage() != null && e.getMessage().contains("D@RE jar/license is unavailable"));
+            throw e;
+        }
+
+        try {
+            // initiate MPU on encrypted bucket
+            String uploadId = client.initiateMultipartUpload(bucketName, key);
+
+            try {
+                // uploadPart() now sets VERIFY_WRITE_CHECKSUM — if the ETag returned by ECS
+                // for a D@RE bucket were not the plaintext MD5, ChecksumFilter would throw
+                // ChecksumError here, failing this test
+                UploadPartRequest partRequest = new UploadPartRequest(bucketName, key, uploadId, 1,
+                        new ByteArrayInputStream(data));
+                partRequest.setContentLength((long) data.length);
+                MultipartPartETag partETag = client.uploadPart(partRequest);
+
+                // verify the returned ETag matches the expected plaintext MD5
+                Assert.assertNotNull("part ETag must not be null", partETag.getETag());
+                Assert.assertEquals("part ETag must equal plaintext MD5 on D@RE bucket",
+                        expectedPartMd5, partETag.getETag());
+
+                // complete the MPU
+                SortedSet<MultipartPartETag> parts = new TreeSet<>(Arrays.asList(partETag));
+                client.completeMultipartUpload(
+                        new CompleteMultipartUploadRequest(bucketName, key, uploadId).withParts(parts));
+
+                // verify readback
+                byte[] readBack = client.readObject(bucketName, key, byte[].class);
+                Assert.assertArrayEquals("data round-trip must be identical", data, readBack);
+            } catch (Exception e) {
+                try {
+                    client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+                } catch (Exception ignored) {
+                }
+                throw e;
+            }
+        } finally {
+            try {
+                client.deleteObject(bucketName, key);
+            } catch (Exception ignored) {
+            }
+            try {
+                cleanMpus(bucketName);
+            } catch (Exception ignored) {
+            }
+            try {
+                client.deleteBucket(bucketName);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
     private String getContentMD5(Object obj) {
         String contentMD5 = null;
         try {
