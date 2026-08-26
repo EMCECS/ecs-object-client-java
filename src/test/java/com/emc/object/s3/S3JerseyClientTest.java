@@ -61,6 +61,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
@@ -3649,4 +3650,100 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         return contentMD5;
     }
 
+    @Test
+    public void testPutObjectClosesInputStream() throws Exception {
+        String key = "stream-close-test";
+        byte[] data = "Hello Stream Close!".getBytes(StandardCharsets.UTF_8);
+
+        // wrap in a stream that tracks whether close() was called
+        CloseTrackingInputStream trackingStream = new CloseTrackingInputStream(new ByteArrayInputStream(data));
+
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, trackingStream);
+        request.setObjectMetadata(new S3ObjectMetadata().withContentLength((long) data.length));
+        client.putObject(request);
+
+        // verify the stream was closed by executeAndClose
+        Assert.assertTrue("putObject should close the request entity InputStream", trackingStream.isClosed());
+
+        // verify the object was written correctly
+        String result = client.readObject(getTestBucket(), key, String.class);
+        Assert.assertEquals("Hello Stream Close!", result);
+    }
+
+    @Test
+    public void testPutObjectStreamDigestAccessible() throws Exception {
+        String key = "stream-digest-test";
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+        String expectedMd5 = Hex.encodeHexString(DigestUtils.md5(data));
+
+        // wrap in a digest-computing stream (simulates what ecs-sync does)
+        DigestInputStream digestStream = new DigestInputStream(
+                new ByteArrayInputStream(data), MessageDigest.getInstance("MD5"));
+
+        PutObjectRequest request = new PutObjectRequest(getTestBucket(), key, digestStream);
+        request.setObjectMetadata(new S3ObjectMetadata().withContentLength((long) data.length));
+        client.putObject(request);
+
+        // after putObject, the stream should be closed and we should be able to read the digest
+        String actualMd5 = Hex.encodeHexString(digestStream.getMessageDigest().digest());
+        Assert.assertEquals("MD5 digest should be accessible after putObject", expectedMd5, actualMd5);
+    }
+
+    @Test
+    public void testUploadPartClosesInputStream() throws Exception {
+        String key = "mpu-stream-close-test";
+        byte[] data = new byte[5 * 1024 * 1024]; // 5 MB minimum part size
+        new Random().nextBytes(data);
+
+        String uploadId = client.initiateMultipartUpload(getTestBucket(), key);
+
+        try {
+            CloseTrackingInputStream trackingStream = new CloseTrackingInputStream(new ByteArrayInputStream(data));
+
+            UploadPartRequest request = new UploadPartRequest(getTestBucket(), key, uploadId, 1, trackingStream);
+            request.setContentLength((long) data.length);
+
+            client.uploadPart(request);
+
+            Assert.assertTrue("uploadPart should close the request entity InputStream", trackingStream.isClosed());
+        } finally {
+            try {
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(getTestBucket(), key, uploadId));
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /**
+     * Simple InputStream wrapper that tracks whether close() has been called.
+     */
+    private static class CloseTrackingInputStream extends InputStream {
+        private final InputStream delegate;
+        private boolean closed = false;
+
+        CloseTrackingInputStream(InputStream delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int read() throws IOException {
+            return delegate.read();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            return delegate.read(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            closed = true;
+            delegate.close();
+        }
+
+        boolean isClosed() {
+            return closed;
+        }
+    }
 }
