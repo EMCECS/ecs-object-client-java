@@ -26,6 +26,8 @@
  */
 package com.emc.object;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 
@@ -56,8 +58,25 @@ public abstract class AbstractJerseyClient {
     }
 
     protected Response executeAndClose(Client client, ObjectRequest request) {
-        Response response = executeRequest(client, request);
-        response.close();
+        Response response;
+        try {
+            response = executeRequest(client, request);
+            response.close();
+        } finally {
+            // Jersey 2's Apache connector does not close the request entity input stream after
+            // consuming it during the request. Close it here so that callers who wrap the stream
+            // (e.g. with a digest-computing stream) can read the computed result after the request.
+            if (request instanceof EntityRequest) {
+                Object entity = ((EntityRequest) request).getEntity();
+                if (entity instanceof InputStream) {
+                    try {
+                        ((InputStream) entity).close();
+                    } catch (IOException e) {
+                        log.warn("could not close request entity stream", e);
+                    }
+                }
+            }
+        }
         return response;
     }
 
