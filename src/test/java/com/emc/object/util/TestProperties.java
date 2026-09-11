@@ -40,6 +40,9 @@ public class TestProperties {
     public static final String S3_TEMP_SECRET_KEY = "s3.temp_secret_key";
     public static final String S3_SECURITY_TOKEN = "s3.security_token";
 
+    public static final String STS_ENDPOINT = "sts.endpoint";
+    public static final String IAM_ENDPOINT = "iam.endpoint";
+
     public static final String PROXY_URI = "http.proxyUri";
     public static final String NON_DEFAULT_VPOOL = "nonDefaultVpoolId";
 }
