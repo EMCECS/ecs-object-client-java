@@ -16,8 +16,18 @@ s3.endpoint=http[s]://<ecshost>[:9020|:9021]
 s3.iam_user=false
 
 
-### STS test part, uncomment the following to test STS
+### STS test part (Dell ECS / ObjectScale)
 
+## STS endpoint for dynamically fetching temporary credentials (recommended)
+## When set, S3TempCredentialsTest will use STS AssumeRole to obtain fresh credentials at runtime
+## For ECS: https://<ecshost>:4443/sts
+#sts.endpoint=https://<ecshost>:4443/sts
+
+## IAM endpoint for creating roles/users for AssumeRole tests
+## For ECS: https://<ecshost>:4443/iam
+#iam.endpoint=https://<ecshost>:4443/iam
+
+## Static temporary credentials (legacy, used as fallback if sts.endpoint is not set)
 ## Your S3 Access Key for sts
 #s3.temp_access_key=<user>@<domain>
 
