@@ -181,6 +181,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         // the AssumeRole temp credentials may not have permission to create buckets.
         // Then we set a bucket policy granting the assumed role access.
         S3Config ownerConfig = s3ConfigFromProperties();
+        ownerConfig.setSmartClient(false);
         S3Client ownerClient = new S3JerseyClient(ownerConfig);
         try {
             ownerClient.createBucket(bucketName);
@@ -469,6 +470,16 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
     @Ignore("IAM user is not supported for Copy Range API on ECS")
     @Test
     public void testCopyRangeAPI() {
+    }
+
+    @Ignore("temp credentials cannot create Object Lock buckets")
+    @Test
+    public void testCreateObjectLockBucket() {
+    }
+
+    @Ignore("temp credentials cannot create Object Lock buckets")
+    @Test
+    public void testDeleteBucketInRetentionWithBackgroundTasks() {
     }
 
     private S3Client getPresignDummyClient() throws URISyntaxException {
