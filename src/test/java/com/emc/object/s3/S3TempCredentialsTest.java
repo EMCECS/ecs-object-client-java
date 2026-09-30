@@ -365,14 +365,24 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                 url.toString());
     }
 
+    // testVPoolHeader creates a bucket in a non-default VPool, which is a bucket-creation (account-level)
+    // operation not permitted with AssumeRole temp credentials
+    @Ignore("temp credentials cannot create buckets in a different VPool")
+    @Test
+    public void testVPoolHeader() {
+    }
+
     @Ignore
     @Test
     public void testMultipleVdcs() {
     }
 
-    @Ignore
+    // MPU abort is an object-level operation that is covered by the bucket policy Allow *,
+    // so it works with temp credentials - no need to @Ignore
     @Test
-    public void testMpuAbortInMiddle() {
+    @Override
+    public void testMpuAbortInMiddle() throws Exception {
+        super.testMpuAbortInMiddle();
     }
 
     @Ignore
@@ -400,9 +410,12 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
     public void testSetGetBucketAcl() {
     }
 
-    @Ignore
+    // Retention extension is an object-level operation that is covered by the bucket policy Allow *,
+    // so it works with temp credentials - no need to @Ignore
     @Test
-    public void testExtendObjectRetentionPeriod() {
+    @Override
+    public void testExtendObjectRetentionPeriod() throws Exception {
+        super.testExtendObjectRetentionPeriod();
     }
 
     // bucket-admin operations not allowed with AssumeRole temp credentials
