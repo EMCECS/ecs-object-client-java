@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Random;
 
-import javax.ws.rs.ProcessingException;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.ws.rs.ProcessingException;
+import jakarta.xml.bind.DatatypeConverter;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Assert;

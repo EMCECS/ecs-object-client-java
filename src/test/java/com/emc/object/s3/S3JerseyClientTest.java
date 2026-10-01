@@ -43,9 +43,9 @@ import com.emc.rest.smart.ecs.Vdc;
 import com.emc.rest.smart.ecs.VdcHost;
 import com.emc.util.RandomInputStream;
 import com.emc.util.TestConfig;
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.ProcessingException;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -53,8 +53,8 @@ import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.Marshaller;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
@@ -2669,9 +2669,9 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
                             .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                     .addUserMetadata("foo", "bar"))
             );
-            javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
+            jakarta.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
                     .request().header("Content-Type", "application/x-download").header("x-amz-meta-foo", "bar")
-                    .put(javax.ws.rs.client.Entity.entity(content, "application/x-download"));
+                    .put(jakarta.ws.rs.client.Entity.entity(content, "application/x-download"));
             Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
             S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
             Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
@@ -2756,7 +2756,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         URL url = client.getPresignedUrl(new PresignedUrlRequest(Method.GET, getTestBucket(), key, expiration.getTime())
                 .headerOverride(ResponseHeaderOverride.CONTENT_DISPOSITION, contentDisposition));
 
-        Response response = javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
+        Response response = jakarta.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
         Assert.assertEquals(contentDisposition, response.getHeaderString(RestUtil.HEADER_CONTENT_DISPOSITION));
     }
 
@@ -3509,14 +3509,14 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         org.glassfish.jersey.client.ClientConfig clientConfig = new org.glassfish.jersey.client.ClientConfig();
         clientConfig.connectorProvider(new MockETagConnectorProvider(wrongMd5));
-        Client jerseyClient = javax.ws.rs.client.ClientBuilder.newClient(clientConfig);
+        Client jerseyClient = jakarta.ws.rs.client.ClientBuilder.newClient(clientConfig);
         jerseyClient.register(new com.emc.object.s3.jersey.ChecksumFilter(new S3Config()));
 
         try {
             jerseyClient.target("http://localhost/test")
                     .request()
                     .property(RestUtil.PROPERTY_VERIFY_WRITE_CHECKSUM, Boolean.TRUE)
-                    .put(javax.ws.rs.client.Entity.entity(data, "application/octet-stream"));
+                    .put(jakarta.ws.rs.client.Entity.entity(data, "application/octet-stream"));
             Assert.fail("Expected ChecksumError wrapped in ProcessingException");
         } catch (ProcessingException e) {
             Assert.assertTrue("Root cause must be ChecksumError, was: " + e.getCause(),
@@ -3537,7 +3537,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
         @Override
         public org.glassfish.jersey.client.spi.Connector getConnector(Client client,
-                javax.ws.rs.core.Configuration runtimeConfig) {
+                jakarta.ws.rs.core.Configuration runtimeConfig) {
             return this;
         }
 

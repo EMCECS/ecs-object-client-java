@@ -5,7 +5,7 @@ import com.emc.object.s3.jersey.NamespaceFilter;
 import com.emc.object.s3.request.PresignedUrlRequest;
 import com.emc.object.s3.request.ResponseHeaderOverride;
 import com.emc.object.util.RestUtil;
-import javax.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientRequestContext;
 
 import java.net.MalformedURLException;
 import java.net.URI;

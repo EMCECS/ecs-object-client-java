@@ -33,13 +33,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
+import com.fasterxml.jackson.jakarta.rs.json.JacksonJsonProvider;
+import com.fasterxml.jackson.jakarta.rs.json.JacksonXmlBindJsonProvider;
+import com.fasterxml.jackson.module.jakarta.xmlbind.JakartaXmlBindAnnotationIntrospector;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -94,7 +94,7 @@ public class BucketPolicyTest {
         ObjectMapper mapper = new ObjectMapper()
                 .configure(MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME, true)
                 .enable(SerializationFeature.INDENT_OUTPUT)
-                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JaxbAnnotationIntrospector(TypeFactory.defaultInstance())));
+                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JakartaXmlBindAnnotationIntrospector(TypeFactory.defaultInstance())));
 
         String generatedJson = mapper.writeValueAsString(OBJECT);
         Assertions.assertEquals(JSON, generatedJson);
@@ -107,13 +107,13 @@ public class BucketPolicyTest {
 
     @Test
     public void testProviderMarshalling() throws Exception {
-        JacksonJsonProvider provider = new JacksonJaxbJsonProvider();
+        JacksonJsonProvider provider = new JacksonXmlBindJsonProvider();
         // the only difference between this test and the client implementation, is indentation (to ease testing)
         // if MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME not used, it will be serialized to "conditions" instead of "Condition"
         provider.setMapper(new ObjectMapper()
                 .configure(MapperFeature.USE_WRAPPER_NAME_AS_PROPERTY_NAME, true)
                 .enable(SerializationFeature.INDENT_OUTPUT)
-                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()))));
+                .setAnnotationIntrospector(AnnotationIntrospector.pair(new JacksonAnnotationIntrospector(), new JakartaXmlBindAnnotationIntrospector(TypeFactory.defaultInstance()))));
 
         // test writing
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

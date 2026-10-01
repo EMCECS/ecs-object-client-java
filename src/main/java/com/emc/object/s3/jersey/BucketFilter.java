@@ -30,8 +30,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientRequestFilter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,7 @@ import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
 import com.emc.object.util.RestUtil;
 
-@javax.annotation.Priority(3000) // must run before AuthorizationFilter so the signed URI includes the bucket
+@jakarta.annotation.Priority(3000) // must run before AuthorizationFilter so the signed URI includes the bucket
 public class BucketFilter implements ClientRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BucketFilter.class);

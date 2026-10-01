@@ -2,7 +2,7 @@ package com.emc.object.s3;
 
 import com.emc.object.s3.request.PutObjectRequest;
 import com.emc.object.util.RestUtil;
-import javax.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedHashMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

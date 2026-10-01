@@ -29,8 +29,8 @@ package com.emc.object.s3.jersey;
 import java.io.IOException;
 import java.util.Map;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientRequestFilter;
 
 import com.emc.object.s3.S3Config;
 import com.emc.object.s3.S3Constants;
@@ -40,7 +40,7 @@ import com.emc.object.s3.S3SignerV4;
 import com.emc.object.s3.VHostUtil;
 import com.emc.object.util.RestUtil;
 
-@javax.annotation.Priority(4000) // must run after NamespaceFilter, GeoPinningFilter and BucketFilter
+@jakarta.annotation.Priority(4000) // must run after NamespaceFilter, GeoPinningFilter and BucketFilter
 public class AuthorizationFilter implements ClientRequestFilter {
     private S3Config s3Config;
     private S3Signer signer;

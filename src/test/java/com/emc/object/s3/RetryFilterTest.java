@@ -31,7 +31,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 
-import javax.ws.rs.ProcessingException;
+import jakarta.ws.rs.ProcessingException;
 
 import org.junit.Assert;
 import org.junit.Test;

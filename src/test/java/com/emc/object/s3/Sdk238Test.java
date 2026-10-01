@@ -29,8 +29,8 @@ package com.emc.object.s3;
 import java.io.IOException;
 import java.net.URI;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientRequestFilter;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

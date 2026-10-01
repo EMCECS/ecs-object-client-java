@@ -35,14 +35,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientResponseContext;
-import javax.ws.rs.client.ClientResponseFilter;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.ReaderInterceptor;
-import javax.ws.rs.ext.ReaderInterceptorContext;
-import javax.ws.rs.ext.WriterInterceptor;
-import javax.ws.rs.ext.WriterInterceptorContext;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientResponseContext;
+import jakarta.ws.rs.client.ClientResponseFilter;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.ext.ReaderInterceptor;
+import jakarta.ws.rs.ext.ReaderInterceptorContext;
+import jakarta.ws.rs.ext.WriterInterceptor;
+import jakarta.ws.rs.ext.WriterInterceptorContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,7 @@ import com.emc.object.s3.S3Signer;
 import com.emc.object.util.RestUtil;
 import com.emc.rest.smart.jersey.SizeOverrideWriter;
 
-@javax.annotation.Priority(javax.ws.rs.Priorities.USER + 100) // must run AFTER ChecksumFilter so that the checksum is computed over the on-the-wire (encoded) bytes on both outbound and inbound
+@jakarta.annotation.Priority(jakarta.ws.rs.Priorities.USER + 100) // must run AFTER ChecksumFilter so that the checksum is computed over the on-the-wire (encoded) bytes on both outbound and inbound
 public class CodecFilter implements WriterInterceptor, ClientResponseFilter, ReaderInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(CodecFilter.class);

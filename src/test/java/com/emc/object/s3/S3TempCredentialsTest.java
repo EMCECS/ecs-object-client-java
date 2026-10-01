@@ -271,7 +271,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
 
         url = client.getPresignedUrl(getTestBucket(), key, new Date(System.currentTimeMillis() + 100000));
 
-        javax.ws.rs.core.Response response = javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
+        jakarta.ws.rs.core.Response response = jakarta.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
         Assert.assertEquals(200, response.getStatus());
         Assert.assertEquals(content, response.readEntity(String.class));
     }
@@ -301,9 +301,9 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                 .addUserMetadata("foo", "bar"))
         );
-        javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
+        jakarta.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
                 .request().header("Content-Type", "application/x-download").header("x-amz-meta-foo", "bar")
-                .put(javax.ws.rs.client.Entity.entity(content, "application/x-download"));
+                .put(jakarta.ws.rs.client.Entity.entity(content, "application/x-download"));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
