@@ -61,6 +61,10 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         s3AccessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
         s3SecretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
 
+        // STS/IAM dynamic setup requires an IAM user - object users cannot call IAM APIs
+        boolean isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER, "false"));
+        Assume.assumeTrue("S3TempCredentialsTest requires an IAM user (s3.iam_user=true)", isIamUser);
+
         if (stsEndpoint != null && !stsEndpoint.isEmpty()
                 && iamEndpoint != null && !iamEndpoint.isEmpty()) {
             dynamicMode = true;
