@@ -62,16 +62,22 @@ repositories {
 }
 
 dependencies {
-    api 'com.emc.ecs:smart-client-ecs:4.0.0'
-    implementation 'org.glassfish.jersey.core:jersey-client:2.47'
-    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.47'
-    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.47'
-    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.47'
-    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.17.3'
-    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.17.3'
+    api 'com.emc.ecs:smart-client-ecs:4.0.0-dev.6.uncommitted+OBS04O.379.jersey3.upgrade.624e73a'
+    implementation 'org.glassfish.jersey.core:jersey-client:3.1.11'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:3.1.11'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:3.1.11'
+    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:3.1.11'
+    implementation 'com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider:2.17.3'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations:2.17.3'
+    // JAXB 4.x (jakarta.xml.bind)
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.0'
+    runtimeOnly 'org.glassfish.jaxb:jaxb-runtime:4.0.2'
     implementation('com.emc.ecs:object-transform:1.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-log4j12'
     }
+    // object-transform:1.1.0 uses javax.xml.bind.DatatypeConverter (not yet migrated to jakarta)
+    // Provide the old JAXB API so DatatypeConverter is on the classpath at runtime
+    runtimeOnly 'javax.xml.bind:jaxb-api:2.3.1'
     implementation 'commons-codec:commons-codec:1.17.1'
     implementation('org.dom4j:dom4j:2.1.4') {
         // workaround for jdom2 bug (https://github.com/dom4j/dom4j/issues/99)
