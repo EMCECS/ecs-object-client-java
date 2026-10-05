@@ -62,7 +62,7 @@ repositories {
 }
 
 dependencies {
-    api 'com.emc.ecs:smart-client-ecs:4.0.0-dev.6.uncommitted+OBS04O.379.jersey3.upgrade.624e73a'
+    api 'com.emc.ecs:smart-client-ecs:4.0.1-rc.1'
     implementation 'org.glassfish.jersey.core:jersey-client:3.1.11'
     implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:3.1.11'
     implementation 'org.glassfish.jersey.inject:jersey-hk2:3.1.11'
