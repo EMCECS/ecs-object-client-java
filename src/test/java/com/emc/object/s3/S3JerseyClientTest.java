@@ -328,7 +328,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         String bucketName = getTestBucket();
         String key = "testObject_PutObjectRetention";
         client.enableObjectLock(bucketName);
-        Date retentionDate = new Date(System.currentTimeMillis() + 10000);
+        Date retentionDate = new Date(System.currentTimeMillis() + 5000);
         ObjectLockRetention objectLockRetention = new ObjectLockRetention()
                 .withMode(ObjectLockRetentionMode.COMPLIANCE)
                 .withRetainUntilDate(retentionDate);
@@ -344,10 +344,10 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         S3ObjectMetadata objectMetadata = client.getObjectMetadata(bucketName, key);
         Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
         Assert.assertEquals(retentionDate, objectMetadata.getObjectLockRetention().getRetainUntilDate());
-        Thread.sleep(10000);
+        Thread.sleep(5000);
 
         //Put Retention on existing object.
-        Date retentionDate2 = new Date(System.currentTimeMillis() + 10000);
+        Date retentionDate2 = new Date(System.currentTimeMillis() + 5000);
         objectLockRetention.setRetainUntilDate(retentionDate2);
         objectLockRetention.setMode(ObjectLockRetentionMode.GOVERNANCE);
         SetObjectRetentionRequest setObjectRetentionRequest = new SetObjectRetentionRequest(bucketName, key).withVersionId(versionId)
@@ -359,7 +359,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         objectMetadata = client.getObjectMetadata(bucketName, key);
         Assert.assertEquals(objectLockRetention.getMode(), objectMetadata.getObjectLockRetention().getMode());
         Assert.assertEquals(retentionDate2, objectMetadata.getObjectLockRetention().getRetainUntilDate());
-        Thread.sleep(10000);
+        Thread.sleep(5000);
     }
 
     @Test
@@ -442,7 +442,7 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
         new Random().nextBytes(content);
         InputStream is1 = new ByteArrayInputStream(content, 0, fiveMB);
         InputStream is2 = new ByteArrayInputStream(content, fiveMB, fiveMB);
-        Date retentionDate = new Date(System.currentTimeMillis() + 10000);
+        Date retentionDate = new Date(System.currentTimeMillis() + 5000);
         ObjectLockRetention objectLockRetention = new ObjectLockRetention().withMode(ObjectLockRetentionMode.GOVERNANCE).withRetainUntilDate(retentionDate);
 
         client.enableObjectLock(bucketName);
