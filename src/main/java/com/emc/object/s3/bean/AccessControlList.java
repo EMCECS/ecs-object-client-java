@@ -28,7 +28,7 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
 
-import javax.xml.bind.annotation.*;
+import jakarta.xml.bind.annotation.*;
 import java.util.*;
 
 @XmlRootElement(name = "AccessControlPolicy")

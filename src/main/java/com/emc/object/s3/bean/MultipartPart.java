@@ -26,7 +26,7 @@
  */
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElement;
 import java.util.Date;
 
 public class MultipartPart extends MultipartPartETag {

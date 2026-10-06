@@ -28,8 +28,8 @@ package com.emc.object.s3.jersey;
 
 import com.emc.object.s3.S3Exception;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientRequestFilter;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientRequestFilter;
 import java.io.IOException;
 import java.util.Random;
 

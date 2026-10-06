@@ -31,11 +31,11 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Map;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.client.Invocation;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.Response;
 
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.client.RequestEntityProcessing;
@@ -122,8 +122,8 @@ public abstract class AbstractJerseyClient {
                 // which in turn REMOVES the Content-Encoding header when the variant encoding is null.
                 // Preserve any Content-Encoding header by pushing it into the Entity's Variant.
                 String contentEncoding = RestUtil.getFirstAsString(request.getHeaders(), RestUtil.HEADER_CONTENT_ENCODING);
-                javax.ws.rs.core.Variant variant = new javax.ws.rs.core.Variant(
-                        javax.ws.rs.core.MediaType.valueOf(contentType), (String) null, contentEncoding);
+                jakarta.ws.rs.core.Variant variant = new jakarta.ws.rs.core.Variant(
+                        jakarta.ws.rs.core.MediaType.valueOf(contentType), (String) null, contentEncoding);
                 return builder.method(request.getMethod().toString(), Entity.entity(entity, variant));
             } else { // non-entity request method
 

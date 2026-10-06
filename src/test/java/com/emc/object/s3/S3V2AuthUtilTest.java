@@ -28,13 +28,13 @@ package com.emc.object.s3;
 
 import com.emc.object.Method;
 import com.emc.object.s3.request.PresignedUrlRequest;
-import javax.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedHashMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.core.MultivaluedMap;
 import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;

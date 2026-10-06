@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Properties;
 
-import javax.ws.rs.client.Client;
+import jakarta.ws.rs.client.Client;
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.junit.Assert;

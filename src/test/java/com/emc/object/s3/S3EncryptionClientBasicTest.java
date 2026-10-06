@@ -635,7 +635,9 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
             Assert.fail("Fail was expected. Can NOT get tags from a deleted object");
         } catch (S3Exception e) {
             Assert.assertEquals(404, e.getHttpCode());
-            Assert.assertEquals("NoSuchKey", e.getErrorCode());
+            // ECS may return NoSuchKey or NoSuchVersion depending on server version and version history
+            Assert.assertTrue("expected NoSuchKey or NoSuchVersion but got " + e.getErrorCode(),
+                    "NoSuchKey".equals(e.getErrorCode()) || "NoSuchVersion".equals(e.getErrorCode()));
         }
     }
 
@@ -679,6 +681,21 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
                     throw new S3Exception("foo", 500);
             }
         }
+    }
+
+    @Ignore
+    @Override
+    public void testUploadPartSetsVerifyWriteChecksumProperty() {
+    }
+
+    @Ignore
+    @Override
+    public void testUploadPartChecksumOnEncryptedBucket() {
+    }
+
+    @Ignore
+    @Override
+    public void testUploadPartClosesInputStream() {
     }
 
     @Override

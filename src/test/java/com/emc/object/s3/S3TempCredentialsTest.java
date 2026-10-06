@@ -61,6 +61,10 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
         s3AccessKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_ACCESS_KEY);
         s3SecretKey = TestConfig.getPropertyNotEmpty(props, TestProperties.S3_SECRET_KEY);
 
+        // STS/IAM dynamic setup requires an IAM user - object users cannot call IAM APIs
+        boolean isIamUser = Boolean.parseBoolean(props.getProperty(TestProperties.S3_IAM_USER, "false"));
+        Assume.assumeTrue("S3TempCredentialsTest requires an IAM user (s3.iam_user=true)", isIamUser);
+
         if (stsEndpoint != null && !stsEndpoint.isEmpty()
                 && iamEndpoint != null && !iamEndpoint.isEmpty()) {
             dynamicMode = true;
@@ -267,7 +271,7 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
 
         url = client.getPresignedUrl(getTestBucket(), key, new Date(System.currentTimeMillis() + 100000));
 
-        javax.ws.rs.core.Response response = javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
+        jakarta.ws.rs.core.Response response = jakarta.ws.rs.client.ClientBuilder.newClient().target(url.toURI()).request().get();
         Assert.assertEquals(200, response.getStatus());
         Assert.assertEquals(content, response.readEntity(String.class));
     }
@@ -297,9 +301,9 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                         .withObjectMetadata(new S3ObjectMetadata().withContentType("application/x-download")
                                 .addUserMetadata("foo", "bar"))
         );
-        javax.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
+        jakarta.ws.rs.client.ClientBuilder.newClient().target(url.toURI())
                 .request().header("Content-Type", "application/x-download").header("x-amz-meta-foo", "bar")
-                .put(javax.ws.rs.client.Entity.entity(content, "application/x-download"));
+                .put(jakarta.ws.rs.client.Entity.entity(content, "application/x-download"));
         Assert.assertEquals(content, client.readObject(getTestBucket(), key, String.class));
         S3ObjectMetadata metadata = client.getObjectMetadata(getTestBucket(), key);
         Assert.assertEquals("bar", metadata.getUserMetadata("foo"));
@@ -365,14 +369,24 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
                 url.toString());
     }
 
+    // testVPoolHeader creates a bucket in a non-default VPool, which is a bucket-creation (account-level)
+    // operation not permitted with AssumeRole temp credentials
+    @Ignore("temp credentials cannot create buckets in a different VPool")
+    @Test
+    public void testVPoolHeader() {
+    }
+
     @Ignore
     @Test
     public void testMultipleVdcs() {
     }
 
-    @Ignore
+    // MPU abort is an object-level operation that is covered by the bucket policy Allow *,
+    // so it works with temp credentials - no need to @Ignore
     @Test
-    public void testMpuAbortInMiddle() {
+    @Override
+    public void testMpuAbortInMiddle() throws Exception {
+        super.testMpuAbortInMiddle();
     }
 
     @Ignore
@@ -400,9 +414,12 @@ public class S3TempCredentialsTest extends S3JerseyClientTest {
     public void testSetGetBucketAcl() {
     }
 
-    @Ignore
+    // Retention extension is an object-level operation that is covered by the bucket policy Allow *,
+    // so it works with temp credentials - no need to @Ignore
     @Test
-    public void testExtendObjectRetentionPeriod() {
+    @Override
+    public void testExtendObjectRetentionPeriod() throws Exception {
+        super.testExtendObjectRetentionPeriod();
     }
 
     // bucket-admin operations not allowed with AssumeRole temp credentials

@@ -1,6 +1,6 @@
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.*;
+import jakarta.xml.bind.annotation.*;
 
 @XmlRootElement(name = "ObjectLockConfiguration")
 @XmlType(propOrder = {"objectLockEnabled", "rule"})

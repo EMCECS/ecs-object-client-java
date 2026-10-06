@@ -28,9 +28,11 @@ package com.emc.object.s3.bean;
 
 import com.emc.object.util.RestUtil;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlTransient;
+import jakarta.xml.bind.annotation.XmlType;
 
+@XmlType(propOrder = {"partNumber", "ETag"})
 public class MultipartPartETag implements Comparable<MultipartPartETag> {
     private Integer partNumber;
     private String eTag;

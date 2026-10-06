@@ -41,11 +41,11 @@ import org.glassfish.jersey.client.ClientProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.ProcessingException;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.Invocation;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -306,7 +306,7 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
     private Response unwrapAndExecute(Client client, ObjectRequest request) {
         try {
             return super.executeRequest(client, request);
-        } catch (javax.ws.rs.ProcessingException e) {
+        } catch (jakarta.ws.rs.ProcessingException e) {
             Throwable cause = e.getCause();
             if (cause instanceof RuntimeException && isFromErrorFilter(cause)) {
                 throw (RuntimeException) cause;

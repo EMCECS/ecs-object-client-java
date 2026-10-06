@@ -1,6 +1,6 @@
 package com.emc.object.s3.bean;
 
-import javax.xml.bind.annotation.adapters.XmlAdapter;
+import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 import java.time.ZonedDateTime;
 import java.util.Date;
 

@@ -4,16 +4,16 @@
  */
 package com.emc.object.s3;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientRequestContext;
-import javax.ws.rs.client.ClientResponseContext;
-import javax.ws.rs.core.Configuration;
-import javax.ws.rs.core.Cookie;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedHashMap;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.NewCookie;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.ws.rs.client.ClientResponseContext;
+import jakarta.ws.rs.core.Configuration;
+import jakarta.ws.rs.core.Cookie;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.NewCookie;
+import jakarta.ws.rs.core.Response;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
@@ -138,13 +138,13 @@ public final class TestClientRequestContexts {
         @Override public int getLength() { return -1; }
         @Override public MediaType getMediaType() { return null; }
         @Override public Map<String, NewCookie> getCookies() { return Collections.emptyMap(); }
-        @Override public javax.ws.rs.core.EntityTag getEntityTag() { return null; }
+        @Override public jakarta.ws.rs.core.EntityTag getEntityTag() { return null; }
         @Override public Date getLastModified() { return null; }
         @Override public URI getLocation() { return null; }
-        @Override public Set<javax.ws.rs.core.Link> getLinks() { return new HashSet<>(); }
+        @Override public Set<jakarta.ws.rs.core.Link> getLinks() { return new HashSet<>(); }
         @Override public boolean hasLink(String relation) { return false; }
-        @Override public javax.ws.rs.core.Link getLink(String relation) { return null; }
-        @Override public javax.ws.rs.core.Link.Builder getLinkBuilder(String relation) { return null; }
+        @Override public jakarta.ws.rs.core.Link getLink(String relation) { return null; }
+        @Override public jakarta.ws.rs.core.Link.Builder getLinkBuilder(String relation) { return null; }
         @Override public boolean hasEntity() { return entityStream != null; }
         @Override public InputStream getEntityStream() { return entityStream; }
         @Override public void setEntityStream(InputStream input) { this.entityStream = input; }

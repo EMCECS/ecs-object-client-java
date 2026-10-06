@@ -13,8 +13,8 @@ import java.util.SortedMap;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.ws.rs.client.ClientRequestContext;
-import javax.xml.bind.DatatypeConverter;
+import jakarta.ws.rs.client.ClientRequestContext;
+import jakarta.xml.bind.DatatypeConverter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
