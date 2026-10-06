@@ -683,6 +683,21 @@ public class S3EncryptionClientBasicTest extends S3JerseyClientTest {
         }
     }
 
+    @Ignore
+    @Override
+    public void testUploadPartSetsVerifyWriteChecksumProperty() {
+    }
+
+    @Ignore
+    @Override
+    public void testUploadPartChecksumOnEncryptedBucket() {
+    }
+
+    @Ignore
+    @Override
+    public void testUploadPartClosesInputStream() {
+    }
+
     @Override
     protected void assertForListVersionsPaging(int size, int requestCount) {
         Assert.assertEquals("The correct number of versions were NOT returned", 10, size);

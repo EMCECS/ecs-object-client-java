@@ -33,7 +33,7 @@ import com.emc.object.Range;
 import com.emc.object.s3.bean.*;
 import com.emc.object.s3.bean.BucketPolicyStatement.Effect;
 import com.emc.object.s3.jersey.FaultInjectionFilter;
-import com.emc.object.s3.jersey.S3EncryptionClient;
+
 import com.emc.object.s3.jersey.S3JerseyClient;
 import com.emc.object.s3.request.*;
 import com.emc.object.util.RestUtil;
@@ -3471,10 +3471,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     // OBS04O-108: verify uploadPart() sets VERIFY_WRITE_CHECKSUM so ChecksumFilter validates the ETag
-    // Skip for encryption subclasses: S3EncryptionClient throws UnsupportedOperationException for all MPU operations
     @Test
     public void testUploadPartSetsVerifyWriteChecksumProperty() throws Exception {
-        Assume.assumeFalse("S3EncryptionClient does not support MPU", client instanceof S3EncryptionClient);
         String key = "mpu-verify-property.bin";
         byte[] data = new byte[5 * 1024 * 1024]; // 5 MB
         new Random(42).nextBytes(data);
@@ -3571,10 +3569,8 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
     }
 
     // OBS04O-108: confirm no false-positive ChecksumError on D@RE (encrypted) buckets for MPU
-    // Skip for encryption subclasses: S3EncryptionClient throws UnsupportedOperationException for all MPU operations
     @Test
     public void testUploadPartChecksumOnEncryptedBucket() throws Exception {
-        Assume.assumeFalse("S3EncryptionClient does not support MPU", client instanceof S3EncryptionClient);
         String bucketName = getTestBucket() + "-dare-mpu";
         String key = "mpu-dare-checksum.bin";
         int partSize = 5 * 1024 * 1024; // minimum 5MB part
@@ -3699,7 +3695,6 @@ public class S3JerseyClientTest extends AbstractS3ClientTest {
 
     @Test
     public void testUploadPartClosesInputStream() throws Exception {
-        Assume.assumeFalse("S3EncryptionClient does not support MPU", client instanceof S3EncryptionClient);
         String key = "mpu-stream-close-test";
         byte[] data = new byte[5 * 1024 * 1024]; // 5 MB minimum part size
         new Random().nextBytes(data);
