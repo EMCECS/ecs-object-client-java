@@ -197,6 +197,9 @@ public class S3JerseyClient extends AbstractJerseyClient implements S3Client {
             client.register(new FaultInjectionFilter(this.s3Config.getFaultInjectionRate()));
         // Register response filter
         client.register(new ErrorFilter());
+
+        // pin Glassfish RI for S3 bean JAXB marshalling (avoids MOXy quote-escaping issues)
+        client.register(new S3JaxbContextResolver());
     }
 
     /**
